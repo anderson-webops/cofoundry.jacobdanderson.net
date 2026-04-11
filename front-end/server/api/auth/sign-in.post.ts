@@ -1,6 +1,7 @@
-import { getSessionForEmail, validateSignInPayload, verifyCredentials, writeSession } from "~/server/utils/auth"
+import { assertAccountAccessEnabled, getSessionForEmail, validateSignInPayload, verifyCredentials, writeSession } from "~/server/utils/auth"
 
 export default defineEventHandler(async (event) => {
+  assertAccountAccessEnabled()
   const payload = validateSignInPayload(await readBody(event))
   const userId = await verifyCredentials(event, payload.email, payload.password)
   const session = getSessionForEmail(payload.email)

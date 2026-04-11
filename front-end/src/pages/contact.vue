@@ -3,14 +3,43 @@ import { contactSchema } from "~/shared/utils/validation"
 
 usePageSeo("Contact")
 
+const route = useRoute()
+const runtimeConfig = useRuntimeConfig()
 const toastStore = useToastStore()
+
+function getTopicDefaults(topic: string) {
+  switch (topic) {
+    case "access":
+      return {
+        subject: "Workspace access",
+        message: "I would like access to CoFoundry when workspace accounts open for my use case.",
+      }
+    case "intro":
+      return {
+        subject: "Intro access request",
+        message: "I found a profile or startup search on CoFoundry and would like access to send an intro through the platform.",
+      }
+    case "pricing":
+      return {
+        subject: "Pricing and team plans",
+        message: "I would like more detail on CoFoundry pricing, rollout timing, or team/studio access.",
+      }
+    default:
+      return {
+        subject: "",
+        message: "",
+      }
+  }
+}
+
+const topicDefaults = getTopicDefaults(typeof route.query.topic === "string" ? route.query.topic : "")
 
 const form = reactive({
   name: "",
   email: "",
   company: "",
-  subject: "",
-  message: "",
+  subject: topicDefaults.subject,
+  message: topicDefaults.message,
 })
 const errors = ref<Record<string, string>>({})
 const submitting = ref(false)
@@ -32,15 +61,15 @@ async function submitForm() {
     })
     toastStore.push({
       title: "Message sent",
-      message: "Thanks. We received your note and the demo endpoint accepted it successfully.",
+      message: "Thanks. We received your note and the team will follow up shortly.",
       tone: "success",
     })
     Object.assign(form, {
       name: "",
       email: "",
       company: "",
-      subject: "",
-      message: "",
+      subject: topicDefaults.subject,
+      message: topicDefaults.message,
     })
   }
   finally {
@@ -60,12 +89,12 @@ async function submitForm() {
     <div class="mt-10 gap-6 grid lg:grid-cols-[0.8fr_1.2fr]">
       <div class="panel p-6">
         <h2 class="text-xl font-semibold">
-          What founders usually ask us
+          How to reach us
         </h2>
         <ul class="muted text-sm leading-7 mt-5 gap-4 grid">
-          <li>How should we structure proposals between two pre-incorporation founders?</li>
-          <li>Can our venture studio manage multiple opportunities from one workspace?</li>
-          <li>How do paid subscriptions affect visibility and proposal workflow access?</li>
+          <li>General support: <a :href="`mailto:${runtimeConfig.public.supportEmail}`" class="text-[var(--copy)] underline underline-offset-4">{{ runtimeConfig.public.supportEmail }}</a></li>
+          <li>Use this form for access requests, product questions, pricing conversations, or support follow-up.</li>
+          <li>Founder agreement templates remain editable product tools and should still be reviewed by counsel.</li>
         </ul>
       </div>
 

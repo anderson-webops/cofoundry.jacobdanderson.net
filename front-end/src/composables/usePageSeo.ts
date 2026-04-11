@@ -4,6 +4,8 @@ const trailingSlashPattern = /\/+$/
 
 interface PageSeoOptions {
   canonicalPath?: string
+  imagePath?: string
+  ogType?: "article" | "profile" | "website"
   robots?: string
   structuredData?: Record<string, unknown> | Record<string, unknown>[]
 }
@@ -22,17 +24,23 @@ function buildCanonicalUrl(path?: string) {
 }
 
 export function usePageSeo(title: string, description = appDescription, options: PageSeoOptions = {}) {
+  const route = useRoute()
   const fullTitle = `${title} · ${appName}`
-  const canonicalUrl = buildCanonicalUrl(options.canonicalPath)
+  const canonicalUrl = buildCanonicalUrl(options.canonicalPath || route.path)
+  const ogImage = buildCanonicalUrl(options.imagePath || "/og-default.png")
 
   useSeoMeta({
     title,
     description,
     ogTitle: fullTitle,
     ogDescription: description,
+    ogImage,
+    ogSiteName: appName,
+    ogType: options.ogType || "website",
     ogUrl: canonicalUrl,
     robots: options.robots,
     twitterCard: "summary_large_image",
+    twitterImage: ogImage,
     twitterTitle: fullTitle,
     twitterDescription: description,
   })

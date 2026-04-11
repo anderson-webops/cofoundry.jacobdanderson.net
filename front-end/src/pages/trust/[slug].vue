@@ -4,6 +4,7 @@ import { trustCenterPages } from "~/shared/data/public-content"
 const route = useRoute()
 const slug = String(route.params.slug)
 const page = trustCenterPages.find(entry => entry.slug === slug)
+const { getGuidePageCta } = useProductAccess()
 
 if (!page)
   throw createError({ statusCode: 404, statusMessage: "Trust page not found" })
@@ -11,6 +12,8 @@ if (!page)
 usePageSeo(page.title, page.description, {
   canonicalPath: `/trust/${page.slug}`,
 })
+
+const pageCta = computed(() => getGuidePageCta(page.ctaLabel, page.ctaTo, `trust-${page.slug}`))
 </script>
 
 <template>
@@ -24,8 +27,8 @@ usePageSeo(page.title, page.description, {
         <BaseButton variant="secondary" to="/trust">
           Trust Center
         </BaseButton>
-        <BaseButton :to="page.ctaTo">
-          {{ page.ctaLabel }}
+        <BaseButton :to="pageCta.to">
+          {{ pageCta.label }}
         </BaseButton>
       </template>
     </PageIntro>

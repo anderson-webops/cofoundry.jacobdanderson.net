@@ -9,14 +9,12 @@ import {
 } from "~/shared/data/legal"
 
 const runtimeConfig = useRuntimeConfig()
+const { getServiceLabels } = useProductAccess()
+const serviceLabels = getServiceLabels()
 
 const supportEmail = computed(() => runtimeConfig.public.supportEmail)
-const backendModeLabel = computed(() => runtimeConfig.public.backendMode === "supabase"
-  ? "Supabase-backed data mode"
-  : "Mock / first-party demo data mode")
-const billingModeLabel = computed(() => runtimeConfig.public.billingMode === "stripe"
-  ? "Stripe-backed billing mode"
-  : "Mock billing mode")
+const backendModeLabel = computed(() => serviceLabels.backend)
+const billingModeLabel = computed(() => serviceLabels.billing)
 
 usePageSeo("Privacy Policy", "Product-specific privacy disclosures for CoFoundry's founder matching, profile visibility, messaging, proposal, contract, and billing workflows.", {
   canonicalPath: "/privacy",

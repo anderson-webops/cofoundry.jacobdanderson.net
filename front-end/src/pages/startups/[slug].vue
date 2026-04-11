@@ -7,11 +7,13 @@ import { getOpportunityVerificationTone } from "~/shared/utils/formation"
 const route = useRoute()
 const slug = String(route.params.slug)
 const entry = getPublicOpportunityBySlug(workspaceSeed, slug)
+const { getIntroCta } = useProductAccess()
 
 if (!entry)
   throw createError({ statusCode: 404, statusMessage: "Public startup search not found" })
 
 const { opportunity, ownerProfile } = entry
+const introCta = computed(() => getIntroCta(`startup-search-${entry.slug}`))
 
 usePageSeo(opportunity.startupName, opportunity.oneLinePitch, {
   canonicalPath: `/startups/${entry.slug}`,
@@ -29,8 +31,8 @@ usePageSeo(opportunity.startupName, opportunity.oneLinePitch, {
         <BaseButton variant="secondary" to="/startups">
           All startup searches
         </BaseButton>
-        <BaseButton to="/auth/sign-up">
-          Request intro on CoFoundry
+        <BaseButton :to="introCta.to">
+          {{ introCta.label }}
         </BaseButton>
       </template>
     </PageIntro>

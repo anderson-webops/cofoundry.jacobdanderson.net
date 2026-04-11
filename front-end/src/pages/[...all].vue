@@ -1,5 +1,7 @@
 <script setup lang="ts">
 const router = useRouter()
+const { getPrimaryAccessCta } = useProductAccess()
+const primaryAccessCta = computed(() => getPrimaryAccessCta("not-found"))
 
 usePageSeo("Page not found", "The requested CoFoundry page could not be found.", {
   robots: "noindex, nofollow",
@@ -16,13 +18,16 @@ usePageSeo("Page not found", "The requested CoFoundry page could not be found.",
         Page not found
       </h1>
       <p class="muted text-sm leading-7 mx-auto mt-4 max-w-lg">
-        The route does not exist in the current CoFoundry workspace. You can head back or return to the product shell.
+        The route you requested is not available. Use the public navigation, return home, or contact the team if you expected a live workspace path here.
       </p>
       <div class="mt-8 flex gap-3 justify-center">
         <BaseButton variant="secondary" @click="router.back()">
           Go back
         </BaseButton>
-        <BaseButton to="/">
+        <BaseButton :to="primaryAccessCta.to">
+          {{ primaryAccessCta.label }}
+        </BaseButton>
+        <BaseButton variant="secondary" to="/">
           Home
         </BaseButton>
       </div>

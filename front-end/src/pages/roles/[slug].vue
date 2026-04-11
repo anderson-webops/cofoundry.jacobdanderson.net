@@ -16,6 +16,10 @@ const relatedIndustries = pickRelatedHubEntries(getIndustryHubs(workspaceSeed), 
 const relatedStages = pickRelatedHubEntries(getStageHubs(workspaceSeed), "", 3)
 const visibilityGuide = trustCenterPages.find(entry => entry.slug === "profile-visibility")!
 const founderAgreementGuide = contractGuidePages.find(entry => entry.slug === "founder-agreement")!
+const { buildAccessRequestPath, policy } = useProductAccess()
+const roleHubCta = computed(() => policy.value.accountsEnabled
+  ? { label: "Create your profile", to: "/auth/sign-up" }
+  : { label: "Request access", to: buildAccessRequestPath(`role-hub-${hub.slug}`, "access") })
 
 usePageSeo(`${hub.label} searches`, hub.description, {
   canonicalPath: `/roles/${hub.slug}`,
@@ -33,8 +37,8 @@ usePageSeo(`${hub.label} searches`, hub.description, {
         <BaseButton variant="secondary" to="/roles">
           All role hubs
         </BaseButton>
-        <BaseButton to="/auth/sign-up">
-          Create your profile
+        <BaseButton :to="roleHubCta.to">
+          {{ roleHubCta.label }}
         </BaseButton>
       </template>
     </PageIntro>

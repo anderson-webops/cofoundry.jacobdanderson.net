@@ -2,6 +2,9 @@
 import { marketingNavigation } from "~/shared/constants/app"
 
 const menuOpen = ref(false)
+const { getPrimaryAccessCta, getSecondaryAccessCta } = useProductAccess()
+const primaryAccessCta = computed(() => getPrimaryAccessCta("site-header"))
+const secondaryAccessCta = computed(() => getSecondaryAccessCta("site-header"))
 </script>
 
 <template>
@@ -15,11 +18,11 @@ const menuOpen = ref(false)
       </nav>
       <div class="gap-3 hidden items-center lg:flex">
         <ThemeToggle />
-        <BaseButton variant="ghost" to="/auth/sign-in">
-          Sign in
+        <BaseButton variant="ghost" :to="secondaryAccessCta.to">
+          {{ secondaryAccessCta.label }}
         </BaseButton>
-        <BaseButton to="/auth/sign-up">
-          Start free
+        <BaseButton :to="primaryAccessCta.to">
+          {{ primaryAccessCta.label }}
         </BaseButton>
       </div>
       <button class="p-2 border border-[var(--line)] rounded-full lg:hidden" @click="menuOpen = !menuOpen">
@@ -31,11 +34,11 @@ const menuOpen = ref(false)
         {{ item.label }}
       </NuxtLink>
       <div class="flex gap-3">
-        <BaseButton variant="ghost" to="/auth/sign-in" block>
-          Sign in
+        <BaseButton variant="ghost" :to="secondaryAccessCta.to" block>
+          {{ secondaryAccessCta.label }}
         </BaseButton>
-        <BaseButton to="/auth/sign-up" block>
-          Start free
+        <BaseButton :to="primaryAccessCta.to" block>
+          {{ primaryAccessCta.label }}
         </BaseButton>
       </div>
     </div>

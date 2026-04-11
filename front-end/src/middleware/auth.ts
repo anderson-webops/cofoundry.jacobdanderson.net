@@ -1,6 +1,6 @@
-export default defineNuxtRouteMiddleware(() => {
-  const { session } = useSessionState()
+export default defineNuxtRouteMiddleware(async () => {
+  const session = await useAuthoritativeSession()
 
-  if (!session.value)
+  if (!session)
     return navigateTo("/auth/sign-in")
 })

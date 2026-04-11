@@ -4,6 +4,7 @@ import { contractGuidePages } from "~/shared/data/public-content"
 const route = useRoute()
 const slug = String(route.params.slug)
 const page = contractGuidePages.find(entry => entry.slug === slug)
+const { getGuidePageCta } = useProductAccess()
 
 if (!page)
   throw createError({ statusCode: 404, statusMessage: "Contract guide not found" })
@@ -11,6 +12,8 @@ if (!page)
 usePageSeo(page.title, page.description, {
   canonicalPath: `/contracts/${page.slug}`,
 })
+
+const pageCta = computed(() => getGuidePageCta(page.ctaLabel, page.ctaTo, `contracts-${page.slug}`))
 </script>
 
 <template>
@@ -24,8 +27,8 @@ usePageSeo(page.title, page.description, {
         <BaseButton variant="secondary" to="/contracts">
           Contract resources
         </BaseButton>
-        <BaseButton :to="page.ctaTo">
-          {{ page.ctaLabel }}
+        <BaseButton :to="pageCta.to">
+          {{ pageCta.label }}
         </BaseButton>
       </template>
     </PageIntro>

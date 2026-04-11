@@ -14,6 +14,8 @@ if (!entry)
 const { profile } = entry
 const readiness = buildProfileReadiness(profile)
 const runtimeConfig = useRuntimeConfig()
+const { getIntroCta } = useProductAccess()
+const introCta = computed(() => getIntroCta(`public-profile-${entry.slug}`))
 const publicProfileUrl = runtimeConfig.public.appUrl
   ? new URL(`/people/${buildPublicProfileSlug(profile)}`, `${runtimeConfig.public.appUrl}/`).toString()
   : undefined
@@ -52,8 +54,8 @@ usePageSeo(profile.displayName, profile.headline, {
         <BaseButton variant="secondary" to="/people">
           All public profiles
         </BaseButton>
-        <BaseButton to="/auth/sign-up">
-          Request intro on CoFoundry
+        <BaseButton :to="introCta.to">
+          {{ introCta.label }}
         </BaseButton>
       </template>
     </PageIntro>
@@ -215,7 +217,7 @@ usePageSeo(profile.displayName, profile.headline, {
             </div>
           </div>
           <p class="muted text-xs mt-4">
-            Public page last refreshed from demo seed data on {{ formatDate(profile.trustSignals.lastActiveAt) }}.
+            Profile availability snapshot last updated {{ formatDate(profile.trustSignals.lastActiveAt) }}.
           </p>
         </div>
       </section>

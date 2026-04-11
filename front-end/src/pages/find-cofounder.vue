@@ -8,6 +8,10 @@ const publicOpportunities = getPublicOpportunities(workspaceSeed)
 const roleHubs = getRoleHubs(workspaceSeed)
 const industryHubs = getIndustryHubs(workspaceSeed)
 const stageHubs = getStageHubs(workspaceSeed)
+const { buildAccessRequestPath, policy } = useProductAccess()
+const directoryAccessCta = computed(() => policy.value.accountsEnabled
+  ? { label: "Create your profile", to: "/auth/sign-up" }
+  : { label: "Request access", to: buildAccessRequestPath("find-cofounder", "access") })
 
 usePageSeo(
   "Find a cofounder",
@@ -33,8 +37,8 @@ usePageSeo(
             CoFoundry exposes opt-in public founder profiles and startup searches for people who want to be found. Direct contact still runs through mutual intent, but the public layer proves that real inventory exists before you sign up.
           </p>
           <div class="mt-8 flex flex-wrap gap-3">
-            <BaseButton size="lg" to="/auth/sign-up">
-              Create your profile
+            <BaseButton size="lg" :to="directoryAccessCta.to">
+              {{ directoryAccessCta.label }}
             </BaseButton>
             <BaseButton size="lg" variant="secondary" to="/people">
               Browse public profiles

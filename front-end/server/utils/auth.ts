@@ -4,6 +4,8 @@ import { Buffer } from "node:buffer"
 import { createHmac, timingSafeEqual } from "node:crypto"
 import process from "node:process"
 import { workspaceSeed } from "~/shared/data/seed"
+import { isLocalDevelopmentEnvironment, readPublicEnvironment } from "~/shared/utils/environment"
+import { resolveProductAccessPolicy } from "~/shared/utils/product-access"
 import { decodeSessionUser, encodeSessionUser, sessionCookieName, sessionSignatureCookieName } from "~/shared/utils/session"
 import { signInSchema, signUpSchema } from "~/shared/utils/validation"
 import { buildSessionUser } from "~/shared/utils/workspace"
@@ -42,6 +44,27 @@ function verifySessionSignature(session: Pick<SessionUser, "id" | "email">, sign
 
 function getAuthoritativeSessionByUserId(userId: string) {
   return registeredSessions.get(userId) || buildSessionUser(workspaceSeed, userId)
+}
+
+function areAccountsEnabledForCurrentEnvironment() {
+  const publicEnvironment = readPublicEnvironment(process.env)
+  const policy = resolveProductAccessPolicy({
+    backendMode: publicEnvironment.backendMode,
+    billingMode: publicEnvironment.billingMode,
+    enableDemoAccess: publicEnvironment.enableDemoAccess,
+  }, isLocalDevelopmentEnvironment(process.env))
+
+  return policy.accountsEnabled
+}
+
+export function assertAccountAccessEnabled() {
+  if (areAccountsEnabledForCurrentEnvironment())
+    return
+
+  throw createError({
+    statusCode: 403,
+    statusMessage: "Workspace access is opening in phases. Request access from the CoFoundry team.",
+  })
 }
 
 export function readSession(event: H3Event) {

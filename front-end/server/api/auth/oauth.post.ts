@@ -1,6 +1,7 @@
-import { getMockSessionByUserId, writeSession } from "~/server/utils/auth"
+import { assertAccountAccessEnabled, getMockSessionByUserId, writeSession } from "~/server/utils/auth"
 
 export default defineEventHandler(async (event) => {
+  assertAccountAccessEnabled()
   const body = await readBody<{ provider: "google" | "github" }>(event)
   const providerMap = {
     github: "user_olivia",

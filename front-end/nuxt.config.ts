@@ -65,6 +65,7 @@ export default defineNuxtConfig({
       appUrl: environment.public.appUrl,
       backendMode: environment.public.backendMode,
       billingMode: environment.public.billingMode,
+      enableDemoAccess: environment.public.enableDemoAccess,
       featureInvestmentModule: environment.public.featureInvestmentModule,
       stripePriceProMonthly: environment.public.stripePriceProMonthly,
       stripePriceTeamMonthly: environment.public.stripePriceTeamMonthly,
