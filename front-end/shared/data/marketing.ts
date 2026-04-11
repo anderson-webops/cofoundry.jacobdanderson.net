@@ -135,7 +135,7 @@ export const faqs = [
   },
   {
     question: "Are profiles public to the open internet?",
-    answer: "Discovery is designed to happen inside the member network. Public marketing content can rank in search, but people profiles and direct contact are intentionally gated for trust and spam control.",
+    answer: "Only if you opt in. CoFoundry now supports public profile previews and startup opportunity pages for members who want searchable visibility, while direct contact details remain gated behind mutual-intent rules.",
   },
   {
     question: "Why do you limit outreach on the free tier?",

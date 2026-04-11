@@ -1,7 +1,9 @@
 <script setup lang="ts">
 const router = useRouter()
 
-usePageSeo("Page not found")
+usePageSeo("Page not found", "The requested CoFoundry page could not be found.", {
+  robots: "noindex, nofollow",
+})
 </script>
 
 <template>

@@ -3,11 +3,11 @@ export const appTagline = "Find the people you can build a company with."
 export const appDescription = "CoFoundry helps founders and startup collaborators match, structure proposals, and move from interest to agreement without leaving the platform."
 
 export const marketingNavigation = [
+  { label: "Find a cofounder", to: "/find-cofounder" },
   { label: "How it works", to: "/how-it-works" },
   { label: "Pricing", to: "/pricing" },
-  { label: "Trust & Safety", to: "/safety" },
-  { label: "FAQ", to: "/faq" },
-  { label: "Contact", to: "/contact" },
+  { label: "Trust Center", to: "/trust" },
+  { label: "Resources", to: "/contracts" },
 ]
 
 export const appNavigation = [

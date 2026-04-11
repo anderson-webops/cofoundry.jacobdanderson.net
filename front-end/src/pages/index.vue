@@ -1,8 +1,17 @@
 <script setup lang="ts">
 import { appDescription, appTagline } from "~/shared/constants/app"
 import { heroMetrics, howItWorksSteps, pricingTiers, researchPrinciples, testimonials } from "~/shared/data/marketing"
+import { contractGuidePages, trustCenterPages } from "~/shared/data/public-content"
+import { workspaceSeed } from "~/shared/data/seed"
+import { getIndustryHubs, getRoleHubs, getStageHubs } from "~/shared/utils/directory"
 
-usePageSeo("Build startup teams with more structure", appDescription)
+const roleHubs = getRoleHubs(workspaceSeed)
+const industryHubs = getIndustryHubs(workspaceSeed)
+const stageHubs = getStageHubs(workspaceSeed)
+
+usePageSeo("Build startup teams with more structure", appDescription, {
+  canonicalPath: "/",
+})
 </script>
 
 <template>
@@ -112,6 +121,70 @@ usePageSeo("Build startup teams with more structure", appDescription)
     <section class="py-16">
       <div class="page-shell">
         <PageIntro
+          eyebrow="Search entry points"
+          title="A public layer built around real search intent."
+          description="CoFoundry now exposes public role, industry, stage, profile, and startup-search pages so serious users can evaluate the market before they commit to joining it."
+        >
+          <template #actions>
+            <BaseButton variant="secondary" to="/find-cofounder">
+              Browse public directory
+            </BaseButton>
+          </template>
+        </PageIntro>
+
+        <div class="mt-10 gap-5 grid lg:grid-cols-3">
+          <article class="panel p-6">
+            <p class="section-kicker">
+              Roles
+            </p>
+            <div class="mt-4 gap-3 grid">
+              <NuxtLink v-for="hub in roleHubs.slice(0, 4)" :key="hub.slug" :to="`/roles/${hub.slug}`" class="panel-inset p-4">
+                <p class="font-semibold">
+                  {{ hub.label }}
+                </p>
+                <p class="muted text-sm mt-2">
+                  {{ hub.profileCount }} profiles · {{ hub.opportunityCount }} searches
+                </p>
+              </NuxtLink>
+            </div>
+          </article>
+          <article class="panel p-6">
+            <p class="section-kicker">
+              Industries
+            </p>
+            <div class="mt-4 gap-3 grid">
+              <NuxtLink v-for="hub in industryHubs.slice(0, 4)" :key="hub.slug" :to="`/industries/${hub.slug}`" class="panel-inset p-4">
+                <p class="font-semibold">
+                  {{ hub.label }}
+                </p>
+                <p class="muted text-sm mt-2">
+                  {{ hub.profileCount }} profiles · {{ hub.opportunityCount }} searches
+                </p>
+              </NuxtLink>
+            </div>
+          </article>
+          <article class="panel p-6">
+            <p class="section-kicker">
+              Stages
+            </p>
+            <div class="mt-4 gap-3 grid">
+              <NuxtLink v-for="hub in stageHubs.slice(0, 4)" :key="hub.slug" :to="`/stage/${hub.slug}`" class="panel-inset p-4">
+                <p class="font-semibold">
+                  {{ hub.label }}
+                </p>
+                <p class="muted text-sm mt-2">
+                  {{ hub.profileCount }} profiles · {{ hub.opportunityCount }} searches
+                </p>
+              </NuxtLink>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="py-16">
+      <div class="page-shell">
+        <PageIntro
           eyebrow="Research-backed product principles"
           title="The site now reflects what actually reduces failed founder matches."
           description="The best improvements were not more social features. They were tighter intent, faster trust assessment, and a better path from match to real working relationship."
@@ -125,6 +198,58 @@ usePageSeo("Build startup teams with more structure", appDescription)
               {{ principle.body }}
             </p>
           </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="py-16">
+      <div class="page-shell gap-8 grid lg:grid-cols-2">
+        <div class="panel p-6 md:p-8">
+          <p class="section-kicker">
+            Trust Center
+          </p>
+          <h2 class="text-3xl tracking-tight font-semibold mt-3">
+            Search visibility without a safety model is noise.
+          </h2>
+          <div class="mt-6 gap-4 grid">
+            <NuxtLink
+              v-for="page in trustCenterPages"
+              :key="page.slug"
+              :to="`/trust/${page.slug}`"
+              class="panel-inset p-4"
+            >
+              <p class="font-semibold">
+                {{ page.title }}
+              </p>
+              <p class="muted text-sm leading-6 mt-2">
+                {{ page.description }}
+              </p>
+            </NuxtLink>
+          </div>
+        </div>
+
+        <div class="panel p-6 md:p-8">
+          <p class="section-kicker">
+            Contract resources
+          </p>
+          <h2 class="text-3xl tracking-tight font-semibold mt-3">
+            The workflow differentiator now has public entry points.
+          </h2>
+          <div class="mt-6 gap-4 grid">
+            <NuxtLink
+              v-for="page in contractGuidePages"
+              :key="page.slug"
+              :to="`/contracts/${page.slug}`"
+              class="panel-inset p-4"
+            >
+              <p class="font-semibold">
+                {{ page.title }}
+              </p>
+              <p class="muted text-sm leading-6 mt-2">
+                {{ page.description }}
+              </p>
+            </NuxtLink>
+          </div>
         </div>
       </div>
     </section>
