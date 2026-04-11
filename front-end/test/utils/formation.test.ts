@@ -9,9 +9,12 @@ describe("formation utilities", () => {
     expect(profile).toBeDefined()
 
     const checklist = buildIntentChecklist(profile!)
+    const readiness = buildProfileReadiness(profile!)
 
     expect(checklist).toHaveLength(7)
     expect(checklist.every(item => item.complete)).toBe(true)
+    expect(readiness.trustReady).toBe(true)
+    expect(readiness.trustPercent).toBe(100)
   })
 
   it("scores higher-trust profiles above weaker-signal ones", () => {
@@ -38,6 +41,7 @@ describe("formation utilities", () => {
     expect(draft).toBeDefined()
 
     draft!.displayName = "Jordan Alvarez"
+    draft!.photoUrl = ""
     draft!.headline = "Founding operator evaluating serious workflow software teams."
     draft!.bio = "I want to join an early-stage company where the customer problem is already clear and the founder wants an operator to own execution."
     draft!.location = "Chicago, IL"
@@ -82,7 +86,9 @@ describe("formation utilities", () => {
     expect(readiness.percent).toBeGreaterThan(0)
     expect(readiness.profileComplete).toBe(false)
     expect(readiness.readyForOutreach).toBe(false)
+    expect(readiness.trustReady).toBe(false)
     expect(readiness.missingOutreachItems).toContain("Proof and links")
+    expect(readiness.missingTrustItems).toContain("Recognizable profile")
     expect(readiness.missingOutreachItems).toContain("IP readiness")
     expect(readiness.missingOutreachItems).toContain("Phone verification")
   })

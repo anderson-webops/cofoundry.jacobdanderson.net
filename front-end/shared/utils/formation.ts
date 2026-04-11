@@ -91,6 +91,12 @@ export interface ProfileReadinessState {
   completedCount: number
   totalCount: number
   percent: number
+  trustChecklist: ProfileReadinessItem[]
+  trustCompletedCount: number
+  trustTotalCount: number
+  trustPercent: number
+  trustReady: boolean
+  missingTrustItems: string[]
   profileComplete: boolean
   readyForOutreach: boolean
   missingOutreachItems: string[]
@@ -111,6 +117,100 @@ function hasProofLink(profile: Profile) {
     || profile.links.website
     || profile.trustSignals.builderProofs.length,
   )
+}
+
+function hasProfessionalProofLink(profile: Profile) {
+  return Boolean(
+    profile.links.github
+    || profile.links.portfolio
+    || profile.links.website
+    || profile.trustSignals.builderProofs.length,
+  )
+}
+
+function hasRecognizableProfile(profile: Profile) {
+  return Boolean(profile.photoUrl.trim() && profile.displayName.trim() && profile.location.trim())
+}
+
+export function buildVerifiedLinkCount(profile: Profile) {
+  return [
+    profile.trustSignals.linkedInVerified,
+    profile.trustSignals.githubVerified,
+    profile.trustSignals.workDomainVerified,
+    profile.trustSignals.websiteVerified,
+  ].filter(Boolean).length
+}
+
+function buildTrustReadinessChecklist(profile: Profile): ProfileReadinessItem[] {
+  const verifiedLinkCount = buildVerifiedLinkCount(profile)
+  const recognizableProfileComplete = hasRecognizableProfile(profile)
+  const identityRailsComplete = Boolean(
+    profile.verificationBadges.emailVerified
+    && (profile.trustSignals.phoneVerified || profile.trustSignals.governmentIdVerified)
+    && verifiedLinkCount >= 1,
+  )
+  const proofOfWorkComplete = hasProfessionalProofLink(profile)
+  const roleContextComplete = Boolean(
+    profile.roleScope.primaryRole
+    && profile.roles.length
+    && profile.yearsExperience >= 1
+    && profile.headline.trim().length >= 10,
+  )
+  const availabilityComplete = Boolean(
+    profile.location.trim()
+    && profile.commitmentProfile.weeklyAvailabilityHours >= 1
+    && profile.intent.startTimeline
+    && profile.commitmentProfile.fullTimeBy,
+  )
+  const intentClarityComplete = Boolean(
+    profile.intent.companyPreferences.length
+    && profile.intent.introCapacity.trim().length >= 6,
+  )
+
+  return [
+    {
+      id: "recognizable_profile",
+      title: "Recognizable profile",
+      complete: recognizableProfileComplete,
+      description: recognizableProfileComplete ? "Photo, name, and location are visible at scan speed." : "Add a clear profile photo, full name, and location or timezone.",
+    },
+    {
+      id: "identity_rails",
+      title: "Verified identity rails",
+      complete: identityRailsComplete,
+      description: identityRailsComplete
+        ? `${verifiedLinkCount} verified professional link${verifiedLinkCount === 1 ? "" : "s"} plus phone or ID assurance.`
+        : "Verify at least one professional link plus phone or ID so the profile is harder to fake.",
+    },
+    {
+      id: "proof_of_work",
+      title: "Proof of work",
+      complete: proofOfWorkComplete,
+      description: proofOfWorkComplete ? "A portfolio, repo, website, or evidence card is attached." : "Add a shipped product, repo, portfolio, or other inspectable proof link.",
+    },
+    {
+      id: "role_context",
+      title: "Role context",
+      complete: roleContextComplete,
+      description: roleContextComplete ? `${profile.roleScope.primaryRole} · ${profile.yearsExperience}+ years` : "State your primary role, headline, and experience so people know what you can really own.",
+    },
+    {
+      id: "availability",
+      title: "Availability and timing",
+      complete: availabilityComplete,
+      description: availabilityComplete
+        ? `${profile.commitmentProfile.weeklyAvailabilityHours}h/week · ${formatStartTimeline(profile.intent.startTimeline)}`
+        : "Declare hours per week, timing, and location so people can judge seriousness quickly.",
+    },
+    {
+      id: "intent_clarity",
+      title: "Intent clarity",
+      complete: intentClarityComplete,
+      description: intentClarityComplete
+        ? `${profile.intent.companyPreferences.slice(0, 2).join(", ")} · ${profile.intent.introCapacity}`
+        : "Explain what kind of company you want and how many serious conversations you can support now.",
+    },
+  ]
 }
 
 function buildProfileReadinessChecklist(profile: Profile): ProfileReadinessItem[] {
@@ -233,6 +333,13 @@ export function buildProfileReadiness(profile: Profile): ProfileReadinessState {
   const checklist = buildProfileReadinessChecklist(profile)
   const completedCount = checklist.filter(item => item.complete).length
   const totalCount = checklist.length
+  const trustChecklist = buildTrustReadinessChecklist(profile)
+  const trustCompletedCount = trustChecklist.filter(item => item.complete).length
+  const trustTotalCount = trustChecklist.length
+  const trustRequiredItemIds = new Set(["recognizable_profile", "identity_rails", "proof_of_work", "role_context", "availability", "intent_clarity"])
+  const missingTrustItems = trustChecklist
+    .filter(item => trustRequiredItemIds.has(item.id) && !item.complete)
+    .map(item => item.title)
   const outreachRequiredItemIds = new Set(["identity", "role_signal", "company_fit", "commitment", "proof", "guardrails", "governance", "ip_readiness"])
   const missingOutreachItems = checklist
     .filter(item => outreachRequiredItemIds.has(item.id) && !item.complete)
@@ -246,6 +353,12 @@ export function buildProfileReadiness(profile: Profile): ProfileReadinessState {
     completedCount,
     totalCount,
     percent: Math.round((completedCount / totalCount) * 100),
+    trustChecklist,
+    trustCompletedCount,
+    trustTotalCount,
+    trustPercent: Math.round((trustCompletedCount / trustTotalCount) * 100),
+    trustReady: missingTrustItems.length === 0,
+    missingTrustItems,
     profileComplete: checklist.every(item => item.complete),
     readyForOutreach: missingOutreachItems.length === 0,
     missingOutreachItems,
@@ -253,16 +366,19 @@ export function buildProfileReadiness(profile: Profile): ProfileReadinessState {
 }
 
 export function buildProfileTrustTier(profile: Profile): TrustTier {
+  const readiness = buildProfileReadiness(profile)
+
   if (profile.trustSignals.governmentIdVerified ?? false)
     return "level_c"
 
-  if ((profile.trustSignals.phoneVerified ?? false) && buildProfileReadiness(profile).readyForOutreach)
+  if (readiness.trustReady)
     return "level_b"
 
   return "level_a"
 }
 
 export function buildProfileTrustScore(profile: Profile) {
+  const readiness = buildProfileReadiness(profile)
   let score = 0
 
   if (buildProfileTrustTier(profile) === "level_c")
@@ -270,6 +386,10 @@ export function buildProfileTrustScore(profile: Profile) {
   else if (buildProfileTrustTier(profile) === "level_b")
     score += 2
 
+  score += Math.round(readiness.trustPercent / 20)
+
+  if (hasRecognizableProfile(profile))
+    score += 2
   if (profile.verificationBadges.profileComplete)
     score += 2
   if (profile.verificationBadges.emailVerified)
@@ -280,7 +400,11 @@ export function buildProfileTrustScore(profile: Profile) {
     score += 1
   if (profile.trustSignals.linkedInVerified)
     score += 1
+  if (profile.trustSignals.githubVerified)
+    score += 1
   if (profile.trustSignals.workDomainVerified)
+    score += 1
+  if (profile.trustSignals.websiteVerified)
     score += 1
   if (profile.trustSignals.identityVerified)
     score += 2

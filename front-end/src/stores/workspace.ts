@@ -41,6 +41,7 @@ const opportunitySlugTrimPattern = /^-|-$/g
 interface MinimumOnboardingPayload {
   intentMode: "start" | "join" | "explore"
   displayName: string
+  photoUrl: string
   headline: string
   bio: string
   location: string
@@ -60,6 +61,7 @@ interface MinimumOnboardingPayload {
 
 interface FullProfilePayload {
   displayName: string
+  photoUrl: string
   headline: string
   bio: string
   location: string
@@ -225,8 +227,10 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       || profile.links.website,
     )
     profile.trustSignals.workHistoryVerified = profile.trustSignals.workHistoryVerified || Boolean(profile.links.linkedin || profile.links.website)
-    profile.trustSignals.linkedInVerified = profile.trustSignals.linkedInVerified || Boolean(profile.links.linkedin)
-    profile.trustSignals.identityVerified = profile.trustSignals.governmentIdVerified || (profile.verificationBadges.emailVerified && Boolean(profile.links.linkedin))
+    profile.trustSignals.identityVerified = profile.trustSignals.governmentIdVerified || Boolean(
+      profile.verificationBadges.emailVerified
+      && (profile.trustSignals.linkedInVerified || profile.trustSignals.githubVerified || profile.trustSignals.workDomainVerified || profile.trustSignals.websiteVerified),
+    )
     profile.availability = profile.intent.introCapacity || `${profile.timeCommitment.replaceAll("_", " ")} availability`
     profile.summaryHighlights = [
       profile.hasIdea && !profile.wantsToJoinIdea
@@ -235,7 +239,9 @@ export const useWorkspaceStore = defineStore("workspace", () => {
             ? "Actively looking to join a serious founding team"
             : "Exploring both founder and collaborator paths",
       `${profile.roleScope.primaryRole || profile.roles[0] || "Generalist"} · ${profile.commitmentProfile.weeklyAvailabilityHours}h/week · ${profile.intent.startTimeline.replaceAll("_", " ")}`,
-      profile.intent.companyPreferences.slice(0, 2).join(" · ") || "Refine company fit preferences",
+      profile.trustSignals.builderProofs.length
+        ? `${profile.trustSignals.builderProofs.length} evidence card${profile.trustSignals.builderProofs.length === 1 ? "" : "s"} · ${profile.trustSignals.replyRatePercent}% replies`
+        : profile.intent.companyPreferences.slice(0, 2).join(" · ") || "Refine company fit preferences",
     ]
     user.role = deriveUserRole(profile.hasIdea, profile.wantsToJoinIdea)
   }
@@ -265,6 +271,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
         id: `profile_${session.id}`,
         userId: session.id,
         displayName: session.name,
+        photoUrl: "",
         headline: "New member getting their founder profile ready.",
         bio: "Add your background, experience, and operating style to start matching with the right people.",
         location: "Remote",
@@ -335,7 +342,9 @@ export const useWorkspaceStore = defineStore("workspace", () => {
           workHistoryVerified: false,
           phoneVerified: false,
           linkedInVerified: false,
+          githubVerified: false,
           workDomainVerified: false,
+          websiteVerified: false,
           governmentIdVerified: false,
           builderProofs: [],
         },
@@ -381,6 +390,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       return
 
     profile.displayName = payload.displayName
+    profile.photoUrl = payload.photoUrl
     profile.headline = payload.headline
     profile.bio = payload.bio
     profile.location = payload.location
@@ -419,6 +429,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       return
 
     profile.displayName = payload.displayName
+    profile.photoUrl = payload.photoUrl
     profile.headline = payload.headline
     profile.bio = payload.bio
     profile.location = payload.location
@@ -919,7 +930,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     })
   }
 
-  function completeTrustVerification(userId: string, verificationType: "phone" | "linkedin" | "work_domain" | "government_id") {
+  function completeTrustVerification(userId: string, verificationType: "phone" | "linkedin" | "github" | "website" | "work_domain" | "government_id") {
     const profile = getProfileByUserId(data.value, userId)
     if (!profile)
       return
@@ -928,12 +939,36 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       profile.trustSignals.phoneVerified = true
 
     if (verificationType === "linkedin") {
+      if (!profile.links.linkedin)
+        return
+
       profile.trustSignals.linkedInVerified = true
       profile.verificationBadges.linkedAccounts = true
       profile.trustSignals.workHistoryVerified = true
     }
 
+    if (verificationType === "github") {
+      if (!profile.links.github)
+        return
+
+      profile.trustSignals.githubVerified = true
+      profile.verificationBadges.linkedAccounts = true
+      profile.trustSignals.workHistoryVerified = true
+    }
+
+    if (verificationType === "website") {
+      if (!profile.links.website)
+        return
+
+      profile.trustSignals.websiteVerified = true
+      profile.verificationBadges.linkedAccounts = true
+      profile.trustSignals.workHistoryVerified = true
+    }
+
     if (verificationType === "work_domain") {
+      if (!profile.links.website)
+        return
+
       profile.trustSignals.workDomainVerified = true
       profile.trustSignals.workHistoryVerified = true
     }

@@ -47,9 +47,36 @@ function resetDemoData() {
   })
 }
 
-function verify(type: "phone" | "linkedin" | "work_domain" | "government_id", label: string) {
-  if (!authStore.currentUser)
+function verify(type: "phone" | "linkedin" | "github" | "website" | "work_domain" | "government_id", label: string) {
+  if (!authStore.currentUser || !profile.value)
     return
+
+  if (type === "linkedin" && !profile.value.links.linkedin) {
+    toastStore.push({
+      title: "Add LinkedIn first",
+      message: "Attach your LinkedIn URL on the profile editor before verifying it.",
+      tone: "warning",
+    })
+    return
+  }
+
+  if (type === "github" && !profile.value.links.github) {
+    toastStore.push({
+      title: "Add GitHub first",
+      message: "Attach your GitHub URL on the profile editor before verifying it.",
+      tone: "warning",
+    })
+    return
+  }
+
+  if ((type === "website" || type === "work_domain") && !profile.value.links.website) {
+    toastStore.push({
+      title: "Add a website first",
+      message: "Attach your personal or company site before verifying the domain.",
+      tone: "warning",
+    })
+    return
+  }
 
   workspaceStore.completeTrustVerification(authStore.currentUser.id, type)
   toastStore.push({
@@ -101,10 +128,17 @@ function verify(type: "phone" | "linkedin" | "work_domain" | "government_id", la
         <div class="mt-5">
           <TrustSignalStrip v-if="profile" :profile="profile" />
         </div>
+        <div v-if="profile" class="mt-5">
+          <TrustReadinessPanel
+            :profile="profile"
+            title="Trust-critical checklist"
+            description="These are the fields and verifications CoFoundry expects before a profile should rank as high-trust."
+          />
+        </div>
         <div class="muted text-sm mt-4 gap-3 grid">
           <div>Current tier: {{ formatTrustTier(trustTier) }}</div>
           <div>Level A: verified email and baseline profile.</div>
-          <div>Level B: phone verification plus an outreach-ready profile.</div>
+          <div>Level B: verified identity rails, proof, availability, and intent clarity.</div>
           <div>Level C: government ID assurance for higher-risk workflows like contract signing.</div>
         </div>
         <div class="mt-5 flex flex-wrap gap-3">
@@ -113,6 +147,12 @@ function verify(type: "phone" | "linkedin" | "work_domain" | "government_id", la
           </BaseButton>
           <BaseButton variant="secondary" @click="verify('linkedin', 'LinkedIn verification')">
             Verify LinkedIn
+          </BaseButton>
+          <BaseButton variant="secondary" @click="verify('github', 'GitHub verification')">
+            Verify GitHub
+          </BaseButton>
+          <BaseButton variant="secondary" @click="verify('website', 'Website verification')">
+            Verify website
           </BaseButton>
           <BaseButton variant="secondary" @click="verify('work_domain', 'Work-domain verification')">
             Verify work domain

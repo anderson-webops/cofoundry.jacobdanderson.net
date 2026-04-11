@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { formatContactRevealStage, formatCurrentWorkStatus, formatDeadlockPreference, formatDecisionModelPreference, formatEquityPhilosophy, formatLeadershipPreference, formatRelativeDate, formatRunwayBucket, formatStartTimeline } from "~/shared/utils/format"
-import { buildProfileReadiness, buildProfileTrustScore } from "~/shared/utils/formation"
+import { buildProfileReadiness } from "~/shared/utils/formation"
 import { getProfileSkills } from "~/shared/utils/workspace"
 
 definePageMeta({
@@ -14,7 +14,6 @@ const { profile, workspaceStore } = useCurrentMember()
 const tab = ref<"public" | "private">("public")
 
 const skillEntries = computed(() => profile.value ? getProfileSkills(workspaceStore.data, profile.value.id) : [])
-const trustScore = computed(() => profile.value ? buildProfileTrustScore(profile.value) : 0)
 const readiness = computed(() => profile.value ? buildProfileReadiness(profile.value) : null)
 </script>
 
@@ -34,15 +33,35 @@ const readiness = computed(() => profile.value ? buildProfileReadiness(profile.v
 
     <div class="gap-6 grid xl:grid-cols-[0.95fr_1.05fr]">
       <section class="panel p-6">
+        <div class="flex gap-4 items-start">
+          <ProfileAvatar :display-name="profile.displayName" :photo-url="profile.photoUrl" size="lg" />
+          <div class="min-w-0">
+            <div class="flex flex-wrap gap-2">
+              <BaseBadge :tone="readiness?.profileComplete ? 'success' : 'warning'">
+                {{ readiness?.profileComplete ? "Completed profile" : `Profile strength ${readiness?.percent}%` }}
+              </BaseBadge>
+              <BaseBadge :tone="readiness?.trustReady ? 'success' : 'accent'">
+                {{ readiness?.trustPercent || 0 }}% trust-critical
+              </BaseBadge>
+              <BaseBadge :tone="profile.verificationBadges.emailVerified ? 'success' : 'warning'">
+                Verified email
+              </BaseBadge>
+              <BaseBadge :tone="profile.verificationBadges.linkedAccounts ? 'accent' : 'neutral'">
+                {{ profile.verificationBadges.linkedAccounts ? "Linked accounts" : "No linked accounts" }}
+              </BaseBadge>
+            </div>
+            <p class="muted text-sm leading-6 mt-4">
+              A visible trust score is no longer shown to members. CoFoundry ranks profiles privately and exposes the underlying evidence instead.
+            </p>
+          </div>
+        </div>
+
         <div class="flex flex-wrap gap-2">
-          <BaseBadge :tone="readiness?.profileComplete ? 'success' : 'warning'">
-            {{ readiness?.profileComplete ? "Completed profile" : `Profile strength ${readiness?.percent}%` }}
+          <BaseBadge tone="neutral">
+            {{ profile.location }}
           </BaseBadge>
-          <BaseBadge :tone="profile.verificationBadges.emailVerified ? 'success' : 'warning'">
-            Verified email
-          </BaseBadge>
-          <BaseBadge :tone="profile.verificationBadges.linkedAccounts ? 'accent' : 'neutral'">
-            {{ profile.verificationBadges.linkedAccounts ? "Linked accounts" : "No linked accounts" }}
+          <BaseBadge tone="neutral">
+            {{ profile.roleScope.primaryRole || profile.roles[0] }}
           </BaseBadge>
         </div>
 
@@ -56,7 +75,7 @@ const readiness = computed(() => profile.value ? buildProfileReadiness(profile.v
 
         <div class="mt-6 gap-4 grid md:grid-cols-2">
           <MetricTile label="Location" :value="profile.location" />
-          <MetricTile label="Trust score" :value="trustScore" />
+          <MetricTile label="Trust-critical fields" :value="`${readiness?.trustPercent || 0}%`" context="Recognizable profile, verification rails, proof, role context, availability, and intent clarity." />
           <MetricTile label="Profile readiness" :value="`${readiness?.percent || 0}%`" />
           <MetricTile label="Commitment" :value="profile.timeCommitment.replaceAll('_', ' ')" />
           <MetricTile label="Start timeline" :value="formatStartTimeline(profile.intent.startTimeline)" />
@@ -65,8 +84,12 @@ const readiness = computed(() => profile.value ? buildProfileReadiness(profile.v
         </div>
 
         <div class="mt-6">
+          <TrustReadinessPanel :profile="profile" />
+        </div>
+
+        <div class="mt-6">
           <h2 class="text-lg font-semibold">
-            Proof of work
+            Evidence and proof of work
           </h2>
           <div class="mt-4 gap-3 grid">
             <a

@@ -27,6 +27,7 @@ describe("validation schemas", () => {
   it("requires structured onboarding data", () => {
     const result = onboardingSchema.safeParse({
       displayName: "Malik Thompson",
+      photoUrl: "https://example.com/malik.jpg",
       headline: "Staff engineer building a long-term company with a serious founder.",
       bio: "I want a high-trust founder partnership with clear customer access, strong judgment, and enough detail to evaluate fit well.",
       location: "Austin, TX",
@@ -130,6 +131,7 @@ describe("validation schemas", () => {
     const result = minimumOnboardingSchema.safeParse({
       intentMode: "join",
       displayName: "Malik Thompson",
+      photoUrl: "https://example.com/malik.jpg",
       headline: "Technical co-founder looking for a serious workflow software founder.",
       bio: "I want to join a technical, high-trust founding team where customer access and decision rights are clear from day one.",
       location: "Austin, TX",

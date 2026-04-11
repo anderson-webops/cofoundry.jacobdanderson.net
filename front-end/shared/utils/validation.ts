@@ -22,6 +22,7 @@ export const contactSchema = z.object({
 export const minimumOnboardingSchema = z.object({
   intentMode: z.enum(["start", "join", "explore"]),
   displayName: z.string().min(2, "Name is required."),
+  photoUrl: z.string().url("Add a valid profile photo URL."),
   headline: z.string().min(10, "Write a clearer one-line summary."),
   bio: z.string().min(40, "Describe what you want to build or join with enough detail to evaluate fit."),
   location: z.string().min(2, "Location is required."),
@@ -41,6 +42,7 @@ export const minimumOnboardingSchema = z.object({
 
 export const onboardingSchema = z.object({
   displayName: z.string().min(2, "Name is required."),
+  photoUrl: z.string().url("Add a valid profile photo URL."),
   headline: z.string().min(10, "Write a clearer headline."),
   bio: z.string().min(60, "Tell people enough to understand your background."),
   location: z.string().min(2, "Location is required."),

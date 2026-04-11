@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { recommendOpportunitiesForProfile, recommendProfilesForProfile } from "~/shared/utils/discovery"
 import { formatPlanName } from "~/shared/utils/format"
-import { buildProfileReadiness, buildProfileTrustScore } from "~/shared/utils/formation"
+import { buildProfileReadiness } from "~/shared/utils/formation"
 import { getContractsForUser, getIncomingConnectRequestsForUser, getMatchesForUser, getOutgoingConnectRequestsForUser, getProfileByUserId, getProfileSkills, getProposalsForUser, getTrialsForUser } from "~/shared/utils/workspace"
 
 definePageMeta({
@@ -24,7 +24,6 @@ const matches = computed(() => currentUserId.value ? getMatchesForUser(workspace
 const contracts = computed(() => currentUserId.value ? getContractsForUser(workspaceStore.data, currentUserId.value).slice(0, 2) : [])
 const trials = computed(() => currentUserId.value ? getTrialsForUser(workspaceStore.data, currentUserId.value).slice(0, 2) : [])
 const notifications = computed(() => currentUserId.value ? workspaceStore.data.notifications.filter(notification => notification.userId === currentUserId.value).slice(0, 4) : [])
-const trustScore = computed(() => profile.value ? buildProfileTrustScore(profile.value) : 0)
 const incomingRequests = computed(() => {
   if (!currentUserId.value)
     return []
@@ -102,7 +101,7 @@ function getContractVersion(contractId: string) {
 
     <div class="gap-4 grid md:grid-cols-4">
       <MetricTile label="Profile completion" :value="`${readiness?.percent || 0}%`" context="The stronger the profile, the faster CoFoundry can unlock outreach and proposals." />
-      <MetricTile label="Trust score" :value="trustScore" context="Combines proof of work, verification, recency, and response speed." />
+      <MetricTile label="Trust-critical fields" :value="`${readiness?.trustPercent || 0}%`" context="Private ranking still exists, but members now see the evidence that drives credibility instead of a vanity score." />
       <MetricTile label="Matches" :value="matches.length" context="Mutual connections that unlock messaging." />
       <MetricTile label="Open intros" :value="incomingRequests.length + outgoingRequests.length" context="Pending requests that still need a real answer or follow-through." />
     </div>

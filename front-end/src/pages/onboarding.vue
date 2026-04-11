@@ -30,6 +30,7 @@ const initialValues = computed(() => {
   return {
     intentMode: inferIntentMode(),
     displayName: profile.value.displayName,
+    photoUrl: profile.value.photoUrl,
     headline: profile.value.headline,
     bio: profile.value.bio,
     location: profile.value.location,
@@ -84,7 +85,7 @@ async function submitProfile(payload: any) {
       Reach the first credible match before the form gets heavy.
     </h1>
     <p class="muted text-sm leading-6 mt-4">
-      This first pass is intentionally short. CoFoundry needs enough signal to rank the right people: role, weekly bandwidth, runway, timing, and equity philosophy. The deeper profile fields can unlock outreach, proposals, and contracts.
+      This first pass is intentionally short. CoFoundry needs enough signal to rank the right people: a recognizable profile, role, weekly bandwidth, runway, timing, and equity philosophy. The deeper profile fields can unlock outreach, proposals, and contracts.
     </p>
 
     <div v-if="!previewUnlocked" class="mt-8">
@@ -106,8 +107,8 @@ async function submitProfile(payload: any) {
               {{ shouldShowProfilePreview ? "These are the collaborators CoFoundry would put in front of you first." : "These are the founder opportunities CoFoundry would put in front of you first." }}
             </p>
           </div>
-          <BaseBadge :tone="readiness?.readyForOutreach ? 'success' : 'accent'">
-            {{ readiness?.percent || 0 }}% profile strength
+          <BaseBadge :tone="readiness?.trustReady ? 'success' : 'accent'">
+            {{ readiness?.trustPercent || 0 }}% trust-critical
           </BaseBadge>
         </div>
 
@@ -117,6 +118,9 @@ async function submitProfile(payload: any) {
           </p>
           <p class="muted text-sm leading-6 mt-2">
             {{ readiness?.readyForOutreach ? "You are ready to send connect requests." : `Add ${readiness?.missingOutreachItems.join(", ")} to unlock outreach.` }}
+          </p>
+          <p class="muted text-sm leading-6 mt-2">
+            {{ readiness?.trustReady ? "Your trust-critical surface is complete." : `Trust-critical gaps: ${readiness?.missingTrustItems.join(", ")}.` }}
           </p>
         </div>
 

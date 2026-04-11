@@ -25,6 +25,7 @@ import { onboardingSchema } from "~/shared/utils/validation"
 const props = withDefaults(defineProps<{
   initialValues?: Partial<{
     displayName: string
+    photoUrl: string
     headline: string
     bio: string
     location: string
@@ -85,6 +86,7 @@ const existingAssetsText = ref((props.initialValues.existingAssets || []).join("
 
 const form = reactive({
   displayName: props.initialValues.displayName || "",
+  photoUrl: props.initialValues.photoUrl || "",
   headline: props.initialValues.headline || "",
   bio: props.initialValues.bio || "",
   location: props.initialValues.location || "",
@@ -191,6 +193,13 @@ function submitForm() {
         <TextInput v-model="form.displayName" label="Name" :error="errors.displayName" />
         <TextInput v-model="form.location" label="Location" :error="errors.location" />
       </div>
+      <TextInput
+        v-model="form.photoUrl"
+        label="Profile photo URL"
+        type="url"
+        helper="Use a clear headshot or recognizable profile image. This counts toward trust-critical completion."
+        :error="errors.photoUrl"
+      />
       <TextInput v-model="form.headline" label="Headline" :error="errors.headline" helper="State the role you want and the kind of company you want to build." />
       <TextareaInput v-model="form.bio" label="Bio" :error="errors.bio" :rows="6" />
       <SelectInput v-model="form.remotePreference" label="Remote preference" :options="remoteOptions" :error="errors.remotePreference" />
