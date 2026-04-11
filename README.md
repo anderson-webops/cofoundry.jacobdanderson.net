@@ -1,80 +1,174 @@
-<p align="center">
-<img src="https://user-images.githubusercontent.com/11247099/140462375-7b7ac4db-35b7-453c-8a05-13d8d20282c4.png" alt="Vitesse" width="600"/>
-</p>
+# CoFoundry
 
-<h2 align="center">
-<a href="https://github.com/antfu/vitesse">Vitesse</a> for Nuxt 4
-</h2><br>
+Production-minded MVP for a founder and collaborator matching platform, organized as an npm workspace monorepo and built on top of `antfu/vitesse-nuxt`.
 
-<p align="center">
-<br>
-<a href="https://vitesse-nuxt3.netlify.app/">🖥 Online Preview</a>
-<br><br>
-<a href="https://stackblitz.com/github/antfu/vitesse-nuxt"><img src="https://developer.stackblitz.com/img/open_in_stackblitz.svg" alt="Open in StackBlitz" /></a>
-</p>
+## Workspace layout
 
-## Features
+- `front-end`: the Nuxt 4 application, including routes, layouts, UI, server routes, typed shared domain models, and Vitest coverage
+- `back-end`: operational tooling for seed generation, Supabase migrations, and a lightweight Node service surface for backend health and environment inspection
 
-- 💚 [Nuxt 4](https://nuxt.com/) - SSR, ESR, File-based routing, components auto importing, modules, etc.
+## Stack
 
-- ⚡️ Vite - Instant HMR.
+- Nuxt 4
+- Vue 3
+- Vite
+- TypeScript
+- Pinia
+- UnoCSS
+- VueUse
+- Nitro server routes inside the frontend workspace
+- Supabase-ready schema and seed path
+- Stripe-ready checkout route with mock billing mode
+- npm workspaces at the repo root
 
-- 🎨 [UnoCSS](https://github.com/unocss/unocss) - The instant on-demand atomic CSS engine.
+## Product focus
 
-- 😃 Use icons from any icon sets in Pure CSS, powered by [UnoCSS](https://github.com/unocss/unocss).
+CoFoundry is not a freelance marketplace and not a Fiverr clone. It is centered on forming startup teams:
 
-- 🔥 The `<script setup>` syntax.
+- Founders can publish startup opportunities and find co-founders or key collaborators
+- Skilled builders and operators can discover companies to join
+- Mutual interest unlocks messaging
+- Structured proposals and editable agreement templates are first-class workflow surfaces
+- A future investment module exists behind a feature flag and is disabled by default
 
-- 🍍 [State Management via Pinia](https://github.com/vuejs/pinia), see [./app/composables/user.ts](./app/composables/user.ts).
+## Local setup
 
-- 📑 [Layout system](./app/layouts).
-
-- 📥 APIs auto importing - for Composition API, VueUse and custom composables.
-
-- 🏎 Zero-config cloud functions and deploy.
-
-- 🦾 TypeScript, of course.
-
-- 📲 [PWA](https://github.com/vite-pwa/nuxt) with offline support and auto-update behavior.
-
-## Plugins
-
-### Nuxt Modules
-
-- [VueUse](https://github.com/vueuse/vueuse) - collection of useful composition APIs.
-- [ColorMode](https://github.com/nuxt-modules/color-mode) - dark and Light mode with auto detection made easy with Nuxt.
-- [UnoCSS](https://github.com/unocss/unocss) - the instant on-demand atomic CSS engine.
-- [Pinia](https://github.com/vuejs/pinia) - intuitive, type safe, light and flexible Store for Vue.
-- [VitePWA](https://github.com/vite-pwa/nuxt) - zero-config PWA Plugin for Nuxt 4.
-- [DevTools](https://github.com/nuxt/devtools) - unleash Nuxt Developer Experience.
-
-## IDE
-
-We recommend using [VS Code](https://code.visualstudio.com/) with [Volar](https://github.com/johnsoncodehk/volar) to get the best experience (You might want to disable [Vetur](https://vuejs.github.io/vetur/) if you have it).
-
-## Variations
-
-- [vitesse](https://github.com/antfu/vitesse) - Opinionated Vite Starter Template
-- [vitesse-lite](https://github.com/antfu/vitesse-lite) - Lightweight version of Vitesse
-- [vitesse-nuxt-bridge](https://github.com/antfu/vitesse-nuxt-bridge) - Vitesse for Nuxt 2 with Bridge
-- [vitesse-webext](https://github.com/antfu/vitesse-webext) - WebExtension Vite starter template
-
-## Try it now!
-
-### Online
-
-<a href="https://stackblitz.com/github/antfu/vitesse-nuxt"><img src="https://developer.stackblitz.com/img/open_in_stackblitz.svg" alt=""></a>
-
-### GitHub Template
-
-[Create a repo from this template on GitHub](https://github.com/antfu/vitesse-nuxt/generate).
-
-### Clone to local
-
-If you prefer to do it manually with the cleaner git history
+1. Install dependencies:
 
 ```bash
-npx degit antfu/vitesse-nuxt my-nuxt-app
-cd my-nuxt-app
-pnpm i # If you don't have pnpm installed, run: npm install -g pnpm
+npm install
 ```
+
+2. Copy the environment template:
+
+```bash
+cp .env.example .env
+```
+
+3. Refresh the local mock seed snapshot:
+
+```bash
+npm run seed
+```
+
+4. Start the frontend workspace:
+
+```bash
+npm run dev
+```
+
+5. Optional: start the backend workspace service in a separate terminal:
+
+```bash
+npm run server
+```
+
+6. Open [http://localhost:3000](http://localhost:3000)
+
+The frontend workspace loads the root `.env` file via `--dotenv ../.env`, and the backend workspace reads the same root `.env` explicitly.
+
+## Demo accounts
+
+- Founder demo: `olivia@cofoundry.dev` / `founder123`
+- Collaborator demo: `malik@cofoundry.dev` / `builder123`
+- Admin demo: `ava@cofoundry.dev` / `admin123`
+
+Google and GitHub buttons work in local mock mode by signing into seeded demo identities.
+
+## Root scripts
+
+```bash
+npm run dev
+npm run server
+npm run server:once
+npm run serve
+npm run preview
+npm run generate
+npm run build
+npm run seed
+npm run lint
+npm run lint-fix
+npm run typecheck
+npm run test:run
+```
+
+## Environment modes
+
+### Mock backend mode
+
+Default:
+
+- `NUXT_PUBLIC_BACKEND_MODE="mock"`
+- `NUXT_PUBLIC_BILLING_MODE="mock"`
+
+Behavior:
+
+- Auth runs through local cookie-backed mock routes
+- Workspace data comes from realistic seeded demo data with local persistence via `useStorage`
+- Billing uses a mocked checkout redirect and local entitlement updates
+- The full app works without Supabase or Stripe keys
+
+### Supabase-backed mode
+
+Set:
+
+- `NUXT_PUBLIC_BACKEND_MODE="supabase"`
+- `NUXT_PUBLIC_SUPABASE_URL`
+- `NUXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+Then:
+
+1. Apply the SQL migration in `back-end/supabase/migrations/20260410190000_initial.sql`
+2. Run `npm run seed`
+
+`npm run seed` always writes `.data/mock-seed.json`, and when Supabase service credentials are present it also upserts the workspace seed into the database tables defined by the migration. If `SEED_SUPABASE_AUTH` is not `"false"`, it also attempts to create the demo auth users in Supabase Auth.
+
+## Billing notes
+
+The frontend checkout route lives at `front-end/server/api/billing/checkout.post.ts`.
+
+- In mock mode it redirects back into `/app/billing?checkout=success&plan=...`
+- In Stripe mode it creates a Stripe Checkout Session using env-driven price IDs
+- The MVP treats subscriptions as SaaS access. There is no mandatory platform equity in billing
+
+## Feature-flagged investment module
+
+The route exists at `front-end/app/pages/app/investment.vue`.
+
+- Disabled by default with `NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE="false"`
+- When enabled, startups can submit an investment application
+- The module is intentionally separated from the main paid SaaS workflow
+- It does not implement cap table management and does not force platform equity in V1
+
+## Tests
+
+Included coverage is intentionally lightweight:
+
+- utility tests for discovery filtering and contract generation
+- component tests for reusable UI primitives
+
+Run:
+
+```bash
+npm run test:run
+```
+
+## Structure
+
+Key areas:
+
+- `front-end/app/pages`: marketing, auth, app, and admin routes
+- `front-end/app/stores`: auth, workspace, and toast state
+- `front-end/shared`: typed domain model, marketing content, seed data, and shared utilities
+- `front-end/server`: auth, contact, and billing routes
+- `back-end/scripts/seed.ts`: seed snapshot plus optional Supabase seeding
+- `back-end/supabase/migrations`: SQL schema and migrations
+
+## Notes
+
+- Contract templates include a clear legal-review disclaimer and are not legal advice
+- Direct contact is hidden until a connection is mutual
+- The app shell supports dark and light mode
+- Mock mode is the primary local-development path

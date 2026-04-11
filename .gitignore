@@ -1,9 +1,13 @@
 .DS_Store
 node_modules
 *.log
-dist
 .output
 .nuxt
+.data
 .env
 .idea/
+front-end/.output
+front-end/.nuxt
+front-end/dist
+back-end/dist
 public/assets/fonts
