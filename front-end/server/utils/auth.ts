@@ -5,7 +5,7 @@ import { workspaceSeed } from "~/shared/data/seed"
 import { decodeSessionUser, encodeSessionUser, sessionCookieName } from "~/shared/utils/session"
 import { signInSchema, signUpSchema } from "~/shared/utils/validation"
 import { buildSessionUser } from "~/shared/utils/workspace"
-import { createSupabaseServerClient, isSupabaseConfigured } from "./supabase"
+import { createSupabaseServerClient, isSupabaseEnabled } from "./supabase"
 
 interface RegisteredAccount extends AuthAccount {
   name: string
@@ -60,7 +60,7 @@ export function validateSignUpPayload(payload: unknown) {
 export async function verifyCredentials(event: H3Event, email: string, password: string) {
   const normalizedEmail = email.trim().toLowerCase()
 
-  if (isSupabaseConfigured(event)) {
+  if (isSupabaseEnabled(event)) {
     const client = createSupabaseServerClient(event)
     const result = await client?.auth.signInWithPassword({
       email: normalizedEmail,
@@ -91,7 +91,7 @@ export async function createMockAccount(event: H3Event, payload: { name: string,
   if (existing)
     throw createError({ statusCode: 409, statusMessage: "An account with that email already exists." })
 
-  if (isSupabaseConfigured(event)) {
+  if (isSupabaseEnabled(event)) {
     const client = createSupabaseServerClient(event)
     const result = await client?.auth.signUp({
       email: normalizedEmail,

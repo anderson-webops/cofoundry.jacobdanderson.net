@@ -67,6 +67,31 @@ npm run server
 
 The frontend workspace loads the root `.env` file via `--dotenv ../.env`, and the backend workspace reads the same root `.env` explicitly.
 
+## Environment model
+
+CoFoundry is intentionally split into public runtime config and server-only secrets.
+
+Public runtime config:
+
+- `NUXT_PUBLIC_APP_URL`
+- `NUXT_PUBLIC_BACKEND_MODE`
+- `NUXT_PUBLIC_BILLING_MODE`
+- `NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE`
+- `NUXT_PUBLIC_SUPPORT_EMAIL`
+- `NUXT_PUBLIC_SUPABASE_URL`
+- `NUXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+- `NUXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY`
+- `NUXT_PUBLIC_STRIPE_PRICE_TEAM_MONTHLY`
+
+Server-only secrets:
+
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+
+If a non-mock mode is enabled without the required public values and server secrets, startup fails with a clear error. In mock mode, the current production-safe mock behavior remains unchanged.
+
 ## Demo accounts
 
 - Founder demo: `olivia@cofoundry.dev` / `founder123`
@@ -108,6 +133,12 @@ Behavior:
 - Billing uses a mocked checkout redirect and local entitlement updates
 - The full app works without Supabase or Stripe keys
 
+Required env:
+
+- `NUXT_PUBLIC_BACKEND_MODE="mock"`
+- `NUXT_PUBLIC_BILLING_MODE="mock"`
+- No server secrets are required
+
 ### Supabase-backed mode
 
 Set:
@@ -115,7 +146,6 @@ Set:
 - `NUXT_PUBLIC_BACKEND_MODE="supabase"`
 - `NUXT_PUBLIC_SUPABASE_URL`
 - `NUXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
 Then:
@@ -123,7 +153,17 @@ Then:
 1. Apply the SQL migration in `back-end/supabase/migrations/20260410190000_initial.sql`
 2. Run `npm run seed`
 
-`npm run seed` always writes `.data/mock-seed.json`, and when Supabase service credentials are present it also upserts the workspace seed into the database tables defined by the migration. If `SEED_SUPABASE_AUTH` is not `"false"`, it also attempts to create the demo auth users in Supabase Auth.
+`npm run seed` always writes `.data/mock-seed.json`, and when `NUXT_PUBLIC_SUPABASE_URL` plus `SUPABASE_SERVICE_ROLE_KEY` are present it also upserts the workspace seed into the database tables defined by the migration. If `SEED_SUPABASE_AUTH` is not `"false"`, it also attempts to create the demo auth users in Supabase Auth.
+
+Required env:
+
+- Public:
+  `NUXT_PUBLIC_SUPABASE_URL`
+  `NUXT_PUBLIC_SUPABASE_ANON_KEY`
+- Secret:
+  `SUPABASE_SERVICE_ROLE_KEY`
+
+If those values are missing while `NUXT_PUBLIC_BACKEND_MODE="supabase"`, Nuxt SSR startup and the backend workspace fail fast instead of silently falling back.
 
 ## Billing notes
 
@@ -132,6 +172,27 @@ The frontend checkout route lives at `front-end/server/api/billing/checkout.post
 - In mock mode it redirects back into `/app/billing?checkout=success&plan=...`
 - In Stripe mode it creates a Stripe Checkout Session using env-driven price IDs
 - The MVP treats subscriptions as SaaS access. There is no mandatory platform equity in billing
+
+Stripe mode env requirements:
+
+- Public:
+  `NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+  `NUXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY`
+  `NUXT_PUBLIC_STRIPE_PRICE_TEAM_MONTHLY`
+- Secret:
+  `STRIPE_SECRET_KEY`
+  `STRIPE_WEBHOOK_SECRET`
+
+If `NUXT_PUBLIC_BILLING_MODE="stripe"` is enabled without that configuration, startup fails with a clear error so production never drifts into a half-configured payment state.
+
+## Production secret model
+
+Current deployments can stay in mock mode with no secret-backed services enabled.
+
+- Public env can live in normal env files or deploy-time public environment settings.
+- Server-only secrets are expected to come from Vault-managed env files or equivalent host injection later.
+- The repo is already wired so that moving from mock mode to Supabase or Stripe is a config change, not another refactor.
+- `NUXT_PUBLIC_APP_URL` falls back to `http://localhost:3000` only for local development. Production SSR avoids localhost-style defaults and derives request origin when needed.
 
 ## Feature-flagged investment module
 

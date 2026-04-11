@@ -1,32 +1,43 @@
-import { createStripeClient } from "~/server/utils/stripe"
 import { billingCheckoutSchema } from "~/shared/utils/validation"
+import { resolveServerAppUrl } from "../../utils/app-url"
+import { createStripeClient } from "../../utils/stripe"
 
 export default defineEventHandler(async (event) => {
   const runtimeConfig = useRuntimeConfig(event)
   const payload = billingCheckoutSchema.parse(await readBody(event))
-  const stripe = createStripeClient(event)
+  const appUrl = resolveServerAppUrl(event)
 
-  if (
-    runtimeConfig.public.billingMode === "mock"
-    || !stripe
-    || !runtimeConfig.public.appUrl
-    || !runtimeConfig.public[`stripePrice${payload.plan === "pro" ? "Pro" : "Team"}Monthly`]
-  ) {
+  if (runtimeConfig.public.billingMode === "mock") {
     return {
       mode: "mock",
-      checkoutUrl: `${runtimeConfig.public.appUrl}/app/billing?checkout=success&plan=${payload.plan}`,
+      checkoutUrl: `${appUrl}/app/billing?checkout=success&plan=${payload.plan}`,
     }
   }
 
   const priceId = payload.plan === "pro"
     ? runtimeConfig.public.stripePriceProMonthly
     : runtimeConfig.public.stripePriceTeamMonthly
+  const stripe = createStripeClient(event)
+
+  if (!stripe) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: "Stripe billing mode is enabled but the server Stripe client could not be initialized.",
+    })
+  }
+
+  if (!priceId) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: `Stripe billing mode is enabled but the ${payload.plan} plan price ID is missing.`,
+    })
+  }
 
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${runtimeConfig.public.appUrl}/app/billing?checkout=success&plan=${payload.plan}`,
-    cancel_url: `${runtimeConfig.public.appUrl}/app/billing?checkout=cancelled`,
+    success_url: `${appUrl}/app/billing?checkout=success&plan=${payload.plan}`,
+    cancel_url: `${appUrl}/app/billing?checkout=cancelled`,
   })
 
   return {
