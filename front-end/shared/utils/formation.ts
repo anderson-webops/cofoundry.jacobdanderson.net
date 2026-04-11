@@ -1,15 +1,18 @@
 import type {
   ConnectDeclineReason,
+  ConnectRequest,
   Message,
   OpportunityVerificationStatus,
   Profile,
   ReportPriority,
   ReportReason,
   StartupOpportunity,
+  StructuredIntro,
   TrialCollaboration,
   TrustTier,
 } from "../types/domain"
 import {
+  formatConnectRequestNextStep,
   formatCurrentWorkStatus,
   formatDecisionModelPreference,
   formatEquityPhilosophy,
@@ -49,6 +52,31 @@ const declineReasonLabels: Record<ConnectDeclineReason, string> = {
   commitment_mismatch: "Commitment mismatch",
   values_mismatch: "Values mismatch",
   role_mismatch: "Role mismatch",
+}
+
+export function buildStructuredIntroNote(intro: StructuredIntro) {
+  return `${intro.whyFit.trim()} ${intro.whyNow.trim()} Proposed next step: ${formatConnectRequestNextStep(intro.proposedNextStep)}.`.trim()
+}
+
+export function buildConnectRequestDueCopy(request: Pick<ConnectRequest, "createdAt" | "respondedAt" | "status">) {
+  if (request.status !== "pending" || request.respondedAt)
+    return "Closed"
+
+  const dueAt = new Date(new Date(request.createdAt).getTime() + 1000 * 60 * 60 * 48).toISOString()
+  return `Reply target ${formatRelativeDate(dueAt)}`
+}
+
+export function buildResponsivenessLabel(profile: Profile) {
+  if (profile.trustSignals.replyRatePercent >= 85 && profile.trustSignals.medianReplyHours <= 24)
+    return "Likely to reply quickly"
+
+  if (profile.trustSignals.replyRatePercent >= 70 && profile.trustSignals.medianReplyHours <= 48)
+    return "Usually replies within two days"
+
+  if (profile.trustSignals.replyRatePercent >= 50)
+    return "Response history is mixed"
+
+  return "Reply history is still thin"
 }
 
 export interface ProfileReadinessItem {

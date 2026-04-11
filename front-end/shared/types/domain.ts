@@ -8,6 +8,8 @@ export type PrivacyLevel = "public" | "members" | "private"
 export type SkillLevel = "working" | "strong" | "expert"
 export type ConnectRequestStatus = "pending" | "accepted" | "declined"
 export type ConnectDeclineReason = "timing" | "domain_mismatch" | "commitment_mismatch" | "values_mismatch" | "role_mismatch"
+export type ConnectRequestNextStep = "intro_call" | "working_session" | "trial_sprint" | "async_exchange"
+export type ConnectRequestContext = "profile" | "opportunity"
 export type MessageType = "user" | "system"
 export type ProposalStatus = "draft" | "sent" | "viewed" | "countered" | "accepted" | "rejected"
 export type ProposalRelationshipType = "cofounder" | "founding_team" | "advisor"
@@ -252,11 +254,20 @@ export interface Bookmark {
   createdAt: string
 }
 
+export interface StructuredIntro {
+  context: ConnectRequestContext
+  roleContext: string
+  whyFit: string
+  whyNow: string
+  proposedNextStep: ConnectRequestNextStep
+}
+
 export interface ConnectRequest {
   id: string
   fromUserId: string
   toUserId: string
   note: string
+  structuredIntro: StructuredIntro
   status: ConnectRequestStatus
   declineReason: ConnectDeclineReason | null
   createdAt: string

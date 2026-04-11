@@ -2,7 +2,7 @@
 import { recommendOpportunitiesForProfile, recommendProfilesForProfile } from "~/shared/utils/discovery"
 import { formatPlanName } from "~/shared/utils/format"
 import { buildProfileReadiness, buildProfileTrustScore } from "~/shared/utils/formation"
-import { getContractsForUser, getMatchesForUser, getProfileSkills, getProposalsForUser, getTrialsForUser } from "~/shared/utils/workspace"
+import { getContractsForUser, getIncomingConnectRequestsForUser, getMatchesForUser, getOutgoingConnectRequestsForUser, getProfileByUserId, getProfileSkills, getProposalsForUser, getTrialsForUser } from "~/shared/utils/workspace"
 
 definePageMeta({
   layout: "app",
@@ -11,6 +11,7 @@ definePageMeta({
 
 usePageSeo("Workspace")
 
+const toastStore = useToastStore()
 const { authStore, profile, subscription, workspaceStore } = useCurrentMember()
 const currentUserId = computed(() => authStore.currentUser?.id || "")
 
@@ -24,9 +25,54 @@ const contracts = computed(() => currentUserId.value ? getContractsForUser(works
 const trials = computed(() => currentUserId.value ? getTrialsForUser(workspaceStore.data, currentUserId.value).slice(0, 2) : [])
 const notifications = computed(() => currentUserId.value ? workspaceStore.data.notifications.filter(notification => notification.userId === currentUserId.value).slice(0, 4) : [])
 const trustScore = computed(() => profile.value ? buildProfileTrustScore(profile.value) : 0)
+const incomingRequests = computed(() => {
+  if (!currentUserId.value)
+    return []
+
+  return getIncomingConnectRequestsForUser(workspaceStore.data, currentUserId.value)
+    .filter(request => request.status === "pending")
+    .map((request) => {
+      const counterpart = getProfileByUserId(workspaceStore.data, request.fromUserId)
+      return counterpart ? { request, counterpart } : null
+    })
+    .filter((value): value is NonNullable<typeof value> => Boolean(value))
+})
+const outgoingRequests = computed(() => {
+  if (!currentUserId.value)
+    return []
+
+  return getOutgoingConnectRequestsForUser(workspaceStore.data, currentUserId.value)
+    .filter(request => request.status === "pending")
+    .map((request) => {
+      const counterpart = getProfileByUserId(workspaceStore.data, request.toUserId)
+      return counterpart ? { request, counterpart } : null
+    })
+    .filter((value): value is NonNullable<typeof value> => Boolean(value))
+})
 
 function skillLabels(profileId: string) {
   return getProfileSkills(workspaceStore.data, profileId).map(item => item.skill.label)
+}
+
+function acceptConnectRequest(requestId: string) {
+  const conversationId = workspaceStore.respondToConnectRequest(requestId, "accepted")
+  toastStore.push({
+    title: "Intro accepted",
+    message: "Messaging is unlocked. Move straight into the proposed next step while intent is still fresh.",
+    tone: "success",
+  })
+
+  if (conversationId)
+    navigateTo(`/app/messages/${conversationId}`)
+}
+
+function declineConnectRequest(requestId: string, reason: "timing" | "domain_mismatch" | "commitment_mismatch" | "values_mismatch" | "role_mismatch") {
+  workspaceStore.respondToConnectRequest(requestId, "declined", reason)
+  toastStore.push({
+    title: "Intro closed",
+    message: "The other side now gets an explicit reason instead of silence.",
+    tone: "info",
+  })
 }
 
 function getProposalVersion(proposalId: string) {
@@ -58,7 +104,7 @@ function getContractVersion(contractId: string) {
       <MetricTile label="Profile completion" :value="`${readiness?.percent || 0}%`" context="The stronger the profile, the faster CoFoundry can unlock outreach and proposals." />
       <MetricTile label="Trust score" :value="trustScore" context="Combines proof of work, verification, recency, and response speed." />
       <MetricTile label="Matches" :value="matches.length" context="Mutual connections that unlock messaging." />
-      <MetricTile label="Active trials" :value="trials.length" context="Short working sprints that de-risk the relationship before signatures." />
+      <MetricTile label="Open intros" :value="incomingRequests.length + outgoingRequests.length" context="Pending requests that still need a real answer or follow-through." />
     </div>
 
     <div class="gap-6 grid xl:grid-cols-[1.15fr_0.85fr]">
@@ -80,6 +126,12 @@ function getContractVersion(contractId: string) {
           >
             <BaseBadge tone="accent">
               Match score {{ item.score }}
+            </BaseBadge>
+            <BaseBadge v-if="item.reciprocityScore >= 6" tone="success">
+              Likely reply
+            </BaseBadge>
+            <BaseBadge v-if="item.localBias" tone="neutral">
+              Local-first
             </BaseBadge>
             <BaseButton variant="secondary" to="/app/discover">
               Review collaborator
@@ -111,6 +163,54 @@ function getContractVersion(contractId: string) {
             Finish profile
           </BaseButton>
         </EmptyState>
+
+        <PageIntro
+          eyebrow="Intro queue"
+          title="Close the loop quickly."
+          description="Cold-start marketplaces die on ignored intros. Treat pending requests like real work: accept the credible ones, decline the wrong ones, and keep the other side out of ambiguity."
+        />
+
+        <div class="gap-4 grid lg:grid-cols-2">
+          <div class="gap-4 grid">
+            <h3 class="text-base font-semibold">
+              Incoming intros
+            </h3>
+            <ConnectRequestInbox
+              v-if="incomingRequests.length"
+              mode="incoming"
+              :items="incomingRequests"
+              @accept="acceptConnectRequest"
+              @decline="declineConnectRequest"
+            />
+            <div v-else class="panel p-5">
+              <p class="text-sm font-semibold">
+                Nothing waiting on you right now
+              </p>
+              <p class="muted text-sm leading-6 mt-3">
+                Higher-signal profiles and public discovery pages make it easier for the right people to find you. When intros arrive, answer them quickly.
+              </p>
+            </div>
+          </div>
+
+          <div class="gap-4 grid">
+            <h3 class="text-base font-semibold">
+              Outgoing intros
+            </h3>
+            <ConnectRequestInbox
+              v-if="outgoingRequests.length"
+              mode="outgoing"
+              :items="outgoingRequests"
+            />
+            <div v-else class="panel p-5">
+              <p class="text-sm font-semibold">
+                No open outbound intros
+              </p>
+              <p class="muted text-sm leading-6 mt-3">
+                Keep the search focused. Strong wedges convert better than spraying requests across the whole market.
+              </p>
+            </div>
+          </div>
+        </div>
 
         <PageIntro
           eyebrow="Formation workflow"

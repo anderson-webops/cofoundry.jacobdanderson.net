@@ -3,6 +3,7 @@ import type {
   CommitmentLevel,
   CompensationPreference,
   ConnectDeclineReason,
+  ConnectRequestNextStep,
   ContactRevealStage,
   ContractStatus,
   CurrentWorkStatus,
@@ -233,6 +234,15 @@ export function formatConnectDeclineReason(reason: ConnectDeclineReason) {
     values_mismatch: "Values mismatch",
     role_mismatch: "Role mismatch",
   }[reason]
+}
+
+export function formatConnectRequestNextStep(step: ConnectRequestNextStep) {
+  return {
+    intro_call: "15-minute intro call",
+    working_session: "Focused working session",
+    trial_sprint: "Short trial sprint",
+    async_exchange: "Async exchange first",
+  }[step]
 }
 
 export function formatTrustTier(tier: TrustTier) {

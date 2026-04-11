@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { StructuredIntro } from "~/shared/types/domain"
+import { buildSubscriptionUsage, formatUsageQuota } from "~/shared/utils/billing"
 import { formatCommitment, formatCompensation, formatContactRevealStage, formatOpportunityVerificationStatus, formatRemotePreference, formatStage } from "~/shared/utils/format"
 import { getOpportunityVerificationTone, getOutreachUnlockMessage } from "~/shared/utils/formation"
 import { getProfileByUserId } from "~/shared/utils/workspace"
@@ -10,24 +12,26 @@ definePageMeta({
 
 const route = useRoute()
 const toastStore = useToastStore()
-const { authStore, workspaceStore } = useCurrentMember()
+const { authStore, subscription, workspaceStore } = useCurrentMember()
 const reportDialogOpen = ref(false)
+const introDialogOpen = ref(false)
 
 const opportunity = computed(() => workspaceStore.data.opportunities.find(item => item.id === route.params.id))
 const ownerProfile = computed(() => opportunity.value ? getProfileByUserId(workspaceStore.data, opportunity.value.ownerUserId) : null)
 const roles = computed(() => workspaceStore.data.opportunityRoles.filter(role => role.opportunityId === route.params.id))
 const currentProfile = computed(() => authStore.currentUser ? getProfileByUserId(workspaceStore.data, authStore.currentUser.id) : null)
+const usage = computed(() => authStore.currentUser ? buildSubscriptionUsage(workspaceStore.data, authStore.currentUser.id, subscription.value || undefined) : null)
 
 usePageSeo("Opportunity details")
 
-function expressInterest() {
+function expressInterest(payload: { note: string, structuredIntro: StructuredIntro }) {
   if (!authStore.currentUser || !opportunity.value)
     return
 
   const sent = workspaceStore.sendConnectRequest(
     authStore.currentUser.id,
     opportunity.value.ownerUserId,
-    `I am interested in ${opportunity.value.startupName} because the role and stage fit my current search well.`,
+    payload,
   )
   if (!sent) {
     toastStore.push({
@@ -39,10 +43,11 @@ function expressInterest() {
   }
 
   toastStore.push({
-    title: "Interest sent",
-    message: "The founder will see your request and can accept to unlock messaging.",
+    title: "Structured intro sent",
+    message: "The founder will see your intro and can accept to unlock messaging around the proposed next step.",
     tone: "success",
   })
+  introDialogOpen.value = false
 }
 
 function onReportCreated() {
@@ -69,8 +74,8 @@ function onReportCreated() {
           <BaseButton variant="secondary" @click="workspaceStore.toggleBookmark(authStore.currentUser!.id, 'opportunity', opportunity.id)">
             Save opportunity
           </BaseButton>
-          <BaseButton v-if="authStore.currentUser?.id !== opportunity.ownerUserId" @click="expressInterest">
-            Express interest
+          <BaseButton v-if="authStore.currentUser?.id !== opportunity.ownerUserId" @click="introDialogOpen = true">
+            Send structured intro
           </BaseButton>
         </template>
       </PageIntro>
@@ -192,6 +197,15 @@ function onReportCreated() {
       :subject-label="opportunity?.startupName || 'this opportunity'"
       description="Use this if the listing feels fraudulent, misleading, or pushes unsafe off-platform behavior."
       @created="onReportCreated"
+    />
+    <StructuredIntroDialog
+      v-model="introDialogOpen"
+      context="opportunity"
+      :target-label="opportunity?.startupName || 'this opportunity'"
+      :default-role-context="roles[0]?.title || opportunity?.rolesNeeded[0] || opportunity?.startupName || 'Founding role'"
+      :unlock-copy="currentProfile ? getOutreachUnlockMessage(currentProfile) : 'Outreach is gated behind baseline trust checks.'"
+      :quota-copy="usage ? `This plan has ${formatUsageQuota(usage.intros)} this month.` : ''"
+      @submit="expressInterest"
     />
   </div>
 </template>
