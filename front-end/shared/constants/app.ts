@@ -31,7 +31,7 @@ export const adminNavigation = [
 ]
 
 export const demoAccounts = [
-  { email: "olivia@cofoundry.dev", password: "founder123", label: "Founder demo" },
-  { email: "malik@cofoundry.dev", password: "builder123", label: "Collaborator demo" },
-  { email: "ava@cofoundry.dev", password: "admin123", label: "Admin demo" },
+  { email: "olivia@cofoundry.dev", password: "founder123", label: "Founder review account" },
+  { email: "malik@cofoundry.dev", password: "builder123", label: "Collaborator review account" },
+  { email: "ava@cofoundry.dev", password: "admin123", label: "Admin review account" },
 ]

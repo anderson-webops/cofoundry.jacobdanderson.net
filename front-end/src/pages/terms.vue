@@ -41,7 +41,7 @@ usePageSeo("Terms of Service", "Product-specific terms for CoFoundry's founder m
             Drafting note
           </p>
           <p class="muted text-sm leading-6 mt-2">
-            This version is product-specific and substantially more complete than the original MVP placeholder, but CoFoundry should still finalize contracting-entity details, billing flow compliance, and jurisdiction-specific language with counsel before a broad public launch.
+            This version is product-specific, but CoFoundry should still finalize contracting-entity details, billing flow compliance, and jurisdiction-specific language with counsel before a broad public launch.
           </p>
         </div>
       </div>

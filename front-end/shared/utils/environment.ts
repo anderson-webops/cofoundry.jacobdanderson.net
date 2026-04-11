@@ -24,6 +24,7 @@ export interface PublicEnvironment {
 }
 
 export interface SecretEnvironment {
+  sessionSigningSecret: string
   stripeSecretKey: string
   stripeWebhookSecret: string
   supabaseServiceRoleKey: string
@@ -84,6 +85,7 @@ export function readPublicEnvironment(env: EnvironmentSource): PublicEnvironment
 
 export function readSecretEnvironment(env: EnvironmentSource): SecretEnvironment {
   return {
+    sessionSigningSecret: readValue(env, "NUXT_SESSION_SIGNING_SECRET") || readValue(env, "SESSION_SIGNING_SECRET"),
     stripeSecretKey: readValue(env, "STRIPE_SECRET_KEY"),
     stripeWebhookSecret: readValue(env, "STRIPE_WEBHOOK_SECRET"),
     supabaseServiceRoleKey: readValue(env, "SUPABASE_SERVICE_ROLE_KEY"),
@@ -105,6 +107,7 @@ export function collectEnvironmentValidationErrors(env: EnvironmentSource) {
   const configuredAppUrl = readValue(env, "NUXT_PUBLIC_APP_URL")
   const configuredBackendMode = readValue(env, "NUXT_PUBLIC_BACKEND_MODE")
   const configuredBillingMode = readValue(env, "NUXT_PUBLIC_BILLING_MODE")
+  const requiresSignedSessions = !isLocalDevelopmentEnvironment(env) && (publicEnvironment.backendMode === "supabase" || publicEnvironment.enableDemoAccess)
 
   if (configuredAppUrl && !isAbsoluteUrl(configuredAppUrl))
     errors.push("NUXT_PUBLIC_APP_URL must be an absolute URL when it is set.")
@@ -142,6 +145,9 @@ export function collectEnvironmentValidationErrors(env: EnvironmentSource) {
     if (!secretEnvironment.stripeWebhookSecret)
       errors.push("STRIPE_WEBHOOK_SECRET is required when NUXT_PUBLIC_BILLING_MODE=\"stripe\".")
   }
+
+  if (requiresSignedSessions && !secretEnvironment.sessionSigningSecret)
+    errors.push("SESSION_SIGNING_SECRET is required whenever account sessions are enabled in a non-local environment.")
 
   return errors
 }

@@ -97,7 +97,7 @@ async function createOpportunityPost() {
           <TextInput v-model="form.location" label="Location" :error="errors.location" />
         </div>
         <div class="gap-4 grid md:grid-cols-2">
-          <TextInput v-model="form.officialWebsite" label="Official website" helper="Optional in mock mode, but used as a visible trust signal." :error="errors.officialWebsite" />
+          <TextInput v-model="form.officialWebsite" label="Official website" helper="Optional, but used as a visible trust signal." :error="errors.officialWebsite" />
           <SelectInput v-model="form.verificationMethod" label="Verification method" helper="How collaborators should interpret the legitimacy signal on this listing." :options="opportunityVerificationOptions" :error="errors.verificationMethod" />
         </div>
         <SelectInput v-model="form.remotePreference" label="Remote preference" :options="remoteOptions" :error="errors.remotePreference" />

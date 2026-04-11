@@ -115,7 +115,7 @@ export function getBackendModeLabel(environment: ProductAccessEnvironment, isLoc
     return "managed application data services"
 
   if (resolveProductAccessPolicy(environment, isLocalDevelopment).showDemoConveniences)
-    return "development demo services"
+    return "development review services"
 
   return "CoFoundry-hosted application services"
 }

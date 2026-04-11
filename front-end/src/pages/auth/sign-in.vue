@@ -95,7 +95,7 @@ async function signInWithProvider(provider: "google" | "github") {
       </h2>
       <p class="muted text-sm leading-6 mt-3">
         {{ policy.showDemoConveniences
-          ? "This environment supports temporary demo access for product review and local development."
+          ? "This environment supports temporary review access for product review and local development."
           : "Use your account credentials to continue discovery, messaging, and the proposal workflow." }}
       </p>
 
