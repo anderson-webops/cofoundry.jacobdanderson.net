@@ -18,7 +18,7 @@ usePageSeo("Page not found", "The requested CoFoundry page could not be found.",
         Page not found
       </h1>
       <p class="muted text-sm leading-7 mx-auto mt-4 max-w-lg">
-        The route you requested is not available. Use the public navigation, return home, or contact the team if you expected a live workspace path here.
+        The page you requested is unavailable or may have moved. Use the main navigation, return home, or contact the team if you need help finding a route.
       </p>
       <div class="mt-8 flex gap-3 justify-center">
         <BaseButton variant="secondary" @click="router.back()">

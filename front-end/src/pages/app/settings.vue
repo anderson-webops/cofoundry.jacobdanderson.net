@@ -13,6 +13,7 @@ usePageSeo("Settings")
 
 const runtimeConfig = useRuntimeConfig()
 const toastStore = useToastStore()
+const { policy } = useProductAccess()
 const { authStore, profile, workspaceStore } = useCurrentMember()
 const contactRevealStage = ref<ContactRevealStage>(profile.value?.privacy.contactRevealStage || "matches")
 const trustTier = computed(() => profile.value ? buildProfileTrustTier(profile.value) : "level_a")
@@ -41,8 +42,8 @@ async function signOut() {
 function resetDemoData() {
   workspaceStore.resetToSeed()
   toastStore.push({
-    title: "Demo data reset",
-    message: "The local mock workspace was restored to the seeded state.",
+    title: "Workspace reset",
+    message: "The local review workspace was restored to the seeded state.",
     tone: "success",
   })
 }
@@ -81,7 +82,7 @@ function verify(type: "phone" | "linkedin" | "github" | "website" | "work_domain
   workspaceStore.completeTrustVerification(authStore.currentUser.id, type)
   toastStore.push({
     title: "Verification completed",
-    message: `${label} is now reflected on your trust surface in mock mode.`,
+    message: `${label} is now reflected on your trust surface in the current environment.`,
     tone: "success",
   })
 }
@@ -92,7 +93,7 @@ function verify(type: "phone" | "linkedin" | "github" | "website" | "work_domain
     <PageIntro
       eyebrow="Settings"
       title="Workspace settings"
-      description="Profile visibility, environment modes, and local development controls live here."
+      description="Profile visibility, runtime configuration, support details, and environment-specific controls live here."
     />
 
     <div class="gap-6 grid xl:grid-cols-2">
@@ -173,11 +174,23 @@ function verify(type: "phone" | "linkedin" | "github" | "website" | "work_domain
           <div>Investment module: {{ runtimeConfig.public.featureInvestmentModule ? "Enabled" : "Disabled" }}</div>
         </div>
         <div class="mt-5 flex flex-wrap gap-3">
-          <BaseButton variant="secondary" @click="resetDemoData">
-            Reset mock data
-          </BaseButton>
           <BaseButton variant="ghost" @click="signOut">
             Sign out
+          </BaseButton>
+        </div>
+      </div>
+
+      <div v-if="policy.showDemoConveniences" class="panel p-6">
+        <h2 class="text-lg font-semibold">
+          Development controls
+        </h2>
+        <div class="muted text-sm mt-5 gap-3 grid">
+          <div>These controls exist for local review and staged product walkthroughs.</div>
+          <div>They are not part of the normal production workspace experience.</div>
+        </div>
+        <div class="mt-5 flex flex-wrap gap-3">
+          <BaseButton variant="secondary" @click="resetDemoData">
+            Reset review workspace
           </BaseButton>
         </div>
       </div>

@@ -10,7 +10,7 @@ const primaryAccessCta = computed(() => getPrimaryAccessCta("error-page"))
 const statusCode = computed(() => props.error?.statusCode || 500)
 const title = computed(() => statusCode.value === 404 ? "Page not found" : "Something went wrong")
 const description = computed(() => statusCode.value === 404
-  ? "The page you requested is not available. Use the public navigation or contact the team if you expected a live workspace route here."
+  ? "The page you requested is unavailable or may have moved. Use the public navigation or contact the team if you need help finding the right route."
   : "CoFoundry hit an unexpected problem while loading this page. You can return home, request access, or contact support.")
 
 useSeoMeta({
