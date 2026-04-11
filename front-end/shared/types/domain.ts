@@ -148,7 +148,9 @@ export interface TrustSignals {
   workHistoryVerified: boolean
   phoneVerified: boolean
   linkedInVerified: boolean
+  githubVerified: boolean
   workDomainVerified: boolean
+  websiteVerified: boolean
   governmentIdVerified: boolean
   builderProofs: ProofOfWorkArtifact[]
 }
@@ -164,6 +166,7 @@ export interface Profile {
   id: string
   userId: string
   displayName: string
+  photoUrl: string
   headline: string
   bio: string
   location: string

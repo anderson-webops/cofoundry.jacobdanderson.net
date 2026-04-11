@@ -23,6 +23,10 @@ function proof(id: string, title: string, summary: string, url: string, outcome:
   }
 }
 
+function photo(seed: string) {
+  return `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(seed)}`
+}
+
 function trust(
   replyRatePercent: number,
   medianReplyHours: number,
@@ -33,7 +37,9 @@ function trust(
   verification: Partial<{
     phoneVerified: boolean
     linkedInVerified: boolean
+    githubVerified: boolean
     workDomainVerified: boolean
+    websiteVerified: boolean
     governmentIdVerified: boolean
   }> = {},
 ) {
@@ -45,7 +51,9 @@ function trust(
     workHistoryVerified,
     phoneVerified: verification.phoneVerified ?? false,
     linkedInVerified: verification.linkedInVerified ?? false,
+    githubVerified: verification.githubVerified ?? false,
     workDomainVerified: verification.workDomainVerified ?? false,
+    websiteVerified: verification.websiteVerified ?? false,
     governmentIdVerified: verification.governmentIdVerified ?? false,
     builderProofs,
   }
@@ -102,7 +110,7 @@ function ipReadiness(
 }
 
 export const workspaceSeed: WorkspaceSeed = {
-  version: "2026-04-11-research-pass-founder-alignment",
+  version: "2026-04-11-research-pass-trust-signals",
   authAccounts: [
     { email: "olivia@cofoundry.dev", password: "founder123", providers: ["email", "github"], userId: "user_olivia" },
     { email: "malik@cofoundry.dev", password: "builder123", providers: ["email", "google"], userId: "user_malik" },
@@ -196,6 +204,7 @@ export const workspaceSeed: WorkspaceSeed = {
       id: "profile_olivia",
       userId: "user_olivia",
       displayName: "Olivia Chen",
+      photoUrl: photo("Olivia Chen"),
       headline: "Repeat fintech founder building the operating system for compliance workflows.",
       bio: "Former product lead at Mercury and the co-founder of a B2B payments startup acquired in 2023. I am looking for a technical co-founder who wants to own architecture, product judgment, and the company with me.",
       location: "New York, NY",
@@ -258,7 +267,7 @@ export const workspaceSeed: WorkspaceSeed = {
           proof("proof_olivia_1", "Fintech workflow case study", "Detailed write-up of the compliance operations system Olivia shipped and the buyer constraints it solved.", "https://clearwire.example/case-study", "Cut KYB review time by 38% across 2,100 SMB teams."),
           proof("proof_olivia_2", "Founder memo", "Concise founder memo on the LedgerLoop wedge, customer pull, and what the first 90 days should prove.", "https://ledgerloop.co/memo", "Used in founder and design-partner conversations."),
         ],
-        { phoneVerified: true, linkedInVerified: true, workDomainVerified: true, governmentIdVerified: true },
+        { phoneVerified: true, linkedInVerified: true, githubVerified: true, workDomainVerified: true, websiteVerified: true, governmentIdVerified: true },
       ),
       availability: "Available for 3 founder conversations this week.",
       portfolio: [
@@ -280,6 +289,7 @@ export const workspaceSeed: WorkspaceSeed = {
       id: "profile_malik",
       userId: "user_malik",
       displayName: "Malik Thompson",
+      photoUrl: photo("Malik Thompson"),
       headline: "Staff-level engineer who wants to build a category-defining infra-heavy company from zero.",
       bio: "I spent seven years building backend platforms at Stripe and Render. I want a high-trust founder partnership with a strong market insight, clear customer access, and room to own the technical system from day one.",
       location: "Austin, TX",
@@ -342,7 +352,7 @@ export const workspaceSeed: WorkspaceSeed = {
           proof("proof_malik_1", "Realtime ledger architecture", "Explains how Malik redesigned a high-volume payments system with operational reliability in mind.", "https://malik.dev/reconciliation", "Dropped reconciliation lag from 12 hours to under 4 minutes."),
           proof("proof_malik_2", "Systems design notes", "Short technical notes showing how he scopes 0-to-1 architecture without overbuilding.", "https://malik.dev/work", "Used to qualify deep infra conversations quickly."),
         ],
-        { phoneVerified: true, linkedInVerified: true, workDomainVerified: true },
+        { phoneVerified: true, linkedInVerified: true, githubVerified: true, workDomainVerified: true, websiteVerified: true },
       ),
       availability: "Open to one serious founder match and two exploratory calls this month.",
       portfolio: [
@@ -362,6 +372,7 @@ export const workspaceSeed: WorkspaceSeed = {
       id: "profile_sofia",
       userId: "user_sofia",
       displayName: "Sofia Ramirez",
+      photoUrl: photo("Sofia Ramirez"),
       headline: "Founding designer for serious B2B products that need trust, clarity, and speed.",
       bio: "Former design lead at Ramp and the first designer at two seed-stage companies. I want to join a team where product, GTM, and design are genuinely collaborative from the beginning.",
       location: "Chicago, IL",
@@ -406,7 +417,7 @@ export const workspaceSeed: WorkspaceSeed = {
       verificationBadges: {
         profileComplete: true,
         emailVerified: true,
-        linkedAccounts: false,
+        linkedAccounts: true,
       },
       intent: intent(
         "30_days",
@@ -423,7 +434,7 @@ export const workspaceSeed: WorkspaceSeed = {
         [
           proof("proof_sofia_1", "Ramp procurement redesign", "Narrative and UI breakdown of a trust-heavy enterprise workflow redesign.", "https://sofiaramirez.design/ramp", "Supported a launch tied to $1.8M in annualized pipeline."),
         ],
-        { phoneVerified: true, linkedInVerified: true },
+        { phoneVerified: true, linkedInVerified: true, websiteVerified: true },
       ),
       availability: "Interviewing two teams and open to one more excellent fit.",
       portfolio: [
@@ -443,6 +454,7 @@ export const workspaceSeed: WorkspaceSeed = {
       id: "profile_arjun",
       userId: "user_arjun",
       displayName: "Arjun Patel",
+      photoUrl: photo("Arjun Patel"),
       headline: "Early GTM operator who likes turning founder intuition into a repeatable revenue motion.",
       bio: "Built outbound and founder-led sales systems at two Series A SaaS companies. I want to join a team with clear ICP conviction and enough product depth to earn long-term retention.",
       location: "Toronto, ON",
@@ -487,7 +499,7 @@ export const workspaceSeed: WorkspaceSeed = {
       verificationBadges: {
         profileComplete: true,
         emailVerified: true,
-        linkedAccounts: false,
+        linkedAccounts: true,
       },
       intent: intent(
         "30_days",
@@ -504,7 +516,7 @@ export const workspaceSeed: WorkspaceSeed = {
         [
           proof("proof_arjun_1", "Outbound operating memo", "Examples of how Arjun turns founder intuition into a measurable pipeline motion.", "https://arjunpatel.co", "Built repeatable outbound systems at two Series A teams."),
         ],
-        { linkedInVerified: true },
+        { linkedInVerified: true, websiteVerified: true },
       ),
       availability: "Can start full-time in 30 days.",
       portfolio: [],
@@ -515,6 +527,7 @@ export const workspaceSeed: WorkspaceSeed = {
       id: "profile_emma",
       userId: "user_emma",
       displayName: "Emma Li",
+      photoUrl: photo("Emma Li"),
       headline: "Healthtech founder building workflow software for clinical operations teams.",
       bio: "I spent five years in growth and product at Ro and Cedar. I am building a clinical operations workflow product with early pilots and need a founding designer plus operational muscle.",
       location: "San Francisco, CA",
@@ -559,7 +572,7 @@ export const workspaceSeed: WorkspaceSeed = {
       verificationBadges: {
         profileComplete: true,
         emailVerified: true,
-        linkedAccounts: false,
+        linkedAccounts: true,
       },
       intent: intent(
         "immediately",
@@ -577,7 +590,7 @@ export const workspaceSeed: WorkspaceSeed = {
           proof("proof_emma_1", "CareOps launchbook", "A product-growth case study showing Emma's operating system for getting clinical products into real customer hands.", "https://trialwire.health/case-study", "Reached eight paid pilot customers in 10 months."),
           proof("proof_emma_2", "Clinical ops pilot brief", "Sanitized overview of the customer workflow and traction signals Trialwire already has.", "https://trialwire.health/pilots", "Gives joiners enough signal to evaluate seriousness before outreach."),
         ],
-        { phoneVerified: true, linkedInVerified: true, workDomainVerified: true },
+        { phoneVerified: true, linkedInVerified: true, workDomainVerified: true, websiteVerified: true },
       ),
       availability: "Hiring one founding designer and one operations partner now.",
       portfolio: [
@@ -599,6 +612,7 @@ export const workspaceSeed: WorkspaceSeed = {
       id: "profile_noah",
       userId: "user_noah",
       displayName: "Noah Kim",
+      photoUrl: photo("Noah Kim"),
       headline: "Revenue-minded founder building workflow intelligence for logistics teams.",
       bio: "Former Flexport operator turned founder. My startup has early revenue and strong retention, and I am looking for a technical operator who enjoys gnarly workflows and real customers.",
       location: "Seattle, WA",
@@ -660,7 +674,7 @@ export const workspaceSeed: WorkspaceSeed = {
         [
           proof("proof_noah_1", "SignalDeck retention notes", "Short operational brief showing why the current logistics wedge is sticky and where the product is going next.", "https://signaldeck.io", "$19k MRR with 93% gross revenue retention."),
         ],
-        { phoneVerified: true, linkedInVerified: true, workDomainVerified: true, governmentIdVerified: true },
+        { phoneVerified: true, linkedInVerified: true, githubVerified: true, workDomainVerified: true, websiteVerified: true, governmentIdVerified: true },
       ),
       availability: "Open to a technical founding operator or senior builder.",
       portfolio: [],
@@ -673,6 +687,7 @@ export const workspaceSeed: WorkspaceSeed = {
       id: "profile_ava",
       userId: "user_ava",
       displayName: "Ava Morgan",
+      photoUrl: photo("Ava Morgan"),
       headline: "Community and trust lead for CoFoundry.",
       bio: "Oversees moderation, profile integrity, and early community quality.",
       location: "Remote",
@@ -717,7 +732,7 @@ export const workspaceSeed: WorkspaceSeed = {
       verificationBadges: {
         profileComplete: true,
         emailVerified: true,
-        linkedAccounts: false,
+        linkedAccounts: true,
       },
       intent: intent(
         "immediately",
@@ -732,7 +747,7 @@ export const workspaceSeed: WorkspaceSeed = {
         true,
         true,
         [],
-        { phoneVerified: true, governmentIdVerified: true, workDomainVerified: true },
+        { phoneVerified: true, linkedInVerified: true, governmentIdVerified: true, workDomainVerified: true },
       ),
       availability: "Internal team member",
       portfolio: [],
@@ -743,6 +758,7 @@ export const workspaceSeed: WorkspaceSeed = {
       id: "profile_priya",
       userId: "user_priya",
       displayName: "Priya Shah",
+      photoUrl: photo("Priya Shah"),
       headline: "Operator reviewing the future investment pipeline.",
       bio: "Included only when the investment module is enabled.",
       location: "Remote",
@@ -787,7 +803,7 @@ export const workspaceSeed: WorkspaceSeed = {
       verificationBadges: {
         profileComplete: true,
         emailVerified: true,
-        linkedAccounts: false,
+        linkedAccounts: true,
       },
       intent: intent(
         "90_days",
@@ -802,7 +818,7 @@ export const workspaceSeed: WorkspaceSeed = {
         true,
         true,
         [],
-        { phoneVerified: true, governmentIdVerified: true, workDomainVerified: true },
+        { phoneVerified: true, linkedInVerified: true, governmentIdVerified: true, workDomainVerified: true },
       ),
       availability: "Internal team member",
       portfolio: [],

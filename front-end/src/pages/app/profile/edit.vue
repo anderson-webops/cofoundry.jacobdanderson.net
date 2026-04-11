@@ -12,6 +12,7 @@ const { authStore, profile, workspaceStore } = useCurrentMember()
 const initialValues = computed(() => profile.value
   ? {
       displayName: profile.value.displayName,
+      photoUrl: profile.value.photoUrl,
       headline: profile.value.headline,
       bio: profile.value.bio,
       location: profile.value.location,

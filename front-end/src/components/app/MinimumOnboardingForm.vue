@@ -6,6 +6,7 @@ const props = withDefaults(defineProps<{
   initialValues?: Partial<{
     intentMode: "start" | "join" | "explore"
     displayName: string
+    photoUrl: string
     headline: string
     bio: string
     location: string
@@ -38,6 +39,7 @@ const errors = ref<Record<string, string>>({})
 const form = reactive({
   intentMode: props.initialValues.intentMode || "start",
   displayName: props.initialValues.displayName || "",
+  photoUrl: props.initialValues.photoUrl || "",
   headline: props.initialValues.headline || "",
   bio: props.initialValues.bio || "",
   location: props.initialValues.location || "",
@@ -152,6 +154,14 @@ function submitForm() {
         <TextInput v-model="form.displayName" label="Name" :error="errors.displayName" required />
         <TextInput v-model="form.location" label="Location or time zone" :error="errors.location" required />
       </div>
+      <TextInput
+        v-model="form.photoUrl"
+        label="Profile photo URL"
+        type="url"
+        helper="Use a clear headshot or recognizable profile image. This is part of the trust-critical surface."
+        :error="errors.photoUrl"
+        required
+      />
       <SelectInput
         v-model="form.profileVisibility"
         label="Visibility"

@@ -2,6 +2,7 @@
 import { workspaceSeed } from "~/shared/data/seed"
 import { buildPublicProfileSlug, getPublicProfileBySlug, getRoleHubs, slugifySegment } from "~/shared/utils/directory"
 import { formatContactRevealStage, formatDate, formatRemotePreference, formatRunwayBucket, formatStage, formatStartTimeline } from "~/shared/utils/format"
+import { buildProfileReadiness } from "~/shared/utils/formation"
 
 const route = useRoute()
 const slug = String(route.params.slug)
@@ -11,6 +12,7 @@ if (!entry)
   throw createError({ statusCode: 404, statusMessage: "Public profile not found" })
 
 const { profile } = entry
+const readiness = buildProfileReadiness(profile)
 const runtimeConfig = useRuntimeConfig()
 const publicProfileUrl = runtimeConfig.public.appUrl
   ? new URL(`/people/${buildPublicProfileSlug(profile)}`, `${runtimeConfig.public.appUrl}/`).toString()
@@ -58,6 +60,23 @@ usePageSeo(profile.displayName, profile.headline, {
 
     <div class="mt-10 gap-6 grid xl:grid-cols-[0.95fr_1.05fr]">
       <section class="panel p-6">
+        <div class="flex gap-4 items-start">
+          <ProfileAvatar :display-name="profile.displayName" :photo-url="profile.photoUrl" size="lg" />
+          <div>
+            <div class="flex flex-wrap gap-2">
+              <BaseBadge :tone="readiness.trustReady ? 'success' : 'accent'">
+                {{ readiness.trustPercent }}% trust-critical
+              </BaseBadge>
+              <BaseBadge tone="neutral">
+                Public-lite profile
+              </BaseBadge>
+            </div>
+            <p class="muted text-sm leading-6 mt-4">
+              CoFoundry does not expose a public trust score. Public pages show the evidence and verification surface instead.
+            </p>
+          </div>
+        </div>
+
         <div class="flex flex-wrap gap-2">
           <BaseBadge tone="neutral">
             {{ formatRemotePreference(profile.remotePreference) }}
@@ -80,9 +99,18 @@ usePageSeo(profile.displayName, profile.headline, {
 
         <div class="mt-6 gap-4 grid md:grid-cols-2">
           <MetricTile label="Start timeline" :value="formatStartTimeline(profile.intent.startTimeline)" />
+          <MetricTile label="Trust-critical fields" :value="`${readiness.trustPercent}%`" />
           <MetricTile label="Hours / week" :value="profile.commitmentProfile.weeklyAvailabilityHours" />
           <MetricTile label="Runway" :value="formatRunwayBucket(profile.commitmentProfile.runwayBucket)" />
           <MetricTile label="Contact rule" :value="formatContactRevealStage(profile.privacy.contactRevealStage)" />
+        </div>
+
+        <div class="mt-6">
+          <TrustReadinessPanel
+            :profile="profile"
+            title="Public trust surface"
+            description="Public visitors see the signals that are fast to scan and hard to fake before any private details unlock."
+          />
         </div>
 
         <div class="mt-6">
@@ -136,7 +164,7 @@ usePageSeo(profile.displayName, profile.headline, {
 
         <div class="panel p-6">
           <h2 class="text-lg font-semibold">
-            Proof of work
+            Evidence and proof of work
           </h2>
           <div class="mt-4 gap-4 grid">
             <a

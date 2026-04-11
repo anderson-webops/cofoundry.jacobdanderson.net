@@ -1,7 +1,7 @@
 import type { Profile, StartupOpportunity, StartupStage, WorkspaceSeed } from "../types/domain"
 import { contractGuidePages, trustCenterPages } from "../data/public-content"
 import { formatStage } from "./format"
-import { buildProfileTrustScore } from "./formation"
+import { buildProfileReadiness, buildProfileTrustScore } from "./formation"
 import { getProfileByUserId, getProfileSkills } from "./workspace"
 
 const slugPattern = /[^a-z0-9]+/g
@@ -35,6 +35,7 @@ export interface PublicProfileEntry {
   stageSlugs: string[]
   skillLabels: string[]
   trustScore: number
+  trustPercent: number
 }
 
 export interface PublicOpportunityEntry {
@@ -153,7 +154,12 @@ export function buildPublicProfileSlug(profile: Profile) {
 
 export function getPublicProfiles(seed: WorkspaceSeed) {
   return seed.profiles
-    .filter(profile => profile.privacy.profileVisibility === "public")
+    .filter((profile) => {
+      if (profile.privacy.profileVisibility !== "public")
+        return false
+
+      return buildProfileReadiness(profile).trustReady
+    })
     .map<PublicProfileEntry>(profile => ({
       slug: buildPublicProfileSlug(profile),
       profile,
@@ -162,6 +168,7 @@ export function getPublicProfiles(seed: WorkspaceSeed) {
       stageSlugs: buildStageSlugs(profile.startupStagePreferences),
       skillLabels: getProfileSkills(seed, profile.id).map(entry => entry.skill.label),
       trustScore: buildProfileTrustScore(profile),
+      trustPercent: buildProfileReadiness(profile).trustPercent,
     }))
     .sort((left, right) => right.trustScore - left.trustScore)
 }

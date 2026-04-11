@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import type { Profile } from "~/shared/types/domain"
 import { formatCommitment, formatEquityPhilosophy, formatRemotePreference, formatRunwayBucket } from "~/shared/utils/format"
-import { buildResponsivenessLabel } from "~/shared/utils/formation"
+import { buildProfileReadiness, buildResponsivenessLabel } from "~/shared/utils/formation"
 
 const props = defineProps<{
   profile: Profile
   skills: string[]
 }>()
+
+const readiness = computed(() => buildProfileReadiness(props.profile))
+const leadProof = computed(() => props.profile.trustSignals.builderProofs[0] || null)
 
 const profileRoleLabel = computed(() => {
   if (props.profile.hasIdea && props.profile.wantsToJoinIdea)
@@ -19,13 +22,16 @@ const profileRoleLabel = computed(() => {
 <template>
   <article class="panel p-5 flex flex-col gap-5 h-full">
     <div class="flex gap-4 items-start justify-between">
-      <div>
-        <h3 class="text-lg font-semibold">
-          {{ profile.displayName }}
-        </h3>
-        <p class="muted text-sm mt-1">
-          {{ profile.headline }}
-        </p>
+      <div class="flex gap-4 items-start">
+        <ProfileAvatar :display-name="profile.displayName" :photo-url="profile.photoUrl" size="md" />
+        <div>
+          <h3 class="text-lg font-semibold">
+            {{ profile.displayName }}
+          </h3>
+          <p class="muted text-sm mt-1">
+            {{ profile.headline }}
+          </p>
+        </div>
       </div>
       <BaseBadge :tone="profile.hasIdea ? 'accent' : 'neutral'">
         {{ profileRoleLabel }}
@@ -33,6 +39,9 @@ const profileRoleLabel = computed(() => {
     </div>
 
     <div class="flex flex-wrap gap-2">
+      <BaseBadge :tone="readiness.trustReady ? 'success' : 'accent'">
+        {{ readiness.trustPercent }}% trust-critical
+      </BaseBadge>
       <BaseBadge tone="neutral">
         {{ formatRemotePreference(profile.remotePreference) }}
       </BaseBadge>
@@ -49,6 +58,18 @@ const profileRoleLabel = computed(() => {
     </p>
 
     <TrustSignalStrip :profile="profile" compact />
+
+    <div v-if="leadProof" class="panel-inset p-4">
+      <h3 class="text-lg font-semibold">
+        {{ leadProof.title }}
+      </h3>
+      <p class="muted text-sm leading-6 mt-2">
+        {{ leadProof.summary }}
+      </p>
+      <p class="text-sm mt-3">
+        {{ leadProof.outcome }}
+      </p>
+    </div>
 
     <div class="flex flex-wrap gap-2">
       <span v-for="skill in skills.slice(0, 4)" :key="skill" class="pill">
