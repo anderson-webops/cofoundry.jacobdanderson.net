@@ -6,6 +6,26 @@ export interface LegalSection {
   bullets?: string[]
 }
 
+export interface PrivacyVisibilityTier {
+  title: string
+  audience: string
+  details: string
+  notes: string
+}
+
+export interface PrivacyDataCategory {
+  category: string
+  examples: string
+  purposes: string
+  visibility: string
+}
+
+export interface PrivacyRetentionRow {
+  category: string
+  window: string
+  notes: string
+}
+
 export const termsLastUpdated = "April 11, 2026"
 
 export const termsKeyNotes = [
@@ -220,6 +240,287 @@ export const termsSections: LegalSection[] = [
     paragraphs: [
       "CoFoundry may change, suspend, or discontinue features, plan limits, verification methods, integrations, trust controls, or workflow requirements at any time.",
       "CoFoundry may update these Terms from time to time. If CoFoundry makes a material change, it may provide notice through the website, the application, email, or another reasonable method. Your continued use of the service after the updated Terms become effective means you accept the revised Terms.",
+    ],
+  },
+]
+
+export const privacyLastUpdated = "April 11, 2026"
+
+export const privacyKeyNotes = [
+  {
+    title: "Visibility is a product feature",
+    body: "CoFoundry uses public-lite, member-only, and mutual-connection visibility states. What you publish publicly can be indexed or copied outside the platform.",
+  },
+  {
+    title: "Direct contact stays gated",
+    body: "Email addresses, direct contact details, messages, proposal drafts, and contract workflows are not shown on public pages and are only exposed inside the product according to match and privacy controls.",
+  },
+  {
+    title: "Current tracking posture is restrained",
+    body: "CoFoundry currently relies on essential session storage and first-party product state. It does not use third-party ad pixels or cross-context behavioral advertising in the current configuration.",
+  },
+  {
+    title: "Live vendors are conditional",
+    body: "Some environments run entirely in mock mode. When live services such as Supabase or Stripe are enabled, they process data only for the product workflows described in this policy.",
+  },
+]
+
+export const privacyVisibilityTiers: PrivacyVisibilityTier[] = [
+  {
+    title: "Public web",
+    audience: "Visible to anyone, including search engines",
+    details: "Public-lite profiles, selected startup listings, display name, photo, headline, broad location, bio, selected roles, selected skills, public links, and public trust signals may appear on public pages when a member chooses public visibility.",
+    notes: "Once information is public, third parties may cache, scrape, or republish it outside CoFoundry's control.",
+  },
+  {
+    title: "Signed-in members",
+    audience: "Visible inside the product to authenticated users",
+    details: "Member-only profile details, deeper fit signals, time commitment, startup preferences, structured intro context, and certain trust-readiness details may be visible only to logged-in members depending on the profile owner's settings.",
+    notes: "This tier is meant for serious founder matching, not public indexing.",
+  },
+  {
+    title: "Mutual connections",
+    audience: "Visible only after both sides unlock the relationship",
+    details: "Messaging history, shared attachments, proposal versions, contract drafts, signature events, and any direct contact details CoFoundry reveals are limited to the parties involved and authorized admins supporting the workflow.",
+    notes: "Counterparties may retain copies of information they already received even if you later close your account.",
+  },
+  {
+    title: "Internal operations",
+    audience: "Visible only to CoFoundry admins or service providers with a need to know",
+    details: "Authentication logs, device and session signals, billing metadata, abuse reports, moderation notes, support records, and security investigations are kept internal unless disclosure is required by law or necessary to protect users or the service.",
+    notes: "These records are used for trust, safety, billing support, and platform integrity rather than public networking.",
+  },
+]
+
+export const privacyDataCategories: PrivacyDataCategory[] = [
+  {
+    category: "Account and security data",
+    examples: "Email address, account ID, login state, session cookie, password or reset events, IP and device signals.",
+    purposes: "Authentication, fraud prevention, account recovery, and platform security.",
+    visibility: "Internal only, except limited account data shown to the signed-in member.",
+  },
+  {
+    category: "Profile and onboarding data",
+    examples: "Name, photo URL, headline, bio, location, roles, skills, industries, stage preferences, values, work style, availability, equity expectations, and linked profiles.",
+    purposes: "Discovery, matching, trust signaling, profile rendering, and public directory pages when enabled by the member.",
+    visibility: "Public, member-only, or private depending on the member's settings and the field involved.",
+  },
+  {
+    category: "Discovery and interaction data",
+    examples: "Search filters, saved searches, bookmarks, structured intros, connect requests, match state, and profile activity signals.",
+    purposes: "Ranking results, measuring reciprocity, managing intros, and helping members resume the pipeline.",
+    visibility: "Mostly internal or visible only to the participants involved in the interaction.",
+  },
+  {
+    category: "Messages, proposals, and contract workflow data",
+    examples: "Messages, attachments, clause comments, proposal versions, negotiation notes, agreement drafts, typed-name signatures, and timeline events.",
+    purposes: "Running the deal room, creating editable documents, preserving negotiation history, and supporting disputes or trust-and-safety reviews.",
+    visibility: "Visible to the relevant participants and authorized admins when review is required.",
+  },
+  {
+    category: "Billing and subscription data",
+    examples: "Plan tier, billing status, checkout events, invoice references, payment processor responses, and tax-related metadata when applicable.",
+    purposes: "Charging for paid plans, preventing fraud, resolving billing issues, and keeping accounting records.",
+    visibility: "Internal only, except plan status shown to the account owner.",
+  },
+  {
+    category: "Support, moderation, and admin records",
+    examples: "Reports, evidence uploads, moderation notes, appeal requests, support tickets, internal audit trails, and enforcement history.",
+    purposes: "Investigations, abuse prevention, policy enforcement, legal compliance, and service improvement.",
+    visibility: "Internal only, except for limited status notices shown to affected members.",
+  },
+]
+
+export const privacyRetentionRows: PrivacyRetentionRow[] = [
+  {
+    category: "Active account and profile records",
+    window: "While the account is active, then generally up to 24 months after closure",
+    notes: "Used for reactivation, dispute handling, trust and safety, and legal compliance unless a shorter or longer period is required.",
+  },
+  {
+    category: "Messages, proposals, and contract drafts",
+    window: "While the relationship is active, then generally up to 36 months after the last workflow activity",
+    notes: "Needed so counterparties can preserve shared negotiation history and so CoFoundry can investigate reports tied to a collaboration workflow.",
+  },
+  {
+    category: "Security logs and session signals",
+    window: "Generally up to 12 months",
+    notes: "Kept for fraud prevention, access troubleshooting, and incident response unless a live investigation requires longer retention.",
+  },
+  {
+    category: "Trust and safety reports",
+    window: "Generally up to 5 years after the last related enforcement action",
+    notes: "Longer retention may be necessary for repeat-offender review, legal claims, or coordinated abuse investigations.",
+  },
+  {
+    category: "Billing and accounting records",
+    window: "Generally 7 years or longer if required by law",
+    notes: "Financial records are retained longer than ordinary product data because of accounting, tax, chargeback, and audit obligations.",
+  },
+]
+
+export const privacySections: LegalSection[] = [
+  {
+    id: "scope-contact",
+    title: "1. Scope and Who This Policy Covers",
+    summary: "This policy covers CoFoundry's public website, application, and related founder-matching workflows.",
+    paragraphs: [
+      "This Privacy Policy explains how CoFoundry collects, uses, stores, shares, and protects information when you visit the marketing site, create an account, build a profile, search for collaborators, message other members, exchange proposals, generate contract templates, manage a subscription, contact support, or interact with the trust-and-safety process.",
+      "It applies to both public pages and authenticated product pages. It also applies when CoFoundry processes information through service providers or through its internal mock systems in environments where live third-party services are not enabled.",
+      "For privacy questions, rights requests, or trust-and-safety escalation, use CoFoundry's support contact listed on this page.",
+    ],
+  },
+  {
+    id: "visibility-controls",
+    title: "2. Visibility Controls and Public Profile Exposure",
+    summary: "CoFoundry's privacy model depends heavily on what you choose to make public, member-only, or fully private.",
+    paragraphs: [
+      "CoFoundry is a discovery platform, so some profile and startup information may be deliberately visible to other people. Members can choose public-lite, member-only, or private settings for key profile surfaces, and some startup opportunities can also be published publicly.",
+      "When you select a public setting, information such as your display name, headline, photo, broad location, role context, startup interests, public links, or startup listing details may appear on public directory pages and may be indexed by search engines.",
+      "CoFoundry keeps direct contact information gated. Email addresses, messages, proposal drafts, contract workflow data, and similar collaboration materials are not intended for public display and are only revealed within the product according to connection state, workflow permissions, and admin review rules.",
+      "Because public content can be copied by search engines, aggregators, or other users, changing a visibility setting later may not remove every historical copy that exists outside CoFoundry.",
+    ],
+  },
+  {
+    id: "information-collected",
+    title: "3. Information We Collect",
+    summary: "We collect account, profile, workflow, billing, and safety data needed to operate the network.",
+    paragraphs: [
+      "CoFoundry collects information you provide directly, including account credentials, profile details, startup opportunity listings, values and work-style inputs, links to external profiles, messages, proposals, contract-template inputs, support requests, and report submissions.",
+      "We also collect information generated by your use of the product, including search filters, bookmarks, saved searches, connect requests, matches, workflow events, subscription activity, and trust-signal completion events.",
+      "Certain technical and security data are collected automatically, such as session state, device and browser metadata, IP-based security signals, and logs tied to authentication, rate limiting, or abuse detection.",
+      "CoFoundry may also receive limited information from third-party providers when enabled, such as payment status from Stripe-backed billing, authentication state from live identity providers, or storage and database metadata from a Supabase-backed environment.",
+    ],
+  },
+  {
+    id: "how-we-use-data",
+    title: "4. How We Use Information",
+    summary: "We use personal information to operate the service, rank relevant results, protect the network, and support billing.",
+    paragraphs: [
+      "CoFoundry uses information to create and maintain accounts, render profiles, power search and discovery, recommend relevant people or opportunities, manage structured intros, enable messaging after a mutual connection, and run proposal and contract workflows.",
+      "We also use information for trust and safety, including fraud detection, scam prevention, moderation, support, debugging, enforcing the Terms of Service, and protecting members from spam, impersonation, harassment, and data harvesting.",
+      "Subscription and billing information is used to determine plan access, process checkout events, prevent chargeback abuse, and maintain accounting records.",
+      "CoFoundry may also use aggregated or de-identified product data to understand usage patterns, improve ranking quality, refine onboarding, and operate internal analytics for the service.",
+    ],
+  },
+  {
+    id: "matching-ranking",
+    title: "5. Matching, Ranking, and Recommendations",
+    summary: "CoFoundry uses declared preferences and product signals to rank discovery results and recommendations.",
+    paragraphs: [
+      "The product uses the information members provide, including roles, industries, startup-stage preferences, compensation preferences, time commitment, availability, values, work-style preferences, reciprocity signals, trust-readiness signals, and explicit search filters, to rank profiles and startup opportunities.",
+      "Those rankings are meant to improve relevance, response likelihood, and network quality. They are not credit decisions, employment decisions, or guarantees that a person or startup is legitimate, safe, or suitable for partnership.",
+      "Members can influence matching outcomes by updating profile information, adjusting visibility settings, changing stated preferences, and using filters directly. CoFoundry does not currently use third-party advertising profiles to shape in-product recommendations.",
+    ],
+  },
+  {
+    id: "sharing",
+    title: "6. How We Share Information",
+    summary: "We share information with other members, service providers, and authorities only as needed for the service or legal obligations.",
+    paragraphs: [
+      "CoFoundry shares information with other members according to profile visibility settings, startup listing settings, mutual-connection state, and workflow permissions. That includes profile content, intros, messages, proposals, contract drafts, and signatures when the relevant workflow calls for it.",
+      "We share information with service providers that help us operate the product, such as infrastructure, storage, authentication, billing, email delivery, and security vendors. In some environments, equivalent functionality may be handled by CoFoundry's internal mock services instead of live third-party processors.",
+      "We may disclose information to comply with law, respond to lawful requests, protect the rights or safety of members, investigate fraud or abuse, or support a merger, acquisition, financing, or similar business transaction.",
+      "CoFoundry's current configuration does not use third-party advertising pixels or cross-context behavioral advertising, and CoFoundry does not currently sell or share personal information for that purpose. If that changes, CoFoundry will update this policy and any required opt-out controls before rollout.",
+    ],
+  },
+  {
+    id: "tracking-storage",
+    title: "7. Cookies, Local Storage, and Device Signals",
+    summary: "Current tracking is limited to essential session and product-state technologies.",
+    paragraphs: [
+      "CoFoundry currently uses essential technologies such as cookies and local storage to keep members signed in, preserve workspace state, remember product preferences, and maintain secure session handling.",
+      "These technologies include the session cookie used for authentication and first-party browser storage used to preserve mock workspace state, product preferences, and local interaction continuity.",
+      "CoFoundry does not currently deploy third-party ad pixels, cross-site behavioral advertising tags, or similar tracking technologies in the present product configuration. If non-essential analytics or marketing cookies are introduced later, CoFoundry will update this policy and add any required notices or consent controls before using them.",
+      "Because CoFoundry does not currently use cross-site behavioral advertising in this configuration, it does not presently offer a separate advertising opt-out flow. If that changes, CoFoundry will implement the required controls for the jurisdictions in which those features are offered.",
+    ],
+  },
+  {
+    id: "email-notifications",
+    title: "8. Email, Product Notices, and Communication Preferences",
+    summary: "Some messages are required for the service, while marketing communication remains optional.",
+    paragraphs: [
+      "CoFoundry may send service-related emails or in-product notices for account verification, security events, password resets, connect requests, match status, proposal updates, billing events, moderation actions, and similar operational communications.",
+      "CoFoundry may also send product updates, launch announcements, or other marketing communications where permitted. You can opt out of non-essential marketing messages, but you may still receive service-critical communications tied to your account, subscription, or safety status.",
+      "If members use direct links or contact details obtained through CoFoundry to continue a discussion off-platform, those later communications are governed by the tools and policies of the channels they choose to use.",
+    ],
+  },
+  {
+    id: "retention-deletion",
+    title: "9. Retention and Deletion",
+    summary: "Different categories of data stay around for different reasons, and deletion is not absolute across every workflow.",
+    paragraphs: [
+      "CoFoundry retains information for as long as necessary to operate the service, preserve collaboration history, enforce the Terms, handle trust-and-safety reports, meet legal obligations, and protect against fraud or abuse.",
+      "Account closure or deletion requests do not always erase every record immediately. Other members may still retain copies of messages, proposal drafts, and agreement materials they previously received, and CoFoundry may keep limited records for billing, security, legal compliance, or repeat-offender review.",
+      "CoFoundry generally follows the retention windows summarized on this page, but may retain information for a shorter or longer period where a live investigation, legal hold, tax requirement, or dispute makes that necessary.",
+    ],
+  },
+  {
+    id: "security-moderation",
+    title: "10. Security, Moderation, and Investigations",
+    summary: "Admins and service providers may access protected data when the platform or another member needs protection.",
+    paragraphs: [
+      "CoFoundry uses technical and organizational safeguards designed to protect account data, workflow history, and payment-related metadata, including access controls, scoped service-provider access, and server-side handling for secret-backed integrations when enabled.",
+      "No internet service is perfectly secure, and CoFoundry cannot guarantee absolute security. Members should still use strong passwords, protect their devices, and avoid oversharing sensitive data before they have enough trust in another party.",
+      "Authorized admins may review messages, attachments, proposals, contracts, reports, and associated logs when needed for support, trust and safety, fraud prevention, technical troubleshooting, or legal compliance. CoFoundry does not promise that every interaction is proactively monitored, but it reserves the right to investigate when warranted.",
+    ],
+  },
+  {
+    id: "rights-choices",
+    title: "11. Your Choices and Privacy Rights",
+    summary: "Members can change visibility settings, edit profile data, and request privacy-related action through support.",
+    paragraphs: [
+      "You can update profile information, change visibility settings, manage linked accounts, cancel a paid plan, and close your account through the product surfaces CoFoundry makes available.",
+      "You can also contact CoFoundry to request access, correction, deletion, or other privacy-related support. CoFoundry may need to verify your identity before acting on a request and may limit or deny a request where another user's rights, ongoing investigations, legal obligations, or record-retention duties prevent immediate deletion.",
+      "Members can also control whether they receive marketing messages, decide what links to publish publicly, and choose whether to make a profile visible on the public web, only to signed-in members, or not broadly visible at all.",
+    ],
+  },
+  {
+    id: "us-state-disclosures",
+    title: "12. California and U.S. State Privacy Disclosures",
+    summary: "CoFoundry is built to stay aligned with U.S. privacy-policy and notice expectations as the platform scales.",
+    paragraphs: [
+      "CoFoundry aims to describe its data practices clearly enough to support U.S. state privacy-policy expectations, including disclosures about categories of information collected, how information is shared, how visibility works, and how members can request changes or deletion.",
+      "CoFoundry's current product configuration does not use cross-context behavioral advertising or sell personal information for that purpose. If CoFoundry later introduces targeted advertising, sale or sharing concepts, or additional state-law opt-out rights, CoFoundry will update this policy and any notice-at-collection or opt-out workflows required before the change goes live.",
+      "If CoFoundry becomes subject to broader state-law rights or threshold-based obligations, it may expand this section or add a supplemental U.S. state privacy notice describing category-based retention, rights procedures, and preference-signal handling in more detail.",
+    ],
+  },
+  {
+    id: "international-transfers",
+    title: "13. International Users and Cross-Border Transfers",
+    summary: "CoFoundry is currently structured around a U.S.-first service posture, with additional notices required if broader regional support is enabled.",
+    paragraphs: [
+      "CoFoundry is currently organized around a U.S.-based operating model. If CoFoundry later makes the service broadly available in the EU, UK, or other regions with additional privacy requirements, CoFoundry may provide supplemental notices describing lawful bases, international transfer safeguards, cookie consent controls, and regional rights.",
+      "When live third-party providers process information for CoFoundry, data may be stored or accessed in the United States or other countries where those providers operate. If CoFoundry expands into jurisdictions that require transfer safeguards, CoFoundry will implement the appropriate measures before offering those flows there.",
+    ],
+  },
+  {
+    id: "children",
+    title: "14. Children and Age Restrictions",
+    summary: "CoFoundry is intended for adults who are old enough to enter serious startup collaborations.",
+    paragraphs: [
+      "CoFoundry is not directed to children, and members must be at least 18 years old to use the service.",
+      "If CoFoundry learns that it has collected personal information from someone who is not allowed to use the service, CoFoundry may suspend the account and delete or restrict the related data as appropriate.",
+    ],
+  },
+  {
+    id: "investment-features",
+    title: "15. Future Investment Features",
+    summary: "The future investment module is treated as a separate privacy mode because it may require different data and vendors.",
+    paragraphs: [
+      "CoFoundry's investment module is currently feature-flagged and disabled by default. If it is ever enabled, CoFoundry may need to collect additional information such as enhanced identity, financial, diligence, or regulated-partner data that is not part of the core founder-matching workflow today.",
+      "If CoFoundry launches those features, it may segment the related data, introduce additional vendors or regulated partners, and provide a supplemental feature notice before collecting the new categories of information.",
+      "Nothing about the existence of that dormant feature changes the current privacy posture of the core matching product today.",
+    ],
+  },
+  {
+    id: "changes-contact",
+    title: "16. Changes to This Policy and Contact Information",
+    summary: "CoFoundry may update this policy as the product, vendor stack, or legal posture changes.",
+    paragraphs: [
+      "CoFoundry may update this Privacy Policy from time to time to reflect changes in features, service providers, legal requirements, matching logic, or tracking posture.",
+      "If CoFoundry makes a material change, it may provide notice through the site, application, email, or another reasonable method before or when the updated policy becomes effective.",
+      "Questions, rights requests, or escalation notices can be sent through CoFoundry's support channels.",
     ],
   },
 ]
