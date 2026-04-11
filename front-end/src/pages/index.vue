@@ -326,10 +326,10 @@ usePageSeo("Build startup teams with more structure", appDescription, {
     </section>
 
     <section class="py-16">
-      <div class="page-shell text-white px-6 py-12 rounded-[2rem] bg-[var(--text)] md:px-10">
+      <div class="page-shell marketing-cta-panel px-6 py-12 rounded-[2rem] md:px-10">
         <div class="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p class="section-kicker text-white/60">
+          <div class="max-w-4xl">
+            <p class="section-kicker marketing-cta-kicker">
               Ready to build with more structure
             </p>
             <h2 class="text-3xl tracking-tight font-semibold mt-4 md:text-4xl">
@@ -337,10 +337,10 @@ usePageSeo("Build startup teams with more structure", appDescription, {
             </h2>
           </div>
           <div class="flex flex-wrap gap-3">
-            <BaseButton size="lg" to="/auth/sign-up">
+            <BaseButton size="lg" to="/auth/sign-up" class="marketing-cta-primary">
               Create your profile
             </BaseButton>
-            <BaseButton size="lg" variant="secondary" to="/contact">
+            <BaseButton size="lg" variant="secondary" to="/contact" class="marketing-cta-secondary">
               Talk to us
             </BaseButton>
           </div>
