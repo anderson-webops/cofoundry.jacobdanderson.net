@@ -154,7 +154,7 @@ function createProposal(payload: any) {
       </div>
 
       <div class="p-5 border-t border-[var(--line)]">
-        <TextareaInput v-model="draftMessage" label="Message" helper="Attachments are mocked in local mode and stored as metadata in the conversation." rows="4" />
+        <TextareaInput v-model="draftMessage" label="Message" helper="Attachments are mocked in local mode and stored as metadata in the conversation." :rows="4" />
         <div class="mt-4 flex flex-wrap gap-3 items-center justify-between">
           <input type="file" multiple class="muted text-sm" @change="captureFiles">
           <div class="flex gap-3">

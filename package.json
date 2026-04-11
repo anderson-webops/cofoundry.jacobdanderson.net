@@ -29,6 +29,7 @@
     "seed": "npm run -w back-end seed",
     "test": "npm run -w front-end test",
     "test:unit": "npm run -w front-end test:unit && npm run -w back-end test:run",
+    "test:e2e": "npm run -w front-end test:e2e",
     "test:run": "npm run test:unit",
     "clean": "rm -rf node_modules package-lock.json front-end/node_modules front-end/.nuxt front-end/.output front-end/3000 front-end/dist back-end/node_modules back-end/dist .nuxt .output .data",
     "postinstall": "npm run -w front-end prepare"
