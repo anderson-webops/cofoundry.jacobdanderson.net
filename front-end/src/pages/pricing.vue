@@ -9,7 +9,7 @@ usePageSeo("Pricing")
     <PageIntro
       eyebrow="Pricing"
       title="Straightforward subscription pricing for startup team formation."
-      description="V1 monetizes through SaaS subscriptions and a premium workflow. There is no mandatory platform equity in the core product."
+      description="V1 monetizes through SaaS subscriptions and a premium workflow. There is no mandatory platform equity in the core product, and the paid plans are tied to outbound velocity, proposal volume, and agreement execution instead of basic directory access."
     />
 
     <div class="mt-10 gap-6 grid lg:grid-cols-3">
@@ -41,6 +41,70 @@ usePageSeo("Pricing")
           </BaseButton>
         </div>
       </article>
+    </div>
+
+    <div class="panel mt-10 p-6 md:p-8">
+      <h2 class="text-2xl font-semibold">
+        What the paid plans are really buying
+      </h2>
+      <div class="mt-6 gap-4 grid md:grid-cols-3">
+        <div class="panel-inset p-4">
+          <p class="text-sm font-semibold">
+            Higher search velocity
+          </p>
+          <p class="muted text-sm leading-6 mt-2">
+            More outbound intros, more saved searches, and better ranking for people who have earned trust with proof-of-work and active participation.
+          </p>
+        </div>
+        <div class="panel-inset p-4">
+          <p class="text-sm font-semibold">
+            Higher-intent workflow
+          </p>
+          <p class="muted text-sm leading-6 mt-2">
+            Trial charters, clause-level proposal comments, version history, and signature-ready agreement flow reduce the cost of forming a team badly.
+          </p>
+        </div>
+        <div class="panel-inset p-4">
+          <p class="text-sm font-semibold">
+            Lower billing friction
+          </p>
+          <p class="muted text-sm leading-6 mt-2">
+            The value is not access for its own sake. It is clearer intent, visible renewal dates, and cancellation that happens in-product without a support maze.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel mt-10 p-6 md:p-8">
+      <h2 class="text-2xl font-semibold">
+        The metered units
+      </h2>
+      <div class="mt-6 gap-4 grid md:grid-cols-3">
+        <div class="panel-inset p-4">
+          <p class="text-sm font-semibold">
+            New intros
+          </p>
+          <p class="muted text-sm leading-6 mt-2">
+            CoFoundry meters new outbound introductions, not matched messaging. That keeps the marketplace useful without turning it into a cold-outreach channel.
+          </p>
+        </div>
+        <div class="panel-inset p-4">
+          <p class="text-sm font-semibold">
+            Proposal sends
+          </p>
+          <p class="muted text-sm leading-6 mt-2">
+            Structured deal rooms are visible on every plan, but higher-volume proposal sending is paid because that is where real negotiation begins.
+          </p>
+        </div>
+        <div class="panel-inset p-4">
+          <p class="text-sm font-semibold">
+            Agreement drafts and signatures
+          </p>
+          <p class="muted text-sm leading-6 mt-2">
+            Free can preview an agreement draft. Paid plans unlock signature-ready workflow and print-friendly export when the relationship is ready to formalize.
+          </p>
+        </div>
+      </div>
     </div>
   </div>
 </template>
