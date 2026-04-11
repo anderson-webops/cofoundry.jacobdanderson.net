@@ -1,22 +1,22 @@
 FROM node:20-alpine AS build-stage
 
 WORKDIR /app
-RUN corepack enable
 
-COPY .npmrc package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN --mount=type=cache,id=pnpm-store,target=/root/.pnpm-store \
-    pnpm install --frozen-lockfile
+COPY .npmrc package.json package-lock.json tsconfig.base.json ./
+COPY front-end/package.json ./front-end/package.json
+COPY back-end/package.json ./back-end/package.json
+RUN npm ci --ignore-scripts
 
 COPY . .
-RUN pnpm build
+RUN npm run -w front-end prepare
+RUN npm run build
 
-# SSR
 FROM node:20-alpine AS production-stage
 
 WORKDIR /app
 
-COPY --from=build-stage /app/.output ./.output
+COPY --from=build-stage /app/front-end/.output ./front-end/.output
 
 EXPOSE 3000
 
-CMD ["node", ".output/server/index.mjs"]
+CMD ["node", "front-end/.output/server/index.mjs"]
