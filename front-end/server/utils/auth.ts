@@ -1,8 +1,10 @@
 import type { H3Event } from "h3"
 import type { AuthAccount, SessionUser } from "~/shared/types/domain"
+import { Buffer } from "node:buffer"
+import { createHmac, timingSafeEqual } from "node:crypto"
 import process from "node:process"
 import { workspaceSeed } from "~/shared/data/seed"
-import { decodeSessionUser, encodeSessionUser, sessionCookieName } from "~/shared/utils/session"
+import { decodeSessionUser, encodeSessionUser, sessionCookieName, sessionSignatureCookieName } from "~/shared/utils/session"
 import { signInSchema, signUpSchema } from "~/shared/utils/validation"
 import { buildSessionUser } from "~/shared/utils/workspace"
 import { createSupabaseServerClient, isSupabaseEnabled } from "./supabase"
@@ -14,25 +16,76 @@ interface RegisteredAccount extends AuthAccount {
 const registeredAccounts = new Map<string, RegisteredAccount>()
 const registeredSessions = new Map<string, SessionUser>()
 
+function getSessionSignatureSecret() {
+  return process.env.NUXT_SESSION_SIGNING_SECRET || process.env.SESSION_SIGNING_SECRET || "cofoundry-mock-session-signing-secret"
+}
+
+function createSessionSignature(session: Pick<SessionUser, "id" | "email">) {
+  return createHmac("sha256", getSessionSignatureSecret())
+    .update(`${session.id}:${session.email.toLowerCase()}`)
+    .digest("base64url")
+}
+
+function verifySessionSignature(session: Pick<SessionUser, "id" | "email">, signature?: string | null) {
+  if (!signature)
+    return false
+
+  const expected = createSessionSignature(session)
+  const left = Buffer.from(signature)
+  const right = Buffer.from(expected)
+
+  if (left.length !== right.length)
+    return false
+
+  return timingSafeEqual(left, right)
+}
+
+function getAuthoritativeSessionByUserId(userId: string) {
+  return registeredSessions.get(userId) || buildSessionUser(workspaceSeed, userId)
+}
+
 export function readSession(event: H3Event) {
-  return decodeSessionUser(getCookie(event, sessionCookieName))
+  const decodedSession = decodeSessionUser(getCookie(event, sessionCookieName))
+  const signature = getCookie(event, sessionSignatureCookieName)
+
+  if (!decodedSession || !verifySessionSignature(decodedSession, signature))
+    return null
+
+  const authoritativeSession = getAuthoritativeSessionByUserId(decodedSession.id)
+  if (!authoritativeSession)
+    return null
+
+  if (authoritativeSession.email !== decodedSession.email)
+    return null
+
+  return authoritativeSession
 }
 
 export function writeSession(event: H3Event, session: SessionUser) {
+  const signature = createSessionSignature(session)
+
   setCookie(event, sessionCookieName, encodeSessionUser(session), {
     path: "/",
     sameSite: "lax",
     httpOnly: false,
     secure: process.env.NODE_ENV === "production",
   })
+
+  setCookie(event, sessionSignatureCookieName, signature, {
+    path: "/",
+    sameSite: "lax",
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+  })
 }
 
 export function clearSessionCookie(event: H3Event) {
   deleteCookie(event, sessionCookieName, { path: "/" })
+  deleteCookie(event, sessionSignatureCookieName, { path: "/" })
 }
 
 export function getMockSessionByUserId(userId: string) {
-  return registeredSessions.get(userId) || buildSessionUser(workspaceSeed, userId)
+  return getAuthoritativeSessionByUserId(userId)
 }
 
 export function getSessionForEmail(email: string) {

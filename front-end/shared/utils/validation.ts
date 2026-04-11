@@ -143,3 +143,13 @@ export const reportSchema = z.object({
   reason: z.enum(["spam", "misrepresentation", "harassment", "off_platform_solicitation", "scam_fraud", "impersonation", "data_harvesting", "privacy_violation"]),
   details: z.string().min(12, "Add enough detail for moderation to understand the issue."),
 })
+
+export const adminUserModerationSchema = z.object({
+  action: z.enum(["suspend", "reinstate"]),
+  notes: z.string().trim().min(8, "Add a short moderation note.").max(300, "Keep the moderation note concise."),
+})
+
+export const adminReportStatusSchema = z.object({
+  status: z.enum(["reviewed", "resolved"]),
+  notes: z.string().trim().min(8, "Add a short moderation note.").max(500, "Keep the moderation note concise."),
+})

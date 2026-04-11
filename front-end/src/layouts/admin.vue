@@ -32,7 +32,7 @@ useHead({
           </NuxtLink>
         </nav>
         <div class="panel-inset muted text-sm leading-6 mt-6 p-4">
-          Moderation, reports, and platform analytics for the CoFoundry workspace.
+          Moderation, server-approved enforcement actions, and audit history for the CoFoundry workspace.
         </div>
       </aside>
       <main class="gap-6 grid">
