@@ -13,6 +13,7 @@ export interface PublicEnvironment {
   appUrl: string
   backendMode: BackendMode
   billingMode: BillingMode
+  enableDemoAccess: boolean
   featureInvestmentModule: boolean
   stripePriceProMonthly: string
   stripePriceTeamMonthly: string
@@ -70,6 +71,7 @@ export function readPublicEnvironment(env: EnvironmentSource): PublicEnvironment
     appUrl: configuredAppUrl || (isLocalDevelopmentEnvironment(env) ? localDevelopmentAppUrl : ""),
     backendMode: normalizeBackendMode(readValue(env, "NUXT_PUBLIC_BACKEND_MODE")),
     billingMode: normalizeBillingMode(readValue(env, "NUXT_PUBLIC_BILLING_MODE")),
+    enableDemoAccess: readValue(env, "NUXT_PUBLIC_ENABLE_DEMO_ACCESS") === "true",
     featureInvestmentModule: readValue(env, "NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE") === "true",
     stripePriceProMonthly: readValue(env, "NUXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY"),
     stripePriceTeamMonthly: readValue(env, "NUXT_PUBLIC_STRIPE_PRICE_TEAM_MONTHLY"),

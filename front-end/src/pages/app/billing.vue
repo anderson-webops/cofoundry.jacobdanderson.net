@@ -12,12 +12,13 @@ usePageSeo("Billing")
 
 const route = useRoute()
 const toastStore = useToastStore()
-const runtimeConfig = useRuntimeConfig()
+const { getServiceLabels } = useProductAccess()
 const { authStore, subscription, workspaceStore } = useCurrentMember()
+const serviceLabels = getServiceLabels()
 
 const pendingPlan = ref("")
 const usage = computed(() => authStore.currentUser ? buildSubscriptionUsage(workspaceStore.data, authStore.currentUser.id, subscription.value || undefined) : null)
-const billingModeLabel = computed(() => runtimeConfig.public.billingMode === "stripe" ? "Stripe-backed mode" : "Mock billing mode")
+const billingModeLabel = computed(() => serviceLabels.billing)
 const currentPriceLabel = computed(() => getPlanPriceLabel(subscription.value?.plan || "free", subscription.value?.billingCycle || "monthly"))
 const billingMoments = computed(() => {
   if (!subscription.value?.renewsAt)
@@ -63,8 +64,8 @@ async function startCheckout(plan: "pro" | "team") {
 
     if (response.mode === "mock") {
       toastStore.push({
-        title: "Mock checkout",
-        message: "Redirecting to the local billing success flow.",
+        title: "Billing preview",
+        message: "Self-serve checkout is not live in this environment, so CoFoundry is routing you through the current preview flow.",
         tone: "info",
       })
     }

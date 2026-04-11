@@ -8,6 +8,9 @@ import { getIndustryHubs, getRoleHubs, getStageHubs } from "~/shared/utils/direc
 const roleHubs = getRoleHubs(workspaceSeed)
 const industryHubs = getIndustryHubs(workspaceSeed)
 const stageHubs = getStageHubs(workspaceSeed)
+const { getPrimaryAccessCta } = useProductAccess()
+const heroAccessCta = computed(() => getPrimaryAccessCta("home-hero"))
+const footerAccessCta = computed(() => getPrimaryAccessCta("home-footer"))
 
 usePageSeo("Build startup teams with more structure", appDescription, {
   canonicalPath: "/",
@@ -29,8 +32,8 @@ usePageSeo("Build startup teams with more structure", appDescription, {
             CoFoundry is built for founder relationships, not freelance gigs. Find aligned partners, compare commitment and governance early, run a short working sprint, and only then turn the relationship into something explicit enough to sign.
           </p>
           <div class="mt-8 flex flex-wrap gap-3">
-            <BaseButton size="lg" to="/auth/sign-up">
-              Start free
+            <BaseButton size="lg" :to="heroAccessCta.to">
+              {{ heroAccessCta.label }}
             </BaseButton>
             <BaseButton size="lg" variant="secondary" to="/how-it-works">
               See the workflow
@@ -337,8 +340,8 @@ usePageSeo("Build startup teams with more structure", appDescription, {
             </h2>
           </div>
           <div class="flex flex-wrap gap-3">
-            <BaseButton size="lg" to="/auth/sign-up" class="marketing-cta-primary">
-              Create your profile
+            <BaseButton size="lg" :to="footerAccessCta.to" class="marketing-cta-primary">
+              {{ footerAccessCta.label }}
             </BaseButton>
             <BaseButton size="lg" variant="secondary" to="/contact" class="marketing-cta-secondary">
               Talk to us

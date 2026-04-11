@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { pricingTiers } from "~/shared/data/marketing"
 
+const { getPricingTierCta } = useProductAccess()
+
 usePageSeo("Pricing")
 </script>
 
@@ -36,8 +38,8 @@ usePageSeo("Pricing")
         </ul>
 
         <div class="mt-8">
-          <BaseButton :to="tier.id === 'team' ? '/contact' : '/auth/sign-up'" block :variant="tier.highlighted ? 'primary' : 'secondary'">
-            {{ tier.ctaLabel }}
+          <BaseButton :to="getPricingTierCta(tier.id, `pricing-${tier.id}`).to" block :variant="tier.highlighted ? 'primary' : 'secondary'">
+            {{ getPricingTierCta(tier.id, `pricing-${tier.id}`).label }}
           </BaseButton>
         </div>
       </article>

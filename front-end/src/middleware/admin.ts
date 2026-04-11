@@ -1,16 +1,9 @@
-import type { SessionUser } from "~/shared/types/domain"
-
 export default defineNuxtRouteMiddleware(async () => {
-  const { setSession } = useSessionState()
+  const response = await useAuthoritativeSession()
 
-  const headers = import.meta.server ? useRequestHeaders(["cookie"]) : undefined
-  const response = await $fetch<{ session: SessionUser | null }>("/api/auth/session", { headers })
-
-  setSession(response.session)
-
-  if (!response.session)
+  if (!response)
     return navigateTo("/auth/sign-in")
 
-  if (!["admin", "investor_admin"].includes(response.session.role))
+  if (!["admin", "investor_admin"].includes(response.role))
     return navigateTo("/app")
 })

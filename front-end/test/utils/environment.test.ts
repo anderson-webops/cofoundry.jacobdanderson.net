@@ -5,11 +5,13 @@ describe("environment helpers", () => {
   it("keeps localhost defaults only for local mock development", () => {
     const environment = readPublicEnvironment({
       NODE_ENV: "development",
+      NUXT_PUBLIC_ENABLE_DEMO_ACCESS: "true",
     })
 
     expect(environment.appUrl).toBe("http://localhost:3000")
     expect(environment.backendMode).toBe("mock")
     expect(environment.billingMode).toBe("mock")
+    expect(environment.enableDemoAccess).toBe(true)
   })
 
   it("does not inject a localhost app url into production by default", () => {

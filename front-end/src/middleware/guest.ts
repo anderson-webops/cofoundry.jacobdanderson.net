@@ -1,9 +1,9 @@
-export default defineNuxtRouteMiddleware(() => {
-  const { session } = useSessionState()
+export default defineNuxtRouteMiddleware(async () => {
+  const session = await useAuthoritativeSession()
 
-  if (session.value?.onboardingCompleted)
+  if (session?.onboardingCompleted)
     return navigateTo("/app")
 
-  if (session.value)
+  if (session)
     return navigateTo("/onboarding")
 })

@@ -261,7 +261,7 @@ export const privacyKeyNotes = [
   },
   {
     title: "Live vendors are conditional",
-    body: "Some environments run entirely in mock mode. When live services such as Supabase or Stripe are enabled, they process data only for the product workflows described in this policy.",
+    body: "Some environments rely on CoFoundry-hosted internal services. When live vendors such as Supabase or Stripe are enabled, they process data only for the product workflows described in this policy.",
   },
 ]
 
@@ -366,7 +366,7 @@ export const privacySections: LegalSection[] = [
     summary: "This policy covers CoFoundry's public website, application, and related founder-matching workflows.",
     paragraphs: [
       "This Privacy Policy explains how CoFoundry collects, uses, stores, shares, and protects information when you visit the marketing site, create an account, build a profile, search for collaborators, message other members, exchange proposals, generate contract templates, manage a subscription, contact support, or interact with the trust-and-safety process.",
-      "It applies to both public pages and authenticated product pages. It also applies when CoFoundry processes information through service providers or through its internal mock systems in environments where live third-party services are not enabled.",
+      "It applies to both public pages and authenticated product pages. It also applies when CoFoundry processes information through service providers or through its internal service layer in environments where live third-party services are not enabled.",
       "For privacy questions, rights requests, or trust-and-safety escalation, use CoFoundry's support contact listed on this page.",
     ],
   },
@@ -419,7 +419,7 @@ export const privacySections: LegalSection[] = [
     summary: "We share information with other members, service providers, and authorities only as needed for the service or legal obligations.",
     paragraphs: [
       "CoFoundry shares information with other members according to profile visibility settings, startup listing settings, mutual-connection state, and workflow permissions. That includes profile content, intros, messages, proposals, contract drafts, and signatures when the relevant workflow calls for it.",
-      "We share information with service providers that help us operate the product, such as infrastructure, storage, authentication, billing, email delivery, and security vendors. In some environments, equivalent functionality may be handled by CoFoundry's internal mock services instead of live third-party processors.",
+      "We share information with service providers that help us operate the product, such as infrastructure, storage, authentication, billing, email delivery, and security vendors. In some environments, equivalent functionality may be handled by CoFoundry's internal service layer instead of live third-party processors.",
       "We may disclose information to comply with law, respond to lawful requests, protect the rights or safety of members, investigate fraud or abuse, or support a merger, acquisition, financing, or similar business transaction.",
       "CoFoundry's current configuration does not use third-party advertising pixels or cross-context behavioral advertising, and CoFoundry does not currently sell or share personal information for that purpose. If that changes, CoFoundry will update this policy and any required opt-out controls before rollout.",
     ],
@@ -430,7 +430,7 @@ export const privacySections: LegalSection[] = [
     summary: "Current tracking is limited to essential session and product-state technologies.",
     paragraphs: [
       "CoFoundry currently uses essential technologies such as cookies and local storage to keep members signed in, preserve workspace state, remember product preferences, and maintain secure session handling.",
-      "These technologies include the session cookie used for authentication and first-party browser storage used to preserve mock workspace state, product preferences, and local interaction continuity.",
+      "These technologies include the session cookie used for authentication and first-party browser storage used to preserve product state, product preferences, and local interaction continuity.",
       "CoFoundry does not currently deploy third-party ad pixels, cross-site behavioral advertising tags, or similar tracking technologies in the present product configuration. If non-essential analytics or marketing cookies are introduced later, CoFoundry will update this policy and add any required notices or consent controls before using them.",
       "Because CoFoundry does not currently use cross-site behavioral advertising in this configuration, it does not presently offer a separate advertising opt-out flow. If that changes, CoFoundry will implement the required controls for the jurisdictions in which those features are offered.",
     ],

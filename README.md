@@ -125,19 +125,26 @@ Default:
 
 - `NUXT_PUBLIC_BACKEND_MODE="mock"`
 - `NUXT_PUBLIC_BILLING_MODE="mock"`
+- `NUXT_PUBLIC_ENABLE_DEMO_ACCESS="false"`
 
 Behavior:
 
-- Auth runs through local cookie-backed mock routes
-- Workspace data comes from realistic seeded demo data with local persistence via `useStorage`
-- Billing uses a mocked checkout redirect and local entitlement updates
-- The full app works without Supabase or Stripe keys
+- In production-facing deployments, CoFoundry behaves as a public marketing shell plus access-request funnel
+- Public directories, pricing, legal pages, contact, sitemap, and SEO surfaces remain live
+- `/auth/sign-in` and `/auth/sign-up` become intentional access-request pages instead of fake-live account creation
+- The private app stays available only in local development or when demo access is explicitly enabled
+- Local development still supports cookie-backed mock auth, seeded workspace data, and preview billing flows
 
 Required env:
 
 - `NUXT_PUBLIC_BACKEND_MODE="mock"`
 - `NUXT_PUBLIC_BILLING_MODE="mock"`
+- `NUXT_PUBLIC_ENABLE_DEMO_ACCESS="false"` for production-facing shells
 - No server secrets are required
+
+Optional:
+
+- `NUXT_PUBLIC_ENABLE_DEMO_ACCESS="true"` if you intentionally want seeded/demo account flows in a staging environment
 
 ### Supabase-backed mode
 
@@ -193,6 +200,7 @@ Current deployments can stay in mock mode with no secret-backed services enabled
 - Server-only secrets are expected to come from Vault-managed env files or equivalent host injection later.
 - The repo is already wired so that moving from mock mode to Supabase or Stripe is a config change, not another refactor.
 - `NUXT_PUBLIC_APP_URL` falls back to `http://localhost:3000` only for local development. Production SSR avoids localhost-style defaults and derives request origin when needed.
+- If `NUXT_PUBLIC_BACKEND_MODE="mock"` in a production deployment, the product should stay in marketing-shell mode unless `NUXT_PUBLIC_ENABLE_DEMO_ACCESS="true"` is set deliberately for a staging/demo environment.
 
 ## Feature-flagged investment module
 
