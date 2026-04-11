@@ -94,6 +94,14 @@ export default defineNuxtConfig({
       routes: ["/", "/how-it-works", "/pricing", "/faq", "/safety", "/terms", "/privacy", "/contact"],
     },
   },
+  vite: {
+    build: {
+      modulePreload: {
+        // Avoid Vite 7's polyfill transform, which emits a sourcemap warning in Nuxt builds.
+        polyfill: false,
+      },
+    },
+  },
 
   eslint: {
     config: {
