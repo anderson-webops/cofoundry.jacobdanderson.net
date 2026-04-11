@@ -1,5 +1,10 @@
 import process from "node:process"
 import { appDescription, appName } from "./shared/constants/app"
+import { assertEnvironmentIsValid, readEnvironmentSnapshot } from "./shared/utils/environment"
+
+const environment = readEnvironmentSnapshot(process.env)
+
+assertEnvironmentIsValid(process.env, "Nuxt configuration")
 
 export default defineNuxtConfig({
   modules: [
@@ -46,21 +51,21 @@ export default defineNuxtConfig({
     classSuffix: "",
   },
   runtimeConfig: {
-    stripeSecretKey: process.env.STRIPE_SECRET_KEY || "",
-    stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || "",
-    supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || "",
+    stripeSecretKey: environment.secret.stripeSecretKey,
+    stripeWebhookSecret: environment.secret.stripeWebhookSecret,
+    supabaseServiceRoleKey: environment.secret.supabaseServiceRoleKey,
     public: {
       appName,
-      appUrl: process.env.NUXT_PUBLIC_APP_URL || "http://localhost:3000",
-      backendMode: process.env.NUXT_PUBLIC_BACKEND_MODE || "mock",
-      billingMode: process.env.NUXT_PUBLIC_BILLING_MODE || "mock",
-      featureInvestmentModule: process.env.NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE === "true",
-      stripePriceProMonthly: process.env.NUXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY || "",
-      stripePriceTeamMonthly: process.env.NUXT_PUBLIC_STRIPE_PRICE_TEAM_MONTHLY || "",
-      stripePublishableKey: process.env.NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "",
-      supabaseAnonKey: process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY || "",
-      supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL || "",
-      supportEmail: process.env.NUXT_PUBLIC_SUPPORT_EMAIL || "support@cofoundry.dev",
+      appUrl: environment.public.appUrl,
+      backendMode: environment.public.backendMode,
+      billingMode: environment.public.billingMode,
+      featureInvestmentModule: environment.public.featureInvestmentModule,
+      stripePriceProMonthly: environment.public.stripePriceProMonthly,
+      stripePriceTeamMonthly: environment.public.stripePriceTeamMonthly,
+      stripePublishableKey: environment.public.stripePublishableKey,
+      supabaseAnonKey: environment.public.supabaseAnonKey,
+      supabaseUrl: environment.public.supabaseUrl,
+      supportEmail: environment.public.supportEmail,
     },
   },
 

@@ -3,6 +3,13 @@ import assert from "node:assert/strict"
 import test from "node:test"
 import { createBackendServer } from "../src/server"
 
+function restoreEnvValue(key: string, value: string | undefined) {
+  if (typeof value === "undefined")
+    delete process.env[key]
+  else
+    process.env[key] = value
+}
+
 async function withServer(run: (baseUrl: string) => Promise<void>) {
   const server = createBackendServer()
 
@@ -46,11 +53,17 @@ test("metadata endpoint reflects env-driven flags", async () => {
   const previousBillingMode = process.env.NUXT_PUBLIC_BILLING_MODE
   const previousInvestment = process.env.NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE
   const previousSupportEmail = process.env.NUXT_PUBLIC_SUPPORT_EMAIL
+  const previousSupabaseUrl = process.env.NUXT_PUBLIC_SUPABASE_URL
+  const previousSupabaseAnonKey = process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY
+  const previousSupabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
   process.env.NUXT_PUBLIC_BACKEND_MODE = "supabase"
   process.env.NUXT_PUBLIC_BILLING_MODE = "mock"
   process.env.NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE = "true"
   process.env.NUXT_PUBLIC_SUPPORT_EMAIL = "support@cofoundry.dev"
+  process.env.NUXT_PUBLIC_SUPABASE_URL = "https://cofoundry.supabase.co"
+  process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY = "public-anon-key"
+  process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-key"
 
   try {
     await withServer(async (baseUrl) => {
@@ -66,10 +79,13 @@ test("metadata endpoint reflects env-driven flags", async () => {
     })
   }
   finally {
-    process.env.NUXT_PUBLIC_BACKEND_MODE = previousBackendMode
-    process.env.NUXT_PUBLIC_BILLING_MODE = previousBillingMode
-    process.env.NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE = previousInvestment
-    process.env.NUXT_PUBLIC_SUPPORT_EMAIL = previousSupportEmail
+    restoreEnvValue("NUXT_PUBLIC_BACKEND_MODE", previousBackendMode)
+    restoreEnvValue("NUXT_PUBLIC_BILLING_MODE", previousBillingMode)
+    restoreEnvValue("NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE", previousInvestment)
+    restoreEnvValue("NUXT_PUBLIC_SUPPORT_EMAIL", previousSupportEmail)
+    restoreEnvValue("NUXT_PUBLIC_SUPABASE_URL", previousSupabaseUrl)
+    restoreEnvValue("NUXT_PUBLIC_SUPABASE_ANON_KEY", previousSupabaseAnonKey)
+    restoreEnvValue("SUPABASE_SERVICE_ROLE_KEY", previousSupabaseServiceRoleKey)
   }
 })
 
@@ -81,4 +97,29 @@ test("unknown routes return a 404 payload", async () => {
     assert.equal(response.status, 404)
     assert.equal(body.error, "Not found")
   })
+})
+
+test("server creation fails fast when non-mock modes are misconfigured", () => {
+  const previousBackendMode = process.env.NUXT_PUBLIC_BACKEND_MODE
+  const previousSupabaseUrl = process.env.NUXT_PUBLIC_SUPABASE_URL
+  const previousSupabaseAnonKey = process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY
+  const previousSupabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  process.env.NUXT_PUBLIC_BACKEND_MODE = "supabase"
+  delete process.env.NUXT_PUBLIC_SUPABASE_URL
+  delete process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  try {
+    assert.throws(
+      () => createBackendServer(),
+      /SUPABASE_SERVICE_ROLE_KEY is required when NUXT_PUBLIC_BACKEND_MODE="supabase"\./,
+    )
+  }
+  finally {
+    restoreEnvValue("NUXT_PUBLIC_BACKEND_MODE", previousBackendMode)
+    restoreEnvValue("NUXT_PUBLIC_SUPABASE_URL", previousSupabaseUrl)
+    restoreEnvValue("NUXT_PUBLIC_SUPABASE_ANON_KEY", previousSupabaseAnonKey)
+    restoreEnvValue("SUPABASE_SERVICE_ROLE_KEY", previousSupabaseServiceRoleKey)
+  }
 })

@@ -4,22 +4,26 @@ import { resolve } from "node:path"
 import process from "node:process"
 import { fileURLToPath } from "node:url"
 import { config } from "dotenv"
+import { assertEnvironmentIsValid, readPublicEnvironment } from "./environment.js"
 
 config({
   path: resolve(process.cwd(), "../.env"),
 })
 
 export function resolveBackendPort() {
-  return Number(process.env.BACKEND_PORT || 3008)
+  const configuredPort = Number(process.env.BACKEND_PORT)
+  return Number.isFinite(configuredPort) && configuredPort > 0 ? configuredPort : 3008
 }
 
 export function buildMetadataPayload() {
+  const publicEnvironment = readPublicEnvironment(process.env)
+
   return {
     app: "CoFoundry",
-    backendMode: process.env.NUXT_PUBLIC_BACKEND_MODE || "mock",
-    billingMode: process.env.NUXT_PUBLIC_BILLING_MODE || "mock",
-    investmentModuleEnabled: process.env.NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE === "true",
-    supportEmail: process.env.NUXT_PUBLIC_SUPPORT_EMAIL || "support@cofoundry.dev",
+    backendMode: publicEnvironment.backendMode,
+    billingMode: publicEnvironment.billingMode,
+    investmentModuleEnabled: publicEnvironment.featureInvestmentModule,
+    supportEmail: publicEnvironment.supportEmail,
   }
 }
 
@@ -51,6 +55,7 @@ export function handleRequest(request: IncomingMessage, response: ServerResponse
 }
 
 export function createBackendServer() {
+  assertEnvironmentIsValid(process.env, "back-end server startup")
   return createServer(handleRequest)
 }
 

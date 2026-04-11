@@ -4,6 +4,7 @@ import process from "node:process"
 import { createClient } from "@supabase/supabase-js"
 import { config } from "dotenv"
 import { workspaceSeed } from "../../front-end/shared/data/seed"
+import { formatEnvironmentValidationError, readPublicEnvironment, readSecretEnvironment } from "../src/environment"
 
 config({
   path: resolve(process.cwd(), "../.env"),
@@ -148,10 +149,16 @@ function mapTables() {
 }
 
 async function seedSupabase() {
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.NUXT_PUBLIC_SUPABASE_URL
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const publicEnvironment = readPublicEnvironment(process.env)
+  const secretEnvironment = readSecretEnvironment(process.env)
+  const supabaseUrl = publicEnvironment.supabaseUrl
+  const serviceRoleKey = secretEnvironment.supabaseServiceRoleKey
 
   if (!supabaseUrl || !serviceRoleKey) {
+    if (publicEnvironment.backendMode === "supabase") {
+      throw new Error(formatEnvironmentValidationError(process.env, "seed script") || "Supabase mode is enabled but the seed script is missing required Supabase environment variables.")
+    }
+
     console.log("Supabase credentials not found. Local mock seed is ready and no remote writes were attempted.")
     return
   }
