@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import type { ContactRevealStage } from "~/shared/types/domain"
+import { contactRevealStageOptions } from "~/shared/constants/options"
+import { formatContactRevealStage, formatTrustTier } from "~/shared/utils/format"
+import { buildProfileTrustTier } from "~/shared/utils/formation"
+
 definePageMeta({
   layout: "app",
   middleware: ["auth", "onboarding"],
@@ -9,6 +14,24 @@ usePageSeo("Settings")
 const runtimeConfig = useRuntimeConfig()
 const toastStore = useToastStore()
 const { authStore, profile, workspaceStore } = useCurrentMember()
+const contactRevealStage = ref<ContactRevealStage>(profile.value?.privacy.contactRevealStage || "matches")
+const trustTier = computed(() => profile.value ? buildProfileTrustTier(profile.value) : "level_a")
+
+watch(profile, (value) => {
+  contactRevealStage.value = value?.privacy.contactRevealStage || "matches"
+}, { immediate: true })
+
+watch(contactRevealStage, (value, oldValue) => {
+  if (!authStore.currentUser || !oldValue || value === oldValue)
+    return
+
+  workspaceStore.updateContactRevealStage(authStore.currentUser.id, value)
+  toastStore.push({
+    title: "Contact rule updated",
+    message: `Contact details now reveal ${formatContactRevealStage(value)}.`,
+    tone: "success",
+  })
+})
 
 async function signOut() {
   await authStore.signOut()
@@ -20,6 +43,18 @@ function resetDemoData() {
   toastStore.push({
     title: "Demo data reset",
     message: "The local mock workspace was restored to the seeded state.",
+    tone: "success",
+  })
+}
+
+function verify(type: "phone" | "linkedin" | "work_domain" | "government_id", label: string) {
+  if (!authStore.currentUser)
+    return
+
+  workspaceStore.completeTrustVerification(authStore.currentUser.id, type)
+  toastStore.push({
+    title: "Verification completed",
+    message: `${label} is now reflected on your trust surface in mock mode.`,
     tone: "success",
   })
 }
@@ -41,11 +76,49 @@ function resetDemoData() {
         <div class="muted text-sm mt-5 gap-3 grid">
           <div>Current visibility: {{ profile?.privacy.profileVisibility }}</div>
           <div>Contact details visible to matches only: {{ profile?.privacy.contactDetailsVisibleToMatchesOnly ? "Yes" : "No" }}</div>
+          <div>Contact reveal stage: {{ formatContactRevealStage(profile?.privacy.contactRevealStage || "matches") }}</div>
           <div>Remote preference: {{ profile?.remotePreference }}</div>
+        </div>
+        <div class="mt-5">
+          <SelectInput
+            v-model="contactRevealStage"
+            label="Reveal contact details"
+            helper="Choose when direct contact should unlock for other members."
+            :options="contactRevealStageOptions"
+          />
         </div>
         <div class="mt-5">
           <BaseButton variant="secondary" to="/app/profile/edit">
             Edit profile
+          </BaseButton>
+        </div>
+      </div>
+
+      <div class="panel p-6">
+        <h2 class="text-lg font-semibold">
+          Trust program
+        </h2>
+        <div class="mt-5">
+          <TrustSignalStrip v-if="profile" :profile="profile" />
+        </div>
+        <div class="muted text-sm mt-4 gap-3 grid">
+          <div>Current tier: {{ formatTrustTier(trustTier) }}</div>
+          <div>Level A: verified email and baseline profile.</div>
+          <div>Level B: phone verification plus an outreach-ready profile.</div>
+          <div>Level C: government ID assurance for higher-risk workflows like contract signing.</div>
+        </div>
+        <div class="mt-5 flex flex-wrap gap-3">
+          <BaseButton variant="secondary" @click="verify('phone', 'Phone verification')">
+            Verify phone
+          </BaseButton>
+          <BaseButton variant="secondary" @click="verify('linkedin', 'LinkedIn verification')">
+            Verify LinkedIn
+          </BaseButton>
+          <BaseButton variant="secondary" @click="verify('work_domain', 'Work-domain verification')">
+            Verify work domain
+          </BaseButton>
+          <BaseButton variant="secondary" @click="verify('government_id', 'Government ID verification')">
+            Verify ID
           </BaseButton>
         </div>
       </div>
@@ -66,6 +139,18 @@ function resetDemoData() {
           <BaseButton variant="ghost" @click="signOut">
             Sign out
           </BaseButton>
+        </div>
+      </div>
+
+      <div class="panel p-6">
+        <h2 class="text-lg font-semibold">
+          Official communications
+        </h2>
+        <div class="muted text-sm mt-5 gap-3 grid">
+          <div>Support email: {{ runtimeConfig.public.supportEmail }}</div>
+          <div>App URL: {{ runtimeConfig.public.appUrl }}</div>
+          <div>CoFoundry will not ask for diligence fees, wire transfers, or crypto payments in chat.</div>
+          <div>Move off-platform only after a mutual match and only when the contact reveal rule has been satisfied.</div>
         </div>
       </div>
     </div>

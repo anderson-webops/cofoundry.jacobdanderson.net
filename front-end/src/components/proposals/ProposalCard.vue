@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Proposal, ProposalVersion } from "~/shared/types/domain"
-import { formatProposalStatus } from "~/shared/utils/format"
+import { formatProposalRelationshipType, formatProposalStatus } from "~/shared/utils/format"
 
 defineProps<{
   proposal: Proposal
@@ -25,8 +25,9 @@ defineProps<{
       </BaseBadge>
     </div>
     <div class="muted text-sm mt-4 gap-2 grid">
+      <div>Relationship: {{ version ? formatProposalRelationshipType(version.relationshipType) : "Not set" }}</div>
       <div>Role: {{ version?.roleTitle }}</div>
-      <div>Equity: {{ version?.equity }}</div>
+      <div>Economics: {{ version?.cashCompensation }} · {{ version?.equity }}</div>
     </div>
   </NuxtLink>
 </template>

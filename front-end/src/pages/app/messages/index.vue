@@ -32,7 +32,7 @@ function conversationTitle(conversationId: string) {
     <PageIntro
       eyebrow="Messages"
       title="Matched conversations"
-      description="Messages unlock after mutual interest. Proposal and contract updates also show up as system messages here."
+      description="Messages unlock after mutual interest. Safety warnings, proposal updates, and contract events all stay attached to the conversation so trust does not disappear once the match happens."
     />
 
     <div v-if="conversations.length" class="gap-4 grid lg:grid-cols-2">

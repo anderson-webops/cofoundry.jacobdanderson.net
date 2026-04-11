@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { StartupOpportunity } from "~/shared/types/domain"
-import { formatCommitment, formatCompensation, formatRemotePreference, formatStage } from "~/shared/utils/format"
+import { formatCommitment, formatCompensation, formatOpportunityVerificationStatus, formatRemotePreference, formatStage } from "~/shared/utils/format"
+import { getOpportunityVerificationTone } from "~/shared/utils/formation"
 
 defineProps<{
   opportunity: StartupOpportunity
@@ -33,6 +34,9 @@ defineProps<{
       <BaseBadge tone="neutral">
         {{ formatCompensation(opportunity.compensationStructure) }}
       </BaseBadge>
+      <BaseBadge :tone="getOpportunityVerificationTone(opportunity.verificationStatus)">
+        {{ formatOpportunityVerificationStatus(opportunity.verificationStatus) }}
+      </BaseBadge>
     </div>
 
     <p class="muted text-sm leading-6">
@@ -48,6 +52,9 @@ defineProps<{
     <div class="muted text-sm gap-2 grid">
       <div>Traction: {{ opportunity.traction }}</div>
       <div>Equity range: {{ opportunity.equityRange }}</div>
+      <div v-if="opportunity.officialWebsite">
+        Website: {{ opportunity.officialWebsite }}
+      </div>
     </div>
 
     <div class="mt-auto flex flex-wrap gap-3">

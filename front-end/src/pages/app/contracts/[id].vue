@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { getSubscriptionEntitlements } from "~/shared/utils/billing"
 import { formatDate } from "~/shared/utils/format"
+import { buildProposalTermsSummary } from "~/shared/utils/proposals"
 import { contractSignatureSchema } from "~/shared/utils/validation"
-import { getContractById, getCurrentContractVersion, getProposalById } from "~/shared/utils/workspace"
+import { getContractById, getCurrentContractVersion, getCurrentProposalVersion, getProposalById } from "~/shared/utils/workspace"
 
 definePageMeta({
   layout: "app",
@@ -12,17 +14,30 @@ usePageSeo("Contract detail")
 
 const route = useRoute()
 const toastStore = useToastStore()
-const { authStore, workspaceStore } = useCurrentMember()
+const { authStore, subscription, workspaceStore } = useCurrentMember()
 
 const contract = computed(() => getContractById(workspaceStore.data, route.params.id as string))
 const version = computed(() => contract.value ? getCurrentContractVersion(workspaceStore.data, contract.value) : undefined)
 const proposal = computed(() => contract.value ? getProposalById(workspaceStore.data, contract.value.proposalId) : undefined)
+const proposalVersion = computed(() => proposal.value ? getCurrentProposalVersion(workspaceStore.data, proposal.value) : undefined)
+const proposalSummary = computed(() => proposalVersion.value ? buildProposalTermsSummary(proposalVersion.value) : [])
 const signatures = computed(() => workspaceStore.data.signatures.filter(signature => signature.contractId === route.params.id))
+const entitlements = computed(() => getSubscriptionEntitlements(subscription.value || undefined))
+const previewOnly = computed(() => !entitlements.value.canSignContracts)
 const editDialogOpen = ref(false)
 const signatureName = ref("")
 const signatureError = ref("")
 
 function printContract() {
+  if (previewOnly.value) {
+    toastStore.push({
+      title: "Upgrade required",
+      message: "Free keeps agreement drafts visible, but print and export stay on Pro and Team.",
+      tone: "warning",
+    })
+    return
+  }
+
   if (import.meta.client)
     window.print()
 }
@@ -50,6 +65,15 @@ function signContract() {
 
   if (!contract.value || !authStore.currentUser)
     return
+
+  if (previewOnly.value) {
+    toastStore.push({
+      title: "Signature workflow is paid",
+      message: "This draft is visible on Free, but typed signatures are only enabled on Pro and Team.",
+      tone: "warning",
+    })
+    return
+  }
 
   workspaceStore.signContract(contract.value.id, authStore.currentUser.id, parsed.data.typedName)
   signatureName.value = ""
@@ -83,6 +107,28 @@ function signContract() {
         <p class="muted text-sm leading-7 mt-3">
           This contract is a startup workflow template. It is not legal advice, does not create an attorney-client relationship, and should be reviewed by counsel before execution.
         </p>
+        <p v-if="previewOnly" class="muted text-sm leading-7 mt-3">
+          This account is currently in preview mode for agreement drafts. You can review the structure and terms here, but printing and signature collection require a paid plan.
+        </p>
+      </div>
+
+      <div v-if="proposal && proposalSummary.length" class="panel p-5">
+        <h2 class="text-lg font-semibold">
+          Staged proposal snapshot
+        </h2>
+        <p class="muted text-sm leading-7 mt-3">
+          This agreement draft was generated from the accepted or active proposal terms below. Keep this summary aligned with the deal room before anyone signs.
+        </p>
+        <div class="mt-4 gap-3 grid">
+          <div v-for="item in proposalSummary" :key="item.label" class="panel-inset p-4">
+            <p class="text-sm font-semibold">
+              {{ item.label }}
+            </p>
+            <p class="muted text-sm leading-6 mt-2">
+              {{ item.value }}
+            </p>
+          </div>
+        </div>
       </div>
 
       <div class="panel p-5">
@@ -103,14 +149,17 @@ function signContract() {
         <div class="mt-5 gap-4 grid">
           <TextInput v-model="signatureName" label="Type your full name to sign" :error="signatureError" />
           <div class="flex flex-wrap gap-3">
-            <BaseButton @click="signContract">
-              Sign contract
+            <BaseButton :disabled="previewOnly" @click="signContract">
+              {{ previewOnly ? "Signatures require Pro" : "Sign contract" }}
             </BaseButton>
             <BaseButton variant="secondary" @click="editDialogOpen = true">
               Edit new version
             </BaseButton>
-            <BaseButton variant="ghost" @click="printContract">
-              Print / Save PDF
+            <BaseButton variant="ghost" :disabled="previewOnly" @click="printContract">
+              {{ previewOnly ? "Print requires Pro" : "Print / Save PDF" }}
+            </BaseButton>
+            <BaseButton v-if="previewOnly" variant="secondary" to="/app/billing">
+              Upgrade plan
             </BaseButton>
           </div>
         </div>
@@ -118,9 +167,14 @@ function signContract() {
     </section>
 
     <section class="panel p-6">
-      <p class="muted text-sm">
-        Version {{ version.versionNumber }} · Generated {{ formatDate(version.createdAt) }}
-      </p>
+      <div class="flex gap-3 items-center justify-between">
+        <p class="muted text-sm">
+          Version {{ version.versionNumber }} · Generated {{ formatDate(version.createdAt) }}
+        </p>
+        <BaseBadge :tone="previewOnly ? 'warning' : 'neutral'">
+          {{ previewOnly ? "Preview only" : "Signature-ready" }}
+        </BaseBadge>
+      </div>
       <div class="text-sm leading-7 mt-6 gap-5 grid">
         <div>
           <h2 class="font-semibold">

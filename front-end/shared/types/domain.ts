@@ -7,19 +7,37 @@ export type CommitmentLevel = "nights_weekends" | "part_time" | "full_time"
 export type PrivacyLevel = "public" | "members" | "private"
 export type SkillLevel = "working" | "strong" | "expert"
 export type ConnectRequestStatus = "pending" | "accepted" | "declined"
+export type ConnectDeclineReason = "timing" | "domain_mismatch" | "commitment_mismatch" | "values_mismatch" | "role_mismatch"
 export type MessageType = "user" | "system"
 export type ProposalStatus = "draft" | "sent" | "viewed" | "countered" | "accepted" | "rejected"
+export type ProposalRelationshipType = "cofounder" | "founding_team" | "advisor"
+export type ProposalSectionKey = "partnership" | "scope" | "trial" | "economics" | "decision_rights" | "ip_confidentiality" | "exit"
+export type ProposalSectionState = "proposed" | "countered" | "agreed"
 export type ContractStatus = "draft" | "pending_signature" | "signed"
 export type SubscriptionPlan = "free" | "pro" | "team"
 export type SubscriptionStatus = "inactive" | "trialing" | "active" | "past_due" | "canceled"
 export type BillingCycle = "monthly" | "annual"
-export type ReportReason = "spam" | "misrepresentation" | "harassment" | "off_platform_solicitation"
+export type ReportReason = "spam" | "misrepresentation" | "harassment" | "off_platform_solicitation" | "scam_fraud" | "impersonation" | "data_harvesting" | "privacy_violation"
 export type ReportStatus = "open" | "reviewed" | "resolved"
+export type ReportPriority = "standard" | "high"
 export type AdminActionType = "suspend_user" | "reinstate_user" | "warn_user" | "remove_content" | "resolve_report"
 export type InvestmentApplicationStatus = "draft" | "submitted" | "under_review" | "accepted" | "declined"
 export type NotificationType = "match" | "message" | "proposal" | "contract" | "billing" | "admin"
 export type BookmarkTargetType = "profile" | "opportunity"
 export type SavedSearchScope = "profiles" | "opportunities"
+export type StartTimeline = "immediately" | "30_days" | "90_days" | "exploring"
+export type TrialStatus = "draft" | "active" | "completed"
+export type ContactRevealStage = "matches" | "proposal_accepted" | "contract_generated"
+export type TrustTier = "level_a" | "level_b" | "level_c"
+export type OpportunityVerificationMethod = "none" | "work_email" | "domain" | "github_org"
+export type OpportunityVerificationStatus = "unverified" | "owner_verified" | "domain_verified" | "manual_review"
+export type RunwayBucket = "under_3_months" | "3_to_6_months" | "6_to_12_months" | "12_plus_months" | "undisclosed"
+export type CurrentWorkStatus = "full_time_employed" | "consulting_part_time" | "between_roles" | "full_time_on_startup" | "exploring"
+export type EquityPhilosophy = "equal_unless_strong_reason" | "contribution_weighted" | "dynamic_over_time"
+export type LeadershipPreference = "wants_ceo_role" | "open_to_ceo_role" | "prefers_non_ceo_role"
+export type DecisionModelPreference = "ceo_decides_with_input" | "area_owner_decides" | "consensus_for_big_bets"
+export type DeadlockPreference = "advisor_tiebreaker" | "rotating_decider" | "board_mediator" | "neutral_operator"
+export type PriorObligationStatus = "none_known" | "possible_constraints" | "confirmed_constraints"
 
 export interface SessionUser {
   id: string
@@ -53,12 +71,47 @@ export interface ProfilePrivacySettings {
   portfolioVisibility: PrivacyLevel
   opportunityVisibility: PrivacyLevel
   contactDetailsVisibleToMatchesOnly: boolean
+  contactRevealStage: ContactRevealStage
 }
 
 export interface VerificationBadges {
   profileComplete: boolean
   emailVerified: boolean
   linkedAccounts: boolean
+}
+
+export interface IntentProfile {
+  startTimeline: StartTimeline
+  companyPreferences: string[]
+  nonNegotiables: string[]
+  introCapacity: string
+}
+
+export interface CommitmentProfile {
+  weeklyAvailabilityHours: number
+  fullTimeBy: string
+  runwayBucket: RunwayBucket
+  currentStatus: CurrentWorkStatus
+}
+
+export interface GovernancePreferences {
+  equityPhilosophy: EquityPhilosophy
+  leadershipPreference: LeadershipPreference
+  decisionModelPreference: DecisionModelPreference
+  deadlockPreference: DeadlockPreference
+}
+
+export interface RoleScopeProfile {
+  primaryRole: string
+  nonResponsibilities: string[]
+  accountabilityMilestones: string[]
+}
+
+export interface IpReadinessProfile {
+  existingAssets: string[]
+  existingAssetsNotes: string
+  priorObligations: PriorObligationStatus
+  readyToAssignIp: boolean
 }
 
 export interface ExternalLinks {
@@ -75,6 +128,27 @@ export interface PortfolioProject {
   url: string
   role: string
   outcome: string
+}
+
+export interface ProofOfWorkArtifact {
+  id: string
+  title: string
+  summary: string
+  url: string
+  outcome: string
+}
+
+export interface TrustSignals {
+  replyRatePercent: number
+  medianReplyHours: number
+  lastActiveAt: string
+  identityVerified: boolean
+  workHistoryVerified: boolean
+  phoneVerified: boolean
+  linkedInVerified: boolean
+  workDomainVerified: boolean
+  governmentIdVerified: boolean
+  builderProofs: ProofOfWorkArtifact[]
 }
 
 export interface AssociatedVentureSummary {
@@ -99,6 +173,10 @@ export interface Profile {
   compensationPreferences: CompensationPreference[]
   equityExpectationRange: string
   timeCommitment: CommitmentLevel
+  commitmentProfile: CommitmentProfile
+  governancePreferences: GovernancePreferences
+  roleScope: RoleScopeProfile
+  ipReadiness: IpReadinessProfile
   links: ExternalLinks
   hasIdea: boolean
   wantsToJoinIdea: boolean
@@ -106,6 +184,8 @@ export interface Profile {
   workStylePreferences: string[]
   privacy: ProfilePrivacySettings
   verificationBadges: VerificationBadges
+  intent: IntentProfile
+  trustSignals: TrustSignals
   availability: string
   portfolio: PortfolioProject[]
   ventures: AssociatedVentureSummary[]
@@ -143,6 +223,10 @@ export interface StartupOpportunity {
   industries: string[]
   location: string
   remotePreference: RemotePreference
+  officialWebsite: string
+  verificationMethod: OpportunityVerificationMethod
+  verificationStatus: OpportunityVerificationStatus
+  riskFlags: string[]
   createdAt: string
   updatedAt: string
   isOpen: boolean
@@ -174,6 +258,7 @@ export interface ConnectRequest {
   toUserId: string
   note: string
   status: ConnectRequestStatus
+  declineReason: ConnectDeclineReason | null
   createdAt: string
   respondedAt: string | null
 }
@@ -228,10 +313,15 @@ export interface ProposalVersion {
   id: string
   proposalId: string
   versionNumber: number
+  relationshipType: ProposalRelationshipType
   roleTitle: string
   responsibilities: string[]
   weeklyTimeCommitment: number
   startDate: string
+  fullTimeTrigger: string
+  ceoDecision: string
+  trialScope: string
+  trialIpHandling: string
   cashCompensation: string
   equity: string
   vestingSchedule: string
@@ -251,7 +341,7 @@ export interface ProposalComment {
   proposalId: string
   proposalVersionId: string
   authorUserId: string
-  section: string
+  section: ProposalSectionKey
   body: string
   createdAt: string
 }
@@ -297,6 +387,25 @@ export interface Signature {
   signedAt: string
 }
 
+export interface TrialCollaboration {
+  id: string
+  matchId: string
+  createdByUserId: string
+  title: string
+  objective: string
+  scope: string
+  weeklyHours: number
+  durationWeeks: number
+  checkInCadence: string
+  deliverables: string[]
+  successSignals: string[]
+  status: TrialStatus
+  acknowledgedByUserIds: string[]
+  nextCheckInAt: string
+  createdAt: string
+  updatedAt: string
+}
+
 export interface Subscription {
   id: string
   userId: string
@@ -304,6 +413,7 @@ export interface Subscription {
   status: SubscriptionStatus
   billingCycle: BillingCycle
   renewsAt: string | null
+  cancelAtPeriodEnd: boolean
   visibilityBoost: boolean
   unlimitedMessaging: boolean
   proposalWorkflow: boolean
@@ -316,8 +426,11 @@ export interface Report {
   targetType: "profile" | "message" | "opportunity"
   targetId: string
   reason: ReportReason
+  priority: ReportPriority
   details: string
   status: ReportStatus
+  resolutionNotes: string | null
+  resolvedAt: string | null
   createdAt: string
 }
 
@@ -364,6 +477,9 @@ export interface SearchFilters {
   stage: StartupStage | "any"
   timeCommitment: CommitmentLevel | "any"
   compensationType: CompensationPreference | "any"
+  minimumWeeklyHours: string
+  runwayBucket: RunwayBucket | "any"
+  equityPhilosophy: EquityPhilosophy | "any"
   equityExpectationRange: string
 }
 
@@ -395,6 +511,7 @@ export interface WorkspaceSeed {
   contracts: Contract[]
   contractVersions: ContractVersion[]
   signatures: Signature[]
+  trialCollaborations: TrialCollaboration[]
   subscriptions: Subscription[]
   reports: Report[]
   adminActions: AdminAction[]

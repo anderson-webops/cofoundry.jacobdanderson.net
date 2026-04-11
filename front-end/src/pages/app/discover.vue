@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { commitmentOptions, industryOptions, roleOptions, stageOptions } from "~/shared/constants/options"
+import { commitmentOptions, equityPhilosophyOptions, industryOptions, roleOptions, runwayBucketOptions, stageOptions } from "~/shared/constants/options"
+import { buildSubscriptionUsage, formatUsageQuota } from "~/shared/utils/billing"
 import { createEmptySearchFilters, filterOpportunities, filterProfiles } from "~/shared/utils/discovery"
+import { buildProfileReadiness, getOutreachUnlockMessage } from "~/shared/utils/formation"
 import { getProfileSkills } from "~/shared/utils/workspace"
 
 definePageMeta({
@@ -11,7 +13,7 @@ definePageMeta({
 usePageSeo("Discover")
 
 const toastStore = useToastStore()
-const { authStore, workspaceStore } = useCurrentMember()
+const { authStore, subscription, workspaceStore } = useCurrentMember()
 
 const scope = ref<"profiles" | "opportunities">("profiles")
 const viewMode = ref<"card" | "list">("card")
@@ -20,6 +22,9 @@ const connectDialogOpen = ref(false)
 const connectTargetUserId = ref("")
 const connectNote = ref("")
 const currentUserId = computed(() => authStore.currentUser?.id || "")
+const currentProfile = computed(() => currentUserId.value ? workspaceStore.data.profiles.find(profile => profile.userId === currentUserId.value) : null)
+const currentReadiness = computed(() => currentProfile.value ? buildProfileReadiness(currentProfile.value) : null)
+const usage = computed(() => authStore.currentUser ? buildSubscriptionUsage(workspaceStore.data, authStore.currentUser.id, subscription.value || undefined) : null)
 
 const profileResults = computed(() => filterProfiles(workspaceStore.data, filters))
 const opportunityResults = computed(() => filterOpportunities(workspaceStore.data, filters))
@@ -39,7 +44,34 @@ function submitConnectRequest() {
   if (!authStore.currentUser || !connectTargetUserId.value)
     return
 
-  workspaceStore.sendConnectRequest(authStore.currentUser.id, connectTargetUserId.value, connectNote.value)
+  if (currentReadiness.value && !currentReadiness.value.readyForOutreach) {
+    toastStore.push({
+      title: "Profile gate still locked",
+      message: getOutreachUnlockMessage(currentProfile.value!),
+      tone: "warning",
+    })
+    return
+  }
+
+  if (usage.value?.intros.exhausted) {
+    toastStore.push({
+      title: "Monthly intro limit reached",
+      message: "Free and lower-volume plans meter new introductions. Upgrade to keep running your search process without moving off-platform.",
+      tone: "warning",
+    })
+    return
+  }
+
+  const sent = workspaceStore.sendConnectRequest(authStore.currentUser.id, connectTargetUserId.value, connectNote.value)
+  if (!sent) {
+    toastStore.push({
+      title: "Request blocked",
+      message: currentProfile.value ? getOutreachUnlockMessage(currentProfile.value) : "Finish your profile and phone verification before sending connect requests.",
+      tone: "warning",
+    })
+    return
+  }
+
   toastStore.push({
     title: "Connect request sent",
     message: "If the other person accepts, messaging will unlock automatically.",
@@ -64,12 +96,22 @@ function saveCurrentSearch() {
   if (!authStore.currentUser)
     return
 
-  workspaceStore.saveSearch(
+  const saved = workspaceStore.saveSearch(
     authStore.currentUser.id,
     scope.value,
     `${scope.value === "profiles" ? "Profiles" : "Opportunities"} · ${new Date().toLocaleDateString()}`,
     filters,
   )
+
+  if (!saved) {
+    toastStore.push({
+      title: "Saved-search limit reached",
+      message: "Free keeps one saved search live. Upgrade to Pro for unlimited saved searches and alerts.",
+      tone: "warning",
+    })
+    return
+  }
+
   toastStore.push({
     title: "Search saved",
     message: "You can find this search again from your saved search list.",
@@ -79,6 +121,11 @@ function saveCurrentSearch() {
 
 function isBookmarked(targetType: "profile" | "opportunity", targetId: string) {
   return currentBookmarks.value.some(bookmark => bookmark.targetType === targetType && bookmark.targetId === targetId)
+}
+
+function quotaText(key: "intros" | "savedSearches") {
+  const quota = usage.value?.[key]
+  return quota ? formatUsageQuota(quota) : ""
 }
 </script>
 
@@ -90,6 +137,9 @@ function isBookmarked(targetType: "profile" | "opportunity", targetId: string) {
       description="Everything here is filtered for startup team formation, not gig work. Save searches, bookmark strong fits, and unlock contact through mutual interest."
     >
       <template #actions>
+        <BaseBadge v-if="usage" tone="accent">
+          {{ quotaText("intros") }}
+        </BaseBadge>
         <BaseButton variant="secondary" @click="saveCurrentSearch">
           Save search
         </BaseButton>
@@ -119,10 +169,57 @@ function isBookmarked(targetType: "profile" | "opportunity", targetId: string) {
         <SelectInput v-model="filters.timeCommitment" label="Commitment" :options="[{ label: 'Any commitment', value: 'any' }, ...commitmentOptions]" />
       </div>
 
+      <div v-if="scope === 'profiles'" class="gap-4 grid md:grid-cols-3">
+        <TextInput v-model="filters.minimumWeeklyHours" label="Minimum hours/week" type="number" helper="Filter for the amount of weekly bandwidth you need." />
+        <SelectInput v-model="filters.runwayBucket" label="Runway" :options="[{ label: 'Any runway', value: 'any' }, ...runwayBucketOptions]" />
+        <SelectInput v-model="filters.equityPhilosophy" label="Equity philosophy" :options="[{ label: 'Any philosophy', value: 'any' }, ...equityPhilosophyOptions]" />
+      </div>
+
       <div class="gap-4 grid xl:grid-cols-2">
         <PillPicker v-model="filters.roles" label="Roles" :options="roleOptions" />
         <PillPicker v-model="filters.industries" label="Industries" :options="industryOptions" />
       </div>
+    </div>
+
+    <div v-if="usage" class="gap-4 grid md:grid-cols-3">
+      <div class="panel-inset p-4">
+        <p class="text-sm font-semibold">
+          New intros
+        </p>
+        <p class="muted text-sm leading-6 mt-2">
+          {{ quotaText("intros") }}. Messaging stays available after a mutual match, but outbound intros are metered to keep discovery calmer.
+        </p>
+      </div>
+      <div class="panel-inset p-4">
+        <p class="text-sm font-semibold">
+          Saved searches
+        </p>
+        <p class="muted text-sm leading-6 mt-2">
+          {{ quotaText("savedSearches") }}. Pro is built for people running a repeatable search process instead of one-off browsing.
+        </p>
+      </div>
+      <div class="panel-inset p-4">
+        <p class="text-sm font-semibold">
+          Why the caps exist
+        </p>
+        <p class="muted text-sm leading-6 mt-2">
+          CoFoundry sells speed and clarity, not inbox spam. Limits apply to high-intent actions so matched conversations can stay free to continue on-platform.
+        </p>
+      </div>
+    </div>
+
+    <div v-if="scope === 'profiles'" class="panel-inset p-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div>
+        <p class="text-sm font-semibold">
+          Ranked for fit, proof of work, and response speed
+        </p>
+        <p class="muted text-sm leading-6 mt-1">
+          Discovery now favors recent activity, declared intent, proof of work, and alignment signals like commitment, runway, and equity philosophy.
+        </p>
+      </div>
+      <BaseBadge tone="accent">
+        Mutual-intent only
+      </BaseBadge>
     </div>
 
     <div v-if="scope === 'profiles'" class="gap-4 grid" :class="viewMode === 'card' ? 'lg:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1'">
@@ -175,6 +272,12 @@ function isBookmarked(targetType: "profile" | "opportunity", targetId: string) {
 
     <BaseDialog v-model="connectDialogOpen" title="Send connect request" description="Direct contact stays hidden until the request is accepted.">
       <TextareaInput v-model="connectNote" label="Why this fit?" helper="Explain the specific role, stage, or operating fit you see." :rows="5" />
+      <p class="muted text-sm leading-6 mt-4">
+        {{ currentProfile ? getOutreachUnlockMessage(currentProfile) : "Outreach is gated behind baseline trust checks." }}
+      </p>
+      <p v-if="usage" class="muted text-sm leading-6 mt-2">
+        This plan has {{ quotaText("intros") }} this month.
+      </p>
       <div class="mt-5 flex justify-end">
         <BaseButton @click="submitConnectRequest">
           Send request

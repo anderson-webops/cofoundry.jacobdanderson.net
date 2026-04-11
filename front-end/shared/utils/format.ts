@@ -1,12 +1,29 @@
 import type {
+  BillingCycle,
   CommitmentLevel,
   CompensationPreference,
+  ConnectDeclineReason,
+  ContactRevealStage,
   ContractStatus,
+  CurrentWorkStatus,
+  DeadlockPreference,
+  DecisionModelPreference,
+  EquityPhilosophy,
+  LeadershipPreference,
+  OpportunityVerificationStatus,
+  ProposalRelationshipType,
+  ProposalSectionKey,
+  ProposalSectionState,
   ProposalStatus,
   RemotePreference,
+  ReportReason,
+  RunwayBucket,
   SkillLevel,
+  StartTimeline,
   StartupStage,
   SubscriptionPlan,
+  TrialStatus,
+  TrustTier,
 } from "../types/domain"
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
@@ -101,4 +118,157 @@ export function formatPlanName(plan: SubscriptionPlan) {
     pro: "Pro",
     team: "Team",
   }[plan]
+}
+
+export function formatBillingCycle(cycle: BillingCycle) {
+  return {
+    monthly: "Monthly",
+    annual: "Annual",
+  }[cycle]
+}
+
+export function formatStartTimeline(timeline: StartTimeline) {
+  return {
+    "immediately": "Ready now",
+    "30_days": "Within 30 days",
+    "90_days": "Within 90 days",
+    "exploring": "Exploring carefully",
+  }[timeline]
+}
+
+export function formatRunwayBucket(bucket: RunwayBucket) {
+  return {
+    "under_3_months": "Under 3 months",
+    "3_to_6_months": "3 to 6 months",
+    "6_to_12_months": "6 to 12 months",
+    "12_plus_months": "12+ months",
+    "undisclosed": "Undisclosed",
+  }[bucket]
+}
+
+export function formatCurrentWorkStatus(status: CurrentWorkStatus) {
+  return {
+    full_time_employed: "Full-time employed",
+    consulting_part_time: "Consulting or part-time",
+    between_roles: "Between roles",
+    full_time_on_startup: "Full-time on startup",
+    exploring: "Exploring",
+  }[status]
+}
+
+export function formatEquityPhilosophy(philosophy: EquityPhilosophy) {
+  return {
+    equal_unless_strong_reason: "Equal unless there is a strong reason",
+    contribution_weighted: "Contribution-weighted",
+    dynamic_over_time: "Dynamic over time",
+  }[philosophy]
+}
+
+export function formatLeadershipPreference(preference: LeadershipPreference) {
+  return {
+    wants_ceo_role: "Wants the CEO / lead role",
+    open_to_ceo_role: "Open to the CEO / lead role",
+    prefers_non_ceo_role: "Prefers a non-CEO role",
+  }[preference]
+}
+
+export function formatDecisionModelPreference(preference: DecisionModelPreference) {
+  return {
+    ceo_decides_with_input: "CEO decides with input",
+    area_owner_decides: "Area owners decide",
+    consensus_for_big_bets: "Consensus for big bets",
+  }[preference]
+}
+
+export function formatDeadlockPreference(preference: DeadlockPreference) {
+  return {
+    advisor_tiebreaker: "Advisor tiebreaker",
+    rotating_decider: "Rotating decider",
+    board_mediator: "Board or formal mediator",
+    neutral_operator: "Neutral operator",
+  }[preference]
+}
+
+export function formatTrialStatus(status: TrialStatus) {
+  return {
+    draft: "Draft trial",
+    active: "Active trial",
+    completed: "Completed trial",
+  }[status]
+}
+
+export function formatProposalRelationshipType(type: ProposalRelationshipType) {
+  return {
+    cofounder: "Co-founder",
+    founding_team: "Founding team member",
+    advisor: "Advisor / operating advisor",
+  }[type]
+}
+
+export function formatProposalSectionKey(section: ProposalSectionKey) {
+  return {
+    partnership: "Partnership shape",
+    scope: "Role and scope",
+    trial: "Work trial",
+    economics: "Economics",
+    decision_rights: "Decision rights",
+    ip_confidentiality: "IP and confidentiality",
+    exit: "Exit and off-ramp",
+  }[section]
+}
+
+export function formatProposalSectionState(state: ProposalSectionState) {
+  return {
+    proposed: "Proposed",
+    countered: "Countered",
+    agreed: "Agreed",
+  }[state]
+}
+
+export function formatConnectDeclineReason(reason: ConnectDeclineReason) {
+  return {
+    timing: "Timing mismatch",
+    domain_mismatch: "Domain mismatch",
+    commitment_mismatch: "Commitment mismatch",
+    values_mismatch: "Values mismatch",
+    role_mismatch: "Role mismatch",
+  }[reason]
+}
+
+export function formatTrustTier(tier: TrustTier) {
+  return {
+    level_a: "Trust level A",
+    level_b: "Trust level B",
+    level_c: "Trust level C",
+  }[tier]
+}
+
+export function formatContactRevealStage(stage: ContactRevealStage) {
+  return {
+    matches: "After a mutual match",
+    proposal_accepted: "After a proposal is accepted",
+    contract_generated: "After a contract draft exists",
+  }[stage]
+}
+
+export function formatOpportunityVerificationStatus(status: OpportunityVerificationStatus) {
+  return {
+    unverified: "Unverified listing",
+    owner_verified: "Verified owner",
+    domain_verified: "Domain verified",
+    manual_review: "Under safety review",
+  }[status]
+}
+
+export function formatReportReason(reason: ReportReason) {
+  return {
+    spam: "Spam",
+    misrepresentation: "Misrepresentation",
+    harassment: "Harassment",
+    off_platform_solicitation: "Off-platform solicitation",
+    scam_fraud: "Scam or fraud",
+    impersonation: "Impersonation",
+    data_harvesting: "Data harvesting",
+    privacy_violation: "Privacy violation",
+  }[reason]
 }
