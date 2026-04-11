@@ -11,6 +11,14 @@
   --accent: #136c59;
   --accent-strong: #0e5849;
   --accent-soft: rgba(19, 108, 89, 0.12);
+  --cta-surface: linear-gradient(135deg, #101816 0%, #17231f 100%);
+  --cta-surface-border: rgba(16, 24, 22, 0.14);
+  --cta-text: #f7faf8;
+  --cta-kicker: rgba(247, 250, 248, 0.72);
+  --cta-secondary-bg: rgba(255, 255, 255, 0.08);
+  --cta-secondary-bg-hover: rgba(255, 255, 255, 0.12);
+  --cta-secondary-border: rgba(255, 255, 255, 0.14);
+  --cta-accent-text: #ffffff;
   --danger: #a34f3d;
   --warning: #b07c28;
   --success: #117252;
@@ -33,6 +41,14 @@
   --accent: #5ac3a8;
   --accent-strong: #74d5bc;
   --accent-soft: rgba(90, 195, 168, 0.14);
+  --cta-surface: linear-gradient(135deg, #151e1c 0%, #1d2a27 100%);
+  --cta-surface-border: rgba(255, 255, 255, 0.08);
+  --cta-text: #f4f6f5;
+  --cta-kicker: rgba(244, 246, 245, 0.74);
+  --cta-secondary-bg: rgba(255, 255, 255, 0.06);
+  --cta-secondary-bg-hover: rgba(255, 255, 255, 0.1);
+  --cta-secondary-border: rgba(255, 255, 255, 0.14);
+  --cta-accent-text: #10211c;
   --danger: #e19b87;
   --warning: #d6a853;
   --success: #6cd0ad;
@@ -209,6 +225,49 @@ select {
 
 .hero-auth-panel {
   box-shadow: var(--shadow);
+}
+
+.marketing-cta-panel {
+  position: relative;
+  overflow: hidden;
+  background: var(--cta-surface);
+  border: 1px solid var(--cta-surface-border);
+  box-shadow: 0 28px 72px rgba(7, 16, 14, 0.28);
+  color: var(--cta-text);
+}
+
+.marketing-cta-panel::before {
+  content: "";
+  position: absolute;
+  inset: auto -10% -55% auto;
+  width: 22rem;
+  height: 22rem;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(90, 195, 168, 0.28), transparent 72%);
+  pointer-events: none;
+}
+
+.marketing-cta-panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+.marketing-cta-kicker {
+  color: var(--cta-kicker);
+}
+
+.marketing-cta-secondary {
+  background: var(--cta-secondary-bg) !important;
+  border-color: var(--cta-secondary-border) !important;
+  color: var(--cta-text) !important;
+}
+
+.marketing-cta-secondary:hover {
+  background: var(--cta-secondary-bg-hover) !important;
+}
+
+.marketing-cta-primary {
+  color: var(--cta-accent-text) !important;
 }
 
 .fade-up {
