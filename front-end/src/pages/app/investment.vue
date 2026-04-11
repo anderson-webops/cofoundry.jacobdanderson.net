@@ -66,10 +66,10 @@ function submitApplication() {
               :options="workspaceStore.data.opportunities.filter(item => item.ownerUserId === authStore.currentUser?.id).map(item => ({ label: item.startupName, value: item.id }))"
             />
             <TextInput v-model="form.raiseAmount" label="Raise amount" />
-            <TextareaInput v-model="form.traction" label="Traction" rows="4" />
+            <TextareaInput v-model="form.traction" label="Traction" :rows="4" />
             <TextInput v-model="form.deckLink" label="Deck link" />
-            <TextareaInput v-model="form.teamSummary" label="Team summary" rows="3" />
-            <TextareaInput v-model="form.reason" label="Why do you want investment?" rows="4" />
+            <TextareaInput v-model="form.teamSummary" label="Team summary" :rows="3" />
+            <TextareaInput v-model="form.reason" label="Why do you want investment?" :rows="4" />
             <div class="flex justify-end">
               <BaseButton type="submit">
                 Submit application

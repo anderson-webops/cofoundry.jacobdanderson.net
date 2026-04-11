@@ -174,7 +174,7 @@ function isBookmarked(targetType: "profile" | "opportunity", targetId: string) {
     </div>
 
     <BaseDialog v-model="connectDialogOpen" title="Send connect request" description="Direct contact stays hidden until the request is accepted.">
-      <TextareaInput v-model="connectNote" label="Why this fit?" helper="Explain the specific role, stage, or operating fit you see." rows="5" />
+      <TextareaInput v-model="connectNote" label="Why this fit?" helper="Explain the specific role, stage, or operating fit you see." :rows="5" />
       <div class="mt-5 flex justify-end">
         <BaseButton @click="submitConnectRequest">
           Send request

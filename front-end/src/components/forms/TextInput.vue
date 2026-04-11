@@ -14,7 +14,7 @@ withDefaults(defineProps<{
   required: false,
 })
 
-const model = defineModel<string | number>({ default: "" })
+const model = defineModel<string>({ default: "" })
 </script>
 
 <template>

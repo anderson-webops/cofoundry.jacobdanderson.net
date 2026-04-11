@@ -137,7 +137,7 @@ function createContract() {
 
         <div class="mt-5 gap-4 grid">
           <TextInput v-model="commentSection" label="Section" />
-          <TextareaInput v-model="commentBody" label="Add comment" rows="4" />
+          <TextareaInput v-model="commentBody" label="Add comment" :rows="4" />
           <div class="flex justify-end">
             <BaseButton @click="addComment">
               Add comment

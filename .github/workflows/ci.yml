@@ -17,12 +17,6 @@ jobs:
           node-version: 22.x
           cache: npm
 
-      - name: Pin npm version
-        run: |
-          npm -v
-          npm i -g npm@11.12.1
-          npm -v
-
       - name: Install deps
         run: npm ci
 
@@ -38,11 +32,6 @@ jobs:
         with:
           node-version: 22.x
           cache: npm
-
-      - name: Pin npm version
-        run: |
-          npm i -g npm@11.12.1
-          npm -v
 
       - name: Install deps
         run: npm ci
@@ -67,18 +56,31 @@ jobs:
           cache: npm
           registry-url: https://registry.npmjs.org/
 
-      - name: Pin npm version
-        run: |
-          if [ "$(node -v | cut -d. -f1 | sed 's/v//')" -ge 20 ]; then
-            npm i -g npm@11.12.1
-          fi
-          npm -v
-
       - name: Install deps
         run: npm ci
 
       - name: Unit tests
         run: npm run test:run
+
+  test-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+          registry-url: https://registry.npmjs.org/
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: End-to-end tests
+        run: npm run test:e2e
 
   build:
     runs-on: ubuntu-latest
@@ -89,11 +91,6 @@ jobs:
         with:
           node-version: 22.x
           cache: npm
-
-      - name: Pin npm version
-        run: |
-          npm i -g npm@11.12.1
-          npm -v
 
       - name: Install deps
         run: npm ci

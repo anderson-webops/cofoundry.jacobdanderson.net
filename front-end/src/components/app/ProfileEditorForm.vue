@@ -49,7 +49,7 @@ const form = reactive({
   location: props.initialValues.location || "",
   remotePreference: props.initialValues.remotePreference || "remote",
   roles: props.initialValues.roles || [],
-  yearsExperience: props.initialValues.yearsExperience || 0,
+  yearsExperience: String(props.initialValues.yearsExperience || 0),
   industries: props.initialValues.industries || [],
   startupStagePreferences: props.initialValues.startupStagePreferences || [],
   compensationPreferences: props.initialValues.compensationPreferences || [],
@@ -129,7 +129,7 @@ function submitForm() {
         <TextInput v-model="form.location" label="Location" :error="errors.location" />
       </div>
       <TextInput v-model="form.headline" label="Headline" :error="errors.headline" helper="State the role you want and the kind of company you want to build." />
-      <TextareaInput v-model="form.bio" label="Bio" :error="errors.bio" rows="6" />
+      <TextareaInput v-model="form.bio" label="Bio" :error="errors.bio" :rows="6" />
       <SelectInput v-model="form.remotePreference" label="Remote preference" :options="remoteOptions" :error="errors.remotePreference" />
       <PillPicker v-model="form.roles" label="Roles" :options="roleOptions" helper="Pick the roles you want to be discovered for." />
       <TextInput v-model="form.yearsExperience" label="Years of experience" type="number" :error="errors.yearsExperience" />

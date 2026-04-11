@@ -12,6 +12,13 @@ export default defineNuxtConfig({
     "@nuxt/eslint",
   ],
 
+  components: [
+    {
+      path: "~/components",
+      pathPrefix: false,
+    },
+  ],
+
   devtools: {
     enabled: true,
   },

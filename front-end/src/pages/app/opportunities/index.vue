@@ -81,13 +81,13 @@ async function createOpportunityPost() {
       <form class="gap-4 grid" @submit.prevent="createOpportunityPost">
         <TextInput v-model="form.startupName" label="Startup name" :error="errors.startupName" />
         <TextInput v-model="form.oneLinePitch" label="One-line pitch" :error="errors.oneLinePitch" />
-        <TextareaInput v-model="form.problem" label="Problem" :error="errors.problem" rows="4" />
-        <TextareaInput v-model="form.targetUsers" label="Target users" :error="errors.targetUsers" rows="3" />
+        <TextareaInput v-model="form.problem" label="Problem" :error="errors.problem" :rows="4" />
+        <TextareaInput v-model="form.targetUsers" label="Target users" :error="errors.targetUsers" :rows="3" />
         <div class="gap-4 grid md:grid-cols-2">
           <SelectInput v-model="form.stage" label="Stage" :options="stageOptions" :error="errors.stage" />
           <SelectInput v-model="form.expectedCommitment" label="Expected commitment" :options="commitmentOptions" :error="errors.expectedCommitment" />
         </div>
-        <TextareaInput v-model="form.traction" label="Traction" :error="errors.traction" rows="3" />
+        <TextareaInput v-model="form.traction" label="Traction" :error="errors.traction" :rows="3" />
         <PillPicker v-model="form.rolesNeeded" label="Roles needed" :options="roleOptions" />
         <PillPicker v-model="form.industries" label="Industries" :options="industryOptions" />
         <div class="gap-4 grid md:grid-cols-2">

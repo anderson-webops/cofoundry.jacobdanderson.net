@@ -74,7 +74,7 @@ async function submitForm() {
         <TextInput v-model="form.email" label="Email" type="email" :error="errors.email" />
         <TextInput v-model="form.company" label="Company" :error="errors.company" />
         <TextInput v-model="form.subject" label="Subject" :error="errors.subject" />
-        <TextareaInput v-model="form.message" label="Message" :error="errors.message" rows="6" />
+        <TextareaInput v-model="form.message" label="Message" :error="errors.message" :rows="6" />
         <div class="flex items-center justify-end">
           <BaseButton type="submit" :disabled="submitting">
             {{ submitting ? "Sending..." : "Send message" }}
