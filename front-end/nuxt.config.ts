@@ -1,6 +1,5 @@
 import process from "node:process"
 import { appDescription, appName } from "./shared/constants/app"
-import { pwa } from "./src/config/pwa"
 
 export default defineNuxtConfig({
   modules: [
@@ -8,7 +7,6 @@ export default defineNuxtConfig({
     "@unocss/nuxt",
     "@pinia/nuxt",
     "@nuxtjs/color-mode",
-    "@vite-pwa/nuxt",
     "@nuxt/eslint",
   ],
 
@@ -100,6 +98,4 @@ export default defineNuxtConfig({
       },
     },
   },
-
-  pwa,
 })

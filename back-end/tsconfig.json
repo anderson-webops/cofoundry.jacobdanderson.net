@@ -4,6 +4,7 @@
     "incremental": true,
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "rootDir": "./src",
     "sourceMap": true,
     "outDir": "./dist",
     "allowSyntheticDefaultImports": true,
