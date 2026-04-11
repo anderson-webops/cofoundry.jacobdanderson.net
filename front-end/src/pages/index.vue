@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { appDescription, appTagline } from "~/shared/constants/app"
-import { heroMetrics, howItWorksSteps, pricingTiers, testimonials } from "~/shared/data/marketing"
+import { heroMetrics, howItWorksSteps, pricingTiers, researchPrinciples, testimonials } from "~/shared/data/marketing"
 
 usePageSeo("Build startup teams with more structure", appDescription)
 </script>
@@ -17,7 +17,7 @@ usePageSeo("Build startup teams with more structure", appDescription)
             {{ appTagline }}
           </h1>
           <p class="muted text-lg leading-8 mt-6 max-w-2xl">
-            CoFoundry is built for founder relationships, not freelance gigs. Find aligned partners, structure proposals, and turn early trust into something explicit enough to sign.
+            CoFoundry is built for founder relationships, not freelance gigs. Find aligned partners, compare commitment and governance early, run a short working sprint, and only then turn the relationship into something explicit enough to sign.
           </p>
           <div class="mt-8 flex flex-wrap gap-3">
             <BaseButton size="lg" to="/auth/sign-up">
@@ -38,14 +38,14 @@ usePageSeo("Build startup teams with more structure", appDescription)
             <div class="flex gap-4 items-center justify-between">
               <div>
                 <p class="text-sm font-semibold">
-                  Proposal workflow
+                  Formation workflow
                 </p>
                 <p class="muted text-sm mt-1">
-                  The differentiator in V1
+                  High-trust by design
                 </p>
               </div>
               <BaseBadge tone="accent">
-                Co-founder style
+                Research-backed
               </BaseBadge>
             </div>
             <div class="mt-8 gap-4 grid">
@@ -53,29 +53,29 @@ usePageSeo("Build startup teams with more structure", appDescription)
                 <div class="flex gap-4 items-center justify-between">
                   <div>
                     <p class="text-sm font-semibold">
-                      Technical Co-Founder Proposal
+                      First call → trial sprint
                     </p>
                     <p class="muted text-sm mt-1">
                       LedgerLoop → Malik Thompson
                     </p>
                   </div>
-                  <BaseBadge tone="warning">
-                    Countered
+                  <BaseBadge tone="accent">
+                    Active trial
                   </BaseBadge>
                 </div>
                 <div class="muted text-sm mt-4 gap-3 grid">
-                  <div>Equity: 24% common stock</div>
-                  <div>Weekly commitment: 45 hours</div>
-                  <div>Decision rights: architecture owned by technical co-founder unless strategy changes</div>
+                  <div>Goal: pressure-test architecture ownership and customer cadence</div>
+                  <div>Weekly commitment: 10 hours for 2 weeks</div>
+                  <div>Outputs: one workflow prototype, one written decision log, one retro</div>
                 </div>
               </div>
               <div class="panel-inset p-4 flex gap-4 items-center justify-between">
                 <div>
                   <p class="text-sm font-semibold">
-                    Contract draft ready
+                    Proposal and agreement ready
                   </p>
                   <p class="muted text-sm mt-1">
-                    Generated from accepted proposal terms
+                    Structured terms only appear after the sprint creates conviction
                   </p>
                 </div>
                 <span class="i-carbon-document-signed text-2xl text-[var(--accent)]" />
@@ -103,6 +103,26 @@ usePageSeo("Build startup teams with more structure", appDescription)
             </h2>
             <p class="muted text-sm leading-7 mt-4">
               {{ step.body }}
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="py-16">
+      <div class="page-shell">
+        <PageIntro
+          eyebrow="Research-backed product principles"
+          title="The site now reflects what actually reduces failed founder matches."
+          description="The best improvements were not more social features. They were tighter intent, faster trust assessment, and a better path from match to real working relationship."
+        />
+        <div class="mt-10 gap-5 grid lg:grid-cols-4">
+          <article v-for="principle in researchPrinciples" :key="principle.title" class="panel p-6">
+            <h2 class="text-xl font-semibold">
+              {{ principle.title }}
+            </h2>
+            <p class="muted text-sm leading-7 mt-4">
+              {{ principle.body }}
             </p>
           </article>
         </div>
@@ -145,7 +165,7 @@ usePageSeo("Build startup teams with more structure", appDescription)
         <PageIntro
           eyebrow="Pricing"
           title="Free to start. Paid when the workflow matters."
-          description="The core monetization in V1 is subscription SaaS. Platform investment is separate, optional, and behind a feature flag."
+          description="The core monetization in V1 is subscription SaaS. CoFoundry charges for better workflow outcomes, not mandatory platform equity."
         >
           <template #actions>
             <BaseButton to="/pricing">

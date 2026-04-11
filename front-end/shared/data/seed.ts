@@ -1,9 +1,108 @@
 import type { WorkspaceSeed } from "../types/domain"
 
-const ts = (day: number, time: string) => new Date(`2026-04-${String(day).padStart(2, "0")}T${time}:00.000Z`).toISOString()
+function ts(day: number, time: string) {
+  return new Date(`2026-04-${String(day).padStart(2, "0")}T${time}:00.000Z`).toISOString()
+}
+
+function intent(startTimeline: "immediately" | "30_days" | "90_days" | "exploring", companyPreferences: string[], nonNegotiables: string[], introCapacity: string) {
+  return {
+    startTimeline,
+    companyPreferences,
+    nonNegotiables,
+    introCapacity,
+  }
+}
+
+function proof(id: string, title: string, summary: string, url: string, outcome: string) {
+  return {
+    id,
+    title,
+    summary,
+    url,
+    outcome,
+  }
+}
+
+function trust(
+  replyRatePercent: number,
+  medianReplyHours: number,
+  lastActiveAt: string,
+  identityVerified: boolean,
+  workHistoryVerified: boolean,
+  builderProofs: ReturnType<typeof proof>[],
+  verification: Partial<{
+    phoneVerified: boolean
+    linkedInVerified: boolean
+    workDomainVerified: boolean
+    governmentIdVerified: boolean
+  }> = {},
+) {
+  return {
+    replyRatePercent,
+    medianReplyHours,
+    lastActiveAt,
+    identityVerified,
+    workHistoryVerified,
+    phoneVerified: verification.phoneVerified ?? false,
+    linkedInVerified: verification.linkedInVerified ?? false,
+    workDomainVerified: verification.workDomainVerified ?? false,
+    governmentIdVerified: verification.governmentIdVerified ?? false,
+    builderProofs,
+  }
+}
+
+function commitmentProfile(
+  weeklyAvailabilityHours: number,
+  fullTimeBy: string,
+  runwayBucket: "under_3_months" | "3_to_6_months" | "6_to_12_months" | "12_plus_months" | "undisclosed",
+  currentStatus: "full_time_employed" | "consulting_part_time" | "between_roles" | "full_time_on_startup" | "exploring",
+) {
+  return {
+    weeklyAvailabilityHours,
+    fullTimeBy,
+    runwayBucket,
+    currentStatus,
+  }
+}
+
+function governancePreferences(
+  equityPhilosophy: "equal_unless_strong_reason" | "contribution_weighted" | "dynamic_over_time",
+  leadershipPreference: "wants_ceo_role" | "open_to_ceo_role" | "prefers_non_ceo_role",
+  decisionModelPreference: "ceo_decides_with_input" | "area_owner_decides" | "consensus_for_big_bets",
+  deadlockPreference: "advisor_tiebreaker" | "rotating_decider" | "board_mediator" | "neutral_operator",
+) {
+  return {
+    equityPhilosophy,
+    leadershipPreference,
+    decisionModelPreference,
+    deadlockPreference,
+  }
+}
+
+function roleScope(primaryRole: string, nonResponsibilities: string[], accountabilityMilestones: string[]) {
+  return {
+    primaryRole,
+    nonResponsibilities,
+    accountabilityMilestones,
+  }
+}
+
+function ipReadiness(
+  existingAssets: string[],
+  existingAssetsNotes: string,
+  priorObligations: "none_known" | "possible_constraints" | "confirmed_constraints",
+  readyToAssignIp: boolean,
+) {
+  return {
+    existingAssets,
+    existingAssetsNotes,
+    priorObligations,
+    readyToAssignIp,
+  }
+}
 
 export const workspaceSeed: WorkspaceSeed = {
-  version: "2026-04-10-mvp",
+  version: "2026-04-11-research-pass-founder-alignment",
   authAccounts: [
     { email: "olivia@cofoundry.dev", password: "founder123", providers: ["email", "github"], userId: "user_olivia" },
     { email: "malik@cofoundry.dev", password: "builder123", providers: ["email", "google"], userId: "user_malik" },
@@ -108,6 +207,19 @@ export const workspaceSeed: WorkspaceSeed = {
       compensationPreferences: ["cash_and_equity", "equity_only"],
       equityExpectationRange: "20% - 35%",
       timeCommitment: "full_time",
+      commitmentProfile: commitmentProfile(55, "2026-06-01", "12_plus_months", "full_time_on_startup"),
+      governancePreferences: governancePreferences("contribution_weighted", "wants_ceo_role", "ceo_decides_with_input", "advisor_tiebreaker"),
+      roleScope: roleScope(
+        "Founder",
+        ["Does not want to own day-to-day engineering execution long term", "Does not want a passive technical partner who avoids customers"],
+        ["Close 3 design partners", "Run weekly customer decision reviews", "Define the company narrative and founder hiring bar"],
+      ),
+      ipReadiness: ipReadiness(
+        ["Founder memo", "Domain and product research", "Customer discovery notes"],
+        "LedgerLoop already has customer notes and workflow documentation. Olivia expects net-new product and code work to transfer into company documents once the proposal is accepted.",
+        "none_known",
+        true,
+      ),
       links: {
         linkedin: "https://linkedin.com/in/oliviachen",
         github: "https://github.com/oliviachen",
@@ -123,12 +235,31 @@ export const workspaceSeed: WorkspaceSeed = {
         portfolioVisibility: "members",
         opportunityVisibility: "public",
         contactDetailsVisibleToMatchesOnly: true,
+        contactRevealStage: "proposal_accepted",
       },
       verificationBadges: {
         profileComplete: true,
         emailVerified: true,
         linkedAccounts: true,
       },
+      intent: intent(
+        "immediately",
+        ["Workflow software", "B2B SaaS", "Fintech"],
+        ["Need clear decision rights", "Must be full-time soon", "Must use founder vesting"],
+        "Can take 3 serious intros this week.",
+      ),
+      trustSignals: trust(
+        96,
+        12,
+        ts(10, "18:15"),
+        true,
+        true,
+        [
+          proof("proof_olivia_1", "Fintech workflow case study", "Detailed write-up of the compliance operations system Olivia shipped and the buyer constraints it solved.", "https://clearwire.example/case-study", "Cut KYB review time by 38% across 2,100 SMB teams."),
+          proof("proof_olivia_2", "Founder memo", "Concise founder memo on the LedgerLoop wedge, customer pull, and what the first 90 days should prove.", "https://ledgerloop.co/memo", "Used in founder and design-partner conversations."),
+        ],
+        { phoneVerified: true, linkedInVerified: true, workDomainVerified: true, governmentIdVerified: true },
+      ),
       availability: "Available for 3 founder conversations this week.",
       portfolio: [
         {
@@ -160,6 +291,19 @@ export const workspaceSeed: WorkspaceSeed = {
       compensationPreferences: ["equity_only", "cash_and_equity"],
       equityExpectationRange: "15% - 30%",
       timeCommitment: "full_time",
+      commitmentProfile: commitmentProfile(45, "2026-07-01", "6_to_12_months", "full_time_employed"),
+      governancePreferences: governancePreferences("contribution_weighted", "open_to_ceo_role", "area_owner_decides", "advisor_tiebreaker"),
+      roleScope: roleScope(
+        "Technical Co-Founder",
+        ["Does not want to be reduced to an implementation-only CTO", "Does not want to own founder sales without product partnership"],
+        ["Ship the first production system", "Set the engineering hiring bar", "Join weekly customer and workflow reviews"],
+      ),
+      ipReadiness: ipReadiness(
+        ["Architecture notes", "Open-source infrastructure patterns"],
+        "Malik is comfortable assigning net-new startup work but wants any current-employer overlap checked before long-term terms are finalized.",
+        "possible_constraints",
+        true,
+      ),
       links: {
         linkedin: "https://linkedin.com/in/malikthompson",
         github: "https://github.com/malikthompson",
@@ -175,12 +319,31 @@ export const workspaceSeed: WorkspaceSeed = {
         portfolioVisibility: "public",
         opportunityVisibility: "members",
         contactDetailsVisibleToMatchesOnly: true,
+        contactRevealStage: "matches",
       },
       verificationBadges: {
         profileComplete: true,
         emailVerified: true,
         linkedAccounts: true,
       },
+      intent: intent(
+        "30_days",
+        ["Developer tools", "Workflow software", "Fintech"],
+        ["Need clear decision rights", "Need direct customer exposure", "Must use founder vesting"],
+        "One serious founder match and two exploratory calls this month.",
+      ),
+      trustSignals: trust(
+        91,
+        18,
+        ts(10, "19:05"),
+        true,
+        true,
+        [
+          proof("proof_malik_1", "Realtime ledger architecture", "Explains how Malik redesigned a high-volume payments system with operational reliability in mind.", "https://malik.dev/reconciliation", "Dropped reconciliation lag from 12 hours to under 4 minutes."),
+          proof("proof_malik_2", "Systems design notes", "Short technical notes showing how he scopes 0-to-1 architecture without overbuilding.", "https://malik.dev/work", "Used to qualify deep infra conversations quickly."),
+        ],
+        { phoneVerified: true, linkedInVerified: true, workDomainVerified: true },
+      ),
       availability: "Open to one serious founder match and two exploratory calls this month.",
       portfolio: [
         {
@@ -210,6 +373,19 @@ export const workspaceSeed: WorkspaceSeed = {
       compensationPreferences: ["cash_and_equity", "equity_only"],
       equityExpectationRange: "3% - 8%",
       timeCommitment: "full_time",
+      commitmentProfile: commitmentProfile(32, "2026-08-01", "6_to_12_months", "consulting_part_time"),
+      governancePreferences: governancePreferences("equal_unless_strong_reason", "prefers_non_ceo_role", "area_owner_decides", "advisor_tiebreaker"),
+      roleScope: roleScope(
+        "Founding Designer",
+        ["Does not want to own quota-carrying sales", "Does not want design reduced to ticket polish"],
+        ["Ship trust-heavy onboarding flows", "Run customer research cadence", "Set the visual and UX system for the first product surface"],
+      ),
+      ipReadiness: ipReadiness(
+        ["Design templates", "Customer research frameworks"],
+        "Sofia expects general methods to remain hers while startup-specific design files and artifacts transfer into the company once the relationship is accepted.",
+        "none_known",
+        true,
+      ),
       links: {
         linkedin: "https://linkedin.com/in/sofiaramirez",
         github: "",
@@ -225,12 +401,30 @@ export const workspaceSeed: WorkspaceSeed = {
         portfolioVisibility: "public",
         opportunityVisibility: "members",
         contactDetailsVisibleToMatchesOnly: true,
+        contactRevealStage: "matches",
       },
       verificationBadges: {
         profileComplete: true,
         emailVerified: true,
         linkedAccounts: false,
       },
+      intent: intent(
+        "30_days",
+        ["Workflow software", "Healthtech", "B2B SaaS"],
+        ["Need weekly written updates", "Need product and technical candor"],
+        "Interviewing two teams and open to one more excellent fit.",
+      ),
+      trustSignals: trust(
+        88,
+        20,
+        ts(10, "17:40"),
+        false,
+        true,
+        [
+          proof("proof_sofia_1", "Ramp procurement redesign", "Narrative and UI breakdown of a trust-heavy enterprise workflow redesign.", "https://sofiaramirez.design/ramp", "Supported a launch tied to $1.8M in annualized pipeline."),
+        ],
+        { phoneVerified: true, linkedInVerified: true },
+      ),
       availability: "Interviewing two teams and open to one more excellent fit.",
       portfolio: [
         {
@@ -260,6 +454,19 @@ export const workspaceSeed: WorkspaceSeed = {
       compensationPreferences: ["cash_and_equity"],
       equityExpectationRange: "1% - 4%",
       timeCommitment: "full_time",
+      commitmentProfile: commitmentProfile(35, "2026-09-01", "3_to_6_months", "full_time_employed"),
+      governancePreferences: governancePreferences("contribution_weighted", "prefers_non_ceo_role", "ceo_decides_with_input", "neutral_operator"),
+      roleScope: roleScope(
+        "Sales",
+        ["Does not want to own engineering hiring", "Does not want to be the only revenue owner without product access"],
+        ["Land the first 5 pilots", "Build the founder-led outbound playbook", "Turn founder conversations into a repeatable sales process"],
+      ),
+      ipReadiness: ipReadiness(
+        ["Outbound messaging templates", "Prospect map structures"],
+        "Arjun does not plan to bring employer customer data or proprietary collateral, but wants the boundary stated clearly before any contract is signed.",
+        "none_known",
+        true,
+      ),
       links: {
         linkedin: "https://linkedin.com/in/arjunpatel",
         github: "",
@@ -275,12 +482,30 @@ export const workspaceSeed: WorkspaceSeed = {
         portfolioVisibility: "private",
         opportunityVisibility: "members",
         contactDetailsVisibleToMatchesOnly: true,
+        contactRevealStage: "proposal_accepted",
       },
       verificationBadges: {
         profileComplete: true,
         emailVerified: true,
         linkedAccounts: false,
       },
+      intent: intent(
+        "30_days",
+        ["B2B SaaS", "Developer tools", "Workflow software"],
+        ["Need direct customer exposure", "Must be full-time soon"],
+        "Can support two revenue-focused conversations before committing.",
+      ),
+      trustSignals: trust(
+        74,
+        36,
+        ts(9, "20:10"),
+        false,
+        true,
+        [
+          proof("proof_arjun_1", "Outbound operating memo", "Examples of how Arjun turns founder intuition into a measurable pipeline motion.", "https://arjunpatel.co", "Built repeatable outbound systems at two Series A teams."),
+        ],
+        { linkedInVerified: true },
+      ),
       availability: "Can start full-time in 30 days.",
       portfolio: [],
       ventures: [],
@@ -301,6 +526,19 @@ export const workspaceSeed: WorkspaceSeed = {
       compensationPreferences: ["cash_and_equity"],
       equityExpectationRange: "8% - 20%",
       timeCommitment: "full_time",
+      commitmentProfile: commitmentProfile(50, "2026-06-15", "6_to_12_months", "full_time_on_startup"),
+      governancePreferences: governancePreferences("contribution_weighted", "wants_ceo_role", "ceo_decides_with_input", "advisor_tiebreaker"),
+      roleScope: roleScope(
+        "Founder",
+        ["Does not want to own every product decision alone forever", "Does not want a collaborator who treats trust work as design garnish"],
+        ["Convert pilots into repeatable enterprise motion", "Define operating cadence with founding team", "Prove the first accountable healthtech workflow wedge"],
+      ),
+      ipReadiness: ipReadiness(
+        ["Pilot workflow documents", "Clinical operations research notes"],
+        "Trialwire has product research, customer diligence notes, and pilot-specific workflow artifacts that should transfer into the company cleanly once a collaborator joins.",
+        "none_known",
+        true,
+      ),
       links: {
         linkedin: "https://linkedin.com/in/emmali",
         github: "",
@@ -316,12 +554,31 @@ export const workspaceSeed: WorkspaceSeed = {
         portfolioVisibility: "members",
         opportunityVisibility: "public",
         contactDetailsVisibleToMatchesOnly: true,
+        contactRevealStage: "proposal_accepted",
       },
       verificationBadges: {
         profileComplete: true,
         emailVerified: true,
         linkedAccounts: false,
       },
+      intent: intent(
+        "immediately",
+        ["Healthtech", "Applied AI", "Workflow software"],
+        ["Need direct customer exposure", "Need weekly written updates", "Must stay startup-team focused"],
+        "Hiring one founding designer and one operations partner now.",
+      ),
+      trustSignals: trust(
+        89,
+        16,
+        ts(10, "18:50"),
+        true,
+        true,
+        [
+          proof("proof_emma_1", "CareOps launchbook", "A product-growth case study showing Emma's operating system for getting clinical products into real customer hands.", "https://trialwire.health/case-study", "Reached eight paid pilot customers in 10 months."),
+          proof("proof_emma_2", "Clinical ops pilot brief", "Sanitized overview of the customer workflow and traction signals Trialwire already has.", "https://trialwire.health/pilots", "Gives joiners enough signal to evaluate seriousness before outreach."),
+        ],
+        { phoneVerified: true, linkedInVerified: true, workDomainVerified: true },
+      ),
       availability: "Hiring one founding designer and one operations partner now.",
       portfolio: [
         {
@@ -353,6 +610,19 @@ export const workspaceSeed: WorkspaceSeed = {
       compensationPreferences: ["cash_and_equity"],
       equityExpectationRange: "5% - 12%",
       timeCommitment: "full_time",
+      commitmentProfile: commitmentProfile(50, "2026-05-20", "12_plus_months", "full_time_on_startup"),
+      governancePreferences: governancePreferences("contribution_weighted", "wants_ceo_role", "ceo_decides_with_input", "advisor_tiebreaker"),
+      roleScope: roleScope(
+        "Founder",
+        ["Does not want a collaborator who avoids live operations", "Does not want ambiguous ownership over systems architecture"],
+        ["Stabilize early revenue systems", "Hire a hands-on technical operator", "Improve fulfillment and customer visibility workflows"],
+      ),
+      ipReadiness: ipReadiness(
+        ["Live operations data model", "Domain and workflow maps"],
+        "Noah has live operating workflows and company-specific process documents that need clear assignment and confidentiality treatment before a long-term collaborator joins.",
+        "none_known",
+        true,
+      ),
       links: {
         linkedin: "https://linkedin.com/in/noahkim",
         github: "https://github.com/noahkim",
@@ -368,12 +638,30 @@ export const workspaceSeed: WorkspaceSeed = {
         portfolioVisibility: "private",
         opportunityVisibility: "public",
         contactDetailsVisibleToMatchesOnly: true,
+        contactRevealStage: "proposal_accepted",
       },
       verificationBadges: {
         profileComplete: true,
         emailVerified: true,
         linkedAccounts: true,
       },
+      intent: intent(
+        "immediately",
+        ["Workflow software", "Vertical software", "Logistics"],
+        ["Need clear decision rights", "Must be full-time soon"],
+        "Open to one technical operator conversation and one growth conversation this week.",
+      ),
+      trustSignals: trust(
+        82,
+        22,
+        ts(10, "17:25"),
+        true,
+        true,
+        [
+          proof("proof_noah_1", "SignalDeck retention notes", "Short operational brief showing why the current logistics wedge is sticky and where the product is going next.", "https://signaldeck.io", "$19k MRR with 93% gross revenue retention."),
+        ],
+        { phoneVerified: true, linkedInVerified: true, workDomainVerified: true, governmentIdVerified: true },
+      ),
       availability: "Open to a technical founding operator or senior builder.",
       portfolio: [],
       ventures: [
@@ -396,6 +684,19 @@ export const workspaceSeed: WorkspaceSeed = {
       compensationPreferences: ["cash_only"],
       equityExpectationRange: "N/A",
       timeCommitment: "full_time",
+      commitmentProfile: commitmentProfile(40, "2026-04-30", "12_plus_months", "full_time_on_startup"),
+      governancePreferences: governancePreferences("equal_unless_strong_reason", "prefers_non_ceo_role", "area_owner_decides", "neutral_operator"),
+      roleScope: roleScope(
+        "Admin",
+        ["Does not participate in founder matching decisions as a founder", "Does not hold operational ownership in member startups"],
+        ["Review trust reports within 24 hours", "Keep moderation queue current"],
+      ),
+      ipReadiness: ipReadiness(
+        ["Internal moderation tooling"],
+        "Admin profile exists for moderation and analytics workflows only.",
+        "none_known",
+        true,
+      ),
       links: {
         linkedin: "https://linkedin.com/in/avamorgan",
         github: "",
@@ -411,12 +712,28 @@ export const workspaceSeed: WorkspaceSeed = {
         portfolioVisibility: "private",
         opportunityVisibility: "private",
         contactDetailsVisibleToMatchesOnly: true,
+        contactRevealStage: "contract_generated",
       },
       verificationBadges: {
         profileComplete: true,
         emailVerified: true,
         linkedAccounts: false,
       },
+      intent: intent(
+        "immediately",
+        ["Workflow software"],
+        ["Must stay startup-team focused"],
+        "Internal team member",
+      ),
+      trustSignals: trust(
+        100,
+        8,
+        ts(10, "18:30"),
+        true,
+        true,
+        [],
+        { phoneVerified: true, governmentIdVerified: true, workDomainVerified: true },
+      ),
       availability: "Internal team member",
       portfolio: [],
       ventures: [],
@@ -437,6 +754,19 @@ export const workspaceSeed: WorkspaceSeed = {
       compensationPreferences: ["cash_only"],
       equityExpectationRange: "N/A",
       timeCommitment: "part_time",
+      commitmentProfile: commitmentProfile(10, "2026-12-31", "12_plus_months", "exploring"),
+      governancePreferences: governancePreferences("equal_unless_strong_reason", "prefers_non_ceo_role", "consensus_for_big_bets", "board_mediator"),
+      roleScope: roleScope(
+        "Investor Admin",
+        ["Does not participate in core member matching", "Does not manage cap tables inside CoFoundry"],
+        ["Review investment applications when the feature flag is enabled"],
+      ),
+      ipReadiness: ipReadiness(
+        ["Investment review notes"],
+        "Investor admin profile is feature-flagged and separated from the core SaaS workflow.",
+        "none_known",
+        true,
+      ),
       links: {
         linkedin: "https://linkedin.com/in/priyashah",
         github: "",
@@ -452,12 +782,28 @@ export const workspaceSeed: WorkspaceSeed = {
         portfolioVisibility: "private",
         opportunityVisibility: "private",
         contactDetailsVisibleToMatchesOnly: true,
+        contactRevealStage: "contract_generated",
       },
       verificationBadges: {
         profileComplete: true,
         emailVerified: true,
         linkedAccounts: false,
       },
+      intent: intent(
+        "90_days",
+        ["B2B SaaS"],
+        ["Must stay startup-team focused"],
+        "Internal team member",
+      ),
+      trustSignals: trust(
+        100,
+        12,
+        ts(10, "16:00"),
+        true,
+        true,
+        [],
+        { phoneVerified: true, governmentIdVerified: true, workDomainVerified: true },
+      ),
       availability: "Internal team member",
       portfolio: [],
       ventures: [],
@@ -513,6 +859,10 @@ export const workspaceSeed: WorkspaceSeed = {
       industries: ["Fintech", "Compliance", "B2B SaaS"],
       location: "New York, NY",
       remotePreference: "hybrid",
+      officialWebsite: "https://ledgerloop.co",
+      verificationMethod: "domain",
+      verificationStatus: "domain_verified",
+      riskFlags: [],
       createdAt: ts(5, "09:30"),
       updatedAt: ts(9, "13:00"),
       isOpen: true,
@@ -534,6 +884,10 @@ export const workspaceSeed: WorkspaceSeed = {
       industries: ["Healthtech", "Operations", "AI"],
       location: "San Francisco, CA",
       remotePreference: "hybrid",
+      officialWebsite: "https://trialwire.health",
+      verificationMethod: "work_email",
+      verificationStatus: "owner_verified",
+      riskFlags: [],
       createdAt: ts(6, "12:00"),
       updatedAt: ts(9, "16:45"),
       isOpen: true,
@@ -555,6 +909,10 @@ export const workspaceSeed: WorkspaceSeed = {
       industries: ["Logistics", "Operations", "B2B SaaS"],
       location: "Seattle, WA",
       remotePreference: "remote",
+      officialWebsite: "https://signaldeck.io",
+      verificationMethod: "domain",
+      verificationStatus: "domain_verified",
+      riskFlags: [],
       createdAt: ts(5, "15:25"),
       updatedAt: ts(8, "11:10"),
       isOpen: true,
@@ -640,6 +998,7 @@ export const workspaceSeed: WorkspaceSeed = {
       toUserId: "user_malik",
       note: "Your background in systems-heavy fintech feels unusually aligned with the workflow and customer set I already know. If the problem resonates, I would like to compare expectations on ownership and pace.",
       status: "accepted",
+      declineReason: null,
       createdAt: ts(7, "09:45"),
       respondedAt: ts(7, "14:10"),
     },
@@ -649,6 +1008,7 @@ export const workspaceSeed: WorkspaceSeed = {
       toUserId: "user_sofia",
       note: "Your work on trust-heavy B2B products is exactly the kind of design sensibility I want in Trialwire. I would like to compare how you think about founding designer scope.",
       status: "accepted",
+      declineReason: null,
       createdAt: ts(7, "12:20"),
       respondedAt: ts(8, "08:00"),
     },
@@ -658,6 +1018,7 @@ export const workspaceSeed: WorkspaceSeed = {
       toUserId: "user_noah",
       note: "SignalDeck looks like the sort of business where GTM discipline can compound quickly. I would be interested in discussing growth ownership.",
       status: "pending",
+      declineReason: null,
       createdAt: ts(9, "11:30"),
       respondedAt: null,
     },
@@ -667,6 +1028,7 @@ export const workspaceSeed: WorkspaceSeed = {
       toUserId: "user_emma",
       note: "Impressive traction. I suspect my fit is better for pure technical co-founder roles, but I wanted to compare notes before assuming.",
       status: "declined",
+      declineReason: "role_mismatch",
       createdAt: ts(6, "13:10"),
       respondedAt: ts(6, "17:25"),
     },
@@ -801,6 +1163,7 @@ export const workspaceSeed: WorkspaceSeed = {
       id: "proposal_version_ledgerloop_1",
       proposalId: "proposal_ledgerloop_cto",
       versionNumber: 1,
+      relationshipType: "cofounder",
       roleTitle: "Technical Co-Founder",
       responsibilities: [
         "Own initial product architecture and technical roadmap",
@@ -809,6 +1172,10 @@ export const workspaceSeed: WorkspaceSeed = {
       ],
       weeklyTimeCommitment: 45,
       startDate: "2026-05-01",
+      fullTimeTrigger: "Both founders move to full-time once the first three design partners convert and the company has enough capital for a founder stipend.",
+      ceoDecision: "Olivia remains CEO and final owner of company-level calls; Malik is expected to challenge assumptions and co-own strategy, but financing and market narrative decisions stay CEO-led.",
+      trialScope: "Run a two-week architecture and workflow sprint covering one realistic customer onboarding flow, a decision log, and a written review of whether the partnership should move into incorporation planning.",
+      trialIpHandling: "Trial code, product notes, and customer-facing artifacts stay confidential and can be reused by LedgerLoop only if both sides move into the company agreement or separately consent in writing.",
       cashCompensation: "$4,000 monthly founder stipend after financing closes",
       equity: "22% common stock, standard vesting",
       vestingSchedule: "48 months monthly vesting",
@@ -826,6 +1193,7 @@ export const workspaceSeed: WorkspaceSeed = {
       id: "proposal_version_ledgerloop_2",
       proposalId: "proposal_ledgerloop_cto",
       versionNumber: 2,
+      relationshipType: "cofounder",
       roleTitle: "Technical Co-Founder",
       responsibilities: [
         "Own system architecture, engineering roadmap, and technical hiring plan",
@@ -834,6 +1202,10 @@ export const workspaceSeed: WorkspaceSeed = {
       ],
       weeklyTimeCommitment: 45,
       startDate: "2026-05-06",
+      fullTimeTrigger: "Both founders move full-time no later than the first external financing close or once recurring design-partner revenue reliably covers the agreed founder stipend.",
+      ceoDecision: "Olivia remains CEO and final decision-maker on financing, company strategy, and market narrative; Malik has final call on technical architecture unless a change materially affects regulatory posture or financing.",
+      trialScope: "Use the first two weeks to ship one production-grade compliance workflow slice, review live customer feedback together, and confirm whether both sides still want a long-term founder relationship.",
+      trialIpHandling: "All trial code and documents remain confidential. If the relationship ends before incorporation, each side can keep general learnings but company-specific artifacts stay with LedgerLoop and no ownership transfers without signed company documents.",
       cashCompensation: "$4,000 monthly stipend after external financing or equivalent founder salary threshold",
       equity: "24% common stock subject to vesting",
       vestingSchedule: "4-year vesting with monthly vesting after the cliff",
@@ -851,6 +1223,7 @@ export const workspaceSeed: WorkspaceSeed = {
       id: "proposal_version_trialwire_1",
       proposalId: "proposal_trialwire_design",
       versionNumber: 1,
+      relationshipType: "founding_team",
       roleTitle: "Founding Designer",
       responsibilities: [
         "Own the product design system and interaction patterns",
@@ -859,6 +1232,10 @@ export const workspaceSeed: WorkspaceSeed = {
       ],
       weeklyTimeCommitment: 40,
       startDate: "2026-05-15",
+      fullTimeTrigger: "The role converts to full-time when the first enterprise pilot closes or when the company reaches the budget threshold for a full salary and design tooling support.",
+      ceoDecision: "Emma remains CEO and final owner of company strategy while Sofia has clear authority over design quality, brand system, and end-user workflow decisions.",
+      trialScope: "Use a 30-day working sprint to ship one onboarding flow, one pilot-facing narrative asset, and a joint review on whether the company should formalize the founding designer role.",
+      trialIpHandling: "Design files and customer-facing artifacts created during the sprint stay confidential and move into Trialwire only if the relationship proceeds or both sides approve the transfer in writing.",
       cashCompensation: "$120,000 salary after close; $6,500 monthly consulting retainer until then",
       equity: "6% stock option grant",
       vestingSchedule: "48 months monthly vesting",
@@ -876,6 +1253,7 @@ export const workspaceSeed: WorkspaceSeed = {
       id: "proposal_version_trialwire_2",
       proposalId: "proposal_trialwire_design",
       versionNumber: 2,
+      relationshipType: "founding_team",
       roleTitle: "Founding Designer",
       responsibilities: [
         "Own product design system, design research, and onboarding flows",
@@ -884,6 +1262,10 @@ export const workspaceSeed: WorkspaceSeed = {
       ],
       weeklyTimeCommitment: 40,
       startDate: "2026-05-15",
+      fullTimeTrigger: "The role converts to full-time by the 90-day review or sooner if pilot revenue and budget support the salary band already discussed.",
+      ceoDecision: "Emma remains CEO and final decision-maker on financing and roadmap sequence. Sofia owns the design system, design research process, and customer-facing trust layer inside that company direction.",
+      trialScope: "Use the first 90 days as a structured design leadership sprint with explicit deliverables around onboarding, enterprise trust collateral, and how product prioritization should work between founder and designer.",
+      trialIpHandling: "Design files, customer research, and pilot-facing assets stay confidential. If the role does not convert, Trialwire keeps company-specific work product while Sofia retains portfolio rights only for publicly released material or with founder approval.",
       cashCompensation: "$6,500 monthly consulting retainer until full-time conversion, then $135,000 salary",
       equity: "6.5% stock option grant",
       vestingSchedule: "48 months monthly vesting",
@@ -904,7 +1286,7 @@ export const workspaceSeed: WorkspaceSeed = {
       proposalId: "proposal_ledgerloop_cto",
       proposalVersionId: "proposal_version_ledgerloop_2",
       authorUserId: "user_malik",
-      section: "decisionRights",
+      section: "decision_rights",
       body: "This is close. I want the wording to explicitly protect architecture ownership unless it changes financing, compliance, or company strategy.",
       createdAt: ts(10, "16:40"),
     },
@@ -913,7 +1295,7 @@ export const workspaceSeed: WorkspaceSeed = {
       proposalId: "proposal_trialwire_design",
       proposalVersionId: "proposal_version_trialwire_2",
       authorUserId: "user_sofia",
-      section: "cashCompensation",
+      section: "economics",
       body: "The retainer structure works. I would also want the conversion conversation tied to a concrete timeline rather than only financing timing.",
       createdAt: ts(10, "15:12"),
     },
@@ -962,6 +1344,60 @@ export const workspaceSeed: WorkspaceSeed = {
       signedAt: ts(10, "12:12"),
     },
   ],
+  trialCollaborations: [
+    {
+      id: "trial_olivia_malik",
+      matchId: "match_olivia_malik",
+      createdByUserId: "user_olivia",
+      title: "LedgerLoop architecture + founder cadence sprint",
+      objective: "Pressure-test technical ownership, customer proximity, and whether the working rhythm feels sustainable before finalizing co-founder terms.",
+      scope: "Run one two-week sprint around a compliance workflow prototype, decision log, and customer call debrief to verify how product and architecture decisions actually get made together.",
+      weeklyHours: 10,
+      durationWeeks: 2,
+      checkInCadence: "Monday scoping review, Thursday written update, Friday customer debrief.",
+      deliverables: [
+        "Prototype one deterministic compliance-review workflow together",
+        "Maintain a shared decision log on product vs. architecture boundaries",
+        "Write a sprint retrospective before moving into final proposal terms",
+      ],
+      successSignals: [
+        "Both founders keep commitments visible and on time",
+        "The decision-rights language feels easier after working together",
+        "The sprint creates conviction to sign a longer-term agreement",
+      ],
+      status: "active",
+      acknowledgedByUserIds: ["user_olivia", "user_malik"],
+      nextCheckInAt: ts(12, "15:00"),
+      createdAt: ts(10, "13:00"),
+      updatedAt: ts(10, "17:00"),
+    },
+    {
+      id: "trial_emma_sofia",
+      matchId: "match_emma_sofia",
+      createdByUserId: "user_emma",
+      title: "Trialwire onboarding trust sprint",
+      objective: "Use a short working sprint to confirm taste, pace, and decision-making before turning the designer proposal into a signed agreement.",
+      scope: "Focus on onboarding, pilot-facing collateral, and the first clinical operations handoff moment where trust matters most.",
+      weeklyHours: 8,
+      durationWeeks: 2,
+      checkInCadence: "Twice-weekly reviews with a Friday written recap.",
+      deliverables: [
+        "Redesign the first onboarding flow for one pilot customer",
+        "Write a shared design-principles memo",
+        "Summarize what needs to be explicit in the agreement if the fit is real",
+      ],
+      successSignals: [
+        "The work improves customer trust without slowing the team down",
+        "Design ownership feels clear in practice",
+        "Both sides want to move into a signed agreement after the sprint",
+      ],
+      status: "draft",
+      acknowledgedByUserIds: ["user_emma"],
+      nextCheckInAt: ts(13, "18:00"),
+      createdAt: ts(10, "15:30"),
+      updatedAt: ts(10, "15:30"),
+    },
+  ],
   subscriptions: [
     {
       id: "subscription_olivia",
@@ -970,6 +1406,7 @@ export const workspaceSeed: WorkspaceSeed = {
       status: "active",
       billingCycle: "monthly",
       renewsAt: ts(28, "00:00"),
+      cancelAtPeriodEnd: false,
       visibilityBoost: true,
       unlimitedMessaging: true,
       proposalWorkflow: true,
@@ -982,6 +1419,7 @@ export const workspaceSeed: WorkspaceSeed = {
       status: "active",
       billingCycle: "monthly",
       renewsAt: null,
+      cancelAtPeriodEnd: false,
       visibilityBoost: false,
       unlimitedMessaging: false,
       proposalWorkflow: false,
@@ -994,6 +1432,7 @@ export const workspaceSeed: WorkspaceSeed = {
       status: "active",
       billingCycle: "monthly",
       renewsAt: null,
+      cancelAtPeriodEnd: false,
       visibilityBoost: false,
       unlimitedMessaging: false,
       proposalWorkflow: false,
@@ -1006,6 +1445,7 @@ export const workspaceSeed: WorkspaceSeed = {
       status: "active",
       billingCycle: "monthly",
       renewsAt: ts(29, "00:00"),
+      cancelAtPeriodEnd: false,
       visibilityBoost: true,
       unlimitedMessaging: true,
       proposalWorkflow: true,
@@ -1018,6 +1458,7 @@ export const workspaceSeed: WorkspaceSeed = {
       status: "active",
       billingCycle: "annual",
       renewsAt: "2027-01-15T00:00:00.000Z",
+      cancelAtPeriodEnd: true,
       visibilityBoost: true,
       unlimitedMessaging: true,
       proposalWorkflow: true,
@@ -1030,6 +1471,7 @@ export const workspaceSeed: WorkspaceSeed = {
       status: "active",
       billingCycle: "monthly",
       renewsAt: null,
+      cancelAtPeriodEnd: false,
       visibilityBoost: false,
       unlimitedMessaging: true,
       proposalWorkflow: true,
@@ -1043,8 +1485,11 @@ export const workspaceSeed: WorkspaceSeed = {
       targetType: "profile",
       targetId: "profile_arjun",
       reason: "misrepresentation",
+      priority: "standard",
       details: "The profile claims founder-level ownership of two companies but the linked site appears to be a personal consulting page. Needs review, not necessarily bad intent.",
       status: "open",
+      resolutionNotes: null,
+      resolvedAt: null,
       createdAt: ts(10, "09:12"),
     },
     {
@@ -1053,8 +1498,24 @@ export const workspaceSeed: WorkspaceSeed = {
       targetType: "message",
       targetId: "message_7",
       reason: "spam",
+      priority: "standard",
       details: "Resolved example report kept for admin history.",
       status: "resolved",
+      resolutionNotes: "Sender was warned and the spam pattern has not repeated.",
+      resolvedAt: ts(8, "11:20"),
+      createdAt: ts(8, "10:55"),
+    },
+    {
+      id: "report_3",
+      reporterUserId: "user_emma",
+      targetType: "message",
+      targetId: "message_10",
+      reason: "impersonation",
+      priority: "high",
+      details: "The sender claimed to represent an investor, pushed the conversation to WhatsApp, and asked for a diligence fee before any real call.",
+      status: "open",
+      resolutionNotes: null,
+      resolvedAt: null,
       createdAt: ts(8, "10:55"),
     },
   ],
@@ -1130,6 +1591,9 @@ export const workspaceSeed: WorkspaceSeed = {
         stage: "any",
         timeCommitment: "full_time",
         compensationType: "equity_only",
+        minimumWeeklyHours: "35",
+        runwayBucket: "any",
+        equityPhilosophy: "any",
         equityExpectationRange: "",
       },
       createdAt: ts(8, "10:05"),
@@ -1149,6 +1613,9 @@ export const workspaceSeed: WorkspaceSeed = {
         stage: "prototype",
         timeCommitment: "full_time",
         compensationType: "cash_and_equity",
+        minimumWeeklyHours: "",
+        runwayBucket: "any",
+        equityPhilosophy: "any",
         equityExpectationRange: "",
       },
       createdAt: ts(8, "10:25"),

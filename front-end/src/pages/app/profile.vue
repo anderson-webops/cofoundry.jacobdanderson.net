@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { formatContactRevealStage, formatCurrentWorkStatus, formatDeadlockPreference, formatDecisionModelPreference, formatEquityPhilosophy, formatLeadershipPreference, formatRelativeDate, formatRunwayBucket, formatStartTimeline } from "~/shared/utils/format"
+import { buildProfileReadiness, buildProfileTrustScore } from "~/shared/utils/formation"
 import { getProfileSkills } from "~/shared/utils/workspace"
 
 definePageMeta({
@@ -12,6 +14,8 @@ const { profile, workspaceStore } = useCurrentMember()
 const tab = ref<"public" | "private">("public")
 
 const skillEntries = computed(() => profile.value ? getProfileSkills(workspaceStore.data, profile.value.id) : [])
+const trustScore = computed(() => profile.value ? buildProfileTrustScore(profile.value) : 0)
+const readiness = computed(() => profile.value ? buildProfileReadiness(profile.value) : null)
 </script>
 
 <template>
@@ -31,8 +35,8 @@ const skillEntries = computed(() => profile.value ? getProfileSkills(workspaceSt
     <div class="gap-6 grid xl:grid-cols-[0.95fr_1.05fr]">
       <section class="panel p-6">
         <div class="flex flex-wrap gap-2">
-          <BaseBadge :tone="profile.verificationBadges.profileComplete ? 'success' : 'warning'">
-            {{ profile.verificationBadges.profileComplete ? "Completed profile" : "Needs more detail" }}
+          <BaseBadge :tone="readiness?.profileComplete ? 'success' : 'warning'">
+            {{ readiness?.profileComplete ? "Completed profile" : `Profile strength ${readiness?.percent}%` }}
           </BaseBadge>
           <BaseBadge :tone="profile.verificationBadges.emailVerified ? 'success' : 'warning'">
             Verified email
@@ -42,15 +46,47 @@ const skillEntries = computed(() => profile.value ? getProfileSkills(workspaceSt
           </BaseBadge>
         </div>
 
+        <div class="mt-4">
+          <TrustSignalStrip :profile="profile" />
+        </div>
+
         <p class="muted text-base leading-7 mt-6">
           {{ profile.bio }}
         </p>
 
         <div class="mt-6 gap-4 grid md:grid-cols-2">
           <MetricTile label="Location" :value="profile.location" />
+          <MetricTile label="Trust score" :value="trustScore" />
+          <MetricTile label="Profile readiness" :value="`${readiness?.percent || 0}%`" />
           <MetricTile label="Commitment" :value="profile.timeCommitment.replaceAll('_', ' ')" />
-          <MetricTile label="Compensation" :value="profile.compensationPreferences.join(', ')" />
-          <MetricTile label="Equity range" :value="profile.equityExpectationRange" />
+          <MetricTile label="Start timeline" :value="formatStartTimeline(profile.intent.startTimeline)" />
+          <MetricTile label="Hours / week" :value="profile.commitmentProfile.weeklyAvailabilityHours" />
+          <MetricTile label="Runway" :value="formatRunwayBucket(profile.commitmentProfile.runwayBucket)" />
+        </div>
+
+        <div class="mt-6">
+          <h2 class="text-lg font-semibold">
+            Proof of work
+          </h2>
+          <div class="mt-4 gap-3 grid">
+            <a
+              v-for="artifact in profile.trustSignals.builderProofs"
+              :key="artifact.id"
+              :href="artifact.url"
+              target="_blank"
+              class="panel-inset p-4"
+            >
+              <p class="font-semibold">
+                {{ artifact.title }}
+              </p>
+              <p class="muted text-sm leading-6 mt-2">
+                {{ artifact.summary }}
+              </p>
+              <p class="text-sm mt-3">
+                {{ artifact.outcome }}
+              </p>
+            </a>
+          </div>
         </div>
 
         <div class="mt-6">
@@ -76,6 +112,7 @@ const skillEntries = computed(() => profile.value ? getProfileSkills(workspaceSt
         </div>
 
         <div v-if="tab === 'public'" class="mt-6 gap-5 grid">
+          <IntentChecklistPanel :profile="profile" title="What serious matches can evaluate quickly" />
           <div>
             <h2 class="text-lg font-semibold">
               Public highlights
@@ -104,6 +141,76 @@ const skillEntries = computed(() => profile.value ? getProfileSkills(workspaceSt
         </div>
 
         <div v-else class="mt-6 gap-5 grid">
+          <div class="panel-inset p-4 gap-3 grid">
+            <h2 class="text-lg font-semibold">
+              Intent profile
+            </h2>
+            <div class="muted text-sm leading-6">
+              Start timeline: {{ formatStartTimeline(profile.intent.startTimeline) }}
+            </div>
+            <div class="muted text-sm leading-6">
+              Commitment: {{ profile.commitmentProfile.weeklyAvailabilityHours }}h/week · full-time by {{ profile.commitmentProfile.fullTimeBy }}
+            </div>
+            <div class="muted text-sm leading-6">
+              Runway and status: {{ formatRunwayBucket(profile.commitmentProfile.runwayBucket) }} · {{ formatCurrentWorkStatus(profile.commitmentProfile.currentStatus) }}
+            </div>
+            <div class="muted text-sm leading-6">
+              Conversation capacity: {{ profile.intent.introCapacity }}
+            </div>
+            <div class="muted text-sm leading-6">
+              Median reply time: {{ profile.trustSignals.medianReplyHours }} hours · last active {{ formatRelativeDate(profile.trustSignals.lastActiveAt) }}
+            </div>
+            <div class="muted text-sm leading-6">
+              Contact reveal rule: {{ formatContactRevealStage(profile.privacy.contactRevealStage) }}
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <span v-for="preference in profile.intent.companyPreferences" :key="preference" class="pill">
+                {{ preference }}
+              </span>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <span v-for="item in profile.intent.nonNegotiables" :key="item" class="pill">
+                {{ item }}
+              </span>
+            </div>
+          </div>
+          <div class="panel-inset p-4 gap-3 grid">
+            <h2 class="text-lg font-semibold">
+              Governance defaults
+            </h2>
+            <div class="muted text-sm leading-6">
+              Equity philosophy: {{ formatEquityPhilosophy(profile.governancePreferences.equityPhilosophy) }}
+            </div>
+            <div class="muted text-sm leading-6">
+              Leadership preference: {{ formatLeadershipPreference(profile.governancePreferences.leadershipPreference) }}
+            </div>
+            <div class="muted text-sm leading-6">
+              Decision model: {{ formatDecisionModelPreference(profile.governancePreferences.decisionModelPreference) }}
+            </div>
+            <div class="muted text-sm leading-6">
+              Deadlock plan: {{ formatDeadlockPreference(profile.governancePreferences.deadlockPreference) }}
+            </div>
+          </div>
+          <div class="panel-inset p-4 gap-3 grid">
+            <h2 class="text-lg font-semibold">
+              Role boundaries and IP readiness
+            </h2>
+            <div class="muted text-sm leading-6">
+              Primary role: {{ profile.roleScope.primaryRole }}
+            </div>
+            <div class="muted text-sm leading-6">
+              Non-responsibilities: {{ profile.roleScope.nonResponsibilities.join(", ") }}
+            </div>
+            <div class="muted text-sm leading-6">
+              Accountability milestones: {{ profile.roleScope.accountabilityMilestones.join(", ") }}
+            </div>
+            <div class="muted text-sm leading-6">
+              Existing assets: {{ profile.ipReadiness.existingAssets.join(", ") }}
+            </div>
+            <div class="muted text-sm leading-6">
+              Prior constraints: {{ profile.ipReadiness.priorObligations.replaceAll("_", " ") }} · {{ profile.ipReadiness.readyToAssignIp ? "ready to assign IP" : "needs IP discussion" }}
+            </div>
+          </div>
           <div>
             <h2 class="text-lg font-semibold">
               Values and work style

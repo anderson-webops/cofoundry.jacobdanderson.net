@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { formatDate } from "~/shared/utils/format"
-import { buildParticipantProfiles, getConversationByMatch, getMatchesForUser } from "~/shared/utils/workspace"
+import { buildParticipantProfiles, getConversationByMatch, getMatchesForUser, getProfileByUserId, getTrialForMatch } from "~/shared/utils/workspace"
 
 definePageMeta({
   layout: "app",
@@ -9,7 +9,10 @@ definePageMeta({
 
 usePageSeo("Matches")
 
+const toastStore = useToastStore()
 const { authStore, workspaceStore } = useCurrentMember()
+const currentUserId = computed(() => authStore.currentUser?.id || "")
+const currentProfile = computed(() => currentUserId.value ? getProfileByUserId(workspaceStore.data, currentUserId.value) : null)
 
 const matches = computed(() => authStore.currentUser ? getMatchesForUser(workspaceStore.data, authStore.currentUser.id) : [])
 
@@ -25,6 +28,38 @@ function latestPreview(match: ReturnType<typeof getMatchesForUser>[number]) {
   const conversation = getConversationByMatch(workspaceStore.data, match)
   return conversation ? workspaceStore.getConversationPreview(conversation.id)?.body : ""
 }
+
+function trialForMatch(match: ReturnType<typeof getMatchesForUser>[number]) {
+  return getTrialForMatch(workspaceStore.data, match.id)
+}
+
+function startTrial(match: ReturnType<typeof getMatchesForUser>[number]) {
+  if (!currentUserId.value)
+    return
+
+  workspaceStore.startTrialCollaboration(match.id, currentUserId.value)
+  toastStore.push({
+    title: "Trial started",
+    message: "A short working sprint was attached to the match so you can pressure-test the relationship before final terms.",
+    tone: "success",
+  })
+}
+
+function acknowledgeTrial(match: ReturnType<typeof getMatchesForUser>[number]) {
+  if (!currentUserId.value)
+    return
+
+  const trial = trialForMatch(match)
+  if (!trial)
+    return
+
+  workspaceStore.acknowledgeTrialCollaboration(trial.id, currentUserId.value)
+  toastStore.push({
+    title: "Trial acknowledged",
+    message: "Your acknowledgement was recorded on the sprint plan.",
+    tone: "success",
+  })
+}
 </script>
 
 <template>
@@ -32,11 +67,11 @@ function latestPreview(match: ReturnType<typeof getMatchesForUser>[number]) {
     <PageIntro
       eyebrow="Matches"
       title="Mutual interest unlocks messaging."
-      description="Founders and collaborators only get direct access after both sides opt in. That keeps outreach higher signal and the discovery layer calmer."
+      description="Founders and collaborators only get direct access after both sides opt in. From there, CoFoundry helps you run the first call, start a short trial, and only then move into proposal terms."
     />
 
-    <div v-if="matches.length" class="gap-4 grid lg:grid-cols-2">
-      <article v-for="match in matches" :key="match.id" class="panel p-6">
+    <div v-if="matches.length" class="gap-5 grid">
+      <article v-for="match in matches" :key="match.id" class="panel p-6 gap-5 grid">
         <div class="flex gap-4 items-start justify-between">
           <div>
             <h2 class="text-xl font-semibold">
@@ -50,13 +85,61 @@ function latestPreview(match: ReturnType<typeof getMatchesForUser>[number]) {
             Match
           </BaseBadge>
         </div>
+        <TrustSignalStrip v-if="matchPartner(match)" :profile="matchPartner(match)!" />
         <p class="muted text-sm leading-6 mt-4">
           {{ latestPreview(match) }}
         </p>
-        <div class="mt-5 flex items-center justify-between">
+
+        <div class="gap-4 grid lg:grid-cols-[0.95fr_1.05fr]">
+          <FirstCallAgenda :profile="matchPartner(match)" />
+
+          <TrialCollaborationCard
+            v-if="trialForMatch(match)"
+            :trial="trialForMatch(match)!"
+            :acknowledged="trialForMatch(match)!.acknowledgedByUserIds.includes(currentUserId)"
+          >
+            <div class="flex flex-wrap gap-3">
+              <BaseButton
+                v-if="!trialForMatch(match)!.acknowledgedByUserIds.includes(currentUserId)"
+                variant="secondary"
+                @click="acknowledgeTrial(match)"
+              >
+                Acknowledge trial
+              </BaseButton>
+              <BaseButton :to="`/app/messages/${match.conversationId}`">
+                Open conversation
+              </BaseButton>
+            </div>
+          </TrialCollaborationCard>
+
+          <div v-else class="panel-inset p-5">
+            <h3 class="text-base font-semibold">
+              Start a short working sprint
+            </h3>
+            <p class="muted text-sm leading-6 mt-3">
+              Run a two-week alignment sprint before the proposal gets heavy. It is the fastest way to uncover commitment or decision-rights mismatches while the cost is still low.
+            </p>
+            <div class="mt-4 flex flex-wrap gap-3">
+              <BaseButton @click="startTrial(match)">
+                Start trial
+              </BaseButton>
+              <BaseButton variant="secondary" :to="`/app/messages/${match.conversationId}`">
+                Open conversation
+              </BaseButton>
+            </div>
+          </div>
+        </div>
+
+        <AlignmentCheckPanel
+          v-if="currentProfile && matchPartner(match)"
+          :current-profile="currentProfile"
+          :counterpart-profile="matchPartner(match)!"
+        />
+
+        <div class="mt-1 flex items-center justify-between">
           <span class="muted text-sm">Matched on {{ formatDate(match.createdAt) }}</span>
-          <BaseButton :to="`/app/messages/${match.conversationId}`">
-            Open conversation
+          <BaseButton variant="ghost" :to="`/app/messages/${match.conversationId}`">
+            Conversation
           </BaseButton>
         </div>
       </article>

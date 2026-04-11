@@ -4,9 +4,10 @@ import type {
   Match,
   Profile,
   Proposal,
+  ProposalComment,
   ProposalVersion,
   SessionUser,
-  Subscription,
+  TrialCollaboration,
   WorkspaceSeed,
 } from "../types/domain"
 
@@ -56,6 +57,10 @@ export function getConversationByMatch(seed: WorkspaceSeed, match: Match) {
   return seed.conversations.find(conversation => conversation.id === match.conversationId)
 }
 
+export function getMatchByConversation(seed: WorkspaceSeed, conversationId: string) {
+  return seed.matches.find(match => match.conversationId === conversationId)
+}
+
 export function getContractsForUser(seed: WorkspaceSeed, userId: string) {
   return seed.contracts.filter((contract) => {
     const proposal = seed.proposals.find(item => item.id === contract.proposalId)
@@ -72,6 +77,18 @@ export function getProposalsForUser(seed: WorkspaceSeed, userId: string) {
 
 export function getOpportunitiesForUser(seed: WorkspaceSeed, userId: string) {
   return seed.opportunities.filter(opportunity => opportunity.ownerUserId === userId)
+}
+
+export function getTrialsForUser(seed: WorkspaceSeed, userId: string) {
+  const matchIds = seed.matches
+    .filter(match => match.participantIds.includes(userId))
+    .map(match => match.id)
+
+  return seed.trialCollaborations.filter(trial => matchIds.includes(trial.matchId))
+}
+
+export function getTrialForMatch(seed: WorkspaceSeed, matchId: string) {
+  return seed.trialCollaborations.find(trial => trial.matchId === matchId)
 }
 
 export function getMessagesForConversation(seed: WorkspaceSeed, conversationId: string) {
@@ -147,6 +164,22 @@ export function getProposalById(seed: WorkspaceSeed, proposalId: string) {
   return seed.proposals.find(proposal => proposal.id === proposalId)
 }
 
+export function getProposalByConversation(seed: WorkspaceSeed, conversationId: string) {
+  return seed.proposals.find(proposal => proposal.conversationId === conversationId)
+}
+
+export function getProposalVersions(seed: WorkspaceSeed, proposalId: string) {
+  return seed.proposalVersions
+    .filter(version => version.proposalId === proposalId)
+    .sort((left, right) => right.versionNumber - left.versionNumber)
+}
+
+export function getProposalComments(seed: WorkspaceSeed, proposalId: string): ProposalComment[] {
+  return seed.proposalComments
+    .filter(comment => comment.proposalId === proposalId)
+    .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+}
+
 export function getContractById(seed: WorkspaceSeed, contractId: string) {
   return seed.contracts.find(contract => contract.id === contractId)
 }
@@ -169,12 +202,38 @@ export function getPendingReports(seed: WorkspaceSeed) {
   return seed.reports.filter(report => report.status === "open")
 }
 
-export function getSubscriptionEntitlements(subscription?: Subscription) {
+export function buildTrialDraft(
+  match: Match,
+  profiles: Profile[],
+  createdByUserId: string,
+): TrialCollaboration {
+  const partnerNames = profiles.map(profile => profile.displayName).join(" + ")
+
   return {
-    canMessageFreely: subscription?.unlimitedMessaging || false,
-    canUseProposals: subscription?.proposalWorkflow || false,
-    canUseContracts: subscription?.contractBuilder || false,
-    hasVisibilityBoost: subscription?.visibilityBoost || false,
+    id: crypto.randomUUID(),
+    matchId: match.id,
+    createdByUserId,
+    title: `${partnerNames} alignment sprint`,
+    objective: "Pressure-test working style, scope ownership, and delivery quality before finalizing the long-term collaboration terms.",
+    scope: "Use one realistic workflow slice to test communication, decision velocity, and whether the company shape still feels right after working together.",
+    weeklyHours: 8,
+    durationWeeks: 2,
+    checkInCadence: "Two short check-ins each week plus a written review at the end of the sprint.",
+    deliverables: [
+      "One scoped workflow or prototype shipped together",
+      "Shared written decision log covering role boundaries and open questions",
+      "End-of-sprint review on whether to move into a formal proposal",
+    ],
+    successSignals: [
+      "Both sides respond on time and keep commitments visible",
+      "Decision rights feel clearer, not fuzzier, after the sprint",
+      "The work creates conviction about moving into a real proposal",
+    ],
+    status: "draft",
+    acknowledgedByUserIds: [createdByUserId],
+    nextCheckInAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 3).toISOString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   }
 }
 

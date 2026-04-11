@@ -1,10 +1,13 @@
 import type {
   BookmarkTargetType,
   ConnectRequestStatus,
+  ContactRevealStage,
   ContractVersion,
   MessageAttachment,
   NotificationType,
+  ProposalSectionKey,
   ProposalStatus,
+  ReportReason,
   SearchFilters,
   SessionUser,
   WorkspaceSeed,
@@ -12,9 +15,12 @@ import type {
 import { useStorage } from "@vueuse/core"
 import { acceptHMRUpdate, defineStore } from "pinia"
 import { workspaceSeed } from "~/shared/data/seed"
+import { buildSubscriptionUsage } from "~/shared/utils/billing"
 import { cloneValue } from "~/shared/utils/clone"
 import { buildContractVersionFromProposal } from "~/shared/utils/contracts"
+import { buildOpportunityRiskFlags, buildProfileReadiness, getReportPriority } from "~/shared/utils/formation"
 import {
+  buildTrialDraft,
   getContractById,
   getCurrentContractVersion,
   getCurrentProposalVersion,
@@ -31,8 +37,100 @@ function now() {
 const opportunitySlugPattern = /[^a-z0-9]+/g
 const opportunitySlugTrimPattern = /^-|-$/g
 
+interface MinimumOnboardingPayload {
+  intentMode: "start" | "join" | "explore"
+  displayName: string
+  headline: string
+  bio: string
+  location: string
+  remotePreference: "remote" | "hybrid" | "in_person"
+  primaryRole: string
+  roles: string[]
+  industries: string[]
+  timeCommitment: "nights_weekends" | "part_time" | "full_time"
+  weeklyAvailabilityHours: number
+  startTimeline: "immediately" | "30_days" | "90_days" | "exploring"
+  fullTimeBy: string
+  runwayBucket: "under_3_months" | "3_to_6_months" | "6_to_12_months" | "12_plus_months" | "undisclosed"
+  equityPhilosophy: "equal_unless_strong_reason" | "contribution_weighted" | "dynamic_over_time"
+  companyPreferences: string[]
+  profileVisibility: "public" | "members" | "private"
+}
+
+interface FullProfilePayload {
+  displayName: string
+  headline: string
+  bio: string
+  location: string
+  remotePreference: "remote" | "hybrid" | "in_person"
+  primaryRole: string
+  roles: string[]
+  yearsExperience: number
+  industries: string[]
+  startupStagePreferences: ("idea" | "prototype" | "mvp" | "revenue" | "growth")[]
+  compensationPreferences: ("equity_only" | "cash_and_equity" | "cash_only" | "advisory")[]
+  equityExpectationRange: string
+  timeCommitment: "nights_weekends" | "part_time" | "full_time"
+  weeklyAvailabilityHours: number
+  startTimeline: "immediately" | "30_days" | "90_days" | "exploring"
+  fullTimeBy: string
+  runwayBucket: "under_3_months" | "3_to_6_months" | "6_to_12_months" | "12_plus_months" | "undisclosed"
+  currentStatus: "full_time_employed" | "consulting_part_time" | "between_roles" | "full_time_on_startup" | "exploring"
+  equityPhilosophy: "equal_unless_strong_reason" | "contribution_weighted" | "dynamic_over_time"
+  leadershipPreference: "wants_ceo_role" | "open_to_ceo_role" | "prefers_non_ceo_role"
+  decisionModelPreference: "ceo_decides_with_input" | "area_owner_decides" | "consensus_for_big_bets"
+  deadlockPreference: "advisor_tiebreaker" | "rotating_decider" | "board_mediator" | "neutral_operator"
+  companyPreferences: string[]
+  nonNegotiables: string[]
+  introCapacity: string
+  nonResponsibilities: string[]
+  accountabilityMilestones: string[]
+  existingAssets: string[]
+  existingAssetsNotes: string
+  priorObligations: "none_known" | "possible_constraints" | "confirmed_constraints"
+  readyToAssignIp: boolean
+  linkedin: string
+  github: string
+  portfolio: string
+  website: string
+  hasIdea: boolean
+  wantsToJoinIdea: boolean
+  values: string[]
+  workStylePreferences: string[]
+  profileVisibility: "public" | "members" | "private"
+}
+
+interface ProposalPayload {
+  relationshipType: "cofounder" | "founding_team" | "advisor"
+  roleTitle: string
+  responsibilities: string[]
+  weeklyTimeCommitment: number
+  startDate: string
+  fullTimeTrigger: string
+  ceoDecision: string
+  trialScope: string
+  trialIpHandling: string
+  cashCompensation: string
+  equity: string
+  vestingSchedule: string
+  cliff: string
+  decisionRights: string
+  ipAssignmentRequired: boolean
+  confidentiality: string
+  exitTerms: string
+  notes: string
+}
+
 function createOpportunitySlug(input: string) {
   return input.toLowerCase().replaceAll(opportunitySlugPattern, "-").replaceAll(opportunitySlugTrimPattern, "")
+}
+
+function canSendOutreachFromProfile(profile?: ReturnType<typeof getProfileByUserId>) {
+  return Boolean(profile && buildProfileReadiness(profile).readyForOutreach)
+}
+
+function deriveUserRole(hasIdea: boolean, wantsToJoinIdea: boolean) {
+  return !hasIdea && wantsToJoinIdea ? "collaborator" : "founder"
 }
 
 export const useWorkspaceStore = defineStore("workspace", () => {
@@ -49,6 +147,41 @@ export const useWorkspaceStore = defineStore("workspace", () => {
 
   function resetToSeed() {
     data.value = cloneValue(workspaceSeed)
+  }
+
+  function touchProfileActivity(userId: string) {
+    const profile = getProfileByUserId(data.value, userId)
+    if (profile)
+      profile.trustSignals.lastActiveAt = now()
+  }
+
+  function syncProfileDerivedState(userId: string) {
+    const profile = getProfileByUserId(data.value, userId)
+    const user = data.value.users.find(item => item.id === userId)
+    if (!profile || !user)
+      return
+
+    profile.verificationBadges.profileComplete = buildProfileReadiness(profile).profileComplete
+    profile.verificationBadges.linkedAccounts = Boolean(
+      profile.links.linkedin
+      || profile.links.github
+      || profile.links.portfolio
+      || profile.links.website,
+    )
+    profile.trustSignals.workHistoryVerified = profile.trustSignals.workHistoryVerified || Boolean(profile.links.linkedin || profile.links.website)
+    profile.trustSignals.linkedInVerified = profile.trustSignals.linkedInVerified || Boolean(profile.links.linkedin)
+    profile.trustSignals.identityVerified = profile.trustSignals.governmentIdVerified || (profile.verificationBadges.emailVerified && Boolean(profile.links.linkedin))
+    profile.availability = profile.intent.introCapacity || `${profile.timeCommitment.replaceAll("_", " ")} availability`
+    profile.summaryHighlights = [
+      profile.hasIdea && !profile.wantsToJoinIdea
+        ? "Actively building and screening for a founding partner"
+        : !profile.hasIdea && profile.wantsToJoinIdea
+            ? "Actively looking to join a serious founding team"
+            : "Exploring both founder and collaborator paths",
+      `${profile.roleScope.primaryRole || profile.roles[0] || "Generalist"} · ${profile.commitmentProfile.weeklyAvailabilityHours}h/week · ${profile.intent.startTimeline.replaceAll("_", " ")}`,
+      profile.intent.companyPreferences.slice(0, 2).join(" · ") || "Refine company fit preferences",
+    ]
+    user.role = deriveUserRole(profile.hasIdea, profile.wantsToJoinIdea)
   }
 
   function ensureSessionUser(session: SessionUser) {
@@ -87,6 +220,29 @@ export const useWorkspaceStore = defineStore("workspace", () => {
         compensationPreferences: ["equity_only"],
         equityExpectationRange: "Flexible",
         timeCommitment: "part_time",
+        commitmentProfile: {
+          weeklyAvailabilityHours: 10,
+          fullTimeBy: "",
+          runwayBucket: "undisclosed",
+          currentStatus: "exploring",
+        },
+        governancePreferences: {
+          equityPhilosophy: "equal_unless_strong_reason",
+          leadershipPreference: session.role === "founder" ? "wants_ceo_role" : "prefers_non_ceo_role",
+          decisionModelPreference: "area_owner_decides",
+          deadlockPreference: "advisor_tiebreaker",
+        },
+        roleScope: {
+          primaryRole: session.role === "founder" ? "Founder" : "Collaborator",
+          nonResponsibilities: [],
+          accountabilityMilestones: [],
+        },
+        ipReadiness: {
+          existingAssets: [],
+          existingAssetsNotes: "",
+          priorObligations: "none_known",
+          readyToAssignIp: false,
+        },
         links: {
           linkedin: "",
           github: "",
@@ -95,18 +251,37 @@ export const useWorkspaceStore = defineStore("workspace", () => {
         },
         hasIdea: session.role === "founder",
         wantsToJoinIdea: session.role !== "founder",
-        values: ["Candor"],
-        workStylePreferences: ["Async updates"],
+        values: [],
+        workStylePreferences: [],
         privacy: {
           profileVisibility: "members",
           portfolioVisibility: "private",
           opportunityVisibility: "members",
           contactDetailsVisibleToMatchesOnly: true,
+          contactRevealStage: "matches",
         },
         verificationBadges: {
           profileComplete: false,
           emailVerified: true,
           linkedAccounts: false,
+        },
+        intent: {
+          startTimeline: "exploring",
+          companyPreferences: [],
+          nonNegotiables: [],
+          introCapacity: "",
+        },
+        trustSignals: {
+          replyRatePercent: 0,
+          medianReplyHours: 48,
+          lastActiveAt: now(),
+          identityVerified: false,
+          workHistoryVerified: false,
+          phoneVerified: false,
+          linkedInVerified: false,
+          workDomainVerified: false,
+          governmentIdVerified: false,
+          builderProofs: [],
         },
         availability: "Profile still in progress.",
         portfolio: [],
@@ -123,12 +298,15 @@ export const useWorkspaceStore = defineStore("workspace", () => {
         status: "active",
         billingCycle: "monthly",
         renewsAt: null,
+        cancelAtPeriodEnd: false,
         visibilityBoost: false,
         unlimitedMessaging: false,
         proposalWorkflow: false,
         contractBuilder: false,
       })
     }
+
+    syncProfileDerivedState(session.id)
   }
 
   function createDraftUserFromSignUp(session: SessionUser, displayName: string) {
@@ -138,31 +316,44 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     })
   }
 
+  function completeMinimumOnboarding(userId: string, payload: MinimumOnboardingPayload) {
+    ensureReady()
+
+    const profile = getProfileByUserId(data.value, userId)
+    const user = data.value.users.find(item => item.id === userId)
+    if (!profile || !user)
+      return
+
+    profile.displayName = payload.displayName
+    profile.headline = payload.headline
+    profile.bio = payload.bio
+    profile.location = payload.location
+    profile.remotePreference = payload.remotePreference
+    profile.roleScope.primaryRole = payload.primaryRole
+    profile.roles = Array.from(new Set([payload.primaryRole, ...payload.roles]))
+    profile.industries = payload.industries
+    profile.timeCommitment = payload.timeCommitment
+    profile.commitmentProfile.weeklyAvailabilityHours = payload.weeklyAvailabilityHours
+    profile.commitmentProfile.fullTimeBy = payload.fullTimeBy
+    profile.commitmentProfile.runwayBucket = payload.runwayBucket
+    profile.intent = {
+      startTimeline: payload.startTimeline,
+      companyPreferences: payload.companyPreferences,
+      nonNegotiables: profile.intent.nonNegotiables,
+      introCapacity: profile.intent.introCapacity,
+    }
+    profile.governancePreferences.equityPhilosophy = payload.equityPhilosophy
+    profile.hasIdea = payload.intentMode !== "join"
+    profile.wantsToJoinIdea = payload.intentMode !== "start"
+    profile.privacy.profileVisibility = payload.profileVisibility
+    profile.trustSignals.lastActiveAt = now()
+    user.onboardingCompleted = true
+    syncProfileDerivedState(userId)
+  }
+
   function updateCurrentProfile(
     userId: string,
-    payload: {
-      displayName: string
-      headline: string
-      bio: string
-      location: string
-      remotePreference: "remote" | "hybrid" | "in_person"
-      roles: string[]
-      yearsExperience: number
-      industries: string[]
-      startupStagePreferences: ("idea" | "prototype" | "mvp" | "revenue" | "growth")[]
-      compensationPreferences: ("equity_only" | "cash_and_equity" | "cash_only" | "advisory")[]
-      equityExpectationRange: string
-      timeCommitment: "nights_weekends" | "part_time" | "full_time"
-      linkedin: string
-      github: string
-      portfolio: string
-      website: string
-      hasIdea: boolean
-      wantsToJoinIdea: boolean
-      values: string[]
-      workStylePreferences: string[]
-      profileVisibility: "public" | "members" | "private"
-    },
+    payload: FullProfilePayload,
   ) {
     ensureReady()
 
@@ -176,13 +367,43 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     profile.bio = payload.bio
     profile.location = payload.location
     profile.remotePreference = payload.remotePreference
-    profile.roles = payload.roles
+    profile.roleScope.primaryRole = payload.primaryRole
+    profile.roles = Array.from(new Set([payload.primaryRole, ...payload.roles]))
     profile.yearsExperience = payload.yearsExperience
     profile.industries = payload.industries
     profile.startupStagePreferences = payload.startupStagePreferences
     profile.compensationPreferences = payload.compensationPreferences
     profile.equityExpectationRange = payload.equityExpectationRange
     profile.timeCommitment = payload.timeCommitment
+    profile.commitmentProfile = {
+      weeklyAvailabilityHours: payload.weeklyAvailabilityHours,
+      fullTimeBy: payload.fullTimeBy,
+      runwayBucket: payload.runwayBucket,
+      currentStatus: payload.currentStatus,
+    }
+    profile.governancePreferences = {
+      equityPhilosophy: payload.equityPhilosophy,
+      leadershipPreference: payload.leadershipPreference,
+      decisionModelPreference: payload.decisionModelPreference,
+      deadlockPreference: payload.deadlockPreference,
+    }
+    profile.roleScope = {
+      primaryRole: payload.primaryRole,
+      nonResponsibilities: payload.nonResponsibilities,
+      accountabilityMilestones: payload.accountabilityMilestones,
+    }
+    profile.ipReadiness = {
+      existingAssets: payload.existingAssets,
+      existingAssetsNotes: payload.existingAssetsNotes,
+      priorObligations: payload.priorObligations,
+      readyToAssignIp: payload.readyToAssignIp,
+    }
+    profile.intent = {
+      startTimeline: payload.startTimeline,
+      companyPreferences: payload.companyPreferences,
+      nonNegotiables: payload.nonNegotiables,
+      introCapacity: payload.introCapacity,
+    }
     profile.links = {
       linkedin: payload.linkedin,
       github: payload.github,
@@ -194,13 +415,9 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     profile.values = payload.values
     profile.workStylePreferences = payload.workStylePreferences
     profile.privacy.profileVisibility = payload.profileVisibility
-    profile.verificationBadges.profileComplete = true
-    profile.summaryHighlights = [
-      payload.hasIdea ? "Actively building a startup idea" : "Looking to join a serious founding team",
-      `${payload.roles[0]} · ${payload.timeCommitment.replaceAll("_", " ")}`,
-      payload.industries.join(" · "),
-    ]
+    profile.trustSignals.lastActiveAt = now()
     user.onboardingCompleted = true
+    syncProfileDerivedState(userId)
   }
 
   function createOpportunity(userId: string, payload: {
@@ -216,9 +433,20 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     equityRange: string
     location: string
     remotePreference: "remote" | "hybrid" | "in_person"
+    officialWebsite: string
+    verificationMethod: "none" | "work_email" | "domain" | "github_org"
     industries: string[]
   }) {
     const opportunityId = crypto.randomUUID()
+    const riskFlags = buildOpportunityRiskFlags(payload)
+    const verificationStatus = riskFlags.length
+      ? "manual_review"
+      : payload.verificationMethod === "domain"
+        ? "domain_verified"
+        : payload.verificationMethod === "work_email" || payload.verificationMethod === "github_org"
+          ? "owner_verified"
+          : "unverified"
+
     data.value.opportunities.unshift({
       id: opportunityId,
       ownerUserId: userId,
@@ -236,6 +464,10 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       industries: payload.industries,
       location: payload.location,
       remotePreference: payload.remotePreference,
+      officialWebsite: payload.officialWebsite,
+      verificationMethod: payload.verificationMethod,
+      verificationStatus,
+      riskFlags,
       createdAt: now(),
       updatedAt: now(),
       isOpen: true,
@@ -263,6 +495,11 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   }
 
   function saveSearch(userId: string, scope: "profiles" | "opportunities", label: string, filters: SearchFilters) {
+    const subscription = getSubscriptionByUserId(data.value, userId)
+    const usage = buildSubscriptionUsage(data.value, userId, subscription || undefined)
+    if (usage.savedSearches.exhausted)
+      return false
+
     data.value.savedSearches.unshift({
       id: crypto.randomUUID(),
       userId,
@@ -271,27 +508,43 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       filters: cloneValue(filters),
       createdAt: now(),
     })
+    touchProfileActivity(userId)
+    return true
   }
 
   function sendConnectRequest(fromUserId: string, toUserId: string, note: string) {
+    const profile = getProfileByUserId(data.value, fromUserId)
+    if (!canSendOutreachFromProfile(profile))
+      return false
+
+    const subscription = getSubscriptionByUserId(data.value, fromUserId)
+    const usage = buildSubscriptionUsage(data.value, fromUserId, subscription || undefined)
+    if (usage.intros.exhausted)
+      return false
+
     data.value.connectRequests.unshift({
       id: crypto.randomUUID(),
       fromUserId,
       toUserId,
       note,
       status: "pending",
+      declineReason: null,
       createdAt: now(),
       respondedAt: null,
     })
+    touchProfileActivity(fromUserId)
+    return true
   }
 
-  function respondToConnectRequest(requestId: string, status: ConnectRequestStatus) {
+  function respondToConnectRequest(requestId: string, status: ConnectRequestStatus, declineReason: "timing" | "domain_mismatch" | "commitment_mismatch" | "values_mismatch" | "role_mismatch" | null = null) {
     const request = data.value.connectRequests.find(item => item.id === requestId)
     if (!request)
       return null
 
     request.status = status
+    request.declineReason = status === "declined" ? declineReason : null
     request.respondedAt = now()
+    touchProfileActivity(request.toUserId)
 
     if (status !== "accepted")
       return null
@@ -343,6 +596,8 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     })
 
     conversation.lastMessageAt = now()
+    if (senderUserId)
+      touchProfileActivity(senderUserId)
     conversation.participantIds.forEach((participantId) => {
       if (participantId !== senderUserId)
         conversation.unreadCountByUser[participantId] = (conversation.unreadCountByUser[participantId] || 0) + 1
@@ -377,22 +632,13 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     conversationId: string,
     opportunityId: string | null,
     title: string,
-    payload: {
-      roleTitle: string
-      responsibilities: string[]
-      weeklyTimeCommitment: number
-      startDate: string
-      cashCompensation: string
-      equity: string
-      vestingSchedule: string
-      cliff: string
-      decisionRights: string
-      ipAssignmentRequired: boolean
-      confidentiality: string
-      exitTerms: string
-      notes: string
-    },
+    payload: ProposalPayload,
   ) {
+    const subscription = getSubscriptionByUserId(data.value, creatorUserId)
+    const usage = buildSubscriptionUsage(data.value, creatorUserId, subscription || undefined)
+    if (usage.proposals.exhausted)
+      return null
+
     const proposalId = crypto.randomUUID()
     const versionId = crypto.randomUUID()
 
@@ -419,6 +665,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       ...payload,
     })
 
+    touchProfileActivity(creatorUserId)
     sendMessage(conversationId, null, "A collaboration proposal was sent.", [], "system")
     createNotification(recipientUserId, "proposal", "New proposal received", title, `/app/proposals/${proposalId}`)
     return proposalId
@@ -446,21 +693,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   function createProposalCounterVersion(
     proposalId: string,
     createdByUserId: string,
-    payload: {
-      roleTitle: string
-      responsibilities: string[]
-      weeklyTimeCommitment: number
-      startDate: string
-      cashCompensation: string
-      equity: string
-      vestingSchedule: string
-      cliff: string
-      decisionRights: string
-      ipAssignmentRequired: boolean
-      confidentiality: string
-      exitTerms: string
-      notes: string
-    },
+    payload: ProposalPayload,
   ) {
     const proposal = getProposalById(data.value, proposalId)
     const currentVersion = proposal && getCurrentProposalVersion(data.value, proposal)
@@ -482,10 +715,11 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     proposal.currentVersionId = versionId
     proposal.status = "countered"
     proposal.updatedAt = now()
+    touchProfileActivity(createdByUserId)
     sendMessage(proposal.conversationId, null, `Proposal updated to version ${currentVersion.versionNumber + 1}.`, [], "system")
   }
 
-  function addProposalComment(proposalId: string, proposalVersionId: string, authorUserId: string, section: string, body: string) {
+  function addProposalComment(proposalId: string, proposalVersionId: string, authorUserId: string, section: ProposalSectionKey, body: string) {
     data.value.proposalComments.unshift({
       id: crypto.randomUUID(),
       proposalId,
@@ -497,7 +731,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     })
   }
 
-  function createContractFromProposal(proposalId: string) {
+  function createContractFromProposal(proposalId: string, actorUserId?: string) {
     const proposal = getProposalById(data.value, proposalId)
     if (!proposal)
       return null
@@ -505,6 +739,13 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     const existingContract = data.value.contracts.find(contract => contract.proposalId === proposalId)
     if (existingContract)
       return existingContract.id
+
+    if (actorUserId) {
+      const subscription = getSubscriptionByUserId(data.value, actorUserId)
+      const usage = buildSubscriptionUsage(data.value, actorUserId, subscription || undefined)
+      if (usage.contractDrafts.exhausted)
+        return null
+    }
 
     const version = getCurrentProposalVersion(data.value, proposal)
     const participants = [proposal.createdByUserId, proposal.recipientUserId]
@@ -570,6 +811,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       typedName,
       signedAt: now(),
     })
+    touchProfileActivity(userId)
 
     const proposal = data.value.proposals.find(item => item.id === contract.proposalId)
     if (!proposal)
@@ -595,6 +837,118 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     })
   }
 
+  function completeTrustVerification(userId: string, verificationType: "phone" | "linkedin" | "work_domain" | "government_id") {
+    const profile = getProfileByUserId(data.value, userId)
+    if (!profile)
+      return
+
+    if (verificationType === "phone")
+      profile.trustSignals.phoneVerified = true
+
+    if (verificationType === "linkedin") {
+      profile.trustSignals.linkedInVerified = true
+      profile.verificationBadges.linkedAccounts = true
+      profile.trustSignals.workHistoryVerified = true
+    }
+
+    if (verificationType === "work_domain") {
+      profile.trustSignals.workDomainVerified = true
+      profile.trustSignals.workHistoryVerified = true
+    }
+
+    if (verificationType === "government_id") {
+      profile.trustSignals.governmentIdVerified = true
+      profile.trustSignals.identityVerified = true
+    }
+
+    touchProfileActivity(userId)
+    syncProfileDerivedState(userId)
+  }
+
+  function updateContactRevealStage(userId: string, stage: ContactRevealStage) {
+    const profile = getProfileByUserId(data.value, userId)
+    if (!profile)
+      return
+
+    profile.privacy.contactRevealStage = stage
+  }
+
+  function createReport(
+    reporterUserId: string,
+    targetType: "profile" | "message" | "opportunity",
+    targetId: string,
+    reason: ReportReason,
+    details: string,
+  ) {
+    const priority = getReportPriority(reason)
+    data.value.reports.unshift({
+      id: crypto.randomUUID(),
+      reporterUserId,
+      targetType,
+      targetId,
+      reason,
+      priority,
+      details,
+      status: "open",
+      resolutionNotes: null,
+      resolvedAt: null,
+      createdAt: now(),
+    })
+
+    data.value.users
+      .filter(user => user.role === "admin")
+      .forEach((user) => {
+        createNotification(
+          user.id,
+          "admin",
+          priority === "high" ? "High-priority safety report" : "New moderation report",
+          details,
+          "/admin/reports",
+        )
+      })
+  }
+
+  function startTrialCollaboration(matchId: string, createdByUserId: string) {
+    const existingTrial = data.value.trialCollaborations.find(trial => trial.matchId === matchId)
+    if (existingTrial)
+      return existingTrial.id
+
+    const match = data.value.matches.find(item => item.id === matchId)
+    if (!match)
+      return null
+
+    const profiles = match.participantIds
+      .map(participantId => getProfileByUserId(data.value, participantId))
+      .filter((profile): profile is NonNullable<typeof profile> => Boolean(profile))
+
+    const trial = buildTrialDraft(match, profiles, createdByUserId)
+    trial.status = "active"
+    data.value.trialCollaborations.unshift(trial)
+    touchProfileActivity(createdByUserId)
+
+    const counterpartyId = match.participantIds.find(participantId => participantId !== createdByUserId)
+    if (counterpartyId)
+      createNotification(counterpartyId, "match", "Trial collaboration started", trial.title, "/app/matches")
+
+    const conversation = data.value.conversations.find(item => item.id === match.conversationId)
+    if (conversation)
+      sendMessage(conversation.id, null, `A trial collaboration was started: ${trial.title}.`, [], "system")
+
+    return trial.id
+  }
+
+  function acknowledgeTrialCollaboration(trialId: string, userId: string) {
+    const trial = data.value.trialCollaborations.find(item => item.id === trialId)
+    if (!trial)
+      return
+
+    if (!trial.acknowledgedByUserIds.includes(userId))
+      trial.acknowledgedByUserIds.push(userId)
+
+    trial.updatedAt = now()
+    touchProfileActivity(userId)
+  }
+
   function markNotificationRead(notificationId: string) {
     const notification = data.value.notifications.find(item => item.id === notificationId)
     if (notification)
@@ -609,10 +963,27 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     subscription.plan = plan
     subscription.status = "active"
     subscription.renewsAt = plan === "free" ? null : new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString()
+    subscription.cancelAtPeriodEnd = false
     subscription.visibilityBoost = plan !== "free"
     subscription.unlimitedMessaging = plan !== "free"
     subscription.proposalWorkflow = plan !== "free"
     subscription.contractBuilder = plan !== "free"
+  }
+
+  function cancelSubscriptionAtPeriodEnd(userId: string) {
+    const subscription = getSubscriptionByUserId(data.value, userId)
+    if (!subscription || subscription.plan === "free")
+      return
+
+    subscription.cancelAtPeriodEnd = true
+  }
+
+  function resumeSubscription(userId: string) {
+    const subscription = getSubscriptionByUserId(data.value, userId)
+    if (!subscription)
+      return
+
+    subscription.cancelAtPeriodEnd = false
   }
 
   function suspendUser(targetUserId: string, adminUserId: string, notes: string) {
@@ -653,6 +1024,8 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       return
 
     report.status = "resolved"
+    report.resolutionNotes = notes
+    report.resolvedAt = now()
     data.value.adminActions.unshift({
       id: crypto.randomUUID(),
       adminUserId,
@@ -687,13 +1060,17 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   return {
     data,
     ready,
+    completeMinimumOnboarding,
+    cancelSubscriptionAtPeriodEnd,
     createContractFromProposal,
     createDraftUserFromSignUp,
     createInvestmentApplication,
     createOpportunity,
+    createReport,
     createProposal,
     createProposalCounterVersion,
     addProposalComment,
+    completeTrustVerification,
     ensureReady,
     ensureSessionUser,
     getConversationPreview,
@@ -701,15 +1078,19 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     markNotificationRead,
     reinstateUser,
     resetToSeed,
+    resumeSubscription,
     resolveReport,
+    acknowledgeTrialCollaboration,
     respondToConnectRequest,
     saveSearch,
     sendConnectRequest,
     sendMessage,
     setTyping,
     signContract,
+    startTrialCollaboration,
     suspendUser,
     toggleBookmark,
+    updateContactRevealStage,
     updateContractVersion,
     updateCurrentProfile,
     updateProposalStatus,

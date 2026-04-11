@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { formatDate } from "~/shared/utils/format"
-import { getCurrentProposalVersion, getProfileByUserId, getProposalById } from "~/shared/utils/workspace"
+import type { ProposalSectionKey, ProposalSectionState } from "~/shared/types/domain"
+import { buildSubscriptionUsage, formatUsageQuota, getSubscriptionEntitlements } from "~/shared/utils/billing"
+import { formatDate, formatProposalRelationshipType, formatProposalSectionKey, formatProposalSectionState, formatProposalStatus } from "~/shared/utils/format"
+import { buildProposalSectionSummaries, buildProposalTermsSummary, buildProposalTimeline, buildProposalUnresolvedItems, getProposalStatusTone } from "~/shared/utils/proposals"
+import { getCurrentProposalVersion, getProfileByUserId, getProposalById, getProposalComments, getProposalVersions } from "~/shared/utils/workspace"
 
 definePageMeta({
   layout: "app",
@@ -11,17 +14,39 @@ usePageSeo("Proposal detail")
 
 const route = useRoute()
 const toastStore = useToastStore()
-const { authStore, workspaceStore } = useCurrentMember()
+const { authStore, subscription, workspaceStore } = useCurrentMember()
+
+const proposalSections: ProposalSectionKey[] = [
+  "partnership",
+  "scope",
+  "trial",
+  "economics",
+  "decision_rights",
+  "ip_confidentiality",
+  "exit",
+]
+
+const commentSectionOptions: { label: string, value: ProposalSectionKey }[] = proposalSections.map(section => ({
+  label: formatProposalSectionKey(section),
+  value: section,
+}))
 
 const proposal = computed(() => getProposalById(workspaceStore.data, route.params.id as string))
 const version = computed(() => proposal.value ? getCurrentProposalVersion(workspaceStore.data, proposal.value) : undefined)
-const comments = computed(() => workspaceStore.data.proposalComments.filter(comment => comment.proposalId === route.params.id))
+const versions = computed(() => proposal.value ? getProposalVersions(workspaceStore.data, proposal.value.id) : [])
+const comments = computed(() => proposal.value ? getProposalComments(workspaceStore.data, proposal.value.id) : [])
+const sections = computed(() => proposal.value && version.value ? buildProposalSectionSummaries(version.value, comments.value, proposal.value.status) : [])
+const unresolvedSections = computed(() => buildProposalUnresolvedItems(sections.value))
+const timeline = computed(() => proposal.value ? buildProposalTimeline(proposal.value, versions.value) : [])
+const termsSummary = computed(() => version.value ? buildProposalTermsSummary(version.value) : [])
 const authorProfile = computed(() => proposal.value ? getProfileByUserId(workspaceStore.data, proposal.value.createdByUserId) : null)
 const recipientProfile = computed(() => proposal.value ? getProfileByUserId(workspaceStore.data, proposal.value.recipientUserId) : null)
 const contractId = computed(() => workspaceStore.data.contracts.find(contract => contract.proposalId === route.params.id)?.id)
+const entitlements = computed(() => getSubscriptionEntitlements(subscription.value || undefined))
+const usage = computed(() => authStore.currentUser ? buildSubscriptionUsage(workspaceStore.data, authStore.currentUser.id, subscription.value || undefined) : null)
 
 const commentBody = ref("")
-const commentSection = ref("general")
+const commentSection = ref<ProposalSectionKey>("partnership")
 const counterDialogOpen = ref(false)
 
 function updateStatus(status: "accepted" | "rejected" | "viewed") {
@@ -58,10 +83,19 @@ function addComment() {
 }
 
 function createContract() {
-  if (!proposal.value)
+  if (!proposal.value || !authStore.currentUser)
     return
 
-  const nextContractId = workspaceStore.createContractFromProposal(proposal.value.id)
+  if (usage.value?.contractDrafts.exhausted) {
+    toastStore.push({
+      title: "Agreement-draft limit reached",
+      message: "This plan has already used its agreement-draft capacity for the month. Upgrade to keep moving accepted proposals into editable agreements.",
+      tone: "warning",
+    })
+    return
+  }
+
+  const nextContractId = workspaceStore.createContractFromProposal(proposal.value.id, authStore.currentUser.id)
   if (!nextContractId)
     return
 
@@ -72,52 +106,145 @@ function createContract() {
   })
   navigateTo(`/app/contracts/${nextContractId}`)
 }
+
+function sectionTone(state: ProposalSectionState) {
+  if (state === "agreed")
+    return "success"
+
+  if (state === "countered")
+    return "warning"
+
+  return "neutral"
+}
+
+function contractQuotaText() {
+  return usage.value ? formatUsageQuota(usage.value.contractDrafts) : ""
+}
 </script>
 
 <template>
-  <div v-if="proposal && version" class="gap-6 grid xl:grid-cols-[0.9fr_1.1fr]">
+  <div v-if="proposal && version" class="gap-6 grid xl:grid-cols-[0.86fr_1.14fr]">
     <section class="gap-4 grid">
       <PageIntro
-        eyebrow="Proposal"
+        eyebrow="Deal room"
         :title="proposal.title"
-        :description="`From ${authorProfile?.displayName} to ${recipientProfile?.displayName}`"
+        :description="`Between ${authorProfile?.displayName} and ${recipientProfile?.displayName}`"
       >
         <template #actions>
-          <BaseBadge tone="accent">
-            {{ proposal.status }}
+          <BaseBadge :tone="getProposalStatusTone(proposal.status)">
+            {{ formatProposalStatus(proposal.status) }}
           </BaseBadge>
         </template>
       </PageIntro>
 
       <div class="panel p-5">
-        <h2 class="text-lg font-semibold">
-          Quick actions
-        </h2>
-        <div class="mt-4 flex flex-wrap gap-3">
+        <div class="flex gap-4 items-start justify-between">
+          <div>
+            <h2 class="text-lg font-semibold">
+              What this proposal is doing
+            </h2>
+            <p class="muted text-sm leading-6 mt-3">
+              CoFoundry treats the proposal as the primary collaboration artifact: trial scope, economics, governance, IP, and exit assumptions are versioned before a formal agreement draft exists.
+            </p>
+          </div>
+          <BaseBadge tone="neutral">
+            Version {{ version.versionNumber }}
+          </BaseBadge>
+        </div>
+        <div v-if="usage" class="panel-inset mt-4 p-4">
+          <p class="text-sm font-semibold">
+            Agreement draft usage
+          </p>
+          <p class="muted text-sm leading-6 mt-2">
+            {{ contractQuotaText() }}. Free can still open one agreement preview each month, while Pro and Team unlock higher-volume signature-ready workflow.
+          </p>
+        </div>
+        <div class="mt-5 flex flex-wrap gap-3">
           <BaseButton variant="secondary" @click="updateStatus('viewed')">
             Mark viewed
           </BaseButton>
           <BaseButton variant="secondary" @click="counterDialogOpen = true">
-            Counter
+            Counter terms
           </BaseButton>
           <BaseButton @click="updateStatus('accepted')">
-            Accept
+            Accept proposal
           </BaseButton>
           <BaseButton variant="danger" @click="updateStatus('rejected')">
             Reject
           </BaseButton>
           <BaseButton v-if="!contractId" variant="secondary" @click="createContract">
-            Generate contract
+            {{ entitlements.canSignContracts ? "Generate agreement" : "Generate agreement preview" }}
           </BaseButton>
           <BaseButton v-else variant="secondary" :to="`/app/contracts/${contractId}`">
-            Open contract
+            Open agreement
           </BaseButton>
         </div>
       </div>
 
       <div class="panel p-5">
+        <div class="flex gap-4 items-start justify-between">
+          <div>
+            <h2 class="text-lg font-semibold">
+              Open terms
+            </h2>
+            <p class="muted text-sm leading-6 mt-2">
+              These are the sections that still need explicit agreement before this should become a signed template.
+            </p>
+          </div>
+          <BaseBadge :tone="unresolvedSections.length ? 'warning' : 'success'">
+            {{ unresolvedSections.length ? `${unresolvedSections.length} active` : "Aligned" }}
+          </BaseBadge>
+        </div>
+        <div class="mt-4 gap-3 grid">
+          <div
+            v-for="section in unresolvedSections"
+            :key="section.id"
+            class="panel-inset p-4"
+          >
+            <div class="flex gap-3 items-center justify-between">
+              <p class="text-sm font-semibold">
+                {{ section.title }}
+              </p>
+              <BaseBadge :tone="section.state === 'agreed' ? 'success' : section.state === 'countered' ? 'warning' : 'neutral'">
+                {{ formatProposalSectionState(section.state) }}
+              </BaseBadge>
+            </div>
+            <p class="muted text-sm leading-6 mt-3">
+              {{ section.body }}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel p-5">
         <h2 class="text-lg font-semibold">
-          Comments
+          Version history
+        </h2>
+        <div class="mt-4 gap-3 grid">
+          <div v-for="entry in timeline" :key="entry.id" class="panel-inset p-4">
+            <div class="flex gap-3 items-center justify-between">
+              <div>
+                <p class="text-sm font-semibold">
+                  Version {{ entry.versionNumber }}
+                </p>
+                <p class="muted text-sm mt-1">
+                  {{ entry.summary }}
+                </p>
+              </div>
+              <BaseBadge :tone="entry.current ? 'accent' : 'neutral'">
+                {{ entry.current ? "Current" : "History" }}
+              </BaseBadge>
+            </div>
+            <p class="muted text-xs mt-3">
+              {{ getProfileByUserId(workspaceStore.data, entry.createdByUserId)?.displayName }} · {{ formatDate(entry.createdAt) }}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel p-5">
+        <h2 class="text-lg font-semibold">
+          Clause comments
         </h2>
         <div class="mt-4 gap-3 grid">
           <div v-for="comment in comments" :key="comment.id" class="panel-inset p-4">
@@ -126,7 +253,7 @@ function createContract() {
                 {{ getProfileByUserId(workspaceStore.data, comment.authorUserId)?.displayName }}
               </p>
               <BaseBadge tone="neutral">
-                {{ comment.section }}
+                {{ formatProposalSectionKey(comment.section) }}
               </BaseBadge>
             </div>
             <p class="muted text-sm leading-6 mt-3">
@@ -136,8 +263,13 @@ function createContract() {
         </div>
 
         <div class="mt-5 gap-4 grid">
-          <TextInput v-model="commentSection" label="Section" />
-          <TextareaInput v-model="commentBody" label="Add comment" :rows="4" />
+          <SelectInput v-model="commentSection" label="Section" :options="commentSectionOptions" />
+          <TextareaInput
+            v-model="commentBody"
+            label="Add comment"
+            helper="Keep comments attached to a real section so the version history stays useful."
+            :rows="4"
+          />
           <div class="flex justify-end">
             <BaseButton @click="addComment">
               Add comment
@@ -147,70 +279,65 @@ function createContract() {
       </div>
     </section>
 
-    <section class="panel p-6">
-      <h2 class="text-xl font-semibold">
-        Version {{ version.versionNumber }}
-      </h2>
-      <p class="muted text-sm mt-2">
-        Last updated {{ formatDate(version.createdAt) }}
-      </p>
-
-      <div class="text-sm leading-7 mt-6 gap-5 grid">
-        <div>
-          <h3 class="font-semibold">
-            Role title
-          </h3>
-          <p class="muted mt-2">
-            {{ version.roleTitle }}
-          </p>
+    <section class="gap-4 grid">
+      <div class="panel p-6">
+        <div class="flex gap-4 items-start justify-between">
+          <div>
+            <p class="muted text-sm">
+              Current proposal snapshot
+            </p>
+            <h2 class="text-xl font-semibold mt-2">
+              {{ version.roleTitle }}
+            </h2>
+            <p class="muted text-sm mt-2">
+              {{ formatProposalRelationshipType(version.relationshipType) }} · Updated {{ formatDate(version.createdAt) }}
+            </p>
+          </div>
+          <BaseBadge tone="neutral">
+            Counsel-ready summary
+          </BaseBadge>
         </div>
-        <div>
-          <h3 class="font-semibold">
-            Responsibilities
-          </h3>
-          <ul class="muted mt-2 gap-2 grid">
-            <li v-for="responsibility in version.responsibilities" :key="responsibility">
-              {{ responsibility }}
+
+        <div class="mt-6 gap-4 grid md:grid-cols-2">
+          <div v-for="item in termsSummary" :key="item.label" class="panel-inset p-4">
+            <p class="text-sm font-semibold">
+              {{ item.label }}
+            </p>
+            <p class="muted text-sm leading-6 mt-2">
+              {{ item.value }}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="gap-4 grid">
+        <article
+          v-for="section in sections"
+          :key="section.id"
+          class="panel p-5"
+        >
+          <div class="flex gap-4 items-start justify-between">
+            <div>
+              <h3 class="text-lg font-semibold">
+                {{ section.title }}
+              </h3>
+              <p class="muted text-sm leading-6 mt-3">
+                {{ section.body }}
+              </p>
+            </div>
+            <BaseBadge :tone="sectionTone(section.state)">
+              {{ formatProposalSectionState(section.state) }}
+            </BaseBadge>
+          </div>
+          <ul v-if="section.supporting.length" class="muted text-sm leading-6 mt-4 gap-2 grid">
+            <li v-for="item in section.supporting" :key="item">
+              {{ item }}
             </li>
           </ul>
-        </div>
-        <div class="gap-4 grid md:grid-cols-2">
-          <div class="panel-inset p-4">
-            <p class="font-semibold">
-              Cash compensation
-            </p>
-            <p class="muted mt-2">
-              {{ version.cashCompensation }}
-            </p>
-          </div>
-          <div class="panel-inset p-4">
-            <p class="font-semibold">
-              Equity
-            </p>
-            <p class="muted mt-2">
-              {{ version.equity }}
-            </p>
-          </div>
-        </div>
-        <div>
-          <h3 class="font-semibold">
-            Decision rights
-          </h3>
-          <p class="muted mt-2">
-            {{ version.decisionRights }}
+          <p v-if="section.commentCount" class="muted text-xs mt-4">
+            {{ section.commentCount }} clause comment{{ section.commentCount > 1 ? "s" : "" }} on the current version.
           </p>
-        </div>
-        <div>
-          <h3 class="font-semibold">
-            Confidentiality and exit
-          </h3>
-          <p class="muted mt-2">
-            {{ version.confidentiality }}
-          </p>
-          <p class="muted mt-3">
-            {{ version.exitTerms }}
-          </p>
-        </div>
+        </article>
       </div>
     </section>
 

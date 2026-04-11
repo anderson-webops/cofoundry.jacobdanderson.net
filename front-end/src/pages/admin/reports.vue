@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { formatReportReason } from "~/shared/utils/format"
+
 definePageMeta({
   layout: "admin",
   middleware: ["admin"],
@@ -39,15 +41,21 @@ function resolve(reportId: string) {
               <BaseBadge :tone="report.status === 'open' ? 'warning' : 'neutral'">
                 {{ report.status }}
               </BaseBadge>
+              <BaseBadge :tone="report.priority === 'high' ? 'warning' : 'neutral'">
+                {{ report.priority }} priority
+              </BaseBadge>
               <BaseBadge tone="neutral">
                 {{ report.targetType }}
               </BaseBadge>
             </div>
             <h2 class="text-lg font-semibold mt-4">
-              {{ report.reason }}
+              {{ formatReportReason(report.reason) }}
             </h2>
             <p class="muted text-sm leading-7 mt-3">
               {{ report.details }}
+            </p>
+            <p v-if="report.resolutionNotes" class="text-sm mt-3">
+              Resolution: {{ report.resolutionNotes }}
             </p>
           </div>
           <BaseButton v-if="report.status !== 'resolved'" variant="secondary" @click="resolve(report.id)">

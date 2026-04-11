@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatReportReason } from "~/shared/utils/format"
 import { buildAdminMetrics, getPendingReports } from "~/shared/utils/workspace"
 
 definePageMeta({
@@ -39,12 +40,15 @@ const pendingReports = computed(() => getPendingReports(workspaceStore.data))
           <div class="flex gap-3 items-start justify-between">
             <div>
               <p class="text-sm font-semibold">
-                {{ report.reason }}
+                {{ formatReportReason(report.reason) }}
               </p>
               <p class="muted text-sm leading-6 mt-2">
                 {{ report.details }}
               </p>
             </div>
+            <BaseBadge :tone="report.priority === 'high' ? 'warning' : 'neutral'">
+              {{ report.priority }}
+            </BaseBadge>
             <BaseButton variant="secondary" to="/admin/reports">
               Review
             </BaseButton>

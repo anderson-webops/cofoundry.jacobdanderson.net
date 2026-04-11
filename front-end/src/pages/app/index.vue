@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { recommendOpportunitiesForProfile, recommendProfilesForProfile } from "~/shared/utils/discovery"
 import { formatPlanName } from "~/shared/utils/format"
-import { buildRecommendationCards, getContractsForUser, getMatchesForUser, getProposalsForUser } from "~/shared/utils/workspace"
+import { buildProfileReadiness, buildProfileTrustScore } from "~/shared/utils/formation"
+import { getContractsForUser, getMatchesForUser, getProfileSkills, getProposalsForUser, getTrialsForUser } from "~/shared/utils/workspace"
 
 definePageMeta({
   layout: "app",
@@ -12,11 +14,20 @@ usePageSeo("Workspace")
 const { authStore, profile, subscription, workspaceStore } = useCurrentMember()
 const currentUserId = computed(() => authStore.currentUser?.id || "")
 
-const recommendations = computed(() => currentUserId.value ? buildRecommendationCards(workspaceStore.data, currentUserId.value).slice(0, 3) : [])
+const readiness = computed(() => profile.value ? buildProfileReadiness(profile.value) : null)
+const profileRecommendations = computed(() => profile.value ? recommendProfilesForProfile(workspaceStore.data, profile.value).slice(0, 3) : [])
+const opportunityRecommendations = computed(() => profile.value ? recommendOpportunitiesForProfile(workspaceStore.data, profile.value).slice(0, 3) : [])
+const showProfileRecommendations = computed(() => profile.value ? profile.value.hasIdea && !profile.value.wantsToJoinIdea : false)
 const proposals = computed(() => currentUserId.value ? getProposalsForUser(workspaceStore.data, currentUserId.value).slice(0, 3) : [])
 const matches = computed(() => currentUserId.value ? getMatchesForUser(workspaceStore.data, currentUserId.value).slice(0, 3) : [])
 const contracts = computed(() => currentUserId.value ? getContractsForUser(workspaceStore.data, currentUserId.value).slice(0, 2) : [])
+const trials = computed(() => currentUserId.value ? getTrialsForUser(workspaceStore.data, currentUserId.value).slice(0, 2) : [])
 const notifications = computed(() => currentUserId.value ? workspaceStore.data.notifications.filter(notification => notification.userId === currentUserId.value).slice(0, 4) : [])
+const trustScore = computed(() => profile.value ? buildProfileTrustScore(profile.value) : 0)
+
+function skillLabels(profileId: string) {
+  return getProfileSkills(workspaceStore.data, profileId).map(item => item.skill.label)
+}
 
 function getProposalVersion(proposalId: string) {
   const proposal = workspaceStore.data.proposals.find(item => item.id === proposalId)
@@ -44,23 +55,41 @@ function getContractVersion(contractId: string) {
     </PageIntro>
 
     <div class="gap-4 grid md:grid-cols-4">
-      <MetricTile label="Profile completion" :value="profile?.verificationBadges.profileComplete ? '100%' : '70%'" context="Complete profiles surface more often in discovery." />
+      <MetricTile label="Profile completion" :value="`${readiness?.percent || 0}%`" context="The stronger the profile, the faster CoFoundry can unlock outreach and proposals." />
+      <MetricTile label="Trust score" :value="trustScore" context="Combines proof of work, verification, recency, and response speed." />
       <MetricTile label="Matches" :value="matches.length" context="Mutual connections that unlock messaging." />
-      <MetricTile label="Active proposals" :value="proposals.length" context="Structured collaboration terms in motion." />
-      <MetricTile label="Contracts" :value="contracts.length" context="Editable agreement drafts and signed versions." />
+      <MetricTile label="Active trials" :value="trials.length" context="Short working sprints that de-risk the relationship before signatures." />
     </div>
 
     <div class="gap-6 grid xl:grid-cols-[1.15fr_0.85fr]">
       <section class="gap-4 grid">
         <PageIntro
-          eyebrow="Recommended opportunities"
+          :eyebrow="showProfileRecommendations ? 'Recommended collaborators' : 'Recommended opportunities'"
           title="Best next conversations"
-          description="These are ranked from your profile signal, stage preferences, and compensation fit."
+          :description="showProfileRecommendations
+            ? 'These people are ranked from intent alignment, operating fit, and trust signal.'
+            : 'These opportunities are ranked from your profile signal, stage preferences, and compensation fit.'"
         />
 
-        <div v-if="recommendations.length" class="gap-4 grid lg:grid-cols-2">
+        <div v-if="showProfileRecommendations && profileRecommendations.length" class="gap-4 grid lg:grid-cols-2">
+          <ProfileCard
+            v-for="item in profileRecommendations"
+            :key="item.profile.id"
+            :profile="item.profile"
+            :skills="skillLabels(item.profile.id)"
+          >
+            <BaseBadge tone="accent">
+              Match score {{ item.score }}
+            </BaseBadge>
+            <BaseButton variant="secondary" to="/app/discover">
+              Review collaborator
+            </BaseButton>
+          </ProfileCard>
+        </div>
+
+        <div v-else-if="opportunityRecommendations.length" class="gap-4 grid lg:grid-cols-2">
           <OpportunityCard
-            v-for="item in recommendations"
+            v-for="item in opportunityRecommendations"
             :key="item.opportunity.id"
             :opportunity="item.opportunity"
           >
@@ -82,9 +111,51 @@ function getContractVersion(contractId: string) {
             Finish profile
           </BaseButton>
         </EmptyState>
+
+        <PageIntro
+          eyebrow="Formation workflow"
+          title="Run a short trial before the terms get heavy."
+          description="The research was consistent here: strong founder matches still fail when nobody pressure-tests working style, decision rights, or pace before equity enters the room."
+        />
+
+        <div v-if="trials.length" class="gap-4 grid">
+          <TrialCollaborationCard
+            v-for="trial in trials"
+            :key="trial.id"
+            :trial="trial"
+            :acknowledged="trial.acknowledgedByUserIds.includes(currentUserId)"
+          >
+            <BaseButton variant="secondary" to="/app/matches">
+              Open match workflow
+            </BaseButton>
+          </TrialCollaborationCard>
+        </div>
+        <div v-else class="panel p-5">
+          <p class="text-sm font-semibold">
+            No active trial sprints yet
+          </p>
+          <p class="muted text-sm leading-6 mt-3">
+            Start from a mutual match, run one small working sprint, and only then move into a formal proposal or agreement.
+          </p>
+          <div class="mt-4">
+            <BaseButton to="/app/matches">
+              Open matches
+            </BaseButton>
+          </div>
+        </div>
       </section>
 
       <section class="gap-4 grid">
+        <ActivationCockpit
+          v-if="profile"
+          :profile="profile"
+          :preview-count="showProfileRecommendations ? profileRecommendations.length : opportunityRecommendations.length"
+          :match-count="matches.length"
+          :proposal-count="proposals.length"
+        />
+
+        <IntentChecklistPanel v-if="profile" :profile="profile" />
+
         <div class="panel p-5">
           <h2 class="text-lg font-semibold">
             Recent notifications

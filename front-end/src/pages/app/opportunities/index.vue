@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { commitmentOptions, industryOptions, remoteOptions, roleOptions, stageOptions } from "~/shared/constants/options"
+import { commitmentOptions, industryOptions, opportunityVerificationOptions, remoteOptions, roleOptions, stageOptions } from "~/shared/constants/options"
 import { opportunitySchema } from "~/shared/utils/validation"
 
 definePageMeta({
@@ -27,6 +27,8 @@ const form = reactive({
   equityRange: "",
   location: "",
   remotePreference: "remote",
+  officialWebsite: "",
+  verificationMethod: "none",
   industries: [] as string[],
 })
 
@@ -44,7 +46,7 @@ async function createOpportunityPost() {
   workspaceStore.createOpportunity(authStore.currentUser.id, parsed.data)
   toastStore.push({
     title: "Opportunity published",
-    message: "Your startup opportunity is now visible in discovery.",
+    message: "Your startup opportunity is now visible in discovery with its verification state attached.",
     tone: "success",
   })
   dialogOpen.value = false
@@ -94,6 +96,10 @@ async function createOpportunityPost() {
           <TextInput v-model="form.equityRange" label="Equity range" :error="errors.equityRange" />
           <TextInput v-model="form.location" label="Location" :error="errors.location" />
         </div>
+        <div class="gap-4 grid md:grid-cols-2">
+          <TextInput v-model="form.officialWebsite" label="Official website" helper="Optional in mock mode, but used as a visible trust signal." :error="errors.officialWebsite" />
+          <SelectInput v-model="form.verificationMethod" label="Verification method" helper="How collaborators should interpret the legitimacy signal on this listing." :options="opportunityVerificationOptions" :error="errors.verificationMethod" />
+        </div>
         <SelectInput v-model="form.remotePreference" label="Remote preference" :options="remoteOptions" :error="errors.remotePreference" />
         <div class="gap-2 grid">
           <span class="field-label">Compensation structure</span>
@@ -109,6 +115,14 @@ async function createOpportunityPost() {
               {{ option.replaceAll('_', ' ') }}
             </button>
           </div>
+        </div>
+        <div class="panel-inset p-4">
+          <p class="text-sm font-semibold">
+            Trust note
+          </p>
+          <p class="muted text-sm leading-6 mt-2">
+            Listings that claim company ownership should carry some proof. CoFoundry highlights whether a listing is unverified, owner-verified, or domain-verified so collaborators can calibrate risk before replying.
+          </p>
         </div>
         <div class="flex justify-end">
           <BaseButton type="submit">
