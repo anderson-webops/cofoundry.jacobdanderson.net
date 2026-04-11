@@ -1,5 +1,10 @@
-import { readSession } from "~/server/utils/auth"
+import { clearSessionCookie, readSession } from "~/server/utils/auth"
 
 export default defineEventHandler((event) => {
-  return { session: readSession(event) }
+  const session = readSession(event)
+
+  if (!session)
+    clearSessionCookie(event)
+
+  return { session }
 })

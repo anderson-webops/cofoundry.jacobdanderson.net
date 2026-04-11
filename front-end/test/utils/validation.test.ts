@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { billingCheckoutSchema, contactSchema, minimumOnboardingSchema, onboardingSchema, opportunitySchema, proposalSchema, reportSchema, signUpSchema } from "../../shared/utils/validation"
+import { adminReportStatusSchema, adminUserModerationSchema, billingCheckoutSchema, contactSchema, minimumOnboardingSchema, onboardingSchema, opportunitySchema, proposalSchema, reportSchema, signUpSchema } from "../../shared/utils/validation"
 
 describe("validation schemas", () => {
   it("accepts a valid sign-up payload", () => {
@@ -159,5 +159,20 @@ describe("validation schemas", () => {
     })
 
     expect(result.success).toBe(true)
+  })
+
+  it("accepts admin moderation payloads with short notes", () => {
+    const userAction = adminUserModerationSchema.safeParse({
+      action: "suspend",
+      notes: "Suspended after manual review.",
+    })
+
+    const reportAction = adminReportStatusSchema.safeParse({
+      status: "reviewed",
+      notes: "Reviewed and queued for follow-up.",
+    })
+
+    expect(userAction.success).toBe(true)
+    expect(reportAction.success).toBe(true)
   })
 })

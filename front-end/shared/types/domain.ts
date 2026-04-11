@@ -22,7 +22,8 @@ export type BillingCycle = "monthly" | "annual"
 export type ReportReason = "spam" | "misrepresentation" | "harassment" | "off_platform_solicitation" | "scam_fraud" | "impersonation" | "data_harvesting" | "privacy_violation"
 export type ReportStatus = "open" | "reviewed" | "resolved"
 export type ReportPriority = "standard" | "high"
-export type AdminActionType = "suspend_user" | "reinstate_user" | "warn_user" | "remove_content" | "resolve_report"
+export type AdminActionType = "suspend_user" | "reinstate_user" | "warn_user" | "remove_content" | "review_report" | "resolve_report"
+export type AdminActionTargetType = "user" | "report" | "profile" | "message" | "opportunity"
 export type InvestmentApplicationStatus = "draft" | "submitted" | "under_review" | "accepted" | "declined"
 export type NotificationType = "match" | "message" | "proposal" | "contract" | "billing" | "admin"
 export type BookmarkTargetType = "profile" | "opportunity"
@@ -443,8 +444,12 @@ export interface Report {
   priority: ReportPriority
   details: string
   status: ReportStatus
+  reviewNotes: string | null
+  reviewedAt: string | null
+  reviewedByUserId: string | null
   resolutionNotes: string | null
   resolvedAt: string | null
+  resolvedByUserId: string | null
   createdAt: string
 }
 
@@ -453,6 +458,7 @@ export interface AdminAction {
   adminUserId: string
   type: AdminActionType
   targetId: string
+  targetType: AdminActionTargetType
   notes: string
   createdAt: string
 }

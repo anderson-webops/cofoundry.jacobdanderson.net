@@ -1,6 +1,6 @@
 import type { SessionUser } from "../../shared/types/domain"
 import { describe, expect, it } from "vitest"
-import { decodeSessionUser, encodeSessionUser, sessionCookieName } from "../../shared/utils/session"
+import { decodeSessionUser, encodeSessionUser, sessionCookieName, sessionSignatureCookieName } from "../../shared/utils/session"
 
 describe("session utilities", () => {
   it("round-trips a session payload", () => {
@@ -22,5 +22,6 @@ describe("session utilities", () => {
     expect(decodeSessionUser("not-a-real-session")).toBeNull()
     expect(decodeSessionUser("")).toBeNull()
     expect(sessionCookieName).toBe("cofoundry_session")
+    expect(sessionSignatureCookieName).toBe("cofoundry_session_sig")
   })
 })

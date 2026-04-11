@@ -27,6 +27,7 @@ export const adminNavigation = [
   { label: "Users", to: "/admin/users", icon: "i-carbon-user-multiple" },
   { label: "Reports", to: "/admin/reports", icon: "i-carbon-flag-filled" },
   { label: "Analytics", to: "/admin/analytics", icon: "i-carbon-chart-line" },
+  { label: "Audit", to: "/admin/audit", icon: "i-carbon-document-tasks" },
 ]
 
 export const demoAccounts = [

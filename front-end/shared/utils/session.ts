@@ -1,6 +1,7 @@
 import type { SessionUser } from "../types/domain"
 
 export const sessionCookieName = "cofoundry_session"
+export const sessionSignatureCookieName = "cofoundry_session_sig"
 
 function encodeBase64Url(value: string) {
   const bytes = new TextEncoder().encode(value)

@@ -1007,8 +1007,12 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       priority,
       details,
       status: "open",
+      reviewNotes: null,
+      reviewedAt: null,
+      reviewedByUserId: null,
       resolutionNotes: null,
       resolvedAt: null,
+      resolvedByUserId: null,
       createdAt: now(),
     })
 
@@ -1103,54 +1107,185 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     subscription.cancelAtPeriodEnd = false
   }
 
-  function suspendUser(targetUserId: string, adminUserId: string, notes: string) {
+  function recordAdminAction(payload: {
+    id?: string
+    adminUserId: string
+    type: "suspend_user" | "reinstate_user" | "review_report" | "resolve_report"
+    targetId: string
+    targetType: "user" | "report"
+    notes: string
+    createdAt?: string
+  }) {
+    data.value.adminActions.unshift({
+      id: payload.id || crypto.randomUUID(),
+      adminUserId: payload.adminUserId,
+      type: payload.type,
+      targetId: payload.targetId,
+      targetType: payload.targetType,
+      notes: payload.notes,
+      createdAt: payload.createdAt || now(),
+    })
+  }
+
+  function applyUserSuspension(targetUserId: string, adminUserId: string, notes: string, suspendedAt = now(), actionId?: string) {
     const user = data.value.users.find(item => item.id === targetUserId)
     if (!user)
       return
 
-    user.suspendedAt = now()
-    data.value.adminActions.unshift({
-      id: crypto.randomUUID(),
+    user.suspendedAt = suspendedAt
+    recordAdminAction({
+      id: actionId,
       adminUserId,
       type: "suspend_user",
       targetId: targetUserId,
+      targetType: "user",
       notes,
-      createdAt: now(),
+      createdAt: suspendedAt,
     })
   }
 
-  function reinstateUser(targetUserId: string, adminUserId: string, notes: string) {
+  function applyUserReinstatement(targetUserId: string, adminUserId: string, notes: string, createdAt = now(), actionId?: string) {
     const user = data.value.users.find(item => item.id === targetUserId)
     if (!user)
       return
 
     user.suspendedAt = null
-    data.value.adminActions.unshift({
-      id: crypto.randomUUID(),
+    recordAdminAction({
+      id: actionId,
       adminUserId,
       type: "reinstate_user",
       targetId: targetUserId,
+      targetType: "user",
       notes,
-      createdAt: now(),
+      createdAt,
     })
   }
 
-  function resolveReport(reportId: string, adminUserId: string, notes: string) {
+  function applyReportReview(reportId: string, adminUserId: string, notes: string, reviewedAt = now(), actionId?: string) {
+    const report = data.value.reports.find(item => item.id === reportId)
+    if (!report)
+      return
+
+    report.status = "reviewed"
+    report.reviewNotes = notes
+    report.reviewedAt = reviewedAt
+    report.reviewedByUserId = adminUserId
+    recordAdminAction({
+      id: actionId,
+      adminUserId,
+      type: "review_report",
+      targetId: reportId,
+      targetType: "report",
+      notes,
+      createdAt: reviewedAt,
+    })
+  }
+
+  function applyReportResolution(reportId: string, adminUserId: string, notes: string, resolvedAt = now(), actionId?: string) {
     const report = data.value.reports.find(item => item.id === reportId)
     if (!report)
       return
 
     report.status = "resolved"
+    report.reviewNotes = report.reviewNotes || notes
+    report.reviewedAt = report.reviewedAt || resolvedAt
+    report.reviewedByUserId = report.reviewedByUserId || adminUserId
     report.resolutionNotes = notes
-    report.resolvedAt = now()
-    data.value.adminActions.unshift({
-      id: crypto.randomUUID(),
+    report.resolvedAt = resolvedAt
+    report.resolvedByUserId = adminUserId
+    recordAdminAction({
+      id: actionId,
       adminUserId,
       type: "resolve_report",
       targetId: reportId,
+      targetType: "report",
       notes,
-      createdAt: now(),
+      createdAt: resolvedAt,
     })
+  }
+
+  async function suspendUser(targetUserId: string, adminUserId: string, notes: string) {
+    const response = await $fetch<{
+      action: {
+        id: string
+        adminUserId: string
+        createdAt: string
+        notes: string
+        targetId: string
+      }
+      user: {
+        id: string
+        suspendedAt: string
+      }
+    }>(`/api/admin/users/${targetUserId}/status`, {
+      method: "POST",
+      body: { action: "suspend", notes },
+    })
+
+    applyUserSuspension(response.user.id, response.action.adminUserId || adminUserId, response.action.notes, response.user.suspendedAt, response.action.id)
+  }
+
+  async function reinstateUser(targetUserId: string, adminUserId: string, notes: string) {
+    const response = await $fetch<{
+      action: {
+        id: string
+        adminUserId: string
+        createdAt: string
+        notes: string
+        targetId: string
+      }
+      user: {
+        id: string
+        suspendedAt: null
+      }
+    }>(`/api/admin/users/${targetUserId}/status`, {
+      method: "POST",
+      body: { action: "reinstate", notes },
+    })
+
+    applyUserReinstatement(response.user.id, response.action.adminUserId || adminUserId, response.action.notes, response.action.createdAt, response.action.id)
+  }
+
+  async function reviewReport(reportId: string, adminUserId: string, notes: string) {
+    const response = await $fetch<{
+      action: {
+        id: string
+        adminUserId: string
+        createdAt: string
+        notes: string
+        targetId: string
+      }
+      report: {
+        id: string
+        reviewedAt: string
+      }
+    }>(`/api/admin/reports/${reportId}/status`, {
+      method: "POST",
+      body: { status: "reviewed", notes },
+    })
+
+    applyReportReview(response.report.id, response.action.adminUserId || adminUserId, response.action.notes, response.report.reviewedAt, response.action.id)
+  }
+
+  async function resolveReport(reportId: string, adminUserId: string, notes: string) {
+    const response = await $fetch<{
+      action: {
+        id: string
+        adminUserId: string
+        createdAt: string
+        notes: string
+        targetId: string
+      }
+      report: {
+        id: string
+        resolvedAt: string
+      }
+    }>(`/api/admin/reports/${reportId}/status`, {
+      method: "POST",
+      body: { status: "resolved", notes },
+    })
+
+    applyReportResolution(response.report.id, response.action.adminUserId || adminUserId, response.action.notes, response.report.resolvedAt, response.action.id)
   }
 
   function createInvestmentApplication(userId: string, opportunityId: string, payload: {
@@ -1193,6 +1328,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     getConversationPreview,
     markConversationRead,
     markNotificationRead,
+    reviewReport,
     reinstateUser,
     resetToSeed,
     resumeSubscription,

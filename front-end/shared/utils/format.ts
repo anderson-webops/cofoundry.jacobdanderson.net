@@ -1,4 +1,5 @@
 import type {
+  AdminActionType,
   BillingCycle,
   CommitmentLevel,
   CompensationPreference,
@@ -18,6 +19,7 @@ import type {
   ProposalStatus,
   RemotePreference,
   ReportReason,
+  ReportStatus,
   RunwayBucket,
   SkillLevel,
   StartTimeline,
@@ -281,4 +283,23 @@ export function formatReportReason(reason: ReportReason) {
     data_harvesting: "Data harvesting",
     privacy_violation: "Privacy violation",
   }[reason]
+}
+
+export function formatReportStatus(status: ReportStatus) {
+  return {
+    open: "Open",
+    reviewed: "Reviewed",
+    resolved: "Resolved",
+  }[status]
+}
+
+export function formatAdminActionType(type: AdminActionType) {
+  return {
+    suspend_user: "Suspended user",
+    reinstate_user: "Reinstated user",
+    warn_user: "Warned user",
+    remove_content: "Removed content",
+    review_report: "Reviewed report",
+    resolve_report: "Resolved report",
+  }[type]
 }
