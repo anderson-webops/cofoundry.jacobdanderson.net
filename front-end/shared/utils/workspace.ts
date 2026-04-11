@@ -53,6 +53,18 @@ export function getMatchesForUser(seed: WorkspaceSeed, userId: string) {
   return seed.matches.filter(match => match.participantIds.includes(userId))
 }
 
+export function getIncomingConnectRequestsForUser(seed: WorkspaceSeed, userId: string) {
+  return seed.connectRequests
+    .filter(request => request.toUserId === userId)
+    .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+}
+
+export function getOutgoingConnectRequestsForUser(seed: WorkspaceSeed, userId: string) {
+  return seed.connectRequests
+    .filter(request => request.fromUserId === userId)
+    .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+}
+
 export function getConversationByMatch(seed: WorkspaceSeed, match: Match) {
   return seed.conversations.find(conversation => conversation.id === match.conversationId)
 }

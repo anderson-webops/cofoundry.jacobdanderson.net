@@ -10,6 +10,7 @@ import type {
   ReportReason,
   SearchFilters,
   SessionUser,
+  StructuredIntro,
   WorkspaceSeed,
 } from "~/shared/types/domain"
 import { useStorage } from "@vueuse/core"
@@ -18,7 +19,7 @@ import { workspaceSeed } from "~/shared/data/seed"
 import { buildSubscriptionUsage } from "~/shared/utils/billing"
 import { cloneValue } from "~/shared/utils/clone"
 import { buildContractVersionFromProposal } from "~/shared/utils/contracts"
-import { buildOpportunityRiskFlags, buildProfileReadiness, getReportPriority } from "~/shared/utils/formation"
+import { buildOpportunityRiskFlags, buildProfileReadiness, buildStructuredIntroNote, getReportPriority } from "~/shared/utils/formation"
 import {
   buildTrialDraft,
   getContractById,
@@ -121,6 +122,11 @@ interface ProposalPayload {
   notes: string
 }
 
+interface ConnectRequestPayload {
+  note: string
+  structuredIntro: StructuredIntro
+}
+
 function createOpportunitySlug(input: string) {
   return input.toLowerCase().replaceAll(opportunitySlugPattern, "-").replaceAll(opportunitySlugTrimPattern, "")
 }
@@ -140,10 +146,32 @@ export const useWorkspaceStore = defineStore("workspace", () => {
 
   const ready = ref(false)
 
+  function normalizeLegacyConnectRequests() {
+    data.value.connectRequests = data.value.connectRequests.map((request) => {
+      if (request.structuredIntro)
+        return request
+
+      return {
+        ...request,
+        structuredIntro: {
+          context: "profile",
+          roleContext: "Structured intro",
+          whyFit: request.note,
+          whyNow: "Interested in comparing fit and next steps now.",
+          proposedNextStep: "intro_call",
+        },
+      }
+    })
+  }
+
   function ensureReady() {
+    normalizeLegacyConnectRequests()
+
     if (!ready.value)
       ready.value = true
   }
+
+  normalizeLegacyConnectRequests()
 
   function resetToSeed() {
     data.value = cloneValue(workspaceSeed)
@@ -153,6 +181,34 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     const profile = getProfileByUserId(data.value, userId)
     if (profile)
       profile.trustSignals.lastActiveAt = now()
+  }
+
+  function syncResponseMetrics(userId: string) {
+    const profile = getProfileByUserId(data.value, userId)
+    if (!profile)
+      return
+
+    const inboundRequests = data.value.connectRequests.filter(request => request.toUserId === userId)
+    if (!inboundRequests.length)
+      return
+
+    const respondedRequests = inboundRequests.filter(request => request.respondedAt)
+    profile.trustSignals.replyRatePercent = Math.round((respondedRequests.length / inboundRequests.length) * 100)
+
+    if (!respondedRequests.length) {
+      profile.trustSignals.medianReplyHours = 48
+      return
+    }
+
+    const replyHours = respondedRequests
+      .map((request) => {
+        const createdAt = new Date(request.createdAt).getTime()
+        const respondedAt = new Date(request.respondedAt!).getTime()
+        return Math.max(1, Math.round((respondedAt - createdAt) / 36e5))
+      })
+      .sort((left, right) => left - right)
+
+    profile.trustSignals.medianReplyHours = replyHours[Math.floor(replyHours.length / 2)] || 48
   }
 
   function syncProfileDerivedState(userId: string) {
@@ -512,7 +568,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     return true
   }
 
-  function sendConnectRequest(fromUserId: string, toUserId: string, note: string) {
+  function sendConnectRequest(fromUserId: string, toUserId: string, payload: ConnectRequestPayload) {
     const profile = getProfileByUserId(data.value, fromUserId)
     if (!canSendOutreachFromProfile(profile))
       return false
@@ -526,13 +582,22 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       id: crypto.randomUUID(),
       fromUserId,
       toUserId,
-      note,
+      note: payload.note || buildStructuredIntroNote(payload.structuredIntro),
+      structuredIntro: payload.structuredIntro,
       status: "pending",
       declineReason: null,
       createdAt: now(),
       respondedAt: null,
     })
     touchProfileActivity(fromUserId)
+    syncResponseMetrics(toUserId)
+    createNotification(
+      toUserId,
+      "match",
+      "New structured intro",
+      `${profile?.displayName || "A member"} proposed ${payload.structuredIntro.roleContext.toLowerCase()} and wants to start with ${payload.structuredIntro.proposedNextStep.replaceAll("_", " ")}.`,
+      "/app",
+    )
     return true
   }
 
@@ -545,9 +610,18 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     request.declineReason = status === "declined" ? declineReason : null
     request.respondedAt = now()
     touchProfileActivity(request.toUserId)
+    syncResponseMetrics(request.toUserId)
 
-    if (status !== "accepted")
+    if (status !== "accepted") {
+      createNotification(
+        request.fromUserId,
+        "match",
+        "Structured intro closed",
+        declineReason ? `The other side declined with reason: ${declineReason.replaceAll("_", " ")}.` : "The other side closed the intro without opening a match.",
+        "/app",
+      )
       return null
+    }
 
     const conversationId = crypto.randomUUID()
     data.value.conversations.unshift({
@@ -572,10 +646,18 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       conversationId,
       senderUserId: null,
       type: "system",
-      body: "Connection accepted. Messaging is now unlocked.",
+      body: `Connection accepted. Messaging is now unlocked. Suggested next step: ${request.structuredIntro.proposedNextStep.replaceAll("_", " ")}.`,
       attachments: [],
       createdAt: now(),
     })
+
+    createNotification(
+      request.fromUserId,
+      "match",
+      "Structured intro accepted",
+      "A mutual match is now open. Move quickly into a first call or trial sprint while intent is still fresh.",
+      `/app/messages/${conversationId}`,
+    )
 
     return conversationId
   }

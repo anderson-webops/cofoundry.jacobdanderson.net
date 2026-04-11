@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { StructuredIntro } from "~/shared/types/domain"
 import { commitmentOptions, equityPhilosophyOptions, industryOptions, roleOptions, runwayBucketOptions, stageOptions } from "~/shared/constants/options"
 import { buildSubscriptionUsage, formatUsageQuota } from "~/shared/utils/billing"
 import { createEmptySearchFilters, filterOpportunities, filterProfiles } from "~/shared/utils/discovery"
@@ -20,27 +21,28 @@ const viewMode = ref<"card" | "list">("card")
 const filters = reactive(createEmptySearchFilters())
 const connectDialogOpen = ref(false)
 const connectTargetUserId = ref("")
-const connectNote = ref("")
+const connectRoleContext = ref("")
 const currentUserId = computed(() => authStore.currentUser?.id || "")
 const currentProfile = computed(() => currentUserId.value ? workspaceStore.data.profiles.find(profile => profile.userId === currentUserId.value) : null)
 const currentReadiness = computed(() => currentProfile.value ? buildProfileReadiness(currentProfile.value) : null)
 const usage = computed(() => authStore.currentUser ? buildSubscriptionUsage(workspaceStore.data, authStore.currentUser.id, subscription.value || undefined) : null)
+const connectTargetProfile = computed(() => connectTargetUserId.value ? workspaceStore.data.profiles.find(profile => profile.userId === connectTargetUserId.value) : null)
 
-const profileResults = computed(() => filterProfiles(workspaceStore.data, filters))
-const opportunityResults = computed(() => filterOpportunities(workspaceStore.data, filters))
+const profileResults = computed(() => filterProfiles(workspaceStore.data, filters, currentProfile.value || undefined))
+const opportunityResults = computed(() => filterOpportunities(workspaceStore.data, filters, currentProfile.value || undefined))
 const currentBookmarks = computed(() => currentUserId.value ? workspaceStore.data.bookmarks.filter(bookmark => bookmark.userId === currentUserId.value) : [])
 
 function skillLabels(profileId: string) {
   return getProfileSkills(workspaceStore.data, profileId).map(item => item.skill.label)
 }
 
-function openConnectDialog(userId: string) {
+function openConnectDialog(userId: string, roleContext = "") {
   connectTargetUserId.value = userId
-  connectNote.value = ""
+  connectRoleContext.value = roleContext
   connectDialogOpen.value = true
 }
 
-function submitConnectRequest() {
+function submitConnectRequest(payload: { note: string, structuredIntro: StructuredIntro }) {
   if (!authStore.currentUser || !connectTargetUserId.value)
     return
 
@@ -62,7 +64,7 @@ function submitConnectRequest() {
     return
   }
 
-  const sent = workspaceStore.sendConnectRequest(authStore.currentUser.id, connectTargetUserId.value, connectNote.value)
+  const sent = workspaceStore.sendConnectRequest(authStore.currentUser.id, connectTargetUserId.value, payload)
   if (!sent) {
     toastStore.push({
       title: "Request blocked",
@@ -73,8 +75,8 @@ function submitConnectRequest() {
   }
 
   toastStore.push({
-    title: "Connect request sent",
-    message: "If the other person accepts, messaging will unlock automatically.",
+    title: "Structured intro sent",
+    message: "If the other person accepts, messaging will unlock automatically and your proposed next step will carry into the conversation.",
     tone: "success",
   })
   connectDialogOpen.value = false
@@ -208,17 +210,31 @@ function quotaText(key: "intros" | "savedSearches") {
       </div>
     </div>
 
+    <div v-if="currentProfile" class="panel-inset p-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div>
+        <p class="text-sm font-semibold">
+          Start with the tightest wedge that could actually convert
+        </p>
+        <p class="muted text-sm leading-6 mt-1">
+          CoFoundry now nudges search toward {{ currentProfile.location }}, {{ currentProfile.startupStagePreferences[0] || "your target stage" }}, and the company shapes you already declared before widening the pool.
+        </p>
+      </div>
+      <BaseBadge tone="neutral">
+        {{ currentProfile.intent.introCapacity || "Set intro capacity" }}
+      </BaseBadge>
+    </div>
+
     <div v-if="scope === 'profiles'" class="panel-inset p-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
       <div>
         <p class="text-sm font-semibold">
-          Ranked for fit, proof of work, and response speed
+          Ranked for mutual fit, reply likelihood, and local density
         </p>
         <p class="muted text-sm leading-6 mt-1">
-          Discovery now favors recent activity, declared intent, proof of work, and alignment signals like commitment, runway, and equity philosophy.
+          Discovery now favors reciprocity, recent activity, commitment fit, and same-city wedges before it broadens out to the wider network.
         </p>
       </div>
       <BaseBadge tone="accent">
-        Mutual-intent only
+        Reciprocal ranking
       </BaseBadge>
     </div>
 
@@ -234,9 +250,9 @@ function quotaText(key: "intros" | "savedSearches") {
         </BaseButton>
         <BaseButton
           v-if="authStore.currentUser && authStore.currentUser.id !== profileItem.userId"
-          @click="openConnectDialog(profileItem.userId)"
+          @click="openConnectDialog(profileItem.userId, profileItem.roleScope.primaryRole || profileItem.roles[0] || 'Founding role')"
         >
-          Connect
+          Send structured intro
         </BaseButton>
       </ProfileCard>
 
@@ -270,19 +286,14 @@ function quotaText(key: "intros" | "savedSearches") {
       />
     </div>
 
-    <BaseDialog v-model="connectDialogOpen" title="Send connect request" description="Direct contact stays hidden until the request is accepted.">
-      <TextareaInput v-model="connectNote" label="Why this fit?" helper="Explain the specific role, stage, or operating fit you see." :rows="5" />
-      <p class="muted text-sm leading-6 mt-4">
-        {{ currentProfile ? getOutreachUnlockMessage(currentProfile) : "Outreach is gated behind baseline trust checks." }}
-      </p>
-      <p v-if="usage" class="muted text-sm leading-6 mt-2">
-        This plan has {{ quotaText("intros") }} this month.
-      </p>
-      <div class="mt-5 flex justify-end">
-        <BaseButton @click="submitConnectRequest">
-          Send request
-        </BaseButton>
-      </div>
-    </BaseDialog>
+    <StructuredIntroDialog
+      v-model="connectDialogOpen"
+      context="profile"
+      :target-label="connectTargetProfile?.displayName || 'this profile'"
+      :default-role-context="connectRoleContext"
+      :unlock-copy="currentProfile ? getOutreachUnlockMessage(currentProfile) : 'Outreach is gated behind baseline trust checks.'"
+      :quota-copy="usage ? `This plan has ${quotaText('intros')} this month.` : ''"
+      @submit="submitConnectRequest"
+    />
   </div>
 </template>

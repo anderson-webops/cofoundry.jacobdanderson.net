@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { workspaceSeed } from "../../shared/data/seed"
-import { buildAlignmentCheck, buildIntentChecklist, buildMessageRiskFlags, buildProfileReadiness, buildProfileTrustScore, buildProfileTrustTier, canOpenProposalWorkflow } from "../../shared/utils/formation"
+import { buildAlignmentCheck, buildConnectRequestDueCopy, buildIntentChecklist, buildMessageRiskFlags, buildProfileReadiness, buildProfileTrustScore, buildProfileTrustTier, buildStructuredIntroNote, canOpenProposalWorkflow } from "../../shared/utils/formation"
 import { getTrialForMatch } from "../../shared/utils/workspace"
 
 describe("formation utilities", () => {
@@ -106,6 +106,14 @@ describe("formation utilities", () => {
 
     expect(flags.length).toBeGreaterThan(0)
     expect(flags.join(" ")).toContain("off-platform")
+  })
+
+  it("builds a structured intro note and response target copy", () => {
+    const request = workspaceSeed.connectRequests.find(item => item.id === "connect_arjun_noah")
+    expect(request).toBeDefined()
+
+    expect(buildStructuredIntroNote(request!.structuredIntro)).toContain("Proposed next step")
+    expect(buildConnectRequestDueCopy(request!)).toContain("Reply target")
   })
 
   it("returns the trial collaboration attached to a match", () => {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Profile } from "~/shared/types/domain"
 import { formatCommitment, formatEquityPhilosophy, formatRemotePreference, formatRunwayBucket } from "~/shared/utils/format"
+import { buildResponsivenessLabel } from "~/shared/utils/formation"
 
 const props = defineProps<{
   profile: Profile
@@ -59,6 +60,7 @@ const profileRoleLabel = computed(() => {
       <div>Industries: {{ profile.industries.join(", ") }}</div>
       <div>Company fit: {{ profile.intent.companyPreferences.slice(0, 2).join(", ") }}</div>
       <div>Commitment: {{ profile.commitmentProfile.weeklyAvailabilityHours }}h/week · {{ formatRunwayBucket(profile.commitmentProfile.runwayBucket) }}</div>
+      <div>Responsiveness: {{ buildResponsivenessLabel(profile) }}</div>
       <div>Equity philosophy: {{ formatEquityPhilosophy(profile.governancePreferences.equityPhilosophy) }}</div>
       <div>Equity range: {{ profile.equityExpectationRange }}</div>
     </div>

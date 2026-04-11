@@ -1,5 +1,7 @@
 import type {
   CompensationPreference,
+  ConnectDeclineReason,
+  ConnectRequestNextStep,
   ContactRevealStage,
   CurrentWorkStatus,
   DeadlockPreference,
@@ -138,6 +140,21 @@ export const reportReasonOptions: { label: string, value: ReportReason }[] = [
   { label: "Impersonation", value: "impersonation" },
   { label: "Data harvesting", value: "data_harvesting" },
   { label: "Privacy violation", value: "privacy_violation" },
+]
+
+export const connectRequestNextStepOptions: { label: string, value: ConnectRequestNextStep }[] = [
+  { label: "15-minute intro call", value: "intro_call" },
+  { label: "Focused working session", value: "working_session" },
+  { label: "Short trial sprint", value: "trial_sprint" },
+  { label: "Async exchange first", value: "async_exchange" },
+]
+
+export const connectDeclineReasonOptions: { label: string, value: ConnectDeclineReason }[] = [
+  { label: "Timing mismatch", value: "timing" },
+  { label: "Domain mismatch", value: "domain_mismatch" },
+  { label: "Commitment mismatch", value: "commitment_mismatch" },
+  { label: "Values mismatch", value: "values_mismatch" },
+  { label: "Role mismatch", value: "role_mismatch" },
 ]
 
 export const proposalRelationshipOptions = [

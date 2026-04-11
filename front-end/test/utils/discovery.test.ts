@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { workspaceSeed } from "../../shared/data/seed"
-import { createEmptySearchFilters, filterOpportunities, filterProfiles, recommendOpportunitiesForProfile } from "../../shared/utils/discovery"
+import { createEmptySearchFilters, filterOpportunities, filterProfiles, recommendOpportunitiesForProfile, recommendProfilesForProfile } from "../../shared/utils/discovery"
 
 describe("discovery utilities", () => {
   it("filters profiles by role and industry", () => {
@@ -33,5 +33,15 @@ describe("discovery utilities", () => {
 
     expect(recommendations[0]?.opportunity.startupName).toBe("LedgerLoop")
     expect(recommendations[0]?.score).toBeGreaterThan(0)
+  })
+
+  it("prioritizes reciprocal collaborators with stronger response signals", () => {
+    const profile = workspaceSeed.profiles.find(item => item.userId === "user_olivia")
+    expect(profile).toBeDefined()
+
+    const recommendations = recommendProfilesForProfile(workspaceSeed, profile!)
+
+    expect(recommendations[0]?.profile.displayName).toBe("Malik Thompson")
+    expect(recommendations[0]?.reciprocityScore).toBeGreaterThan(0)
   })
 })
