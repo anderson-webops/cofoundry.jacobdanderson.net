@@ -1,0 +1,15 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="cofoundry-bg" x1="10" y1="8" x2="55" y2="58" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#17231F"/>
+      <stop offset="1" stop-color="#101816"/>
+    </linearGradient>
+    <linearGradient id="cofoundry-stroke" x1="18" y1="16" x2="50" y2="48" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#74D5BC"/>
+      <stop offset="1" stop-color="#5AC3A8"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="18" fill="url(#cofoundry-bg)"/>
+  <path d="M44 18C39.6009 14.8096 34.357 13 28.6892 13C14.5018 13 13 24.7731 13 32C13 39.2269 14.5018 51 28.6892 51C34.357 51 39.6009 49.1904 44 46" stroke="url(#cofoundry-stroke)" stroke-width="8" stroke-linecap="round"/>
+  <rect x="39" y="26" width="11" height="11" rx="3.5" fill="#F4F6F5"/>
+</svg>
