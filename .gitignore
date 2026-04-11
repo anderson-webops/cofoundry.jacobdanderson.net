@@ -12,4 +12,5 @@ front-end/dist
 front-end/playwright-report
 front-end/test-results
 back-end/dist
+*.tsbuildinfo
 public/assets/fonts
