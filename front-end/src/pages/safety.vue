@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { trustPillars } from "~/shared/data/marketing"
+import { trustCenterPages } from "~/shared/data/public-content"
 
-usePageSeo("Trust & Safety")
+usePageSeo("Trust & Safety", "Designed to reduce spam, ambiguity, and bad-faith founder behavior.", {
+  canonicalPath: "/safety",
+})
 </script>
 
 <template>
@@ -156,6 +159,27 @@ usePageSeo("Trust & Safety")
       <p class="muted text-sm leading-7 mt-4">
         Reports, restrictions, and suspensions are meant to be reviewable. CoFoundry tracks moderation actions, keeps report context attached to the case, and expects an appeal path for users who believe a decision was incorrect.
       </p>
+    </div>
+
+    <div class="panel mt-10 p-6 md:p-8">
+      <h2 class="text-2xl font-semibold">
+        Trust Center guides
+      </h2>
+      <div class="mt-6 gap-4 grid md:grid-cols-3">
+        <NuxtLink
+          v-for="page in trustCenterPages"
+          :key="page.slug"
+          :to="`/trust/${page.slug}`"
+          class="panel-inset p-4 transition hover:border-[var(--accent)]"
+        >
+          <p class="font-semibold">
+            {{ page.title }}
+          </p>
+          <p class="muted text-sm leading-6 mt-2">
+            {{ page.description }}
+          </p>
+        </NuxtLink>
+      </div>
     </div>
   </div>
 </template>

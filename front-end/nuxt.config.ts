@@ -1,8 +1,11 @@
 import process from "node:process"
 import { appDescription, appName } from "./shared/constants/app"
+import { workspaceSeed } from "./shared/data/seed"
+import { getPublicRoutePaths } from "./shared/utils/directory"
 import { assertEnvironmentIsValid, readEnvironmentSnapshot } from "./shared/utils/environment"
 
 const environment = readEnvironmentSnapshot(process.env)
+const publicRoutes = getPublicRoutePaths(workspaceSeed)
 
 assertEnvironmentIsValid(process.env, "Nuxt configuration")
 
@@ -91,7 +94,7 @@ export default defineNuxtConfig({
     },
     prerender: {
       crawlLinks: false,
-      routes: ["/", "/how-it-works", "/pricing", "/faq", "/safety", "/terms", "/privacy", "/contact"],
+      routes: [...publicRoutes, "/sitemap.xml", "/robots.txt"],
     },
   },
   vite: {

@@ -1,5 +1,14 @@
 <script setup lang="ts">
 const mobileNavOpen = ref(false)
+
+useHead({
+  meta: [
+    {
+      name: "robots",
+      content: "noindex, nofollow",
+    },
+  ],
+})
 </script>
 
 <template>

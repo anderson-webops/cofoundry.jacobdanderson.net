@@ -1,5 +1,14 @@
 <script setup lang="ts">
 import { adminNavigation } from "~/shared/constants/app"
+
+useHead({
+  meta: [
+    {
+      name: "robots",
+      content: "noindex, nofollow",
+    },
+  ],
+})
 </script>
 
 <template>

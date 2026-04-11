@@ -1,3 +1,14 @@
+<script setup lang="ts">
+useHead({
+  meta: [
+    {
+      name: "robots",
+      content: "noindex, nofollow",
+    },
+  ],
+})
+</script>
+
 <template>
   <div class="px-4 py-8 min-h-screen">
     <div class="page-shell">
@@ -6,7 +17,7 @@
         <ThemeToggle />
       </div>
       <div class="gap-8 grid lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-        <section class="text-white p-8 border border-[var(--line)] rounded-[2rem] bg-[var(--text)] shadow-[var(--shadow)] relative overflow-hidden">
+        <section class="hero-auth-panel text-white p-8 border border-[var(--line)] rounded-[2rem] bg-[var(--text)] relative overflow-hidden">
           <div class="hero-spotlight" />
           <p class="section-kicker text-white/70">
             Founder relationships deserve structure
