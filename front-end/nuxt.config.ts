@@ -100,6 +100,17 @@ export default defineNuxtConfig({
       crawlLinks: false,
       routes: [...publicRoutes, "/sitemap.xml", "/robots.txt"],
     },
+    routeRules: {
+      "/admin": { headers: { "X-Robots-Tag": "noindex, nofollow" } },
+      "/admin/**": { headers: { "X-Robots-Tag": "noindex, nofollow" } },
+      "/app": { headers: { "X-Robots-Tag": "noindex, nofollow" } },
+      "/app/**": { headers: { "X-Robots-Tag": "noindex, nofollow" } },
+      "/auth": { headers: { "X-Robots-Tag": "noindex, nofollow" } },
+      "/auth/**": { headers: { "X-Robots-Tag": "noindex, nofollow" } },
+      "/api/**": { headers: { "X-Robots-Tag": "noindex, nofollow" } },
+      "/onboarding": { headers: { "X-Robots-Tag": "noindex, nofollow" } },
+      "/onboarding/**": { headers: { "X-Robots-Tag": "noindex, nofollow" } },
+    },
   },
   vite: {
     build: {

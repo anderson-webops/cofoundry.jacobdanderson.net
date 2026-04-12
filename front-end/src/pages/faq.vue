@@ -1,7 +1,41 @@
 <script setup lang="ts">
 import { faqs } from "~/shared/data/marketing"
 
-usePageSeo("FAQ")
+usePageSeo("FAQ", undefined, {
+  canonicalPath: "/faq",
+  structuredData: [
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": faqs.map(faq => ({
+        "@type": "Question",
+        "name": faq.question,
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": faq.answer,
+        },
+      })),
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": "https://cofoundry.jacobdanderson.net/",
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "FAQ",
+          "item": "https://cofoundry.jacobdanderson.net/faq",
+        },
+      ],
+    },
+  ],
+})
 </script>
 
 <template>
