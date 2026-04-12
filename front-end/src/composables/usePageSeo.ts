@@ -28,6 +28,25 @@ export function usePageSeo(title: string, description = appDescription, options:
   const fullTitle = `${title} · ${appName}`
   const canonicalUrl = buildCanonicalUrl(options.canonicalPath || route.path)
   const ogImage = buildCanonicalUrl(options.imagePath || "/og-default.png")
+  const pageStructuredData = canonicalUrl
+    ? {
+        "@context": "https://schema.org",
+        "@type": options.ogType === "article" ? "Article" : "WebPage",
+        "description": description,
+        "headline": fullTitle,
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": appName,
+          "url": buildCanonicalUrl("/") || canonicalUrl,
+        },
+        "name": fullTitle,
+        "url": canonicalUrl,
+      }
+    : null
+  const structuredEntries = [
+    ...(pageStructuredData ? [pageStructuredData] : []),
+    ...(Array.isArray(options.structuredData) ? options.structuredData : options.structuredData ? [options.structuredData] : []),
+  ]
 
   useSeoMeta({
     title,
@@ -54,11 +73,11 @@ export function usePageSeo(title: string, description = appDescription, options:
           },
         ]
       : [],
-    script: (Array.isArray(options.structuredData) ? options.structuredData : options.structuredData ? [options.structuredData] : [])
+    script: structuredEntries
       .map((entry, index) => ({
         key: `structured-data-${index}`,
         type: "application/ld+json",
-        children: JSON.stringify(entry),
+        innerHTML: JSON.stringify(entry),
       })),
   })
 }

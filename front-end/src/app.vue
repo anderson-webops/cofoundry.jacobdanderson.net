@@ -8,6 +8,8 @@ workspaceStore.ensureReady()
 const runtimeConfig = useRuntimeConfig()
 const route = useRoute()
 const { scheme } = useThemeScheme()
+const privateRoutePattern = /^(?:\/admin|\/app|\/auth|\/api|\/onboarding)(?:\/|$)/
+const noindexRoute = computed(() => privateRoutePattern.test(route.path))
 const siteUrl = computed(() => {
   const configured = runtimeConfig.public.appUrl || "https://cofoundry.jacobdanderson.net"
   return new URL(route.path || "/", `${configured.replace(trailingSlashPattern, "")}/`).toString()
@@ -34,6 +36,14 @@ useHead(() => ({
     "data-theme-scheme": scheme.value,
     "lang": "en",
   },
+  meta: noindexRoute.value
+    ? [
+        {
+          name: "robots",
+          content: "noindex,nofollow",
+        },
+      ]
+    : [],
   link: [
     {
       rel: "canonical",
@@ -41,7 +51,7 @@ useHead(() => ({
     },
   ],
   script: structuredData.value.map((entry, index) => ({
-    children: JSON.stringify(entry),
+    innerHTML: JSON.stringify(entry),
     key: `structured-data-${index}`,
     type: "application/ld+json",
   })),
@@ -53,6 +63,7 @@ useSeoMeta({
   ogSiteName: appName,
   ogType: "website",
   ogUrl: () => siteUrl.value,
+  robots: () => (noindexRoute.value ? "noindex,nofollow" : undefined),
   twitterCard: "summary_large_image",
   twitterDescription: appDescription,
   twitterTitle: appName,
