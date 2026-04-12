@@ -57,6 +57,8 @@ function areAccountsEnabledForCurrentEnvironment() {
   return policy.accountsEnabled
 }
 
+export function assertSignInAccessEnabled() {}
+
 export function assertAccountAccessEnabled() {
   if (areAccountsEnabledForCurrentEnvironment())
     return

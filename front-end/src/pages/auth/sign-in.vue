@@ -15,10 +15,13 @@ const { buildAccessRequestPath, policy } = useProductAccess()
 const defaultDemoAccount = demoAccounts[0] || { email: "", password: "" }
 const accessRequestPath = buildAccessRequestPath("auth-sign-in", "access")
 const talkToTeamPath = buildAccessRequestPath("auth-sign-in", "contact")
+const defaultCredentials = policy.value.showDemoConveniences
+  ? defaultDemoAccount
+  : { email: "", password: "" }
 
 const form = reactive({
-  email: defaultDemoAccount.email,
-  password: defaultDemoAccount.password,
+  email: defaultCredentials.email,
+  password: defaultCredentials.password,
 })
 const errors = ref<Record<string, string>>({})
 
@@ -58,27 +61,47 @@ async function signInWithProvider(provider: "google" | "github") {
     <p class="section-kicker">
       Sign in
     </p>
-    <template v-if="policy.marketingShellOnly">
-      <h2 class="text-3xl tracking-tight font-semibold mt-3">
-        Workspace access is opening in phases.
-      </h2>
-      <p class="muted text-sm leading-6 mt-3">
-        CoFoundry's public marketing and discovery surface is live. Member workspaces are being opened deliberately as the persisted backend path comes online.
-      </p>
+    <h2 class="text-3xl tracking-tight font-semibold mt-3">
+      {{ policy.marketingShellOnly
+        ? "Sign in if you already have workspace credentials."
+        : "Pick up the founder conversation where you left it." }}
+    </h2>
+    <p class="muted text-sm leading-6 mt-3">
+      {{ policy.marketingShellOnly
+        ? "New workspace creation is opening in phases, but existing members and invited teams can continue below with their credentials."
+        : policy.showDemoConveniences
+          ? "This environment supports temporary review access for product review and local development."
+          : "Use your account credentials to continue discovery, messaging, and the proposal workflow." }}
+    </p>
 
+    <form class="mt-8 gap-4 grid" @submit.prevent="submitForm">
+      <TextInput
+        v-model="form.email"
+        label="Email"
+        type="email"
+        :helper="policy.marketingShellOnly ? 'Use the email attached to your existing workspace or invitation.' : undefined"
+        :error="errors.email || authStore.error"
+      />
+      <TextInput v-model="form.password" label="Password" type="password" :error="errors.password" />
+      <BaseButton type="submit" block :disabled="authStore.pending">
+        {{ authStore.pending ? "Signing in..." : "Sign in" }}
+      </BaseButton>
+    </form>
+
+    <template v-if="policy.marketingShellOnly">
       <div class="panel-inset mt-8 p-5">
         <p class="text-sm font-semibold">
-          What you can do right now
+          Need a workspace instead?
         </p>
         <div class="muted text-sm leading-6 mt-3 gap-3 grid">
-          <div>Browse public founder profiles, startup searches, trust resources, and contract guides.</div>
-          <div>Request workspace access if you want to use discovery, messaging, proposals, and agreements inside the product.</div>
+          <div>Browse public founder profiles, startup searches, trust resources, and contract guides first.</div>
+          <div>Request workspace access if you want discovery, messaging, proposals, and agreements inside the product.</div>
           <div>Contact the team for pricing, pilot access, or venture-studio setup.</div>
         </div>
       </div>
 
       <div class="mt-8 flex flex-wrap gap-3">
-        <BaseButton :to="accessRequestPath">
+        <BaseButton variant="secondary" :to="accessRequestPath">
           Request access
         </BaseButton>
         <BaseButton variant="secondary" to="/find-cofounder">
@@ -90,23 +113,6 @@ async function signInWithProvider(provider: "google" | "github") {
       </div>
     </template>
     <template v-else>
-      <h2 class="text-3xl tracking-tight font-semibold mt-3">
-        Pick up the founder conversation where you left it.
-      </h2>
-      <p class="muted text-sm leading-6 mt-3">
-        {{ policy.showDemoConveniences
-          ? "This environment supports temporary review access for product review and local development."
-          : "Use your account credentials to continue discovery, messaging, and the proposal workflow." }}
-      </p>
-
-      <form class="mt-8 gap-4 grid" @submit.prevent="submitForm">
-        <TextInput v-model="form.email" label="Email" type="email" :error="errors.email || authStore.error" />
-        <TextInput v-model="form.password" label="Password" type="password" :error="errors.password" />
-        <BaseButton type="submit" block :disabled="authStore.pending">
-          {{ authStore.pending ? "Signing in..." : "Sign in" }}
-        </BaseButton>
-      </form>
-
       <template v-if="policy.showDemoConveniences">
         <div class="muted text-xs tracking-[0.18em] my-6 flex gap-3 uppercase items-center">
           <span class="bg-[var(--line)] flex-1 h-px" />

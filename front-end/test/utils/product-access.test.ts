@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { getPricingTierCta, resolveProductAccessPolicy } from "../../shared/utils/product-access"
+import { getPricingTierCta, getSecondaryAccessCta, resolveProductAccessPolicy } from "../../shared/utils/product-access"
 
 describe("product access policy", () => {
   it("keeps local mock development fully usable", () => {
@@ -24,6 +24,7 @@ describe("product access policy", () => {
     expect(policy.accountsEnabled).toBe(false)
     expect(policy.marketingShellOnly).toBe(true)
     expect(policy.showDemoConveniences).toBe(false)
+    expect(policy.signInEnabled).toBe(true)
   })
 
   it("allows deliberate staging demos behind an explicit flag", () => {
@@ -62,6 +63,19 @@ describe("product access policy", () => {
     expect(getPricingTierCta(policy, "pro", "pricing-pro")).toEqual({
       label: "Talk to the team",
       to: "/contact?source=pricing-pro&topic=pricing",
+    })
+  })
+
+  it("keeps sign-in visible even when self-serve account creation is closed", () => {
+    const policy = resolveProductAccessPolicy({
+      backendMode: "mock",
+      billingMode: "mock",
+      enableDemoAccess: false,
+    }, false)
+
+    expect(getSecondaryAccessCta(policy, "site-header")).toEqual({
+      label: "Sign in",
+      to: "/auth/sign-in",
     })
   })
 })

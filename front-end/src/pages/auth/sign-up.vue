@@ -73,6 +73,9 @@ async function submitForm() {
         <BaseButton variant="secondary" :to="pricingPath">
           Talk about pricing
         </BaseButton>
+        <BaseButton variant="secondary" to="/auth/sign-in">
+          Sign in
+        </BaseButton>
         <BaseButton variant="secondary" to="/find-cofounder">
           Browse public directory
         </BaseButton>
