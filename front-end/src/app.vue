@@ -7,6 +7,7 @@ const workspaceStore = useWorkspaceStore()
 workspaceStore.ensureReady()
 const runtimeConfig = useRuntimeConfig()
 const route = useRoute()
+const { scheme } = useThemeScheme()
 const siteUrl = computed(() => {
   const configured = runtimeConfig.public.appUrl || "https://cofoundry.jacobdanderson.net"
   return new URL(route.path || "/", `${configured.replace(trailingSlashPattern, "")}/`).toString()
@@ -30,7 +31,8 @@ const structuredData = computed(() => [
 
 useHead(() => ({
   htmlAttrs: {
-    lang: "en",
+    "data-theme-scheme": scheme.value,
+    "lang": "en",
   },
   link: [
     {
@@ -63,4 +65,5 @@ useSeoMeta({
     <NuxtPage />
   </NuxtLayout>
   <ToastStack />
+  <ThemeSchemePicker />
 </template>
