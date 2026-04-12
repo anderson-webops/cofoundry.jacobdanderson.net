@@ -112,6 +112,17 @@ select {
   margin: 0 auto;
 }
 
+.workspace-shell {
+  width: min(1580px, calc(100% - 1.5rem));
+  margin: 0 auto;
+}
+
+@media (min-width: 1024px) {
+  .workspace-shell {
+    width: min(1680px, calc(100% - 2rem));
+  }
+}
+
 .section-kicker {
   letter-spacing: 0.12em;
   text-transform: uppercase;

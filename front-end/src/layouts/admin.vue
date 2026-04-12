@@ -12,8 +12,8 @@ useHead({
 </script>
 
 <template>
-  <div class="p-4 min-h-screen lg:p-5">
-    <div class="page-shell gap-4 grid lg:grid-cols-[260px_minmax(0,1fr)]">
+  <div class="px-3 py-4 min-h-screen lg:px-4 lg:py-5">
+    <div class="workspace-shell gap-5 grid lg:grid-cols-[272px_minmax(0,1fr)]">
       <aside class="panel p-4">
         <div class="mb-6 flex items-center justify-between">
           <AppLogo />
