@@ -34,11 +34,6 @@ watch(contactRevealStage, (value, oldValue) => {
   })
 })
 
-async function signOut() {
-  await authStore.signOut()
-  await navigateTo("/auth/sign-in")
-}
-
 function resetDemoData() {
   workspaceStore.resetToSeed()
   toastStore.push({
@@ -172,11 +167,6 @@ function verify(type: "phone" | "linkedin" | "github" | "website" | "work_domain
           <div>Backend mode: {{ runtimeConfig.public.backendMode }}</div>
           <div>Billing mode: {{ runtimeConfig.public.billingMode }}</div>
           <div>Investment module: {{ runtimeConfig.public.featureInvestmentModule ? "Enabled" : "Disabled" }}</div>
-        </div>
-        <div class="mt-5 flex flex-wrap gap-3">
-          <BaseButton variant="ghost" @click="signOut">
-            Sign out
-          </BaseButton>
         </div>
       </div>
 
