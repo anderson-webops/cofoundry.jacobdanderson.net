@@ -35,9 +35,12 @@ useHead({
           Moderation, server-approved enforcement actions, and audit history for the CoFoundry workspace.
         </div>
       </aside>
-      <main class="gap-6 grid">
-        <slot />
-      </main>
+      <div class="gap-5 grid">
+        <AppTopbar />
+        <main class="gap-6 grid">
+          <slot />
+        </main>
+      </div>
     </div>
   </div>
 </template>

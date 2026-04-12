@@ -48,6 +48,101 @@ const outgoingRequests = computed(() => {
     })
     .filter((value): value is NonNullable<typeof value> => Boolean(value))
 })
+const workspaceStage = computed(() => {
+  if (contracts.value.length)
+    return { label: "Agreement stage", tone: "success" as const, summary: "You already have agreement drafts in motion. Focus on finishing the active legal path instead of opening more threads." }
+
+  if (proposals.value.length)
+    return { label: "Terms taking shape", tone: "accent" as const, summary: "At least one relationship has moved beyond chat. Keep the deal room moving and close open sections quickly." }
+
+  if (matches.value.length || trials.value.length)
+    return { label: "Qualified conversations", tone: "accent" as const, summary: "You have enough signal to pressure-test working style. Use a trial sprint before adding heavier terms." }
+
+  if (incomingRequests.value.length || outgoingRequests.value.length)
+    return { label: "Active search", tone: "warning" as const, summary: "Discovery is live. The biggest risk now is leaving intros unanswered or letting follow-through stall." }
+
+  if (readiness.value?.readyForOutreach)
+    return { label: "Ready to reach out", tone: "success" as const, summary: "Your profile is clear enough to start a focused search. Pick the narrowest wedge that could convert." }
+
+  return { label: "Profile still gating outreach", tone: "warning" as const, summary: "The next gain in match quality comes from tightening profile signal before sending more intros." }
+})
+const primaryAction = computed(() => {
+  if (incomingRequests.value.length) {
+    return {
+      title: `Review ${incomingRequests.value.length} inbound intro${incomingRequests.value.length === 1 ? "" : "s"}`,
+      description: "Replying quickly is the fastest way to improve marketplace trust and keep strong conversations alive.",
+      href: "/app",
+      ctaLabel: "Open intro queue",
+    }
+  }
+
+  if (readiness.value && !readiness.value.readyForOutreach) {
+    return {
+      title: "Finish the missing profile signals",
+      description: readiness.value.missingOutreachItems.length
+        ? `Still missing: ${readiness.value.missingOutreachItems.join(", ")}.`
+        : "Tighten the remaining trust and intent fields so outreach unlocks cleanly.",
+      href: "/app/profile/edit",
+      ctaLabel: "Finish profile",
+    }
+  }
+
+  if (matches.value.length) {
+    return {
+      title: "Move one match into a trial sprint",
+      description: "The highest-leverage next step is to test cadence, ownership, and decision style before negotiating terms.",
+      href: "/app/matches",
+      ctaLabel: "Open matches",
+    }
+  }
+
+  if (proposals.value.length) {
+    return {
+      title: "Close open proposal sections",
+      description: "Proposal momentum compounds. Move the live deal room forward before opening another one.",
+      href: "/app/proposals",
+      ctaLabel: "Open proposals",
+    }
+  }
+
+  return {
+    title: "Pick the next high-fit conversation",
+    description: showProfileRecommendations.value
+      ? "Your recommended collaborator set is already ranked for intent alignment and likely reply."
+      : "Your recommended opportunity set is already ranked for role, stage, and compensation fit.",
+    href: "/app/discover",
+    ctaLabel: "Open discover",
+  }
+})
+const statusCards = computed(() => [
+  {
+    title: "Pending on you",
+    value: incomingRequests.value.length ? `${incomingRequests.value.length} intro${incomingRequests.value.length === 1 ? "" : "s"}` : "Nothing urgent",
+    description: incomingRequests.value.length
+      ? "The cleanest win is responding to inbound intros before they decay."
+      : "No inbound requests are waiting on a decision right now.",
+  },
+  {
+    title: "Search state",
+    value: outgoingRequests.value.length ? `${outgoingRequests.value.length} open outbound` : readiness.value?.readyForOutreach ? "Ready to search" : "Profile still gating",
+    description: outgoingRequests.value.length
+      ? "A few precise outbound intros are live. Keep scope tight until one converts."
+      : readiness.value?.readyForOutreach
+        ? "You can spend outreach on the strongest fits now."
+        : "Profile clarity still matters more than sending more volume.",
+  },
+  {
+    title: "Serious workflow",
+    value: contracts.value.length ? `${contracts.value.length} agreement draft${contracts.value.length === 1 ? "" : "s"}` : proposals.value.length ? `${proposals.value.length} proposal${proposals.value.length === 1 ? "" : "s"}` : matches.value.length ? `${matches.value.length} match${matches.value.length === 1 ? "" : "es"}` : "Nothing live yet",
+    description: contracts.value.length
+      ? "You are already documenting the relationship in writing."
+      : proposals.value.length
+        ? "A structured deal room is open and should stay moving."
+        : matches.value.length
+          ? "Mutual interest exists, but it still needs a real working test."
+          : "Discovery and intro quality still matter most.",
+  },
+])
 
 function skillLabels(profileId: string) {
   return getProfileSkills(workspaceStore.data, profileId).map(item => item.skill.label)
@@ -98,6 +193,66 @@ function getContractVersion(contractId: string) {
         </BaseBadge>
       </template>
     </PageIntro>
+
+    <div class="gap-4 grid xl:grid-cols-[1.1fr_0.9fr]">
+      <div class="panel p-6">
+        <div class="flex flex-wrap gap-3 items-center justify-between">
+          <div>
+            <p class="text-sm font-semibold">
+              What needs attention next
+            </p>
+            <p class="muted text-sm leading-6 mt-2">
+              {{ workspaceStage.summary }}
+            </p>
+          </div>
+          <BaseBadge :tone="workspaceStage.tone">
+            {{ workspaceStage.label }}
+          </BaseBadge>
+        </div>
+
+        <div class="panel-inset mt-5 p-5">
+          <p class="text-lg font-semibold">
+            {{ primaryAction.title }}
+          </p>
+          <p class="muted text-sm leading-6 mt-3">
+            {{ primaryAction.description }}
+          </p>
+          <div class="mt-5">
+            <BaseButton :to="primaryAction.href">
+              {{ primaryAction.ctaLabel }}
+            </BaseButton>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel p-6">
+        <h2 class="text-sm font-semibold">
+          Current status
+        </h2>
+        <p class="muted text-sm leading-6 mt-2">
+          This is the fastest read on what stage your workspace is in and where friction is still hiding.
+        </p>
+        <div class="mt-5 gap-3 grid">
+          <div
+            v-for="item in statusCards"
+            :key="item.title"
+            class="panel-inset p-4"
+          >
+            <div class="flex gap-3 items-start justify-between">
+              <p class="text-sm font-semibold">
+                {{ item.title }}
+              </p>
+              <BaseBadge tone="neutral">
+                {{ item.value }}
+              </BaseBadge>
+            </div>
+            <p class="muted text-sm leading-6 mt-3">
+              {{ item.description }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <div class="gap-4 grid md:grid-cols-4">
       <MetricTile label="Profile completion" :value="`${readiness?.percent || 0}%`" context="The stronger the profile, the faster CoFoundry can unlock outreach and proposals." />
@@ -259,7 +414,7 @@ function getContractVersion(contractId: string) {
           <h2 class="text-lg font-semibold">
             Recent notifications
           </h2>
-          <div class="mt-5 gap-3 grid">
+          <div v-if="notifications.length" class="mt-5 gap-3 grid">
             <div v-for="notification in notifications" :key="notification.id" class="p-4 border border-[var(--line)] rounded-[1.25rem]">
               <div class="flex gap-3 items-start justify-between">
                 <div>
@@ -281,13 +436,23 @@ function getContractVersion(contractId: string) {
               </div>
             </div>
           </div>
+          <EmptyState
+            v-else
+            icon="i-carbon-notification"
+            title="Nothing new is waiting on you"
+            description="When new intros, proposal updates, or moderation events happen, they will show up here with a direct path back into the workflow."
+          >
+            <BaseButton variant="secondary" to="/app/discover">
+              Open discover
+            </BaseButton>
+          </EmptyState>
         </div>
 
         <div class="panel p-5">
           <h2 class="text-lg font-semibold">
             Active proposals
           </h2>
-          <div class="mt-5 gap-3 grid">
+          <div v-if="proposals.length" class="mt-5 gap-3 grid">
             <ProposalCard
               v-for="proposal in proposals"
               :key="proposal.id"
@@ -296,13 +461,23 @@ function getContractVersion(contractId: string) {
               :href="`/app/proposals/${proposal.id}`"
             />
           </div>
+          <EmptyState
+            v-else
+            icon="i-carbon-document-signed"
+            title="No live proposals yet"
+            description="Keep proposal workflow reserved for the relationships that already survived a real fit check or trial sprint."
+          >
+            <BaseButton variant="secondary" to="/app/messages">
+              Open messages
+            </BaseButton>
+          </EmptyState>
         </div>
 
         <div class="panel p-5">
           <h2 class="text-lg font-semibold">
             Contract drafts
           </h2>
-          <div class="mt-5 gap-3 grid">
+          <div v-if="contracts.length" class="mt-5 gap-3 grid">
             <ContractCard
               v-for="contract in contracts"
               :key="contract.id"
@@ -311,6 +486,16 @@ function getContractVersion(contractId: string) {
               :href="`/app/contracts/${contract.id}`"
             />
           </div>
+          <EmptyState
+            v-else
+            icon="i-carbon-license-global"
+            title="No agreement drafts yet"
+            description="Agreements appear after a proposal is accepted and the relationship is ready to move into written terms."
+          >
+            <BaseButton variant="secondary" to="/app/proposals">
+              Open proposals
+            </BaseButton>
+          </EmptyState>
         </div>
       </section>
     </div>
