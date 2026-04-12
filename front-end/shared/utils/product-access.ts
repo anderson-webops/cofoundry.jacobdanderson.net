@@ -11,6 +11,7 @@ export interface ProductAccessPolicy {
   marketingShellOnly: boolean
   selfServeBillingEnabled: boolean
   showDemoConveniences: boolean
+  signInEnabled: boolean
 }
 
 export interface ProductCta {
@@ -39,6 +40,7 @@ export function resolveProductAccessPolicy(environment: ProductAccessEnvironment
     marketingShellOnly: !accountsEnabled,
     selfServeBillingEnabled: accountsEnabled && environment.billingMode === "stripe",
     showDemoConveniences,
+    signInEnabled: true,
   }
 }
 
@@ -56,14 +58,8 @@ export function getPrimaryAccessCta(policy: ProductAccessPolicy, source = "site"
   }
 }
 
-export function getSecondaryAccessCta(policy: ProductAccessPolicy, source = "site"): ProductCta {
-  if (policy.accountsEnabled)
-    return { label: "Sign in", to: "/auth/sign-in" }
-
-  return {
-    label: "Talk to the team",
-    to: buildAccessRequestPath(source, "contact"),
-  }
+export function getSecondaryAccessCta(_policy: ProductAccessPolicy, _source = "site"): ProductCta {
+  return { label: "Sign in", to: "/auth/sign-in" }
 }
 
 export function getIntroCta(policy: ProductAccessPolicy, source = "intro"): ProductCta {
@@ -98,6 +94,9 @@ export function getPricingTierCta(policy: ProductAccessPolicy, tierId: "free" | 
 
 export function getGuidePageCta(policy: ProductAccessPolicy, ctaLabel: string, ctaTo: string, source = "resource"): ProductCta {
   if (ctaTo.startsWith("/auth/")) {
+    if (ctaTo === "/auth/sign-in")
+      return { label: "Sign in", to: ctaTo }
+
     if (policy.accountsEnabled)
       return { label: ctaLabel, to: ctaTo }
 

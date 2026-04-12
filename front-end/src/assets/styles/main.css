@@ -19,6 +19,11 @@
   --cta-secondary-bg-hover: rgba(255, 255, 255, 0.12);
   --cta-secondary-border: rgba(255, 255, 255, 0.14);
   --cta-accent-text: #ffffff;
+  --auth-hero-surface: linear-gradient(140deg, #113029 0%, #193d35 52%, #1f4b41 100%);
+  --auth-hero-border: rgba(10, 33, 28, 0.18);
+  --auth-hero-text: #f7faf8;
+  --auth-hero-kicker: rgba(247, 250, 248, 0.76);
+  --auth-hero-muted: rgba(247, 250, 248, 0.82);
   --danger: #a34f3d;
   --warning: #b07c28;
   --success: #117252;
@@ -49,6 +54,11 @@
   --cta-secondary-bg-hover: rgba(255, 255, 255, 0.1);
   --cta-secondary-border: rgba(255, 255, 255, 0.14);
   --cta-accent-text: #10211c;
+  --auth-hero-surface: linear-gradient(140deg, #182321 0%, #1d2d29 52%, #253a35 100%);
+  --auth-hero-border: rgba(255, 255, 255, 0.08);
+  --auth-hero-text: #f4f6f5;
+  --auth-hero-kicker: rgba(244, 246, 245, 0.74);
+  --auth-hero-muted: rgba(244, 246, 245, 0.8);
   --danger: #e19b87;
   --warning: #d6a853;
   --success: #6cd0ad;
@@ -224,7 +234,18 @@ select {
 }
 
 .hero-auth-panel {
-  box-shadow: var(--shadow);
+  background: var(--auth-hero-surface);
+  border: 1px solid var(--auth-hero-border);
+  box-shadow: 0 28px 72px rgba(7, 16, 14, 0.28);
+  color: var(--auth-hero-text);
+}
+
+.auth-hero-kicker {
+  color: var(--auth-hero-kicker);
+}
+
+.auth-hero-copy {
+  color: var(--auth-hero-muted);
 }
 
 .marketing-cta-panel {
