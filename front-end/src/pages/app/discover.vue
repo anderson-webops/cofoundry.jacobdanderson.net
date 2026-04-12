@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type { StructuredIntro } from "~/shared/types/domain"
-import { commitmentOptions, equityPhilosophyOptions, industryOptions, roleOptions, runwayBucketOptions, stageOptions } from "~/shared/constants/options"
+import { commitmentOptions, compensationOptions, equityPhilosophyOptions, industryOptions, remoteOptions, roleOptions, runwayBucketOptions, stageOptions } from "~/shared/constants/options"
 import { buildSubscriptionUsage, formatUsageQuota } from "~/shared/utils/billing"
 import { createEmptySearchFilters, filterOpportunities, filterProfiles } from "~/shared/utils/discovery"
+import { formatCommitment, formatCompensation, formatEquityPhilosophy, formatRemotePreference, formatRunwayBucket, formatStage } from "~/shared/utils/format"
 import { buildProfileReadiness, getOutreachUnlockMessage } from "~/shared/utils/formation"
 import { getProfileSkills } from "~/shared/utils/workspace"
 
@@ -31,6 +32,43 @@ const connectTargetProfile = computed(() => connectTargetUserId.value ? workspac
 const profileResults = computed(() => filterProfiles(workspaceStore.data, filters, currentProfile.value || undefined))
 const opportunityResults = computed(() => filterOpportunities(workspaceStore.data, filters, currentProfile.value || undefined))
 const currentBookmarks = computed(() => currentUserId.value ? workspaceStore.data.bookmarks.filter(bookmark => bookmark.userId === currentUserId.value) : [])
+const resultCount = computed(() => scope.value === "profiles" ? profileResults.value.length : opportunityResults.value.length)
+const resultLabel = computed(() => `${resultCount.value} ${scope.value === "profiles" ? `profile${resultCount.value === 1 ? "" : "s"}` : `opportunit${resultCount.value === 1 ? "y" : "ies"}`}`)
+const activeFilterChips = computed(() => {
+  const chips: { id: string, label: string, type: string, value?: string }[] = []
+
+  if (filters.query)
+    chips.push({ id: `query-${filters.query}`, label: `Query: ${filters.query}`, type: "query" })
+
+  if (filters.location)
+    chips.push({ id: `location-${filters.location}`, label: `Location: ${filters.location}`, type: "location" })
+
+  if (filters.stage !== "any")
+    chips.push({ id: `stage-${filters.stage}`, label: `Stage: ${formatStage(filters.stage)}`, type: "stage" })
+
+  if (filters.timeCommitment !== "any")
+    chips.push({ id: `commitment-${filters.timeCommitment}`, label: `Commitment: ${formatCommitment(filters.timeCommitment)}`, type: "timeCommitment" })
+
+  if (filters.remotePreference !== "any")
+    chips.push({ id: `remote-${filters.remotePreference}`, label: `Remote: ${formatRemotePreference(filters.remotePreference)}`, type: "remotePreference" })
+
+  if (filters.compensationType !== "any")
+    chips.push({ id: `comp-${filters.compensationType}`, label: `Compensation: ${formatCompensation(filters.compensationType)}`, type: "compensationType" })
+
+  if (filters.minimumWeeklyHours)
+    chips.push({ id: `hours-${filters.minimumWeeklyHours}`, label: `Min hours: ${filters.minimumWeeklyHours}/week`, type: "minimumWeeklyHours" })
+
+  if (filters.runwayBucket !== "any")
+    chips.push({ id: `runway-${filters.runwayBucket}`, label: `Runway: ${formatRunwayBucket(filters.runwayBucket)}`, type: "runwayBucket" })
+
+  if (filters.equityPhilosophy !== "any")
+    chips.push({ id: `equity-${filters.equityPhilosophy}`, label: `Equity: ${formatEquityPhilosophy(filters.equityPhilosophy)}`, type: "equityPhilosophy" })
+
+  filters.roles.forEach(role => chips.push({ id: `role-${role}`, label: `Role: ${role}`, type: "role", value: role }))
+  filters.industries.forEach(industry => chips.push({ id: `industry-${industry}`, label: `Industry: ${industry}`, type: "industry", value: industry }))
+
+  return chips
+})
 
 function skillLabels(profileId: string) {
   return getProfileSkills(workspaceStore.data, profileId).map(item => item.skill.label)
@@ -129,6 +167,35 @@ function quotaText(key: "intros" | "savedSearches") {
   const quota = usage.value?.[key]
   return quota ? formatUsageQuota(quota) : ""
 }
+
+function clearAllFilters() {
+  Object.assign(filters, createEmptySearchFilters())
+}
+
+function removeFilterChip(chip: { type: string, value?: string }) {
+  if (chip.type === "query")
+    filters.query = ""
+  else if (chip.type === "location")
+    filters.location = ""
+  else if (chip.type === "stage")
+    filters.stage = "any"
+  else if (chip.type === "timeCommitment")
+    filters.timeCommitment = "any"
+  else if (chip.type === "remotePreference")
+    filters.remotePreference = "any"
+  else if (chip.type === "compensationType")
+    filters.compensationType = "any"
+  else if (chip.type === "minimumWeeklyHours")
+    filters.minimumWeeklyHours = ""
+  else if (chip.type === "runwayBucket")
+    filters.runwayBucket = "any"
+  else if (chip.type === "equityPhilosophy")
+    filters.equityPhilosophy = "any"
+  else if (chip.type === "role" && chip.value)
+    filters.roles = filters.roles.filter(role => role !== chip.value)
+  else if (chip.type === "industry" && chip.value)
+    filters.industries = filters.industries.filter(industry => industry !== chip.value)
+}
 </script>
 
 <template>
@@ -164,11 +231,17 @@ function quotaText(key: "intros" | "savedSearches") {
         </button>
       </div>
 
-      <div class="gap-4 grid md:grid-cols-2 xl:grid-cols-4">
+      <div class="gap-4 grid md:grid-cols-2 xl:grid-cols-6">
         <TextInput v-model="filters.query" label="Search" helper="Role, problem, industry, or headline." />
         <TextInput v-model="filters.location" label="Location" />
         <SelectInput v-model="filters.stage" label="Stage" :options="[{ label: 'Any stage', value: 'any' }, ...stageOptions]" />
         <SelectInput v-model="filters.timeCommitment" label="Commitment" :options="[{ label: 'Any commitment', value: 'any' }, ...commitmentOptions]" />
+        <SelectInput v-model="filters.remotePreference" label="Remote" :options="[{ label: 'Any setup', value: 'any' }, ...remoteOptions]" />
+        <SelectInput
+          v-model="filters.compensationType"
+          label="Compensation"
+          :options="[{ label: 'Any compensation', value: 'any' }, ...compensationOptions.map(option => ({ label: formatCompensation(option), value: option }))]"
+        />
       </div>
 
       <div v-if="scope === 'profiles'" class="gap-4 grid md:grid-cols-3">
@@ -180,6 +253,42 @@ function quotaText(key: "intros" | "savedSearches") {
       <div class="gap-4 grid xl:grid-cols-2">
         <PillPicker v-model="filters.roles" label="Roles" :options="roleOptions" />
         <PillPicker v-model="filters.industries" label="Industries" :options="industryOptions" />
+      </div>
+    </div>
+
+    <div class="panel-inset p-5 flex flex-col gap-4">
+      <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p class="text-sm font-semibold">
+            {{ resultLabel }} in view
+          </p>
+          <p class="muted text-sm leading-6 mt-2">
+            {{ activeFilterChips.length
+              ? "These are the filters actively shaping the current result set. Remove the ones that are over-constraining the search."
+              : "No filters are active yet. Start narrow enough to be credible, then widen only if the result set is too thin." }}
+          </p>
+        </div>
+        <div class="flex flex-wrap gap-2 items-center">
+          <BaseBadge tone="neutral">
+            {{ activeFilterChips.length }} active filter{{ activeFilterChips.length === 1 ? "" : "s" }}
+          </BaseBadge>
+          <BaseButton variant="ghost" size="sm" @click="clearAllFilters">
+            Clear all
+          </BaseButton>
+        </div>
+      </div>
+
+      <div v-if="activeFilterChips.length" class="flex flex-wrap gap-2">
+        <button
+          v-for="chip in activeFilterChips"
+          :key="chip.id"
+          type="button"
+          class="pill"
+          @click="removeFilterChip(chip)"
+        >
+          <span>{{ chip.label }}</span>
+          <span class="i-carbon-close" />
+        </button>
       </div>
     </div>
 
@@ -261,7 +370,14 @@ function quotaText(key: "intros" | "savedSearches") {
         icon="i-carbon-search"
         title="No profiles match this search"
         description="Broaden the roles, industry, or location filters to see more collaborators and founders."
-      />
+      >
+        <BaseButton variant="secondary" @click="clearAllFilters">
+          Clear filters
+        </BaseButton>
+        <BaseButton variant="ghost" @click="scope = 'opportunities'">
+          Switch to opportunities
+        </BaseButton>
+      </EmptyState>
     </div>
 
     <div v-else class="gap-4 grid" :class="viewMode === 'card' ? 'lg:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1'">
@@ -283,7 +399,14 @@ function quotaText(key: "intros" | "savedSearches") {
         icon="i-carbon-launch"
         title="No opportunities match this search"
         description="Try loosening the stage or industry filters, or switch to profiles to find collaborators directly."
-      />
+      >
+        <BaseButton variant="secondary" @click="clearAllFilters">
+          Clear filters
+        </BaseButton>
+        <BaseButton variant="ghost" @click="scope = 'profiles'">
+          Switch to profiles
+        </BaseButton>
+      </EmptyState>
     </div>
 
     <StructuredIntroDialog

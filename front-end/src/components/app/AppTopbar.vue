@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { getUnreadMessages } from "~/shared/utils/workspace"
+import { resolveWorkspaceRouteContext } from "~/shared/utils/workspace-navigation"
 
 const authStore = useAuthStore()
 const workspaceStore = useWorkspaceStore()
+const route = useRoute()
 
 const notificationCount = computed(() => workspaceStore.data.notifications.filter(notification => notification.userId === authStore.currentUser?.id && !notification.readAt).length)
 const unreadMessages = computed(() => authStore.currentUser?.id ? getUnreadMessages(workspaceStore.data, authStore.currentUser.id) : 0)
+const routeContext = computed(() => resolveWorkspaceRouteContext(route.path))
 
 async function signOut() {
   await authStore.signOut()
@@ -15,12 +18,20 @@ async function signOut() {
 
 <template>
   <div class="panel px-5 py-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-    <div>
-      <p class="muted text-sm">
-        Product workspace
+    <div class="min-w-0">
+      <p class="section-kicker">
+        {{ routeContext.areaLabel }}
       </p>
-      <p class="text-lg font-semibold">
-        {{ authStore.currentUser?.name || "Member" }}
+      <div class="mt-2 flex flex-wrap gap-2 items-center">
+        <p class="text-lg font-semibold">
+          {{ routeContext.title }}
+        </p>
+        <BaseBadge tone="neutral">
+          {{ authStore.currentUser?.name || "Member" }}
+        </BaseBadge>
+      </div>
+      <p class="muted text-sm leading-6 mt-2 max-w-2xl">
+        {{ routeContext.description }}
       </p>
     </div>
 
