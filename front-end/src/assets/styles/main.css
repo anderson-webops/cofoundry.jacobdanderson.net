@@ -456,6 +456,30 @@ select {
   color: var(--cta-accent-text) !important;
 }
 
+.hero-preview-frame {
+  border: 1px solid var(--line);
+  border-radius: 1.5rem;
+  background: var(--panel-inset);
+  padding: 1.25rem;
+}
+
+.hero-preview-card {
+  border: 1px solid var(--line);
+  border-radius: 1.25rem;
+  background: var(--panel-strong);
+  padding: 1.25rem;
+}
+
+.hero-preview-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
 .fade-up {
   animation: fade-up 500ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }

@@ -31,8 +31,11 @@ useHead({
             <span>{{ item.label }}</span>
           </NuxtLink>
         </nav>
-        <div class="panel-inset muted text-sm leading-6 mt-6 p-4">
-          Moderation, server-approved enforcement actions, and audit history for the CoFoundry workspace.
+        <div class="mt-6 gap-3 grid">
+          <div class="panel-inset muted text-sm leading-6 p-4">
+            Moderation, server-approved enforcement actions, and audit history for the CoFoundry workspace.
+          </div>
+          <ThemeSchemePicker align="start" compact />
         </div>
       </aside>
       <div class="gap-5 grid">
