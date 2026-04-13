@@ -54,15 +54,11 @@ const primaryAccessCta = computed(() => getPrimaryAccessCta("site-footer"))
           <NuxtLink to="/contact">
             Contact
           </NuxtLink>
+          <div class="pt-2">
+            <ThemeSchemePicker compact align="start" />
+          </div>
         </div>
       </div>
-    </div>
-
-    <div class="page-shell mt-8 pt-6 border-t border-[var(--line)] flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-      <p class="muted text-sm leading-6 max-w-xl">
-        Choose a palette family here. Light and dark mode still follow the selected scheme.
-      </p>
-      <ThemeSchemePicker compact />
     </div>
   </footer>
 </template>
