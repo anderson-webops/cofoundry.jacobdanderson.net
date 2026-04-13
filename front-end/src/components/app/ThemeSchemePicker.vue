@@ -50,7 +50,7 @@ useEventListener("keydown", (event: KeyboardEvent) => {
       class="panel p-4 shadow-[0_28px_80px_rgba(0,0,0,0.28)] bottom-[calc(100%+0.75rem)] absolute"
       :class="[
         align === 'start' ? 'left-0' : 'right-0',
-        compact ? 'w-[min(22rem,calc(100vw-2rem))]' : 'w-[min(24rem,calc(100vw-1.5rem))]',
+        compact ? 'w-[min(28rem,calc(100vw-1rem))]' : 'w-[min(30rem,calc(100vw-1rem))]',
       ]"
     >
       <div class="flex gap-4 items-start justify-between">
@@ -67,11 +67,11 @@ useEventListener("keydown", (event: KeyboardEvent) => {
         </div>
         <button
           type="button"
-          class="p-2 border border-[var(--line)] rounded-full transition hover:bg-[var(--accent-soft)]"
+          class="rounded-full border border-[var(--line)] p-2 text-[var(--text)] transition hover:bg-[var(--accent-soft)]"
           aria-label="Close color scheme picker"
           @click="open = false"
         >
-          <span class="i-carbon-close" />
+          <span class="i-carbon-close text-base" />
         </button>
       </div>
 
@@ -86,9 +86,9 @@ useEventListener("keydown", (event: KeyboardEvent) => {
             : 'border-[var(--line)] bg-[var(--panel-strong)] hover:border-[var(--line-strong)]'"
           @click="selectScheme(option.id)"
         >
-          <div class="flex gap-4 items-start justify-between">
-            <div>
-              <div class="flex gap-2 items-center">
+          <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div class="min-w-0">
+              <div class="flex flex-wrap gap-2 items-center">
                 <span class="font-semibold">{{ option.label }}</span>
                 <BaseBadge v-if="option.isDefault" tone="neutral">
                   Default
@@ -102,7 +102,7 @@ useEventListener("keydown", (event: KeyboardEvent) => {
               </p>
             </div>
 
-            <div class="flex shrink-0 gap-2">
+            <div class="flex self-start shrink-0 gap-2">
               <div class="p-1.5 border border-black/8 rounded-2xl bg-white/40">
                 <div class="flex gap-1">
                   <span class="border border-black/8 rounded-xl h-7 w-7" :style="{ backgroundColor: option.swatches.light.surface }" />
