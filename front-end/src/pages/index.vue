@@ -46,7 +46,7 @@ usePageSeo("Build startup teams with more structure", appDescription, {
 
         <div class="panel p-6 relative overflow-hidden md:p-8">
           <div class="hero-spotlight" />
-          <div class="grid-soft p-6 border border-[var(--line)] rounded-[1.5rem] bg-[var(--panel-inset)] md:p-8">
+          <div class="gap-6 grid">
             <div class="flex gap-4 items-center justify-between">
               <div>
                 <p class="text-sm font-semibold">
@@ -60,8 +60,8 @@ usePageSeo("Build startup teams with more structure", appDescription, {
                 Research-backed
               </BaseBadge>
             </div>
-            <div class="mt-8 gap-4 grid">
-              <div class="panel p-5">
+            <div class="hero-preview-frame grid-soft">
+              <div class="hero-preview-card">
                 <div class="flex gap-4 items-center justify-between">
                   <div>
                     <p class="text-sm font-semibold">
@@ -81,7 +81,7 @@ usePageSeo("Build startup teams with more structure", appDescription, {
                   <div>Outputs: one workflow prototype, one written decision log, one retro</div>
                 </div>
               </div>
-              <div class="panel-inset p-4 flex gap-4 items-center justify-between">
+              <div class="hero-preview-summary">
                 <div>
                   <p class="text-sm font-semibold">
                     Proposal and agreement ready

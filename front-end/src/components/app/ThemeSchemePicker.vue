@@ -3,6 +3,14 @@ import type { ThemeSchemeId } from "~/shared/utils/theme"
 import { onClickOutside, useEventListener } from "@vueuse/core"
 import { isDarkThemeValue } from "~/shared/utils/theme"
 
+withDefaults(defineProps<{
+  align?: "start" | "end"
+  compact?: boolean
+}>(), {
+  align: "end",
+  compact: false,
+})
+
 const colorMode = useColorMode()
 const { activeScheme, scheme, schemes } = useThemeScheme()
 
@@ -32,11 +40,18 @@ useEventListener("keydown", (event: KeyboardEvent) => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-3 items-end bottom-4 right-4 fixed z-[70]">
+  <div
+    class="flex flex-col gap-3 relative z-[20]"
+    :class="align === 'start' ? 'items-start' : 'items-end'"
+  >
     <div
       v-if="open"
       ref="panelRef"
-      class="panel p-4 w-[min(24rem,calc(100vw-1.5rem))] shadow-[0_28px_80px_rgba(0,0,0,0.28)]"
+      class="panel p-4 shadow-[0_28px_80px_rgba(0,0,0,0.28)] bottom-[calc(100%+0.75rem)] absolute"
+      :class="[
+        align === 'start' ? 'left-0' : 'right-0',
+        compact ? 'w-[min(22rem,calc(100vw-2rem))]' : 'w-[min(24rem,calc(100vw-1.5rem))]',
+      ]"
     >
       <div class="flex gap-4 items-start justify-between">
         <div>
@@ -111,7 +126,8 @@ useEventListener("keydown", (event: KeyboardEvent) => {
     <button
       ref="triggerRef"
       type="button"
-      class="panel px-4 py-3 inline-flex gap-3 shadow-[0_20px_60px_rgba(0,0,0,0.24)] transition items-center hover:border-[var(--line-strong)]"
+      class="panel px-4 py-3 inline-flex gap-3 shadow-[0_20px_60px_rgba(0,0,0,0.16)] transition items-center hover:border-[var(--line-strong)]"
+      :class="compact ? 'w-full justify-between' : ''"
       :aria-expanded="open"
       aria-haspopup="dialog"
       @click="toggleOpen"

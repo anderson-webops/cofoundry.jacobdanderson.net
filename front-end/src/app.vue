@@ -76,5 +76,4 @@ useSeoMeta({
     <NuxtPage />
   </NuxtLayout>
   <ToastStack />
-  <ThemeSchemePicker />
 </template>

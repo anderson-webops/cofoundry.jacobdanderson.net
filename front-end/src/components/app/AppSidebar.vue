@@ -34,18 +34,22 @@ const investmentEnabled = useFeatureFlag("featureInvestmentModule")
       </NuxtLink>
     </nav>
 
-    <div class="panel-inset mt-auto p-4">
-      <p class="text-sm font-semibold">
-        Proposal workflow
-      </p>
-      <p class="muted text-sm leading-6 mt-2">
-        Keep equity, vesting, IP, and decision rights in writing before you make a big founder decision.
-      </p>
-      <div class="mt-4">
-        <BaseButton to="/app/proposals" block>
-          Open proposals
-        </BaseButton>
+    <div class="mt-auto gap-3 grid">
+      <div class="panel-inset p-4">
+        <p class="text-sm font-semibold">
+          Proposal workflow
+        </p>
+        <p class="muted text-sm leading-6 mt-2">
+          Keep equity, vesting, IP, and decision rights in writing before you make a big founder decision.
+        </p>
+        <div class="mt-4">
+          <BaseButton to="/app/proposals" block>
+            Open proposals
+          </BaseButton>
+        </div>
       </div>
+
+      <ThemeSchemePicker align="start" compact />
     </div>
   </aside>
 </template>
