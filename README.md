@@ -90,8 +90,22 @@ Server-only secrets:
 - `STRIPE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET`
 - `SESSION_SIGNING_SECRET`
+- `CONTACT_FROM_EMAIL`
+- `CONTACT_FROM_NAME`
+- `CONTACT_TO_EMAIL`
+- `CONTACT_BCC_EMAIL`
+- `CONTACT_USE_SENDMAIL`
+- `CONTACT_SENDMAIL_PATH`
+- `CONTACT_SMTP_HOST`
+- `CONTACT_SMTP_PORT`
+- `CONTACT_SMTP_SECURE`
+- `CONTACT_SMTP_REQUIRE_TLS`
+- `CONTACT_SMTP_USER`
+- `CONTACT_SMTP_PASS`
 
 If a non-mock mode is enabled without the required public values and server secrets, startup fails with a clear error. In mock mode, the current production-safe mock behavior remains unchanged.
+
+The public contact form now delivers through the server instead of only validating the payload. The current default is direct delivery to `contacts@jacobdanderson.net`. To move later to an alias-based outbound pattern, set `CONTACT_FROM_EMAIL` to the sending alias, `CONTACT_TO_EMAIL` to the primary destination, and `CONTACT_BCC_EMAIL` to `contacts@jacobdanderson.net`.
 
 ## Review accounts
 

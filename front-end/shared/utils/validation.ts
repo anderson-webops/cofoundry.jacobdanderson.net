@@ -17,6 +17,7 @@ export const contactSchema = z.object({
   company: z.string().optional(),
   subject: z.string().min(3, "Add a short subject."),
   message: z.string().min(20, "Please include enough detail for us to help."),
+  website: z.string().trim().max(0).optional().or(z.literal("")),
 })
 
 export const minimumOnboardingSchema = z.object({

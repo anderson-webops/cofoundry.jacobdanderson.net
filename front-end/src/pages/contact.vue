@@ -40,6 +40,7 @@ const form = reactive({
   company: "",
   subject: topicDefaults.subject,
   message: topicDefaults.message,
+  website: "",
 })
 const errors = ref<Record<string, string>>({})
 const submitting = ref(false)
@@ -70,6 +71,16 @@ async function submitForm() {
       company: "",
       subject: topicDefaults.subject,
       message: topicDefaults.message,
+      website: "",
+    })
+  }
+  catch (error: unknown) {
+    toastStore.push({
+      title: "Message not sent",
+      message: (error as { data?: { message?: string }, statusMessage?: string })?.data?.message
+        || (error as { statusMessage?: string })?.statusMessage
+        || "The message could not be sent right now. Please try again later.",
+      tone: "error",
     })
   }
   finally {
@@ -104,6 +115,7 @@ async function submitForm() {
         <TextInput v-model="form.company" label="Company" :error="errors.company" />
         <TextInput v-model="form.subject" label="Subject" :error="errors.subject" />
         <TextareaInput v-model="form.message" label="Message" :error="errors.message" :rows="6" />
+        <input v-model="form.website" type="text" name="website" autocomplete="off" tabindex="-1" class="sr-only" aria-hidden="true">
         <div class="flex items-center justify-end">
           <BaseButton type="submit" :disabled="submitting">
             {{ submitting ? "Sending..." : "Send message" }}
