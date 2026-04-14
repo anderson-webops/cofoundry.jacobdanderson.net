@@ -1,5 +1,10 @@
-import { spawn } from "node:child_process"
+import { randomUUID } from "node:crypto"
+import { once } from "node:events"
+import net from "node:net"
+import os from "node:os"
 import { env } from "node:process"
+import { spawn } from "node:child_process"
+import tls from "node:tls"
 import type { H3Event } from "h3"
 import { getHeader, getRequestIP } from "h3"
 import { z } from "zod"
@@ -7,6 +12,33 @@ import { z } from "zod"
 import { contactSchema } from "~/shared/utils/validation"
 
 type ContactPayload = z.infer<typeof contactSchema>
+
+type SendmailConfig = {
+  kind: "sendmail"
+  bccEmail?: string[]
+  fromEmail: string
+  fromName: string
+  sendmailPath: string
+  toEmail: string
+}
+
+type SmtpConfig = {
+  kind: "smtp"
+  bccEmail?: string[]
+  fromEmail: string
+  fromName: string
+  host: string
+  pass?: string
+  port: number
+  requireTLS: boolean
+  secure: boolean
+  toEmail: string
+  user?: string
+}
+
+type ContactMailConfig = SendmailConfig | SmtpConfig
+type SocketLike = net.Socket | tls.TLSSocket
+type SmtpResponse = { code: number, lines: string[] }
 
 const truthyValues = new Set(["1", "true", "yes", "on"])
 
@@ -30,6 +62,13 @@ function escapeHeader(value: string) {
   return value.replaceAll(/\r?\n/g, " ").trim()
 }
 
+function dotStuff(message: string) {
+  return message
+    .split(/\r?\n/)
+    .map(line => (line.startsWith(".") ? `.${line}` : line))
+    .join("\r\n")
+}
+
 function buildRawMessage({
   fromEmail,
   fromName,
@@ -38,18 +77,21 @@ function buildRawMessage({
   subject,
   body,
 }: {
+  body: string
   fromEmail: string
   fromName: string
-  toEmail: string
   replyTo: string
   subject: string
-  body: string
+  toEmail: string
 }) {
+  const messageIdHost = trimToUndefined(env.CONTACT_MESSAGE_ID_HOST) || "jacobdanderson.net"
   return [
     `From: "${escapeHeader(fromName)}" <${escapeHeader(fromEmail)}>`,
     `To: ${escapeHeader(toEmail)}`,
     `Reply-To: ${escapeHeader(replyTo)}`,
     `Subject: ${escapeHeader(subject)}`,
+    `Date: ${new Date().toUTCString()}`,
+    `Message-ID: <${randomUUID()}@${escapeHeader(messageIdHost)}>`,
     "MIME-Version: 1.0",
     "Content-Type: text/plain; charset=UTF-8",
     "Content-Transfer-Encoding: 8bit",
@@ -59,11 +101,243 @@ function buildRawMessage({
   ].join("\r\n")
 }
 
-async function sendRawSendmail(sendmailPath: string, recipients: string[], message: string) {
-  await new Promise<void>((resolve, reject) => {
-    const child = spawn(sendmailPath, ["-i", ...recipients], {
-      stdio: ["pipe", "ignore", "pipe"],
+class SmtpLineReader {
+  private buffer = ""
+  private error: Error | null = null
+  private resume: (() => void) | null = null
+
+  constructor(private readonly socket: SocketLike) {
+    socket.on("data", chunk => {
+      this.buffer += chunk.toString()
+      this.resume?.()
+      this.resume = null
     })
+
+    socket.on("error", error => {
+      this.error = error instanceof Error ? error : new Error(String(error))
+      this.resume?.()
+      this.resume = null
+    })
+
+    socket.on("end", () => {
+      this.error = new Error("SMTP connection closed")
+      this.resume?.()
+      this.resume = null
+    })
+  }
+
+  private async waitForData() {
+    if (this.buffer.includes("\n")) {
+      return
+    }
+    if (this.error) {
+      throw this.error
+    }
+
+    await new Promise<void>(resolve => {
+      this.resume = resolve
+    })
+
+    if (this.error) {
+      throw this.error
+    }
+  }
+
+  async readLine() {
+    while (!this.buffer.includes("\n")) {
+      await this.waitForData()
+    }
+
+    const newlineIndex = this.buffer.indexOf("\n")
+    const line = this.buffer.slice(0, newlineIndex).replace(/\r$/, "")
+    this.buffer = this.buffer.slice(newlineIndex + 1)
+    return line
+  }
+
+  async readResponse(): Promise<SmtpResponse> {
+    const lines: string[] = []
+    let responseCode = ""
+
+    while (true) {
+      const line = await this.readLine()
+      lines.push(line)
+
+      const match = line.match(/^(\d{3})([ -])(.*)$/)
+      if (!match) {
+        continue
+      }
+
+      if (!responseCode) {
+        responseCode = match[1]
+      }
+
+      if (match[1] === responseCode && match[2] === " ") {
+        return { code: Number.parseInt(responseCode, 10), lines }
+      }
+    }
+  }
+}
+
+async function writeToSocket(socket: SocketLike, payload: string) {
+  await new Promise<void>((resolve, reject) => {
+    socket.write(payload, error => {
+      if (error) {
+        reject(error)
+        return
+      }
+
+      resolve()
+    })
+  })
+}
+
+async function sendSmtpCommand(socket: SocketLike, reader: SmtpLineReader, command: string) {
+  await writeToSocket(socket, `${command}\r\n`)
+  return reader.readResponse()
+}
+
+function assertSmtpCode(response: SmtpResponse, allowedCodes: number[], label: string) {
+  if (!allowedCodes.includes(response.code)) {
+    throw new Error(`${label} failed: ${response.lines.join(" | ")}`)
+  }
+}
+
+function parseSmtpCapabilities(response: SmtpResponse) {
+  const capabilities = new Set<string>()
+
+  for (const line of response.lines) {
+    const match = line.match(/^\d{3}[ -]([A-Za-z0-9-]+)/)
+    if (match) {
+      capabilities.add(match[1].toUpperCase())
+    }
+  }
+
+  return capabilities
+}
+
+async function upgradeToTls(socket: net.Socket, host: string) {
+  const secureSocket = tls.connect({
+    host,
+    servername: host,
+    socket,
+  })
+
+  await once(secureSocket, "secureConnect")
+  return secureSocket
+}
+
+async function connectSmtp(config: SmtpConfig) {
+  let socket: SocketLike
+
+  if (config.secure) {
+    socket = tls.connect({
+      host: config.host,
+      port: config.port,
+      servername: config.host,
+    })
+    await once(socket, "secureConnect")
+  }
+  else {
+    socket = net.connect({
+      host: config.host,
+      port: config.port,
+    })
+    await once(socket, "connect")
+  }
+
+  let reader = new SmtpLineReader(socket)
+  const greeting = await reader.readResponse()
+  assertSmtpCode(greeting, [220], "SMTP greeting")
+
+  const clientName = trimToUndefined(env.CONTACT_SMTP_CLIENT_NAME) || os.hostname() || "localhost"
+  let ehlo = await sendSmtpCommand(socket, reader, `EHLO ${clientName}`)
+  assertSmtpCode(ehlo, [250], "SMTP EHLO")
+
+  let capabilities = parseSmtpCapabilities(ehlo)
+
+  if (!config.secure && config.requireTLS) {
+    if (!capabilities.has("STARTTLS")) {
+      throw new Error("SMTP server does not advertise STARTTLS")
+    }
+
+    const startTls = await sendSmtpCommand(socket, reader, "STARTTLS")
+    assertSmtpCode(startTls, [220], "SMTP STARTTLS")
+
+    socket = await upgradeToTls(socket as net.Socket, config.host)
+    reader = new SmtpLineReader(socket)
+    ehlo = await sendSmtpCommand(socket, reader, `EHLO ${clientName}`)
+    assertSmtpCode(ehlo, [250], "SMTP EHLO after STARTTLS")
+    capabilities = parseSmtpCapabilities(ehlo)
+  }
+
+  if (config.user && config.pass) {
+    const authPlain = Buffer.from(`\0${config.user}\0${config.pass}`).toString("base64")
+    const plainResponse = await sendSmtpCommand(socket, reader, `AUTH PLAIN ${authPlain}`)
+
+    if (plainResponse.code !== 235) {
+      if (![500, 502, 504].includes(plainResponse.code)) {
+        throw new Error(`SMTP AUTH PLAIN failed: ${plainResponse.lines.join(" | ")}`)
+      }
+
+      const loginStart = await sendSmtpCommand(socket, reader, "AUTH LOGIN")
+      assertSmtpCode(loginStart, [334], "SMTP AUTH LOGIN start")
+
+      const userResponse = await sendSmtpCommand(socket, reader, Buffer.from(config.user).toString("base64"))
+      assertSmtpCode(userResponse, [334], "SMTP AUTH LOGIN username")
+
+      const passResponse = await sendSmtpCommand(socket, reader, Buffer.from(config.pass).toString("base64"))
+      assertSmtpCode(passResponse, [235], "SMTP AUTH LOGIN password")
+    }
+  }
+
+  return { capabilities, reader, socket }
+}
+
+async function closeSmtpConnection(socket: SocketLike, reader: SmtpLineReader) {
+  try {
+    await sendSmtpCommand(socket, reader, "QUIT")
+  }
+  catch {
+    socket.destroy()
+  }
+
+  socket.end()
+}
+
+async function sendViaSmtp(config: SmtpConfig, message: string) {
+  const { reader, socket } = await connectSmtp(config)
+  const recipients = [config.toEmail, ...(config.bccEmail || [])]
+
+  try {
+    const mailFrom = await sendSmtpCommand(socket, reader, `MAIL FROM:<${config.fromEmail}>`)
+    assertSmtpCode(mailFrom, [250], "SMTP MAIL FROM")
+
+    for (const recipient of recipients) {
+      const rcptTo = await sendSmtpCommand(socket, reader, `RCPT TO:<${recipient}>`)
+      assertSmtpCode(rcptTo, [250, 251], `SMTP RCPT TO ${recipient}`)
+    }
+
+    const dataStart = await sendSmtpCommand(socket, reader, "DATA")
+    assertSmtpCode(dataStart, [354], "SMTP DATA")
+
+    await writeToSocket(socket, `${dotStuff(message)}\r\n.\r\n`)
+    const dataComplete = await reader.readResponse()
+    assertSmtpCode(dataComplete, [250], "SMTP message delivery")
+  }
+  finally {
+    await closeSmtpConnection(socket, reader)
+  }
+}
+
+async function sendRawSendmail(config: SendmailConfig, message: string) {
+  const recipients = [config.toEmail, ...(config.bccEmail || [])]
+
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn(
+      config.sendmailPath,
+      ["-i", "-f", config.fromEmail, ...recipients],
+      { stdio: ["pipe", "ignore", "pipe"] },
+    )
 
     let stderr = ""
 
@@ -85,7 +359,7 @@ async function sendRawSendmail(sendmailPath: string, recipients: string[], messa
   })
 }
 
-function getContactMailConfig() {
+function getContactMailConfig(): ContactMailConfig | null {
   const fromEmail = trimToUndefined(env.CONTACT_FROM_EMAIL)
   if (!fromEmail) {
     return null
@@ -94,20 +368,46 @@ function getContactMailConfig() {
   const toEmail = trimToUndefined(env.CONTACT_TO_EMAIL) || "contacts@jacobdanderson.net"
   const bccEmail = parseAddressList(env.CONTACT_BCC_EMAIL)
   const fromName = trimToUndefined(env.CONTACT_FROM_NAME) || "CoFoundry"
-  const sendmailPath = trimToUndefined(env.CONTACT_SENDMAIL_PATH) || "/usr/sbin/sendmail"
-  const useSendmail = isEnabled(env.CONTACT_USE_SENDMAIL) || !!sendmailPath
 
-  if (useSendmail) {
+  const smtpHost = trimToUndefined(env.CONTACT_SMTP_HOST)
+  if (smtpHost) {
+    const secure = isEnabled(env.CONTACT_SMTP_SECURE)
+    const port = Number.parseInt(env.CONTACT_SMTP_PORT || (secure ? "465" : "587"), 10)
+
+    if (!Number.isFinite(port)) {
+      throw new TypeError("Invalid CONTACT_SMTP_PORT")
+    }
+
     return {
+      kind: "smtp",
+      bccEmail,
       fromEmail,
       fromName,
+      host: smtpHost,
+      pass: trimToUndefined(env.CONTACT_SMTP_PASS),
+      port,
+      requireTLS: isEnabled(env.CONTACT_SMTP_REQUIRE_TLS),
+      secure,
       toEmail,
-      bccEmail,
-      sendmailPath,
+      user: trimToUndefined(env.CONTACT_SMTP_USER),
     }
   }
 
-  return null
+  const sendmailPath = trimToUndefined(env.CONTACT_SENDMAIL_PATH) || "/usr/sbin/sendmail"
+  const useSendmail = isEnabled(env.CONTACT_USE_SENDMAIL) || !!trimToUndefined(env.CONTACT_SENDMAIL_PATH)
+
+  if (!useSendmail) {
+    return null
+  }
+
+  return {
+    kind: "sendmail",
+    bccEmail,
+    fromEmail,
+    fromName,
+    sendmailPath,
+    toEmail,
+  }
 }
 
 export function isContactMailConfigured() {
@@ -150,17 +450,18 @@ export async function sendContactMessage(payload: ContactPayload, event: H3Event
 
   const subject = `[cofoundry.jacobdanderson.net] Contact form from ${payload.name}: ${payload.subject}`
   const message = buildRawMessage({
+    body: `${metadata}\n\nMessage:\n${payload.message}`,
     fromEmail: mailConfig.fromEmail,
     fromName: mailConfig.fromName,
-    toEmail: mailConfig.toEmail,
     replyTo: payload.email,
     subject,
-    body: `${metadata}\n\nMessage:\n${payload.message}`,
+    toEmail: mailConfig.toEmail,
   })
 
-  await sendRawSendmail(
-    mailConfig.sendmailPath,
-    [mailConfig.toEmail, ...(mailConfig.bccEmail || [])],
-    message,
-  )
+  if (mailConfig.kind === "smtp") {
+    await sendViaSmtp(mailConfig, message)
+    return
+  }
+
+  await sendRawSendmail(mailConfig, message)
 }
