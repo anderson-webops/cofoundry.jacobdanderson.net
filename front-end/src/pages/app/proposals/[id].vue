@@ -49,11 +49,11 @@ const commentBody = ref("")
 const commentSection = ref<ProposalSectionKey>("partnership")
 const counterDialogOpen = ref(false)
 
-function updateStatus(status: "accepted" | "rejected" | "viewed") {
+async function updateStatus(status: "accepted" | "rejected" | "viewed") {
   if (!proposal.value || !authStore.currentUser)
     return
 
-  workspaceStore.updateProposalStatus(proposal.value.id, status, authStore.currentUser.id)
+  await workspaceStore.updateProposalStatus(proposal.value.id, status, authStore.currentUser.id)
   toastStore.push({
     title: "Proposal updated",
     message: `Proposal marked as ${status}.`,
@@ -61,11 +61,11 @@ function updateStatus(status: "accepted" | "rejected" | "viewed") {
   })
 }
 
-function submitCounter(payload: any) {
+async function submitCounter(payload: any) {
   if (!proposal.value || !authStore.currentUser)
     return
 
-  workspaceStore.createProposalCounterVersion(proposal.value.id, authStore.currentUser.id, payload)
+  await workspaceStore.createProposalCounterVersion(proposal.value.id, authStore.currentUser.id, payload)
   counterDialogOpen.value = false
   toastStore.push({
     title: "Counter proposal saved",
@@ -74,15 +74,15 @@ function submitCounter(payload: any) {
   })
 }
 
-function addComment() {
+async function addComment() {
   if (!proposal.value || !version.value || !authStore.currentUser || !commentBody.value.trim())
     return
 
-  workspaceStore.addProposalComment(proposal.value.id, version.value.id, authStore.currentUser.id, commentSection.value, commentBody.value.trim())
+  await workspaceStore.addProposalComment(proposal.value.id, version.value.id, authStore.currentUser.id, commentSection.value, commentBody.value.trim())
   commentBody.value = ""
 }
 
-function createContract() {
+async function createContract() {
   if (!proposal.value || !authStore.currentUser)
     return
 
@@ -95,7 +95,7 @@ function createContract() {
     return
   }
 
-  const nextContractId = workspaceStore.createContractFromProposal(proposal.value.id, authStore.currentUser.id)
+  const nextContractId = await workspaceStore.createContractFromProposal(proposal.value.id, authStore.currentUser.id)
   if (!nextContractId)
     return
 

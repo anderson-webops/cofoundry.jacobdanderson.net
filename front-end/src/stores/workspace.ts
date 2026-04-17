@@ -1,16 +1,18 @@
 import type {
   BookmarkTargetType,
+  ConnectDeclineReason,
+  ConnectRequestPayload,
   ConnectRequestStatus,
   ContactRevealStage,
   ContractVersion,
   MessageAttachment,
   NotificationType,
+  ProposalPayload,
   ProposalSectionKey,
   ProposalStatus,
   ReportReason,
   SearchFilters,
   SessionUser,
-  StructuredIntro,
   WorkspaceSeed,
 } from "~/shared/types/domain"
 import { useStorage, watchDebounced } from "@vueuse/core"
@@ -18,10 +20,23 @@ import { acceptHMRUpdate, defineStore } from "pinia"
 import { workspaceSeed } from "~/shared/data/seed"
 import { buildSubscriptionUsage } from "~/shared/utils/billing"
 import { cloneValue } from "~/shared/utils/clone"
-import { buildContractVersionFromProposal } from "~/shared/utils/contracts"
-import { buildOpportunityRiskFlags, buildProfileReadiness, buildStructuredIntroNote, getReportPriority } from "~/shared/utils/formation"
 import {
-  buildTrialDraft,
+  acknowledgeTrialCollaborationTransition,
+  addProposalCommentTransition,
+  createConnectRequestTransition,
+  createContractFromProposalTransition,
+  createProposalCounterVersionTransition,
+  createProposalTransition,
+  markConversationReadTransition,
+  markNotificationReadTransition,
+  respondToConnectRequestTransition,
+  sendMessageTransition,
+  signContractTransition,
+  startTrialCollaborationTransition,
+  updateProposalStatusTransition,
+} from "~/shared/utils/collaboration"
+import { buildOpportunityRiskFlags, buildProfileReadiness, getReportPriority } from "~/shared/utils/formation"
+import {
   getContractById,
   getCurrentContractVersion,
   getCurrentProposalVersion,
@@ -104,32 +119,6 @@ interface FullProfilePayload {
   profileVisibility: "public" | "members" | "private"
 }
 
-interface ProposalPayload {
-  relationshipType: "cofounder" | "founding_team" | "advisor"
-  roleTitle: string
-  responsibilities: string[]
-  weeklyTimeCommitment: number
-  startDate: string
-  fullTimeTrigger: string
-  ceoDecision: string
-  trialScope: string
-  trialIpHandling: string
-  cashCompensation: string
-  equity: string
-  vestingSchedule: string
-  cliff: string
-  decisionRights: string
-  ipAssignmentRequired: boolean
-  confidentiality: string
-  exitTerms: string
-  notes: string
-}
-
-interface ConnectRequestPayload {
-  note: string
-  structuredIntro: StructuredIntro
-}
-
 function createOpportunitySlug(input: string) {
   return input.toLowerCase().replaceAll(opportunitySlugPattern, "-").replaceAll(opportunitySlugTrimPattern, "")
 }
@@ -202,34 +191,6 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     const profile = getProfileByUserId(data.value, userId)
     if (profile)
       profile.trustSignals.lastActiveAt = now()
-  }
-
-  function syncResponseMetrics(userId: string) {
-    const profile = getProfileByUserId(data.value, userId)
-    if (!profile)
-      return
-
-    const inboundRequests = data.value.connectRequests.filter(request => request.toUserId === userId)
-    if (!inboundRequests.length)
-      return
-
-    const respondedRequests = inboundRequests.filter(request => request.respondedAt)
-    profile.trustSignals.replyRatePercent = Math.round((respondedRequests.length / inboundRequests.length) * 100)
-
-    if (!respondedRequests.length) {
-      profile.trustSignals.medianReplyHours = 48
-      return
-    }
-
-    const replyHours = respondedRequests
-      .map((request) => {
-        const createdAt = new Date(request.createdAt).getTime()
-        const respondedAt = new Date(request.respondedAt!).getTime()
-        return Math.max(1, Math.round((respondedAt - createdAt) / 36e5))
-      })
-      .sort((left, right) => left - right)
-
-    profile.trustSignals.medianReplyHours = replyHours[Math.floor(replyHours.length / 2)] || 48
   }
 
   function syncProfileDerivedState(userId: string) {
@@ -364,6 +325,40 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     finally {
       syncing.value = false
     }
+  }
+
+  function applyAuthoritativeWorkspace(payload: { data: WorkspaceSeed, session: SessionUser }) {
+    data.value = cloneValue(payload.data)
+    loadedUserId.value = payload.session.id
+    lastSyncedAt.value = now()
+    persistError.value = ""
+    ensureReady()
+    ready.value = true
+    return data.value
+  }
+
+  async function runCollaborationMutation<Result extends Record<string, string | null> | undefined>(
+    payload: Record<string, unknown>,
+  ) {
+    const headers = import.meta.server ? useRequestHeaders(["cookie"]) : undefined
+    const response = await $fetch<{ data: WorkspaceSeed, result: Result, session: SessionUser }>("/api/workspace/collaboration", {
+      method: "POST",
+      body: payload,
+      headers,
+    })
+
+    applyAuthoritativeWorkspace(response)
+    return response.result
+  }
+
+  async function syncNotificationRead(notificationId: string) {
+    const headers = import.meta.server ? useRequestHeaders(["cookie"]) : undefined
+    const response = await $fetch<{ data: WorkspaceSeed, session: SessionUser }>(`/api/inbox/${notificationId}/read`, {
+      method: "POST",
+      headers,
+    })
+
+    applyAuthoritativeWorkspace(response)
   }
 
   function createDraftUserFromSignUp(session: SessionUser, displayName: string) {
@@ -571,7 +566,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     return true
   }
 
-  function sendConnectRequest(fromUserId: string, toUserId: string, payload: ConnectRequestPayload) {
+  async function sendConnectRequest(fromUserId: string, toUserId: string, payload: ConnectRequestPayload) {
     const profile = getProfileByUserId(data.value, fromUserId)
     if (!canSendOutreachFromProfile(profile))
       return false
@@ -581,120 +576,68 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     if (usage.intros.exhausted)
       return false
 
-    data.value.connectRequests.unshift({
-      id: crypto.randomUUID(),
-      fromUserId,
-      toUserId,
-      note: payload.note || buildStructuredIntroNote(payload.structuredIntro),
-      structuredIntro: payload.structuredIntro,
-      status: "pending",
-      declineReason: null,
-      createdAt: now(),
-      respondedAt: null,
-    })
-    touchProfileActivity(fromUserId)
-    syncResponseMetrics(toUserId)
-    createNotification(
-      toUserId,
-      "match",
-      "New structured intro",
-      `${profile?.displayName || "A member"} proposed ${payload.structuredIntro.roleContext.toLowerCase()} and wants to start with ${payload.structuredIntro.proposedNextStep.replaceAll("_", " ")}.`,
-      "/app",
-    )
+    if (supabaseBackedWorkspace.value) {
+      await runCollaborationMutation({
+        action: "send_connect_request",
+        payload,
+        toUserId,
+      })
+      return true
+    }
+
+    data.value = createConnectRequestTransition(data.value, fromUserId, toUserId, payload, now()).seed
     return true
   }
 
-  function respondToConnectRequest(requestId: string, status: ConnectRequestStatus, declineReason: "timing" | "domain_mismatch" | "commitment_mismatch" | "values_mismatch" | "role_mismatch" | null = null) {
+  async function respondToConnectRequest(requestId: string, status: ConnectRequestStatus, declineReason: ConnectDeclineReason | null = null) {
     const request = data.value.connectRequests.find(item => item.id === requestId)
     if (!request)
       return null
 
-    request.status = status
-    request.declineReason = status === "declined" ? declineReason : null
-    request.respondedAt = now()
-    touchProfileActivity(request.toUserId)
-    syncResponseMetrics(request.toUserId)
-
-    if (status !== "accepted") {
-      createNotification(
-        request.fromUserId,
-        "match",
-        "Structured intro closed",
-        declineReason ? `The other side declined with reason: ${declineReason.replaceAll("_", " ")}.` : "The other side closed the intro without opening a match.",
-        "/app",
-      )
-      return null
+    if (supabaseBackedWorkspace.value) {
+      const result = await runCollaborationMutation<{ conversationId: string | null }>({
+        action: "respond_connect_request",
+        declineReason,
+        requestId,
+        status,
+      })
+      return result?.conversationId || null
     }
 
-    const conversationId = crypto.randomUUID()
-    data.value.conversations.unshift({
-      id: conversationId,
-      participantIds: [request.fromUserId, request.toUserId],
-      lastMessageAt: now(),
-      unreadCountByUser: {
-        [request.fromUserId]: 0,
-        [request.toUserId]: 0,
-      },
-      typingByUserIds: [],
-    })
-    data.value.matches.unshift({
-      id: crypto.randomUUID(),
-      participantIds: [request.fromUserId, request.toUserId],
-      source: "connect_request",
-      conversationId,
-      createdAt: now(),
-    })
-    data.value.messages.push({
-      id: crypto.randomUUID(),
-      conversationId,
-      senderUserId: null,
-      type: "system",
-      body: `Connection accepted. Messaging is now unlocked. Suggested next step: ${request.structuredIntro.proposedNextStep.replaceAll("_", " ")}.`,
-      attachments: [],
-      createdAt: now(),
-    })
-
-    createNotification(
-      request.fromUserId,
-      "match",
-      "Structured intro accepted",
-      "A mutual match is now open. Move quickly into a first call or trial sprint while intent is still fresh.",
-      `/app/messages/${conversationId}`,
-    )
-
-    return conversationId
+    const transition = respondToConnectRequestTransition(data.value, requestId, status, now(), declineReason)
+    data.value = transition.seed
+    return transition.conversationId
   }
 
-  function sendMessage(conversationId: string, senderUserId: string | null, body: string, attachments: MessageAttachment[] = [], type: "user" | "system" = "user") {
+  async function sendMessage(conversationId: string, senderUserId: string | null, body: string, attachments: MessageAttachment[] = [], type: "user" | "system" = "user") {
     const conversation = data.value.conversations.find(item => item.id === conversationId)
     if (!conversation)
       return
 
-    data.value.messages.push({
-      id: crypto.randomUUID(),
-      conversationId,
-      senderUserId,
-      type,
-      body,
-      attachments,
-      createdAt: now(),
-    })
+    if (supabaseBackedWorkspace.value) {
+      await runCollaborationMutation({
+        action: "send_message",
+        attachments,
+        body,
+        conversationId,
+        type,
+      })
+      return
+    }
 
-    conversation.lastMessageAt = now()
-    if (senderUserId)
-      touchProfileActivity(senderUserId)
-    conversation.participantIds.forEach((participantId) => {
-      if (participantId !== senderUserId)
-        conversation.unreadCountByUser[participantId] = (conversation.unreadCountByUser[participantId] || 0) + 1
-    })
+    data.value = sendMessageTransition(data.value, conversationId, senderUserId, body, attachments, now(), type).seed
   }
 
-  function markConversationRead(conversationId: string, userId: string) {
-    const conversation = data.value.conversations.find(item => item.id === conversationId)
-    if (!conversation)
+  async function markConversationRead(conversationId: string, userId: string) {
+    if (supabaseBackedWorkspace.value) {
+      await runCollaborationMutation({
+        action: "mark_conversation_read",
+        conversationId,
+      })
       return
+    }
 
-    conversation.unreadCountByUser[userId] = 0
+    data.value = markConversationReadTransition(data.value, conversationId, userId)
   }
 
   function setTyping(conversationId: string, userId: string, isTyping: boolean) {
@@ -711,7 +654,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     conversation.typingByUserIds = Array.from(current)
   }
 
-  function createProposal(
+  async function createProposal(
     creatorUserId: string,
     recipientUserId: string,
     conversationId: string,
@@ -724,58 +667,41 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     if (usage.proposals.exhausted)
       return null
 
-    const proposalId = crypto.randomUUID()
-    const versionId = crypto.randomUUID()
+    if (supabaseBackedWorkspace.value) {
+      const result = await runCollaborationMutation<{ proposalId: string | null }>({
+        action: "create_proposal",
+        conversationId,
+        opportunityId,
+        payload,
+        recipientUserId,
+        title,
+      })
+      return result?.proposalId || null
+    }
 
-    data.value.proposals.unshift({
-      id: proposalId,
-      conversationId,
-      opportunityId,
-      createdByUserId: creatorUserId,
-      recipientUserId,
-      title,
-      currentVersionId: versionId,
-      status: "sent",
-      createdAt: now(),
-      updatedAt: now(),
-    })
-
-    data.value.proposalVersions.unshift({
-      id: versionId,
-      proposalId,
-      versionNumber: 1,
-      createdByUserId: creatorUserId,
-      createdAt: now(),
-      summary: `${payload.roleTitle} proposal sent`,
-      ...payload,
-    })
-
-    touchProfileActivity(creatorUserId)
-    sendMessage(conversationId, null, "A collaboration proposal was sent.", [], "system")
-    createNotification(recipientUserId, "proposal", "New proposal received", title, `/app/proposals/${proposalId}`)
-    return proposalId
+    const transition = createProposalTransition(data.value, creatorUserId, recipientUserId, conversationId, opportunityId, title, payload, now())
+    data.value = transition.seed
+    return transition.proposalId
   }
 
-  function updateProposalStatus(proposalId: string, status: ProposalStatus, actorUserId: string) {
+  async function updateProposalStatus(proposalId: string, status: ProposalStatus, actorUserId: string) {
     const proposal = getProposalById(data.value, proposalId)
     if (!proposal)
       return
 
-    proposal.status = status
-    proposal.updatedAt = now()
-    sendMessage(proposal.conversationId, null, `Proposal status changed to ${status.replaceAll("_", " ")}.`, [], "system")
+    if (supabaseBackedWorkspace.value) {
+      await runCollaborationMutation({
+        action: "update_proposal_status",
+        proposalId,
+        status,
+      })
+      return
+    }
 
-    const counterpartyId = proposal.createdByUserId === actorUserId ? proposal.recipientUserId : proposal.createdByUserId
-    createNotification(
-      counterpartyId,
-      "proposal",
-      "Proposal updated",
-      `${proposal.title} is now ${status.replaceAll("_", " ")}.`,
-      `/app/proposals/${proposalId}`,
-    )
+    data.value = updateProposalStatusTransition(data.value, proposalId, status, actorUserId, now())
   }
 
-  function createProposalCounterVersion(
+  async function createProposalCounterVersion(
     proposalId: string,
     createdByUserId: string,
     payload: ProposalPayload,
@@ -785,38 +711,34 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     if (!proposal || !currentVersion)
       return
 
-    const versionId = crypto.randomUUID()
+    if (supabaseBackedWorkspace.value) {
+      await runCollaborationMutation({
+        action: "create_proposal_counter_version",
+        payload,
+        proposalId,
+      })
+      return
+    }
 
-    data.value.proposalVersions.unshift({
-      id: versionId,
-      proposalId,
-      versionNumber: currentVersion.versionNumber + 1,
-      createdByUserId,
-      createdAt: now(),
-      summary: `${payload.roleTitle} counter version`,
-      ...payload,
-    })
-
-    proposal.currentVersionId = versionId
-    proposal.status = "countered"
-    proposal.updatedAt = now()
-    touchProfileActivity(createdByUserId)
-    sendMessage(proposal.conversationId, null, `Proposal updated to version ${currentVersion.versionNumber + 1}.`, [], "system")
+    data.value = createProposalCounterVersionTransition(data.value, proposalId, createdByUserId, payload, now()).seed
   }
 
-  function addProposalComment(proposalId: string, proposalVersionId: string, authorUserId: string, section: ProposalSectionKey, body: string) {
-    data.value.proposalComments.unshift({
-      id: crypto.randomUUID(),
-      proposalId,
-      proposalVersionId,
-      authorUserId,
-      section,
-      body,
-      createdAt: now(),
-    })
+  async function addProposalComment(proposalId: string, proposalVersionId: string, authorUserId: string, section: ProposalSectionKey, body: string) {
+    if (supabaseBackedWorkspace.value) {
+      await runCollaborationMutation({
+        action: "add_proposal_comment",
+        body,
+        proposalId,
+        proposalVersionId,
+        section,
+      })
+      return
+    }
+
+    data.value = addProposalCommentTransition(data.value, proposalId, proposalVersionId, authorUserId, section, body, now()).seed
   }
 
-  function createContractFromProposal(proposalId: string, actorUserId?: string) {
+  async function createContractFromProposal(proposalId: string, actorUserId?: string) {
     const proposal = getProposalById(data.value, proposalId)
     if (!proposal)
       return null
@@ -832,31 +754,17 @@ export const useWorkspaceStore = defineStore("workspace", () => {
         return null
     }
 
-    const version = getCurrentProposalVersion(data.value, proposal)
-    const participants = [proposal.createdByUserId, proposal.recipientUserId]
-      .map(userId => getProfileByUserId(data.value, userId))
-      .filter((participant): participant is NonNullable<typeof participant> => Boolean(participant))
+    if (supabaseBackedWorkspace.value) {
+      const result = await runCollaborationMutation<{ contractId: string | null }>({
+        action: "create_contract_from_proposal",
+        proposalId,
+      })
+      return result?.contractId || null
+    }
 
-    if (!version || participants.length !== 2)
-      return null
-
-    const contractId = crypto.randomUUID()
-    const contractVersion = buildContractVersionFromProposal(version, participants, contractId, 1)
-
-    data.value.contracts.unshift({
-      id: contractId,
-      proposalId,
-      title: `${proposal.title.replace("Proposal", "Agreement")}`,
-      status: "pending_signature",
-      currentVersionId: contractVersion.id,
-      disclaimerAcknowledged: true,
-      createdAt: now(),
-      updatedAt: now(),
-    })
-
-    data.value.contractVersions.unshift(contractVersion)
-    createNotification(proposal.recipientUserId, "contract", "Contract draft ready", "A contract draft was generated from your proposal.", `/app/contracts/${contractId}`)
-    return contractId
+    const transition = createContractFromProposalTransition(data.value, proposalId, now())
+    data.value = transition.seed
+    return transition.contractId
   }
 
   function updateContractVersion(contractId: string, partial: Partial<ContractVersion>) {
@@ -878,35 +786,22 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     contract.updatedAt = now()
   }
 
-  function signContract(contractId: string, userId: string, typedName: string) {
+  async function signContract(contractId: string, userId: string, typedName: string) {
     const contract = getContractById(data.value, contractId)
     const currentVersion = contract && getCurrentContractVersion(data.value, contract)
     if (!contract || !currentVersion)
       return
 
-    const existingSignature = data.value.signatures.find(signature => signature.contractId === contractId && signature.userId === userId && signature.contractVersionId === currentVersion.id)
-    if (existingSignature)
+    if (supabaseBackedWorkspace.value) {
+      await runCollaborationMutation({
+        action: "sign_contract",
+        contractId,
+        typedName,
+      })
       return
+    }
 
-    data.value.signatures.push({
-      id: crypto.randomUUID(),
-      contractId,
-      contractVersionId: currentVersion.id,
-      userId,
-      typedName,
-      signedAt: now(),
-    })
-    touchProfileActivity(userId)
-
-    const proposal = data.value.proposals.find(item => item.id === contract.proposalId)
-    if (!proposal)
-      return
-
-    const participantIds = [proposal.createdByUserId, proposal.recipientUserId]
-    const signatures = data.value.signatures.filter(signature => signature.contractId === contractId && signature.contractVersionId === currentVersion.id)
-
-    if (participantIds.every(participantId => signatures.some(signature => signature.userId === participantId)))
-      contract.status = "signed"
+    data.value = signContractTransition(data.value, contractId, userId, typedName, now())
   }
 
   function createNotification(userId: string, type: NotificationType, title: string, body: string, href: string) {
@@ -1021,7 +916,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       })
   }
 
-  function startTrialCollaboration(matchId: string, createdByUserId: string) {
+  async function startTrialCollaboration(matchId: string, createdByUserId: string) {
     const existingTrial = data.value.trialCollaborations.find(trial => trial.matchId === matchId)
     if (existingTrial)
       return existingTrial.id
@@ -1030,42 +925,46 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     if (!match)
       return null
 
-    const profiles = match.participantIds
-      .map(participantId => getProfileByUserId(data.value, participantId))
-      .filter((profile): profile is NonNullable<typeof profile> => Boolean(profile))
+    if (supabaseBackedWorkspace.value) {
+      const result = await runCollaborationMutation<{ trialId: string | null }>({
+        action: "start_trial",
+        matchId,
+      })
+      return result?.trialId || null
+    }
 
-    const trial = buildTrialDraft(match, profiles, createdByUserId)
-    trial.status = "active"
-    data.value.trialCollaborations.unshift(trial)
-    touchProfileActivity(createdByUserId)
-
-    const counterpartyId = match.participantIds.find(participantId => participantId !== createdByUserId)
-    if (counterpartyId)
-      createNotification(counterpartyId, "match", "Trial collaboration started", trial.title, "/app/matches")
-
-    const conversation = data.value.conversations.find(item => item.id === match.conversationId)
-    if (conversation)
-      sendMessage(conversation.id, null, `A trial collaboration was started: ${trial.title}.`, [], "system")
-
-    return trial.id
+    const transition = startTrialCollaborationTransition(data.value, matchId, createdByUserId, now())
+    data.value = transition.seed
+    return transition.trialId
   }
 
-  function acknowledgeTrialCollaboration(trialId: string, userId: string) {
+  async function acknowledgeTrialCollaboration(trialId: string, userId: string) {
     const trial = data.value.trialCollaborations.find(item => item.id === trialId)
     if (!trial)
       return
 
-    if (!trial.acknowledgedByUserIds.includes(userId))
-      trial.acknowledgedByUserIds.push(userId)
+    if (supabaseBackedWorkspace.value) {
+      await runCollaborationMutation({
+        action: "acknowledge_trial",
+        trialId,
+      })
+      return
+    }
 
-    trial.updatedAt = now()
-    touchProfileActivity(userId)
+    data.value = acknowledgeTrialCollaborationTransition(data.value, trialId, userId, now())
   }
 
-  function markNotificationRead(notificationId: string) {
-    const notification = data.value.notifications.find(item => item.id === notificationId)
-    if (notification)
-      notification.readAt = now()
+  async function markNotificationRead(notificationId: string) {
+    if (supabaseBackedWorkspace.value) {
+      await syncNotificationRead(notificationId)
+      return
+    }
+
+    const currentUserId = session.value?.id
+    if (!currentUserId)
+      return
+
+    data.value = markNotificationReadTransition(data.value, notificationId, currentUserId, now()).seed
   }
 
   function updateSubscriptionPlan(userId: string, plan: "free" | "pro" | "team") {

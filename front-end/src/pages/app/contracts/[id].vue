@@ -55,7 +55,7 @@ function saveContractVersion(payload: any) {
   })
 }
 
-function signContract() {
+async function signContract() {
   signatureError.value = ""
   const parsed = contractSignatureSchema.safeParse({ typedName: signatureName.value })
   if (!parsed.success) {
@@ -75,7 +75,7 @@ function signContract() {
     return
   }
 
-  workspaceStore.signContract(contract.value.id, authStore.currentUser.id, parsed.data.typedName)
+  await workspaceStore.signContract(contract.value.id, authStore.currentUser.id, parsed.data.typedName)
   signatureName.value = ""
   toastStore.push({
     title: "Contract signed",

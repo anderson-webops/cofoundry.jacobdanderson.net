@@ -1,6 +1,7 @@
 import type { H3Event } from "h3"
 import type { MemberWorkspaceState, MemberWorkspaceWritePayload, Profile, SavedSearch, StartupOpportunity, Subscription, User } from "~/shared/types/domain"
 import { buildDraftMemberWorkspaceState, buildMemberWorkspaceState, createInitialWorkspaceDocument, mergeMemberWorkspaceState, resolveSessionUserFromWorkspace, sanitizeOwnedProfile, sanitizeUserOwnedBookmarks, sanitizeUserOwnedOpportunities, sanitizeUserOwnedSavedSearches } from "~/shared/utils/workspace-persistence"
+import { loadServerCollaborationState, mergeServerCollaborationState } from "./member-collaboration"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
 
 interface PersistedIdentityInput {
@@ -528,7 +529,9 @@ export async function loadMemberWorkspaceState(event: H3Event, identity: Persist
     bookmarks: fromBookmarkRows(bookmarks),
     savedSearches: fromSavedSearchRows(savedSearches),
   }
-  const seed = buildMergedSeed(state)
+  const mergedSeed = buildMergedSeed(state)
+  const collaborationState = await loadServerCollaborationState(event, userRow.id)
+  const seed = mergeServerCollaborationState(mergedSeed, collaborationState)
 
   return {
     seed,

@@ -6,6 +6,10 @@ import type {
   Proposal,
   WorkspaceSeed,
 } from "../types/domain"
+import {
+  collaborationContractNeedsUserSignature,
+  collaborationProposalNeedsUserResponse,
+} from "./collaboration"
 import { formatConnectRequestNextStep, formatProposalStatus } from "./format"
 import {
   buildParticipantProfiles,
@@ -79,14 +83,8 @@ export function getUnreadConversationsForUser(seed: WorkspaceSeed, userId: strin
 }
 
 export function proposalNeedsUserResponse(seed: WorkspaceSeed, proposal: Proposal, userId: string) {
-  if (proposal.status === "accepted" || proposal.status === "rejected")
-    return false
-
   const version = getCurrentProposalVersion(seed, proposal)
-  if (!version)
-    return false
-
-  return version.createdByUserId !== userId
+  return collaborationProposalNeedsUserResponse(proposal, version, userId)
 }
 
 export function getProposalsNeedingResponse(seed: WorkspaceSeed, userId: string) {
@@ -96,18 +94,8 @@ export function getProposalsNeedingResponse(seed: WorkspaceSeed, userId: string)
 }
 
 export function contractNeedsUserSignature(seed: WorkspaceSeed, contract: Contract, userId: string) {
-  if (contract.status !== "pending_signature")
-    return false
-
   const version = getCurrentContractVersion(seed, contract)
-  if (!version)
-    return false
-
-  return !seed.signatures.some(signature =>
-    signature.contractId === contract.id
-    && signature.contractVersionId === version.id
-    && signature.userId === userId,
-  )
+  return collaborationContractNeedsUserSignature(seed, contract, version, seed.signatures, userId)
 }
 
 export function getContractsNeedingSignature(seed: WorkspaceSeed, userId: string) {

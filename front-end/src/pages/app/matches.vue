@@ -33,11 +33,11 @@ function trialForMatch(match: ReturnType<typeof getMatchesForUser>[number]) {
   return getTrialForMatch(workspaceStore.data, match.id)
 }
 
-function startTrial(match: ReturnType<typeof getMatchesForUser>[number]) {
+async function startTrial(match: ReturnType<typeof getMatchesForUser>[number]) {
   if (!currentUserId.value)
     return
 
-  workspaceStore.startTrialCollaboration(match.id, currentUserId.value)
+  await workspaceStore.startTrialCollaboration(match.id, currentUserId.value)
   toastStore.push({
     title: "Trial started",
     message: "A short working sprint was attached to the match so you can pressure-test the relationship before final terms.",
@@ -45,7 +45,7 @@ function startTrial(match: ReturnType<typeof getMatchesForUser>[number]) {
   })
 }
 
-function acknowledgeTrial(match: ReturnType<typeof getMatchesForUser>[number]) {
+async function acknowledgeTrial(match: ReturnType<typeof getMatchesForUser>[number]) {
   if (!currentUserId.value)
     return
 
@@ -53,7 +53,7 @@ function acknowledgeTrial(match: ReturnType<typeof getMatchesForUser>[number]) {
   if (!trial)
     return
 
-  workspaceStore.acknowledgeTrialCollaboration(trial.id, currentUserId.value)
+  await workspaceStore.acknowledgeTrialCollaboration(trial.id, currentUserId.value)
   toastStore.push({
     title: "Trial acknowledged",
     message: "Your acknowledgement was recorded on the sprint plan.",

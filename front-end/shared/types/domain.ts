@@ -266,6 +266,11 @@ export interface StructuredIntro {
   proposedNextStep: ConnectRequestNextStep
 }
 
+export interface ConnectRequestPayload {
+  note: string
+  structuredIntro: StructuredIntro
+}
+
 export interface ConnectRequest {
   id: string
   fromUserId: string
@@ -359,6 +364,27 @@ export interface ProposalComment {
   section: ProposalSectionKey
   body: string
   createdAt: string
+}
+
+export interface ProposalPayload {
+  relationshipType: ProposalRelationshipType
+  roleTitle: string
+  responsibilities: string[]
+  weeklyTimeCommitment: number
+  startDate: string
+  fullTimeTrigger: string
+  ceoDecision: string
+  trialScope: string
+  trialIpHandling: string
+  cashCompensation: string
+  equity: string
+  vestingSchedule: string
+  cliff: string
+  decisionRights: string
+  ipAssignmentRequired: boolean
+  confidentiality: string
+  exitTerms: string
+  notes: string
 }
 
 export interface Contract {
