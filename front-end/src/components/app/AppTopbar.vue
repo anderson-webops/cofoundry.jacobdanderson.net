@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { buildInboxSnapshot } from "~/shared/utils/inbox"
 import { getUnreadMessages } from "~/shared/utils/workspace"
 import { resolveWorkspaceRouteContext } from "~/shared/utils/workspace-navigation"
 
@@ -8,6 +9,7 @@ const route = useRoute()
 
 const notificationCount = computed(() => workspaceStore.data.notifications.filter(notification => notification.userId === authStore.currentUser?.id && !notification.readAt).length)
 const unreadMessages = computed(() => authStore.currentUser?.id ? getUnreadMessages(workspaceStore.data, authStore.currentUser.id) : 0)
+const inboxActionCount = computed(() => authStore.currentUser?.id ? buildInboxSnapshot(workspaceStore.data, authStore.currentUser.id).actions.length : 0)
 const routeContext = computed(() => resolveWorkspaceRouteContext(route.path))
 
 async function signOut() {
@@ -36,6 +38,13 @@ async function signOut() {
     </div>
 
     <div class="flex flex-wrap gap-2 items-center md:justify-end">
+      <BaseButton variant="ghost" size="sm" to="/app/inbox">
+        <span class="i-carbon-inbox" />
+        Inbox
+        <span class="text-xs text-[var(--muted)]">
+          {{ inboxActionCount }} live
+        </span>
+      </BaseButton>
       <BaseBadge tone="accent">
         {{ unreadMessages }} unread messages
       </BaseBadge>

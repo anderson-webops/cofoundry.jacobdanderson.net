@@ -46,6 +46,12 @@ const workspaceRouteMatchers: WorkspaceRouteMatcher[] = [
     description: "Review the company, role shape, and fit signals before you spend outreach capacity.",
   },
   {
+    prefix: "/app/inbox",
+    areaLabel: "Workspace",
+    title: "Inbox",
+    description: "Work the queue across intros, replies, proposal terms, signatures, and system updates that still need action.",
+  },
+  {
     prefix: "/app/opportunities",
     areaLabel: "Workspace",
     title: "Opportunities",
