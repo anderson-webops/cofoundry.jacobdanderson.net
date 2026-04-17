@@ -1,19 +1,20 @@
+import type { H3Event } from "h3"
+import type { z } from "zod"
+import type { contactSchema } from "~/shared/utils/validation"
+import { Buffer } from "node:buffer"
+import { spawn } from "node:child_process"
 import { randomUUID } from "node:crypto"
 import { once } from "node:events"
 import net from "node:net"
 import os from "node:os"
 import { env } from "node:process"
-import { spawn } from "node:child_process"
 import tls from "node:tls"
-import type { H3Event } from "h3"
-import { getHeader, getRequestIP } from "h3"
-import { z } from "zod"
 
-import { contactSchema } from "~/shared/utils/validation"
+import { getHeader, getRequestIP } from "h3"
 
 type ContactPayload = z.infer<typeof contactSchema>
 
-type SendmailConfig = {
+interface SendmailConfig {
   kind: "sendmail"
   bccEmail?: string[]
   fromEmail: string
@@ -22,7 +23,7 @@ type SendmailConfig = {
   toEmail: string
 }
 
-type SmtpConfig = {
+interface SmtpConfig {
   kind: "smtp"
   bccEmail?: string[]
   fromEmail: string
@@ -38,9 +39,13 @@ type SmtpConfig = {
 
 type ContactMailConfig = SendmailConfig | SmtpConfig
 type SocketLike = net.Socket | tls.TLSSocket
-type SmtpResponse = { code: number, lines: string[] }
+interface SmtpResponse { code: number, lines: string[] }
 
 const truthyValues = new Set(["1", "true", "yes", "on"])
+const newlinePattern = /\r?\n/g
+const trailingCarriageReturnPattern = /\r$/g
+const smtpResponsePattern = /^(\d{3})([ -]).*$/
+const smtpCapabilityPattern = /^\d{3}[ -]([a-z0-9-]+)/i
 
 function isEnabled(value?: string) {
   return truthyValues.has(value?.trim().toLowerCase() || "")
@@ -59,12 +64,12 @@ function parseAddressList(value?: string) {
 }
 
 function escapeHeader(value: string) {
-  return value.replaceAll(/\r?\n/g, " ").trim()
+  return value.replaceAll(newlinePattern, " ").trim()
 }
 
 function dotStuff(message: string) {
   return message
-    .split(/\r?\n/)
+    .split(newlinePattern)
     .map(line => (line.startsWith(".") ? `.${line}` : line))
     .join("\r\n")
 }
@@ -107,13 +112,13 @@ class SmtpLineReader {
   private resume: (() => void) | null = null
 
   constructor(private readonly socket: SocketLike) {
-    socket.on("data", chunk => {
+    socket.on("data", (chunk) => {
       this.buffer += chunk.toString()
       this.resume?.()
       this.resume = null
     })
 
-    socket.on("error", error => {
+    socket.on("error", (error) => {
       this.error = error instanceof Error ? error : new Error(String(error))
       this.resume?.()
       this.resume = null
@@ -134,7 +139,7 @@ class SmtpLineReader {
       throw this.error
     }
 
-    await new Promise<void>(resolve => {
+    await new Promise<void>((resolve) => {
       this.resume = resolve
     })
 
@@ -149,7 +154,7 @@ class SmtpLineReader {
     }
 
     const newlineIndex = this.buffer.indexOf("\n")
-    const line = this.buffer.slice(0, newlineIndex).replace(/\r$/, "")
+    const line = this.buffer.slice(0, newlineIndex).replace(trailingCarriageReturnPattern, "")
     this.buffer = this.buffer.slice(newlineIndex + 1)
     return line
   }
@@ -162,16 +167,19 @@ class SmtpLineReader {
       const line = await this.readLine()
       lines.push(line)
 
-      const match = line.match(/^(\d{3})([ -])(.*)$/)
+      const match = smtpResponsePattern.exec(line)
       if (!match) {
         continue
       }
 
+      const code = match[1] || ""
+      const separator = match[2] || ""
+
       if (!responseCode) {
-        responseCode = match[1]
+        responseCode = code
       }
 
-      if (match[1] === responseCode && match[2] === " ") {
+      if (code === responseCode && separator === " ") {
         return { code: Number.parseInt(responseCode, 10), lines }
       }
     }
@@ -180,7 +188,7 @@ class SmtpLineReader {
 
 async function writeToSocket(socket: SocketLike, payload: string) {
   await new Promise<void>((resolve, reject) => {
-    socket.write(payload, error => {
+    socket.write(payload, (error) => {
       if (error) {
         reject(error)
         return
@@ -206,10 +214,11 @@ function parseSmtpCapabilities(response: SmtpResponse) {
   const capabilities = new Set<string>()
 
   for (const line of response.lines) {
-    const match = line.match(/^\d{3}[ -]([A-Za-z0-9-]+)/)
-    if (match) {
-      capabilities.add(match[1].toUpperCase())
-    }
+    const match = smtpCapabilityPattern.exec(line)
+    const capability = match?.[1]
+
+    if (capability)
+      capabilities.add(capability.toUpperCase())
   }
 
   return capabilities
@@ -341,12 +350,12 @@ async function sendRawSendmail(config: SendmailConfig, message: string) {
 
     let stderr = ""
 
-    child.stderr.on("data", chunk => {
+    child.stderr.on("data", (chunk) => {
       stderr += chunk.toString()
     })
 
     child.on("error", reject)
-    child.on("close", code => {
+    child.on("close", (code) => {
       if (code === 0) {
         resolve()
         return

@@ -11,6 +11,7 @@ describe("workspace route context", () => {
   })
 
   it("maps nested workspace routes to the correct detail context", () => {
+    expect(resolveWorkspaceRouteContext("/app/inbox").title).toBe("Inbox")
     expect(resolveWorkspaceRouteContext("/app/messages/conversation_123").title).toBe("Conversation")
     expect(resolveWorkspaceRouteContext("/app/proposals/proposal_123").title).toBe("Deal room")
     expect(resolveWorkspaceRouteContext("/app/contracts/contract_123").title).toBe("Agreement")

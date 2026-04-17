@@ -2,6 +2,7 @@
 import { recommendOpportunitiesForProfile, recommendProfilesForProfile } from "~/shared/utils/discovery"
 import { formatPlanName } from "~/shared/utils/format"
 import { buildProfileReadiness } from "~/shared/utils/formation"
+import { buildInboxSnapshot } from "~/shared/utils/inbox"
 import { getContractsForUser, getIncomingConnectRequestsForUser, getMatchesForUser, getOutgoingConnectRequestsForUser, getProfileByUserId, getProfileSkills, getProposalsForUser, getTrialsForUser } from "~/shared/utils/workspace"
 
 definePageMeta({
@@ -16,6 +17,7 @@ const { authStore, profile, subscription, workspaceStore } = useCurrentMember()
 const currentUserId = computed(() => authStore.currentUser?.id || "")
 
 const readiness = computed(() => profile.value ? buildProfileReadiness(profile.value) : null)
+const inboxSnapshot = computed(() => currentUserId.value ? buildInboxSnapshot(workspaceStore.data, currentUserId.value) : null)
 const profileRecommendations = computed(() => profile.value ? recommendProfilesForProfile(workspaceStore.data, profile.value).slice(0, 3) : [])
 const opportunityRecommendations = computed(() => profile.value ? recommendOpportunitiesForProfile(workspaceStore.data, profile.value).slice(0, 3) : [])
 const showProfileRecommendations = computed(() => profile.value ? profile.value.hasIdea && !profile.value.wantsToJoinIdea : false)
@@ -67,12 +69,30 @@ const workspaceStage = computed(() => {
   return { label: "Profile still gating outreach", tone: "warning" as const, summary: "The next gain in match quality comes from tightening profile signal before sending more intros." }
 })
 const primaryAction = computed(() => {
-  if (incomingRequests.value.length) {
+  if (inboxSnapshot.value?.counts.pendingIntros) {
     return {
-      title: `Review ${incomingRequests.value.length} inbound intro${incomingRequests.value.length === 1 ? "" : "s"}`,
+      title: `Review ${inboxSnapshot.value.counts.pendingIntros} inbound intro${inboxSnapshot.value.counts.pendingIntros === 1 ? "" : "s"}`,
       description: "Replying quickly is the fastest way to improve marketplace trust and keep strong conversations alive.",
-      href: "/app",
+      href: "/app/inbox",
       ctaLabel: "Open intro queue",
+    }
+  }
+
+  if (inboxSnapshot.value?.counts.contractsNeedingSignature) {
+    return {
+      title: "Finish the waiting agreement signature",
+      description: "The terms are already concrete enough to be in contract form. Do not let agreement drafts stall at the last step.",
+      href: "/app/inbox",
+      ctaLabel: "Open inbox",
+    }
+  }
+
+  if (inboxSnapshot.value?.counts.proposalsNeedingResponse || inboxSnapshot.value?.counts.unreadConversations) {
+    return {
+      title: "Clear the active response queue",
+      description: "The highest-leverage work is now inside live conversations and proposal rooms, not fresh browsing.",
+      href: "/app/inbox",
+      ctaLabel: "Open inbox",
     }
   }
 
@@ -117,10 +137,10 @@ const primaryAction = computed(() => {
 const statusCards = computed(() => [
   {
     title: "Pending on you",
-    value: incomingRequests.value.length ? `${incomingRequests.value.length} intro${incomingRequests.value.length === 1 ? "" : "s"}` : "Nothing urgent",
-    description: incomingRequests.value.length
-      ? "The cleanest win is responding to inbound intros before they decay."
-      : "No inbound requests are waiting on a decision right now.",
+    value: inboxSnapshot.value?.actions.length ? `${inboxSnapshot.value.actions.length} live item${inboxSnapshot.value.actions.length === 1 ? "" : "s"}` : "Nothing urgent",
+    description: inboxSnapshot.value?.actions.length
+      ? "The inbox now tracks direct replies, proposal responses, and signatures in one queue."
+      : "Nothing is currently blocked on you across intros, messages, proposals, or contracts.",
   },
   {
     title: "Search state",

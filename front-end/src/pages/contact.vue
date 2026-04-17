@@ -80,7 +80,7 @@ async function submitForm() {
       message: (error as { data?: { message?: string }, statusMessage?: string })?.data?.message
         || (error as { statusMessage?: string })?.statusMessage
         || "The message could not be sent right now. Please try again later.",
-      tone: "error",
+      tone: "danger",
     })
   }
   finally {
