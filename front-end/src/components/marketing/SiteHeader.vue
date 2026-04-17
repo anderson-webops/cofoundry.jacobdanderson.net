@@ -2,13 +2,60 @@
 import { marketingNavigation } from "~/shared/constants/app"
 
 const menuOpen = ref(false)
+const headerVisible = ref(true)
 const { getPrimaryAccessCta, getSecondaryAccessCta } = useProductAccess()
 const primaryAccessCta = computed(() => getPrimaryAccessCta("site-header"))
 const secondaryAccessCta = computed(() => getSecondaryAccessCta("site-header"))
+
+let lastScrollY = 0
+
+function handleScroll() {
+  if (!import.meta.client)
+    return
+
+  const currentScrollY = window.scrollY
+
+  if (menuOpen.value) {
+    headerVisible.value = true
+    lastScrollY = currentScrollY
+    return
+  }
+
+  if (currentScrollY <= 24) {
+    headerVisible.value = true
+    lastScrollY = currentScrollY
+    return
+  }
+
+  if (Math.abs(currentScrollY - lastScrollY) < 8)
+    return
+
+  headerVisible.value = currentScrollY < lastScrollY
+  lastScrollY = currentScrollY
+}
+
+watch(menuOpen, (isOpen) => {
+  if (!isOpen)
+    return
+
+  headerVisible.value = true
+})
+
+onMounted(() => {
+  lastScrollY = window.scrollY
+  window.addEventListener("scroll", handleScroll, { passive: true })
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener("scroll", handleScroll)
+})
 </script>
 
 <template>
-  <header class="bg-[color:color-mix(in_srgb,var(--bg)_84%,transparent)] border-b border-[var(--line)] top-0 sticky z-40 backdrop-blur-xl">
+  <header
+    class="bg-[color:color-mix(in_srgb,var(--bg)_84%,transparent)] will-change-transform border-b border-[var(--line)] transition-transform duration-250 ease-out top-0 sticky z-40 backdrop-blur-xl"
+    :class="headerVisible ? 'translate-y-0' : '-translate-y-full'"
+  >
     <div class="page-shell py-4 flex items-center justify-between">
       <AppLogo />
       <nav class="text-sm text-[var(--muted)] gap-8 hidden items-center lg:flex">
