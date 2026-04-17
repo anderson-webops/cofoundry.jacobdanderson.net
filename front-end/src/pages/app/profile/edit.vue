@@ -55,17 +55,18 @@ const initialValues = computed(() => profile.value
     }
   : undefined)
 
-function submitProfile(payload: any) {
+async function submitProfile(payload: any) {
   if (!authStore.currentUser)
     return
 
   workspaceStore.updateCurrentProfile(authStore.currentUser.id, payload)
+  await workspaceStore.persistWorkspace(true)
   toastStore.push({
     title: "Profile updated",
     message: "Your discovery profile was saved.",
     tone: "success",
   })
-  navigateTo("/app/profile")
+  await navigateTo("/app/profile")
 }
 </script>
 

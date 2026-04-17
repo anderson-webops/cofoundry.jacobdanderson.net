@@ -47,7 +47,32 @@ Current front-end contract:
 
 ### 2. Real persisted workspace state
 
-Next after inbox.
+Status: foundational slice implemented.
+
+Current persisted slice:
+
+- Supabase-backed credential sign-in and sign-up on the Nuxt server
+- signed CoFoundry app sessions revalidated against persisted member state
+- persisted member-owned records for:
+  - user identity and role
+  - profile state
+  - subscription state
+  - owned opportunities
+  - bookmarks
+  - saved searches
+- frontend workspace hydration from `/api/workspace`
+- safe member-owned writes through `/api/workspace/member`
+
+Still local/mock for now:
+
+- connect requests
+- matches
+- conversations and messages
+- trial collaborations
+- proposals and proposal comments
+- contracts and signatures
+- notifications
+- moderation persistence
 
 Backend-owned entities:
 
@@ -165,7 +190,7 @@ After persistence is stable:
 
 ## Backend Contract To Build Next
 
-The backend should expose a real inbox resource with the same conceptual model the front-end now uses.
+The backend should now continue from the persisted member foundation and move the collaborative workflow off local seed state.
 
 Recommended endpoints:
 
@@ -217,29 +242,35 @@ interface InboxSnapshot {
 Use this prompt for the server-side implementation agent:
 
 ```text
-Implement the real backend support for CoFoundry's inbox and action queue.
+Continue CoFoundry's backend productionization from the new persisted member foundation.
 
 Context:
-- The front-end already has a shared inbox contract in `front-end/shared/utils/inbox.ts`.
+- The frontend now has a real persisted member foundation:
+  - Supabase-backed credential auth on the Nuxt server
+  - persisted member state for user/profile/subscription/bookmarks/saved searches/opportunities
+  - `/api/workspace` and `/api/workspace/member`
+- The remaining collaborative workflow is still derived from local seed state.
 - The app route `/app/inbox` is now the primary action surface for intros, unread messages, proposal responses, contract signatures, and unread operational notifications.
-- The current front-end still derives this from local workspace state. Replace that with real persisted server-backed data.
 
-Build the backend as if it is the source of truth for these entities:
+Make the backend the source of truth for these remaining entities:
 - users
-- profiles
 - connect_requests
 - matches
 - conversations
 - messages
 - proposals
 - proposal_versions
+- proposal_comments
 - contracts
 - contract_versions
 - signatures
 - notifications
+- reports
+- admin_actions
 
 Required backend work:
-1. Add inbox-focused read models and endpoints:
+1. Persist the collaborative workflow entities above in Supabase-backed tables and server routes.
+2. Add inbox-focused read models and endpoints:
    - GET /api/inbox
    - GET /api/inbox/requests
    - GET /api/inbox/conversations
@@ -247,28 +278,45 @@ Required backend work:
    - GET /api/inbox/contracts
    - GET /api/inbox/notifications
    - POST /api/inbox/notifications/:id/read
-2. Enforce auth server-side and return only the signed-in member's data.
-3. Compute:
+3. Enforce auth server-side and return only the signed-in member's data.
+4. Compute:
    - pending inbound intros
    - pending outbound intros
    - unread conversation summaries
    - proposals where the latest version/status now requires the member's response
    - contracts where the current version still needs the member's signature
    - unread notifications
-4. Return an `InboxSnapshot` shape matching the front-end contract.
-5. Add tests for:
+5. Return an `InboxSnapshot` shape matching `front-end/shared/utils/inbox.ts`.
+6. Add mutation endpoints for:
+   - send / accept / decline connect requests
+   - create conversations / messages
+   - mark conversations read
+   - create / update proposals and proposal comments
+   - create / update contracts and signatures
+7. Add tests for:
    - unread message queue behavior
+   - connect request accept / decline transitions
    - proposal response detection
    - contract signature detection
-   - notification deduping / ordering
+   - notification ordering and read-state transitions
    - auth enforcement
-6. Document any schema or migration work required.
+8. Document any schema or migration work required.
 
 Important constraints:
+- Keep the new persisted member foundation in place; extend it instead of replacing it.
 - Keep the current product behavior unchanged for mock mode unless the new backend path is explicitly enabled.
 - Server-side roles and ownership checks must be enforced.
 - Prefer composable query helpers over one large endpoint file.
 - Make the ordering deterministic and newest-first inside each priority band.
+- Preserve the current guarded billing path.
+
+Frontend files already prepared for this next step:
+- `front-end/shared/utils/inbox.ts`
+- `front-end/src/pages/app/inbox.vue`
+- `front-end/src/stores/workspace.ts`
+- `front-end/server/api/inbox.get.ts`
+- `front-end/server/api/workspace.get.ts`
+- `front-end/server/api/workspace/member.post.ts`
 ```
 
 ## Manual Setup Still Needed

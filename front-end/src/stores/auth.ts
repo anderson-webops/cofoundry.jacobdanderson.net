@@ -32,7 +32,7 @@ export const useAuthStore = defineStore("auth", () => {
       })
 
       setSession(response.session)
-      workspaceStore.ensureSessionUser(response.session)
+      await workspaceStore.loadWorkspace(true)
       return response.session
     }
     catch (caughtError) {
@@ -55,8 +55,9 @@ export const useAuthStore = defineStore("auth", () => {
       })
 
       setSession(response.session)
-      workspaceStore.ensureSessionUser(response.session)
+      await workspaceStore.loadWorkspace(true)
       workspaceStore.createDraftUserFromSignUp(response.session, payload.name)
+      await workspaceStore.persistWorkspace(true)
       return response.session
     }
     catch (caughtError) {
@@ -79,7 +80,7 @@ export const useAuthStore = defineStore("auth", () => {
       })
 
       setSession(response.session)
-      workspaceStore.ensureSessionUser(response.session)
+      await workspaceStore.loadWorkspace(true)
       return response.session
     }
     catch (caughtError) {
@@ -94,6 +95,7 @@ export const useAuthStore = defineStore("auth", () => {
   async function signOut() {
     await $fetch("/api/auth/sign-out", { method: "POST" })
     setSession(null)
+    workspaceStore.resetSessionState()
   }
 
   async function completeOnboarding(nextSession: SessionUser) {
@@ -106,6 +108,7 @@ export const useAuthStore = defineStore("auth", () => {
       })
 
       setSession(response.session)
+      await workspaceStore.loadWorkspace(true)
       return response.session
     }
     finally {

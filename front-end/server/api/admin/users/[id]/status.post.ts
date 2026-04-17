@@ -1,7 +1,7 @@
 import { requireAdminSession, validateAdminUserModerationPayload } from "../../../../utils/admin"
 
 export default defineEventHandler(async (event) => {
-  const session = requireAdminSession(event)
+  const session = await requireAdminSession(event)
   const payload = validateAdminUserModerationPayload(await readBody(event))
   const targetUserId = getRouterParam(event, "id")
 

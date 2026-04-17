@@ -512,6 +512,23 @@ export interface SavedSearch {
   createdAt: string
 }
 
+export interface MemberWorkspaceState {
+  user: User
+  profile: Profile
+  subscription: Subscription
+  opportunities: StartupOpportunity[]
+  bookmarks: Bookmark[]
+  savedSearches: SavedSearch[]
+}
+
+export interface MemberWorkspaceWritePayload {
+  onboardingCompleted: boolean
+  profile: Profile
+  opportunities: StartupOpportunity[]
+  bookmarks: Bookmark[]
+  savedSearches: SavedSearch[]
+}
+
 export interface WorkspaceSeed {
   version: string
   users: User[]

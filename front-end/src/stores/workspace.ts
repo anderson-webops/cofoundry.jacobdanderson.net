@@ -13,7 +13,7 @@ import type {
   StructuredIntro,
   WorkspaceSeed,
 } from "~/shared/types/domain"
-import { useStorage } from "@vueuse/core"
+import { useStorage, watchDebounced } from "@vueuse/core"
 import { acceptHMRUpdate, defineStore } from "pinia"
 import { workspaceSeed } from "~/shared/data/seed"
 import { buildSubscriptionUsage } from "~/shared/utils/billing"
@@ -30,6 +30,7 @@ import {
   getProposalById,
   getSubscriptionByUserId,
 } from "~/shared/utils/workspace"
+import { buildDraftMemberWorkspaceState, buildMemberWorkspaceWritePayload } from "~/shared/utils/workspace-persistence"
 
 function now() {
   return new Date().toISOString()
@@ -142,11 +143,19 @@ function deriveUserRole(hasIdea: boolean, wantsToJoinIdea: boolean) {
 }
 
 export const useWorkspaceStore = defineStore("workspace", () => {
+  const runtimeConfig = useRuntimeConfig()
+  const { session } = useSessionState()
   const data = useStorage<WorkspaceSeed>("cofoundry-workspace", cloneValue(workspaceSeed), undefined, {
     mergeDefaults: true,
   })
 
   const ready = ref(false)
+  const hydrating = ref(false)
+  const syncing = ref(false)
+  const persistError = ref("")
+  const lastSyncedAt = ref<string | null>(null)
+  const loadedUserId = ref("")
+  const supabaseBackedWorkspace = computed(() => runtimeConfig.public.backendMode === "supabase")
 
   function normalizeLegacyConnectRequests() {
     data.value.connectRequests = data.value.connectRequests.map((request) => {
@@ -177,6 +186,16 @@ export const useWorkspaceStore = defineStore("workspace", () => {
 
   function resetToSeed() {
     data.value = cloneValue(workspaceSeed)
+    loadedUserId.value = ""
+    lastSyncedAt.value = null
+    persistError.value = ""
+  }
+
+  function resetSessionState() {
+    resetToSeed()
+    hydrating.value = false
+    syncing.value = false
+    ready.value = false
   }
 
   function touchProfileActivity(userId: string) {
@@ -248,130 +267,103 @@ export const useWorkspaceStore = defineStore("workspace", () => {
 
   function ensureSessionUser(session: SessionUser) {
     ensureReady()
+    const draftState = buildDraftMemberWorkspaceState(session)
 
     const existingUser = data.value.users.find(user => user.id === session.id)
     const existingProfile = data.value.profiles.find(profile => profile.userId === session.id)
     const existingSubscription = getSubscriptionByUserId(data.value, session.id)
 
     if (!existingUser) {
-      data.value.users.push({
-        id: session.id,
-        email: session.email,
-        role: session.role,
-        createdAt: now(),
-        linkedProviders: ["email"],
-        verifiedEmail: true,
-        onboardingCompleted: session.onboardingCompleted,
-        suspendedAt: null,
-      })
+      data.value.users.push(draftState.user)
     }
 
     if (!existingProfile) {
-      data.value.profiles.push({
-        id: `profile_${session.id}`,
-        userId: session.id,
-        displayName: session.name,
-        photoUrl: "",
-        headline: "New member getting their founder profile ready.",
-        bio: "Add your background, experience, and operating style to start matching with the right people.",
-        location: "Remote",
-        remotePreference: "remote",
-        roles: [session.role === "founder" ? "Founder" : "Collaborator"],
-        yearsExperience: 0,
-        industries: [],
-        startupStagePreferences: ["idea"],
-        compensationPreferences: ["equity_only"],
-        equityExpectationRange: "Flexible",
-        timeCommitment: "part_time",
-        commitmentProfile: {
-          weeklyAvailabilityHours: 10,
-          fullTimeBy: "",
-          runwayBucket: "undisclosed",
-          currentStatus: "exploring",
-        },
-        governancePreferences: {
-          equityPhilosophy: "equal_unless_strong_reason",
-          leadershipPreference: session.role === "founder" ? "wants_ceo_role" : "prefers_non_ceo_role",
-          decisionModelPreference: "area_owner_decides",
-          deadlockPreference: "advisor_tiebreaker",
-        },
-        roleScope: {
-          primaryRole: session.role === "founder" ? "Founder" : "Collaborator",
-          nonResponsibilities: [],
-          accountabilityMilestones: [],
-        },
-        ipReadiness: {
-          existingAssets: [],
-          existingAssetsNotes: "",
-          priorObligations: "none_known",
-          readyToAssignIp: false,
-        },
-        links: {
-          linkedin: "",
-          github: "",
-          portfolio: "",
-          website: "",
-        },
-        hasIdea: session.role === "founder",
-        wantsToJoinIdea: session.role !== "founder",
-        values: [],
-        workStylePreferences: [],
-        privacy: {
-          profileVisibility: "members",
-          portfolioVisibility: "private",
-          opportunityVisibility: "members",
-          contactDetailsVisibleToMatchesOnly: true,
-          contactRevealStage: "matches",
-        },
-        verificationBadges: {
-          profileComplete: false,
-          emailVerified: true,
-          linkedAccounts: false,
-        },
-        intent: {
-          startTimeline: "exploring",
-          companyPreferences: [],
-          nonNegotiables: [],
-          introCapacity: "",
-        },
-        trustSignals: {
-          replyRatePercent: 0,
-          medianReplyHours: 48,
-          lastActiveAt: now(),
-          identityVerified: false,
-          workHistoryVerified: false,
-          phoneVerified: false,
-          linkedInVerified: false,
-          githubVerified: false,
-          workDomainVerified: false,
-          websiteVerified: false,
-          governmentIdVerified: false,
-          builderProofs: [],
-        },
-        availability: "Profile still in progress.",
-        portfolio: [],
-        ventures: [],
-        summaryHighlights: ["Finish onboarding to appear in recommendations"],
-      })
+      data.value.profiles.push(draftState.profile)
     }
 
     if (!existingSubscription) {
-      data.value.subscriptions.push({
-        id: `subscription_${session.id}`,
-        userId: session.id,
-        plan: session.subscriptionPlan,
-        status: "active",
-        billingCycle: "monthly",
-        renewsAt: null,
-        cancelAtPeriodEnd: false,
-        visibilityBoost: false,
-        unlimitedMessaging: false,
-        proposalWorkflow: false,
-        contractBuilder: false,
-      })
+      data.value.subscriptions.push(draftState.subscription)
     }
 
     syncProfileDerivedState(session.id)
+  }
+
+  async function loadWorkspace(force = false) {
+    ensureReady()
+
+    if (!session.value) {
+      resetSessionState()
+      return data.value
+    }
+
+    if (!supabaseBackedWorkspace.value) {
+      ensureSessionUser(session.value)
+      loadedUserId.value = session.value.id
+      ready.value = true
+      return data.value
+    }
+
+    if (!force && ready.value && loadedUserId.value === session.value.id)
+      return data.value
+
+    hydrating.value = true
+    persistError.value = ""
+
+    try {
+      const headers = import.meta.server ? useRequestHeaders(["cookie"]) : undefined
+      const response = await $fetch<{ data: WorkspaceSeed, session: SessionUser }>("/api/workspace", { headers })
+      data.value = cloneValue(response.data)
+      loadedUserId.value = response.session.id
+      lastSyncedAt.value = now()
+      ensureReady()
+      ready.value = true
+      return data.value
+    }
+    catch (caughtError) {
+      persistError.value = caughtError instanceof Error ? caughtError.message : "Unable to load the workspace."
+      throw caughtError
+    }
+    finally {
+      hydrating.value = false
+    }
+  }
+
+  async function persistWorkspace(force = false) {
+    if (!supabaseBackedWorkspace.value || !session.value || hydrating.value)
+      return data.value
+
+    const payload = buildMemberWorkspaceWritePayload(data.value, session.value.id)
+    if (!payload)
+      return data.value
+
+    if (syncing.value && !force)
+      return data.value
+
+    syncing.value = true
+
+    try {
+      const headers = import.meta.server ? useRequestHeaders(["cookie"]) : undefined
+      const response = await $fetch<{ data: WorkspaceSeed, session: SessionUser }>("/api/workspace/member", {
+        method: "POST",
+        body: { state: payload },
+        headers,
+      })
+      data.value = cloneValue(response.data)
+      loadedUserId.value = response.session.id
+      lastSyncedAt.value = now()
+      persistError.value = ""
+      ensureReady()
+      return data.value
+    }
+    catch (caughtError) {
+      persistError.value = caughtError instanceof Error ? caughtError.message : "Unable to save your workspace changes."
+      if (force)
+        throw caughtError
+      return data.value
+    }
+    finally {
+      syncing.value = false
+    }
   }
 
   function createDraftUserFromSignUp(session: SessionUser, displayName: string) {
@@ -1309,9 +1301,30 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     return getMessagesForConversation(data.value, conversationId).at(-1)
   }
 
+  if (import.meta.client) {
+    watchDebounced(data, async () => {
+      if (!supabaseBackedWorkspace.value || !session.value || hydrating.value || loadedUserId.value !== session.value.id)
+        return
+
+      await persistWorkspace()
+    }, {
+      debounce: 350,
+      deep: true,
+      maxWait: 1200,
+    })
+  }
+
   return {
     data,
     ready,
+    hydrating,
+    lastSyncedAt,
+    loadedUserId,
+    loadWorkspace,
+    persistError,
+    persistWorkspace,
+    resetSessionState,
+    syncing,
     completeMinimumOnboarding,
     cancelSubscriptionAtPeriodEnd,
     createContractFromProposal,
