@@ -62,17 +62,17 @@ function captureFiles(event: Event) {
   }))
 }
 
-function sendMessage() {
+async function sendMessage() {
   if (!conversation.value || !authStore.currentUser || !draftMessage.value.trim())
     return
 
-  workspaceStore.sendMessage(conversation.value.id, authStore.currentUser.id, draftMessage.value.trim(), attachments.value)
+  await workspaceStore.sendMessage(conversation.value.id, authStore.currentUser.id, draftMessage.value.trim(), attachments.value)
   workspaceStore.setTyping(conversation.value.id, authStore.currentUser.id, false)
   draftMessage.value = ""
   attachments.value = []
 }
 
-function createProposal(payload: any) {
+async function createProposal(payload: any) {
   if (!conversation.value || !authStore.currentUser || !otherParticipant.value)
     return
 
@@ -98,7 +98,7 @@ function createProposal(payload: any) {
     || workspaceStore.data.opportunities.find(item => item.ownerUserId === otherParticipant.value?.userId)?.id
     || null
 
-  const proposalId = workspaceStore.createProposal(
+  const proposalId = await workspaceStore.createProposal(
     authStore.currentUser.id,
     otherParticipant.value.userId,
     conversation.value.id,
@@ -118,11 +118,11 @@ function createProposal(payload: any) {
   navigateTo(`/app/proposals/${proposalId}`)
 }
 
-function startTrial() {
+async function startTrial() {
   if (!authStore.currentUser || !match.value)
     return
 
-  workspaceStore.startTrialCollaboration(match.value.id, authStore.currentUser.id)
+  await workspaceStore.startTrialCollaboration(match.value.id, authStore.currentUser.id)
   toastStore.push({
     title: "Trial started",
     message: "The conversation now has a structured trial-collaboration sprint attached to it.",
@@ -130,11 +130,11 @@ function startTrial() {
   })
 }
 
-function acknowledgeTrial() {
+async function acknowledgeTrial() {
   if (!authStore.currentUser || !trial.value)
     return
 
-  workspaceStore.acknowledgeTrialCollaboration(trial.value.id, authStore.currentUser.id)
+  await workspaceStore.acknowledgeTrialCollaboration(trial.value.id, authStore.currentUser.id)
   toastStore.push({
     title: "Trial acknowledged",
     message: "Your acknowledgement was recorded on the sprint plan.",

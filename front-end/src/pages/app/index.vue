@@ -168,8 +168,8 @@ function skillLabels(profileId: string) {
   return getProfileSkills(workspaceStore.data, profileId).map(item => item.skill.label)
 }
 
-function acceptConnectRequest(requestId: string) {
-  const conversationId = workspaceStore.respondToConnectRequest(requestId, "accepted")
+async function acceptConnectRequest(requestId: string) {
+  const conversationId = await workspaceStore.respondToConnectRequest(requestId, "accepted")
   toastStore.push({
     title: "Intro accepted",
     message: "Messaging is unlocked. Move straight into the proposed next step while intent is still fresh.",
@@ -180,8 +180,8 @@ function acceptConnectRequest(requestId: string) {
     navigateTo(`/app/messages/${conversationId}`)
 }
 
-function declineConnectRequest(requestId: string, reason: "timing" | "domain_mismatch" | "commitment_mismatch" | "values_mismatch" | "role_mismatch") {
-  workspaceStore.respondToConnectRequest(requestId, "declined", reason)
+async function declineConnectRequest(requestId: string, reason: "timing" | "domain_mismatch" | "commitment_mismatch" | "values_mismatch" | "role_mismatch") {
+  await workspaceStore.respondToConnectRequest(requestId, "declined", reason)
   toastStore.push({
     title: "Intro closed",
     message: "The other side now gets an explicit reason instead of silence.",

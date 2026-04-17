@@ -80,7 +80,7 @@ function openConnectDialog(userId: string, roleContext = "") {
   connectDialogOpen.value = true
 }
 
-function submitConnectRequest(payload: { note: string, structuredIntro: StructuredIntro }) {
+async function submitConnectRequest(payload: { note: string, structuredIntro: StructuredIntro }) {
   if (!authStore.currentUser || !connectTargetUserId.value)
     return
 
@@ -102,7 +102,7 @@ function submitConnectRequest(payload: { note: string, structuredIntro: Structur
     return
   }
 
-  const sent = workspaceStore.sendConnectRequest(authStore.currentUser.id, connectTargetUserId.value, payload)
+  const sent = await workspaceStore.sendConnectRequest(authStore.currentUser.id, connectTargetUserId.value, payload)
   if (!sent) {
     toastStore.push({
       title: "Request blocked",

@@ -24,11 +24,11 @@ const usage = computed(() => authStore.currentUser ? buildSubscriptionUsage(work
 
 usePageSeo("Opportunity details")
 
-function expressInterest(payload: { note: string, structuredIntro: StructuredIntro }) {
+async function expressInterest(payload: { note: string, structuredIntro: StructuredIntro }) {
   if (!authStore.currentUser || !opportunity.value)
     return
 
-  const sent = workspaceStore.sendConnectRequest(
+  const sent = await workspaceStore.sendConnectRequest(
     authStore.currentUser.id,
     opportunity.value.ownerUserId,
     payload,
