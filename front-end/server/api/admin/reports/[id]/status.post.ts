@@ -1,7 +1,7 @@
 import { requireAdminSession, validateAdminReportStatusPayload } from "../../../../utils/admin"
 
 export default defineEventHandler(async (event) => {
-  const session = requireAdminSession(event)
+  const session = await requireAdminSession(event)
   const payload = validateAdminReportStatusPayload(await readBody(event))
   const reportId = getRouterParam(event, "id")
 

@@ -73,6 +73,14 @@ function mapTables() {
       })),
     },
     {
+      name: "member_profile_state",
+      rows: workspaceSeed.profiles.map(profile => ({
+        user_id: profile.userId,
+        profile,
+        updated_at: new Date().toISOString(),
+      })),
+    },
+    {
       name: "skills",
       rows: workspaceSeed.skills.map(skill => ({
         id: skill.id,
@@ -109,6 +117,10 @@ function mapTables() {
         industries: opportunity.industries,
         location: opportunity.location,
         remote_preference: opportunity.remotePreference,
+        official_website: opportunity.officialWebsite,
+        verification_method: opportunity.verificationMethod,
+        verification_status: opportunity.verificationStatus,
+        risk_flags: opportunity.riskFlags,
         created_at: opportunity.createdAt,
         updated_at: opportunity.updatedAt,
         is_open: opportunity.isOpen,
@@ -139,7 +151,7 @@ function mapTables() {
     { name: "contracts", rows: workspaceSeed.contracts.map(contract => ({ id: contract.id, proposal_id: contract.proposalId, title: contract.title, status: contract.status, current_version_id: contract.currentVersionId, disclaimer_acknowledged: contract.disclaimerAcknowledged, created_at: contract.createdAt, updated_at: contract.updatedAt })) },
     { name: "contract_versions", rows: workspaceSeed.contractVersions.map(version => ({ id: version.id, contract_id: version.contractId, version_number: version.versionNumber, parties: version.parties, role_title: version.roleTitle, scope: version.scope, time_commitment: version.timeCommitment, compensation: version.compensation, equity: version.equity, vesting: version.vesting, ip_assignment: version.ipAssignment, confidentiality: version.confidentiality, decision_making: version.decisionMaking, termination: version.termination, dispute_resolution: version.disputeResolution, notes: version.notes, generated_from_proposal_version_id: version.generatedFromProposalVersionId, created_at: version.createdAt })) },
     { name: "signatures", rows: workspaceSeed.signatures.map(signature => ({ id: signature.id, contract_id: signature.contractId, contract_version_id: signature.contractVersionId, user_id: signature.userId, typed_name: signature.typedName, signed_at: signature.signedAt })) },
-    { name: "subscriptions", rows: workspaceSeed.subscriptions.map(subscription => ({ id: subscription.id, user_id: subscription.userId, plan: subscription.plan, status: subscription.status, billing_cycle: subscription.billingCycle, renews_at: subscription.renewsAt, visibility_boost: subscription.visibilityBoost, unlimited_messaging: subscription.unlimitedMessaging, proposal_workflow: subscription.proposalWorkflow, contract_builder: subscription.contractBuilder })) },
+    { name: "subscriptions", rows: workspaceSeed.subscriptions.map(subscription => ({ id: subscription.id, user_id: subscription.userId, plan: subscription.plan, status: subscription.status, billing_cycle: subscription.billingCycle, renews_at: subscription.renewsAt, cancel_at_period_end: subscription.cancelAtPeriodEnd, visibility_boost: subscription.visibilityBoost, unlimited_messaging: subscription.unlimitedMessaging, proposal_workflow: subscription.proposalWorkflow, contract_builder: subscription.contractBuilder })) },
     { name: "reports", rows: workspaceSeed.reports.map(report => ({ id: report.id, reporter_user_id: report.reporterUserId, target_type: report.targetType, target_id: report.targetId, reason: report.reason, details: report.details, status: report.status, created_at: report.createdAt })) },
     { name: "admin_actions", rows: workspaceSeed.adminActions.map(action => ({ id: action.id, admin_user_id: action.adminUserId, type: action.type, target_id: action.targetId, notes: action.notes, created_at: action.createdAt })) },
     { name: "investment_applications", rows: workspaceSeed.investmentApplications.map(application => ({ id: application.id, opportunity_id: application.opportunityId, applicant_user_id: application.applicantUserId, status: application.status, raise_amount: application.raiseAmount, traction: application.traction, deck_link: application.deckLink, team_summary: application.teamSummary, reason: application.reason, created_at: application.createdAt })) },

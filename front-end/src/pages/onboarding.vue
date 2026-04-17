@@ -59,6 +59,7 @@ async function submitProfile(payload: any) {
     return
 
   workspaceStore.completeMinimumOnboarding(authStore.currentUser.id, payload)
+  await workspaceStore.persistWorkspace(true)
   await authStore.completeOnboarding({
     ...authStore.currentUser,
     name: payload.displayName,
