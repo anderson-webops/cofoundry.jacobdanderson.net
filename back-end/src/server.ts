@@ -3,12 +3,7 @@ import { createServer } from "node:http"
 import { resolve } from "node:path"
 import process from "node:process"
 import { fileURLToPath } from "node:url"
-import { config } from "dotenv"
 import { assertEnvironmentIsValid, readPublicEnvironment } from "./environment.js"
-
-config({
-  path: resolve(process.cwd(), "../.env"),
-})
 
 export function resolveBackendPort() {
   const configuredPort = Number(process.env.BACKEND_PORT)

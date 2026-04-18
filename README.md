@@ -65,7 +65,7 @@ npm run server
 
 6. Open [http://localhost:3000](http://localhost:3000)
 
-The frontend workspace loads the root `.env` file via `--dotenv ../.env`, and the backend workspace reads the same root `.env` explicitly.
+The frontend workspace loads the root `.env` file via `--dotenv ../.env`. The backend `server`, `server:once`, and `seed` scripts optionally read `../.env` for local development, while `npm run -w back-end start` and `node dist/server.js` use only the host process environment.
 
 ## Environment model
 
