@@ -26,8 +26,8 @@
     "typecheck": "nuxt typecheck --dotenv ../.env"
   },
   "dependencies": {
-    "@supabase/supabase-js": "2.103.0",
-    "stripe": "22.0.1",
+    "@supabase/supabase-js": "2.103.3",
+    "stripe": "22.0.2",
     "zod": "4.3.6"
   },
   "devDependencies": {
