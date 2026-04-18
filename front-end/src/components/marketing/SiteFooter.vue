@@ -54,7 +54,7 @@ const primaryAccessCta = computed(() => getPrimaryAccessCta("site-footer"))
           <NuxtLink to="/contact">
             Contact
           </NuxtLink>
-          <div class="pt-2">
+          <div class="pt-2 max-w-full w-[12.5rem]">
             <ThemeSchemePicker compact align="start" />
           </div>
         </div>
