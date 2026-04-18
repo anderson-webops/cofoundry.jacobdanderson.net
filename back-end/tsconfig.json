@@ -4,6 +4,7 @@
     "incremental": true,
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "types": ["node"],
     "rootDir": "./src",
     "sourceMap": true,
     "outDir": "./dist",

@@ -6,20 +6,19 @@
   "private": true,
   "main": "dist/server.js",
   "scripts": {
-    "server": "tsx watch src/server.ts",
-    "server:once": "tsx src/server.ts",
+    "server": "node --env-file-if-exists=../.env --import tsx --watch src/server.ts",
+    "server:once": "node --env-file-if-exists=../.env --import tsx src/server.ts",
     "start": "node dist/server.js",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint \"src/**/*.{js,ts}\" \"scripts/**/*.ts\" \"test/**/*.ts\"",
     "lint-fix": "eslint \"src/**/*.{js,ts}\" \"scripts/**/*.ts\" \"test/**/*.ts\" --fix",
-    "seed": "tsx scripts/seed.ts",
+    "seed": "node --env-file-if-exists=../.env --import tsx scripts/seed.ts",
     "test": "node --test --import tsx test/**/*.test.ts",
     "test:run": "node --test --import tsx test/**/*.test.ts"
   },
   "dependencies": {
-    "@supabase/supabase-js": "2.103.0",
-    "dotenv": "17.4.1"
+    "@supabase/supabase-js": "2.103.0"
   },
   "devDependencies": {
     "@types/node": "25.6.0",

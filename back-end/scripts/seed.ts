@@ -2,13 +2,8 @@ import { mkdir, writeFile } from "node:fs/promises"
 import { dirname, resolve } from "node:path"
 import process from "node:process"
 import { createClient } from "@supabase/supabase-js"
-import { config } from "dotenv"
 import { workspaceSeed } from "../../front-end/shared/data/seed"
 import { formatEnvironmentValidationError, readPublicEnvironment, readSecretEnvironment } from "../src/environment"
-
-config({
-  path: resolve(process.cwd(), "../.env"),
-})
 
 const localOutputPath = resolve(process.cwd(), "../.data/mock-seed.json")
 
