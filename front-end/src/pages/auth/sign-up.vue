@@ -52,12 +52,12 @@ async function submitForm() {
         Request workspace access.
       </h2>
       <p class="muted text-sm leading-6 mt-3">
-        CoFoundry's public shell is live now. Full member workspaces will open behind a persisted backend, not a marketing-only preview.
+        Public pages are open now. Member workspaces are being opened deliberately.
       </p>
 
       <div class="panel-inset mt-8 p-5">
         <p class="text-sm font-semibold">
-          Access requests work best when they include
+          Include these details in your request
         </p>
         <div class="muted text-sm leading-6 mt-3 gap-3 grid">
           <div>Your role in the search: founder, collaborator, or venture studio lead.</div>
@@ -83,10 +83,10 @@ async function submitForm() {
     </template>
     <template v-else>
       <h2 class="text-3xl tracking-tight font-semibold mt-3">
-        Start with a clean profile and a serious intent signal.
+        Create your account.
       </h2>
       <p class="muted text-sm leading-6 mt-3">
-        Founder relationships are high-trust and high-consequence. CoFoundry starts by asking enough to make your profile useful.
+        Start with the basics now. You can finish the rest of your profile during onboarding.
       </p>
 
       <form class="mt-8 gap-4 grid" @submit.prevent="submitForm">

@@ -83,10 +83,10 @@ async function submitProfile(payload: any) {
       Onboarding
     </p>
     <h1 class="text-3xl tracking-tight font-semibold mt-3">
-      Reach the first credible match before the form gets heavy.
+      Build a usable profile first.
     </h1>
     <p class="muted text-sm leading-6 mt-4">
-      This first pass is intentionally short. CoFoundry needs enough signal to rank the right people: a recognizable profile, role, weekly bandwidth, runway, timing, and equity philosophy. The deeper profile fields can unlock outreach, proposals, and contracts.
+      This first pass is short on purpose. Add enough detail to see your first matches, then finish the deeper profile fields before you start outreach.
     </p>
 
     <div v-if="!previewUnlocked" class="mt-8">
@@ -105,7 +105,7 @@ async function submitProfile(payload: any) {
               Match preview ready
             </p>
             <p class="muted text-sm leading-6 mt-2">
-              {{ shouldShowProfilePreview ? "These are the collaborators CoFoundry would put in front of you first." : "These are the founder opportunities CoFoundry would put in front of you first." }}
+              {{ shouldShowProfilePreview ? "These are the collaborators the product would show you first." : "These are the founder opportunities the product would show you first." }}
             </p>
           </div>
           <BaseBadge :tone="readiness?.trustReady ? 'success' : 'accent'">
@@ -115,7 +115,7 @@ async function submitProfile(payload: any) {
 
         <div class="panel-inset mt-5 p-5">
           <p class="text-sm font-semibold">
-            Outreach unlock rule
+            Outreach
           </p>
           <p class="muted text-sm leading-6 mt-2">
             {{ readiness?.readyForOutreach ? "You are ready to send connect requests." : `Add ${readiness?.missingOutreachItems.join(", ")} to unlock outreach.` }}

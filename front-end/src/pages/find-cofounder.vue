@@ -31,10 +31,10 @@ usePageSeo(
             Public founder directory
           </p>
           <h1 class="text-4xl tracking-tight font-semibold mt-4 max-w-3xl md:text-6xl">
-            Search startup team formation by role, stage, and company shape.
+            Browse founders, cofounders, and startup searches by role, stage, and market.
           </h1>
           <p class="muted text-lg leading-8 mt-6 max-w-2xl">
-            CoFoundry exposes opt-in public founder profiles and startup searches for people who want to be found. Direct contact still runs through mutual intent, but the public layer proves that real inventory exists before you sign up.
+            CoFoundry exposes opt-in public profiles and startup searches for people who want to be found. Direct contact still runs through the product.
           </p>
           <div class="mt-8 flex flex-wrap gap-3">
             <BaseButton size="lg" :to="directoryAccessCta.to">
@@ -55,10 +55,10 @@ usePageSeo(
           </div>
           <div class="panel-inset mt-6 p-4">
             <p class="text-sm font-semibold">
-              Why this page exists
+              What stays private
             </p>
             <p class="muted text-sm leading-6 mt-3">
-              Serious founder matching works better when people can browse real, structured inventory before they decide whether the product is worth joining.
+              Direct email, phone, and member-only details stay inside CoFoundry until both sides opt in.
             </p>
           </div>
         </div>
@@ -70,7 +70,7 @@ usePageSeo(
         <PageIntro
           eyebrow="Browse by role"
           title="Start with the role gap you are actually trying to close."
-          description="Role-first discovery is the cleanest search pattern in early-stage team formation. These public hubs reflect live founder inventory and active startup searches."
+          description="Role-first discovery is usually the fastest way to narrow a search."
         >
           <template #actions>
             <BaseButton variant="secondary" to="/roles">
@@ -110,7 +110,7 @@ usePageSeo(
           <PageIntro
             eyebrow="Browse by industry"
             title="Find founder searches in markets you already understand."
-            description="Industry hubs work when they map to real operator judgment, not generic startup content."
+            description="Industry hubs help you stay inside markets you already understand."
           />
           <div class="mt-8 gap-4 grid">
             <NuxtLink
@@ -138,7 +138,7 @@ usePageSeo(
           <PageIntro
             eyebrow="Browse by stage"
             title="Sort for the pace and ambiguity level you actually want."
-            description="Idea-stage and traction-stage searches have different expectations. Public stage hubs make that difference visible."
+            description="Idea-stage and traction-stage searches come with different expectations."
           />
           <div class="mt-8 gap-4 grid">
             <NuxtLink
@@ -169,7 +169,7 @@ usePageSeo(
         <PageIntro
           eyebrow="Public profiles"
           title="Opt-in profiles that prove seriousness before contact unlocks."
-          description="These pages stay lightweight on purpose: enough proof, intent, and company-fit detail to judge whether a conversation is worth earning."
+          description="These pages stay lightweight on purpose: enough context to decide whether a conversation is worth requesting."
         >
           <template #actions>
             <BaseButton variant="secondary" to="/people">
@@ -198,7 +198,7 @@ usePageSeo(
         <PageIntro
           eyebrow="Public startup searches"
           title="See how founders frame the role before you ask for an intro."
-          description="The public startup layer is intentionally high-signal: problem, stage, role expectations, trust markers, and the kind of commitment the founder expects."
+          description="Public startup searches show the problem, stage, role expectations, and commitment level before you ask for an intro."
         >
           <template #actions>
             <BaseButton variant="secondary" to="/startups">
@@ -228,7 +228,7 @@ usePageSeo(
             Trust Center
           </p>
           <h2 class="text-3xl tracking-tight font-semibold mt-3">
-            Search visibility only works if the safety model is explicit.
+            See how privacy, outreach, and moderation work.
           </h2>
           <div class="mt-6 gap-4 grid">
             <NuxtLink

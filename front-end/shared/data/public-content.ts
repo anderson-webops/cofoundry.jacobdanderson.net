@@ -19,7 +19,7 @@ export const trustCenterPages: GuidePage[] = [
   {
     slug: "profile-visibility",
     title: "Profile visibility and employer safety",
-    description: "Public discovery only works if serious people can control when their identity becomes indexable and when direct outreach becomes possible.",
+    description: "Control when your profile is public, who can see it, and when direct outreach becomes possible.",
     eyebrow: "Trust Center",
     category: "trust",
     ctaLabel: "Create a private-first profile",
@@ -27,11 +27,11 @@ export const trustCenterPages: GuidePage[] = [
     sections: [
       {
         title: "Private by default, public by choice",
-        body: "CoFoundry treats public visibility as an explicit opt-in. Members can stay private, member-visible, or open a public preview page when they want to be discoverable to the wider web.",
+        body: "Members can stay private, member-visible, or open a public preview page when they want to be discoverable on the wider web.",
       },
       {
         title: "Contact details stay gated",
-        body: "Even when a profile is public, direct email and phone details are not. The public page is there to prove fit and credibility. Access to the person still runs through CoFoundry's mutual-interest workflow.",
+        body: "Even when a profile is public, direct email and phone details are not. Public pages help people evaluate fit before they request contact through CoFoundry.",
         bullets: [
           "Public pages show role fit, proof of work, and company preferences.",
           "Contact details remain hidden until the member's reveal rule is met.",
@@ -40,14 +40,14 @@ export const trustCenterPages: GuidePage[] = [
       },
       {
         title: "When to go public",
-        body: "Public profiles work best when someone is actively running a search, wants shareable proof of seriousness, and can handle a small number of qualified inbound requests without creating noise.",
+        body: "Public profiles work best when you are actively running a search and want a shareable page that still keeps direct outreach inside the product.",
       },
     ],
   },
   {
     slug: "anti-spam",
     title: "Anti-spam and outreach limits",
-    description: "A founder-matching product gets worse fast when every new account can spray messages or scrape links. CoFoundry keeps that channel intentionally narrow.",
+    description: "CoFoundry limits outreach so the network stays usable and conversations stay relevant.",
     eyebrow: "Trust Center",
     category: "trust",
     ctaLabel: "See how matching works",
@@ -55,11 +55,11 @@ export const trustCenterPages: GuidePage[] = [
     sections: [
       {
         title: "Why limits exist",
-        body: "The point of the network is not maximum message volume. It is a higher percentage of serious conversations. Free-tier limits, trust tiers, and moderation rules protect that.",
+        body: "The point of the network is not maximum message volume. Limits, trust checks, and moderation are there to keep the conversation quality high.",
       },
       {
         title: "What we look for",
-        body: "Signals that support more access include stronger profile completeness, proof-of-work links, recent activity, and step-up verification for higher-risk actions.",
+        body: "Signals that support more access include stronger profile completeness, proof links, recent activity, and extra verification for higher-risk actions.",
         bullets: [
           "Low-effort profiles do not get full outbound access.",
           "Off-platform pressure, fee requests, or scraping behavior trigger review.",
@@ -68,14 +68,14 @@ export const trustCenterPages: GuidePage[] = [
       },
       {
         title: "What happens if a member is restricted",
-        body: "Restrictions are reviewable. Reports, safety context, and moderation actions are attached to the case so the decision can be revisited if the account was flagged incorrectly.",
+        body: "Restrictions are reviewable. Reports and moderation actions stay attached to the case so a decision can be revisited if the account was flagged incorrectly.",
       },
     ],
   },
   {
     slug: "not-a-freelance-marketplace",
-    title: "Why CoFoundry is not a freelance marketplace",
-    description: "The product is built for long-term startup formation: shared ownership, serious commitment, and founder-level clarity. It is not optimized for gigs, recruiting funnels, or consulting lead-gen.",
+    title: "Who CoFoundry is for",
+    description: "CoFoundry is built for founders, co-founders, and early collaborators forming real companies together.",
     eyebrow: "Trust Center",
     category: "trust",
     ctaLabel: "Browse public founder searches",
@@ -86,8 +86,8 @@ export const trustCenterPages: GuidePage[] = [
         body: "Founders, future co-founders, and early collaborators who want to start or join a business with meaningful ownership, defined scope, and shared downside.",
       },
       {
-        title: "What we do not want on the network",
-        body: "Recruiting around full-time jobs, freelance project work, advisory spam, and off-platform service selling all degrade matching quality.",
+        title: "What does not belong here",
+        body: "Recruiting for ordinary jobs, freelance project work, advisory spam, and off-platform service selling all make matching worse.",
         bullets: [
           "If you need one-off execution, use a services marketplace.",
           "If you are hiring employees, use a recruiting product.",
@@ -95,8 +95,8 @@ export const trustCenterPages: GuidePage[] = [
         ],
       },
       {
-        title: "Why the distinction matters",
-        body: "The product only works if users can trust that outreach is coming from people who actually want to build a company together rather than extract leads or sell hours.",
+        title: "Why the focus matters",
+        body: "The product only works if people can trust that outreach is coming from someone who actually wants to build a company together.",
       },
     ],
   },
@@ -106,7 +106,7 @@ export const contractGuidePages: GuidePage[] = [
   {
     slug: "founder-agreement",
     title: "Founder agreement checklist",
-    description: "The right founder agreement starts with decisions about scope, economics, decision rights, and exit paths. CoFoundry turns those into a structured workflow before the document exists.",
+    description: "A strong founder agreement starts with clear decisions about scope, economics, decision rights, and exits.",
     eyebrow: "Contracts & Proposals",
     category: "contracts",
     ctaLabel: "Start with a proposal",
@@ -114,7 +114,7 @@ export const contractGuidePages: GuidePage[] = [
     sections: [
       {
         title: "Decisions that should already be explicit",
-        body: "A clean founder agreement usually reflects decisions already made in conversation and a trial sprint, not surprises introduced by the document itself.",
+        body: "A clean founder agreement should reflect decisions already made in conversation and a trial sprint, not surprises introduced by the document itself.",
         bullets: [
           "Who owns what role and what is explicitly out of scope.",
           "How much time each person is committing and by when.",
@@ -135,7 +135,7 @@ export const contractGuidePages: GuidePage[] = [
   {
     slug: "trial-project-plan",
     title: "Trial project plan for co-founders",
-    description: "A short working sprint reveals more than a dozen chemistry calls. Use a trial plan to test communication, pace, and ownership before equity terms calcify.",
+    description: "A short working sprint reveals more than a long run of speculative calls.",
     eyebrow: "Contracts & Proposals",
     category: "contracts",
     ctaLabel: "See the workflow",
@@ -152,7 +152,7 @@ export const contractGuidePages: GuidePage[] = [
       },
       {
         title: "What the sprint is testing",
-        body: "Not just output. It should expose communication quality, judgment, how disagreement gets resolved, and whether the role boundaries still make sense after real work starts.",
+        body: "It should expose communication quality, judgment, how disagreement gets resolved, and whether the role boundaries still make sense after real work starts.",
       },
       {
         title: "How it feeds the proposal",
@@ -163,7 +163,7 @@ export const contractGuidePages: GuidePage[] = [
   {
     slug: "founder-vesting",
     title: "Founder vesting and cliffs explained",
-    description: "Vesting is not punishment. It is a way to make long-term ownership reflect long-term contribution and to protect the company if the partnership breaks early.",
+    description: "Vesting helps long-term ownership reflect long-term contribution and protects the company if the partnership breaks early.",
     eyebrow: "Contracts & Proposals",
     category: "contracts",
     ctaLabel: "Review agreement terms",
@@ -191,7 +191,7 @@ export const contractGuidePages: GuidePage[] = [
   {
     slug: "ip-assignment",
     title: "IP assignment for founder teams",
-    description: "Founder teams should understand what work already exists, what might be constrained by employment obligations, and what needs to transfer cleanly into the company.",
+    description: "Founder teams should know what already exists, what may be constrained by employment obligations, and what needs to transfer into the company.",
     eyebrow: "Contracts & Proposals",
     category: "contracts",
     ctaLabel: "Compare proposal terms",
@@ -199,7 +199,7 @@ export const contractGuidePages: GuidePage[] = [
     sections: [
       {
         title: "Questions to answer before drafting",
-        body: "IP conversations go badly when the team skips past the messy part: pre-existing assets, side projects, employer restrictions, and ambiguous ownership of early prototypes.",
+        body: "IP conversations go badly when the team skips pre-existing assets, side projects, employer restrictions, and ambiguous ownership of early prototypes.",
         bullets: [
           "What already exists before the company is formed.",
           "Whether any current employer or client claim could conflict.",
@@ -208,7 +208,7 @@ export const contractGuidePages: GuidePage[] = [
       },
       {
         title: "Why this belongs in the workflow",
-        body: "IP readiness is not a legal afterthought. It is a founder-fit question. People who cannot discuss constraints clearly should not be sending clean-looking founder terms yet.",
+        body: "IP readiness is not a legal afterthought. People who cannot discuss constraints clearly should not be sending founder terms yet.",
       },
       {
         title: "What CoFoundry does",

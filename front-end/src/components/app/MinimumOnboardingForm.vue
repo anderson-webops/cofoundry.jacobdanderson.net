@@ -58,9 +58,9 @@ const form = reactive({
 })
 
 const steps = [
-  { title: "Intent", description: "Pick the path that matches why you are here right now." },
+  { title: "Intent", description: "Choose the path that matches what you want right now." },
   { title: "Commitment", description: "Show the role, timing, and working shape you can support." },
-  { title: "Fit", description: "Give CoFoundry enough context to preview the right people." },
+  { title: "Fit", description: "Add enough context to preview the right people." },
 ]
 
 const intentOptions = [
@@ -158,14 +158,14 @@ function submitForm() {
         v-model="form.photoUrl"
         label="Profile photo URL"
         type="url"
-        helper="Use a clear headshot or recognizable profile image. This is part of the trust-critical surface."
+        helper="Use a clear headshot or another profile image people can recognize."
         :error="errors.photoUrl"
         required
       />
       <SelectInput
         v-model="form.profileVisibility"
         label="Visibility"
-        helper="Members-only is the default so you can evaluate fit without broadcasting to the public web."
+        helper="Members only keeps your profile inside CoFoundry by default."
         :options="[
           { label: 'Public-lite', value: 'public' },
           { label: 'Members only', value: 'members' },
@@ -179,20 +179,20 @@ function submitForm() {
       <TextInput
         v-model="form.headline"
         label="One-line summary"
-        helper="Example: Technical co-founder ready to join a compliance startup with strong founder-market fit."
+        helper="Example: Technical co-founder ready to join a compliance startup."
         :error="errors.headline"
         required
       />
       <TextareaInput
         v-model="form.bio"
-        label="What are you trying to build or join?"
-        helper="Keep it specific: customer, wedge, role, or company shape."
+        label="What are you building or looking for?"
+        helper="Keep it specific: customer, role, market, or company shape."
         :rows="5"
         :error="errors.bio"
       />
       <div class="gap-4 grid md:grid-cols-2">
         <SelectInput v-model="form.primaryRole" label="Primary role" :options="roleOptions.map(role => ({ label: role, value: role }))" :error="errors.primaryRole" />
-        <PillPicker v-model="form.roles" label="Role coverage" :options="roleOptions" helper="Choose the other roles you can credibly own in the first year." />
+        <PillPicker v-model="form.roles" label="Role coverage" :options="roleOptions" helper="Choose the other roles you can realistically own in the first year." />
       </div>
       <div class="gap-4 grid md:grid-cols-3">
         <SelectInput v-model="form.timeCommitment" label="Commitment" :options="commitmentOptions" :error="errors.timeCommitment" />
@@ -207,7 +207,7 @@ function submitForm() {
       <SelectInput
         v-model="form.equityPhilosophy"
         label="Equity philosophy"
-        helper="This helps CoFoundry avoid obvious mismatch before the first proposal."
+        helper="This helps avoid obvious mismatch before the first proposal."
         :options="equityPhilosophyOptions"
         :error="errors.equityPhilosophy"
       />
@@ -231,7 +231,7 @@ function submitForm() {
           What happens next
         </p>
         <p class="muted text-sm leading-6 mt-3">
-          You will get an immediate match preview. Outreach stays locked until you add proof of work, declare non-negotiables, and complete phone verification.
+          You will get a match preview right away. Outreach unlocks after you finish the remaining profile and verification steps.
         </p>
       </div>
     </section>

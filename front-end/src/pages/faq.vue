@@ -43,7 +43,7 @@ usePageSeo("FAQ", undefined, {
     <PageIntro
       eyebrow="FAQ"
       title="Questions founders ask before they trust a matching platform."
-      description="The answers are intentionally direct. CoFoundry is built around startup relationships, clear expectations, and a structured workflow."
+      description="Direct answers about how CoFoundry works."
     />
 
     <div class="mt-10 gap-4 grid">

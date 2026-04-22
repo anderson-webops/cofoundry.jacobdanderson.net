@@ -7,7 +7,7 @@ export const marketingNavigation = [
   { label: "How it works", to: "/how-it-works" },
   { label: "Pricing", to: "/pricing" },
   { label: "Trust Center", to: "/trust" },
-  { label: "Resources", to: "/contracts" },
+  { label: "Guides", to: "/contracts" },
 ]
 
 export const appNavigation = [
