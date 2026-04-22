@@ -67,7 +67,7 @@ useEventListener("keydown", (event: KeyboardEvent) => {
         </div>
         <button
           type="button"
-          class="rounded-full border border-[var(--line)] p-2 text-[var(--text)] transition hover:bg-[var(--accent-soft)]"
+          class="text-[var(--text)] p-2 border border-[var(--line)] rounded-full transition hover:bg-[var(--accent-soft)]"
           aria-label="Close color scheme picker"
           @click="open = false"
         >
@@ -102,7 +102,7 @@ useEventListener("keydown", (event: KeyboardEvent) => {
               </p>
             </div>
 
-            <div class="flex self-start shrink-0 gap-2">
+            <div class="flex shrink-0 gap-2 self-start">
               <div class="p-1.5 border border-black/8 rounded-2xl bg-white/40">
                 <div class="flex gap-1">
                   <span class="border border-black/8 rounded-xl h-7 w-7" :style="{ backgroundColor: option.swatches.light.surface }" />

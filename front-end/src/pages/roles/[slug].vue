@@ -27,7 +27,7 @@ usePageSeo(`${hub.label} searches`, hub.description, {
 </script>
 
 <template>
-  <div class="page-shell py-16 md:py-20">
+  <div class="page-shell page-section">
     <PageIntro
       eyebrow="Role hub"
       :title="hub.label"
@@ -93,12 +93,12 @@ usePageSeo(`${hub.label} searches`, hub.description, {
         <h2 class="text-2xl font-semibold">
           Related browse paths
         </h2>
-        <div class="mt-6 gap-4 grid">
+        <div class="surface-row-list mt-6">
           <NuxtLink
             v-for="entry in relatedIndustries"
             :key="`industry-${entry.slug}`"
             :to="`/industries/${entry.slug}`"
-            class="panel-inset p-4 transition hover:border-[var(--accent)]"
+            class="surface-row block transition hover:text-[var(--accent)]"
           >
             <p class="font-semibold">
               {{ entry.label }}
@@ -111,7 +111,7 @@ usePageSeo(`${hub.label} searches`, hub.description, {
             v-for="entry in relatedStages"
             :key="`stage-${entry.slug}`"
             :to="`/stage/${entry.slug}`"
-            class="panel-inset p-4 transition hover:border-[var(--accent)]"
+            class="surface-row block transition hover:text-[var(--accent)]"
           >
             <p class="font-semibold">
               {{ entry.label }}
@@ -127,10 +127,10 @@ usePageSeo(`${hub.label} searches`, hub.description, {
         <h2 class="text-2xl font-semibold">
           Trust and deal-room context
         </h2>
-        <div class="mt-6 gap-4 grid">
+        <div class="surface-row-list mt-6">
           <NuxtLink
             :to="`/trust/${visibilityGuide.slug}`"
-            class="panel-inset p-4 transition hover:border-[var(--accent)]"
+            class="surface-row block transition hover:text-[var(--accent)]"
           >
             <p class="font-semibold">
               {{ visibilityGuide.title }}
@@ -141,7 +141,7 @@ usePageSeo(`${hub.label} searches`, hub.description, {
           </NuxtLink>
           <NuxtLink
             :to="`/contracts/${founderAgreementGuide.slug}`"
-            class="panel-inset p-4 transition hover:border-[var(--accent)]"
+            class="surface-row block transition hover:text-[var(--accent)]"
           >
             <p class="font-semibold">
               {{ founderAgreementGuide.title }}

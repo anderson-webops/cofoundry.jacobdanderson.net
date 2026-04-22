@@ -8,7 +8,7 @@ usePageSeo("Trust & Safety", "Designed to reduce spam, ambiguity, and bad-faith 
 </script>
 
 <template>
-  <div class="page-shell py-16 md:py-20">
+  <div class="reading-shell page-section">
     <PageIntro
       eyebrow="Trust & Safety"
       title="Designed to reduce spam, ambiguity, and bad-faith founder behavior."
@@ -30,7 +30,7 @@ usePageSeo("Trust & Safety", "Designed to reduce spam, ambiguity, and bad-faith 
       <h2 class="text-2xl font-semibold">
         Trust tiers
       </h2>
-      <div class="mt-6 gap-4 grid md:grid-cols-3">
+      <div class="subtle-grid mt-6 md:grid-cols-3">
         <div class="panel-inset p-4">
           <p class="text-sm font-semibold">
             Level A
@@ -98,7 +98,7 @@ usePageSeo("Trust & Safety", "Designed to reduce spam, ambiguity, and bad-faith 
       <h2 class="text-2xl font-semibold">
         Behavior that degrades the network
       </h2>
-      <div class="mt-6 gap-4 grid md:grid-cols-2">
+      <div class="subtle-grid mt-6 md:grid-cols-2">
         <div class="panel-inset p-4">
           <p class="text-sm font-semibold">
             Not acceptable
@@ -128,7 +128,7 @@ usePageSeo("Trust & Safety", "Designed to reduce spam, ambiguity, and bad-faith 
       <h2 class="text-2xl font-semibold">
         Official communication rules
       </h2>
-      <div class="mt-6 gap-4 grid md:grid-cols-2">
+      <div class="subtle-grid mt-6 md:grid-cols-2">
         <div class="panel-inset p-4">
           <p class="text-sm font-semibold">
             What CoFoundry will do
@@ -165,7 +165,7 @@ usePageSeo("Trust & Safety", "Designed to reduce spam, ambiguity, and bad-faith 
       <h2 class="text-2xl font-semibold">
         Trust Center guides
       </h2>
-      <div class="mt-6 gap-4 grid md:grid-cols-3">
+      <div class="subtle-grid mt-6 md:grid-cols-3">
         <NuxtLink
           v-for="page in trustCenterPages"
           :key="page.slug"

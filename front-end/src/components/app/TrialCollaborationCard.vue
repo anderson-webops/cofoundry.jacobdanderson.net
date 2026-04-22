@@ -10,7 +10,7 @@ defineProps<{
 </script>
 
 <template>
-  <article class="panel-inset p-5 gap-4 grid">
+  <article class="panel p-5 gap-4 grid">
     <div class="flex gap-3 items-start justify-between">
       <div>
         <h3 class="text-base font-semibold">

@@ -95,7 +95,7 @@ async function updateReportStatus(row: AdminReportRow, status: "reviewed" | "res
 </script>
 
 <template>
-  <div class="gap-6 grid">
+  <div class="gap-5 grid md:gap-6">
     <PageIntro
       eyebrow="Admin"
       title="Reports"
@@ -127,14 +127,14 @@ async function updateReportStatus(row: AdminReportRow, status: "reviewed" | "res
               <BaseBadge :tone="row.report.priority === 'high' ? 'warning' : 'neutral'">
                 {{ row.report.priority }} priority
               </BaseBadge>
-              <BaseBadge tone="neutral">
-                {{ row.report.targetType }}
-              </BaseBadge>
             </div>
 
             <h2 class="text-lg font-semibold mt-4">
               {{ formatReportReason(row.report.reason) }} on {{ row.targetLabel }}
             </h2>
+            <p class="muted text-xs tracking-[0.12em] mt-2 uppercase">
+              {{ row.report.targetType }}
+            </p>
             <p class="muted text-sm leading-6 mt-2">
               {{ row.targetContext }}
             </p>
@@ -153,7 +153,7 @@ async function updateReportStatus(row: AdminReportRow, status: "reviewed" | "res
               </p>
             </div>
 
-            <div v-if="row.report.reviewNotes" class="panel-inset mt-4 p-4">
+            <div v-if="row.report.reviewNotes" class="surface-divider mt-4">
               <p class="text-xs text-[var(--muted)] tracking-[0.12em] font-semibold uppercase">
                 Review note
               </p>
@@ -162,7 +162,7 @@ async function updateReportStatus(row: AdminReportRow, status: "reviewed" | "res
               </p>
             </div>
 
-            <div v-if="row.report.resolutionNotes" class="panel-inset mt-4 p-4">
+            <div v-if="row.report.resolutionNotes" class="surface-divider mt-4">
               <p class="text-xs text-[var(--muted)] tracking-[0.12em] font-semibold uppercase">
                 Resolution note
               </p>
@@ -172,7 +172,7 @@ async function updateReportStatus(row: AdminReportRow, status: "reviewed" | "res
             </div>
           </div>
 
-          <div class="panel-inset p-4 max-w-[360px] w-full">
+          <div class="panel p-4 max-w-[360px] w-full">
             <h3 class="text-sm font-semibold">
               Moderation action
             </h3>

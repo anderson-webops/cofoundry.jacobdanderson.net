@@ -106,7 +106,7 @@ function quotaText(key: "intros" | "savedSearches" | "proposals" | "contractDraf
 </script>
 
 <template>
-  <div class="gap-6 grid">
+  <div class="gap-5 grid md:gap-6">
     <PageIntro
       eyebrow="Billing"
       title="Transparent pricing, usage, and cancellation"
@@ -130,7 +130,7 @@ function quotaText(key: "intros" | "savedSearches" | "proposals" | "contractDraf
       <MetricTile label="Deal rooms" :value="quotaText('proposals')" context="Structured proposal sends this month." />
     </div>
 
-    <div class="gap-6 grid xl:grid-cols-[0.88fr_1.12fr]">
+    <div class="gap-5 grid md:gap-6 xl:grid-cols-[0.88fr_1.12fr]">
       <section class="panel p-6">
         <div class="flex gap-4 items-start justify-between">
           <div>
@@ -146,8 +146,8 @@ function quotaText(key: "intros" | "savedSearches" | "proposals" | "contractDraf
           </BaseBadge>
         </div>
 
-        <div class="mt-5 gap-4 grid md:grid-cols-2">
-          <div class="panel-inset p-4">
+        <div class="surface-row-list mt-5 md:gap-x-6 md:grid md:grid-cols-2">
+          <div class="surface-row md:pr-4">
             <p class="text-sm font-semibold">
               Current charge
             </p>
@@ -155,7 +155,7 @@ function quotaText(key: "intros" | "savedSearches" | "proposals" | "contractDraf
               {{ currentPriceLabel }} · {{ formatBillingCycle(subscription?.billingCycle || "monthly") }}
             </p>
           </div>
-          <div class="panel-inset p-4">
+          <div class="surface-row md:pr-4">
             <p class="text-sm font-semibold">
               Cancellation
             </p>
@@ -187,8 +187,8 @@ function quotaText(key: "intros" | "savedSearches" | "proposals" | "contractDraf
         <h2 class="text-xl font-semibold">
           Plan usage
         </h2>
-        <div v-if="usage" class="mt-5 gap-4 grid md:grid-cols-2">
-          <div class="panel-inset p-4">
+        <div v-if="usage" class="surface-row-list mt-5 md:gap-x-6 md:grid md:grid-cols-2">
+          <div class="surface-row md:pr-4">
             <p class="text-sm font-semibold">
               New intros
             </p>
@@ -196,7 +196,7 @@ function quotaText(key: "intros" | "savedSearches" | "proposals" | "contractDraf
               {{ quotaText("intros") }}. This is the main anti-spam meter, not matched messaging.
             </p>
           </div>
-          <div class="panel-inset p-4">
+          <div class="surface-row md:pr-4">
             <p class="text-sm font-semibold">
               Saved searches
             </p>
@@ -204,7 +204,7 @@ function quotaText(key: "intros" | "savedSearches" | "proposals" | "contractDraf
               {{ quotaText("savedSearches") }}. Paid tiers are built for repeatable searches and alerts.
             </p>
           </div>
-          <div class="panel-inset p-4">
+          <div class="surface-row md:pr-4">
             <p class="text-sm font-semibold">
               Proposal sends
             </p>
@@ -212,7 +212,7 @@ function quotaText(key: "intros" | "savedSearches" | "proposals" | "contractDraf
               {{ quotaText("proposals") }}. Deal rooms are metered because they mark a real commitment event.
             </p>
           </div>
-          <div class="panel-inset p-4">
+          <div class="surface-row md:pr-4">
             <p class="text-sm font-semibold">
               Agreement drafts
             </p>
@@ -228,8 +228,8 @@ function quotaText(key: "intros" | "savedSearches" | "proposals" | "contractDraf
       <h2 class="text-xl font-semibold">
         Recent billing activity
       </h2>
-      <div v-if="billingMoments.length" class="mt-5 gap-3 grid">
-        <div v-for="item in billingMoments" :key="item.id" class="panel-inset p-4 flex gap-4 items-start justify-between">
+      <div v-if="billingMoments.length" class="surface-row-list mt-5">
+        <div v-for="item in billingMoments" :key="item.id" class="surface-row flex gap-4 items-start justify-between">
           <div>
             <p class="text-sm font-semibold">
               {{ item.label }}
@@ -243,7 +243,7 @@ function quotaText(key: "intros" | "savedSearches" | "proposals" | "contractDraf
           </BaseBadge>
         </div>
       </div>
-      <div v-else class="panel-inset mt-5 p-4">
+      <div v-else class="surface-divider mt-5">
         <p class="text-sm font-semibold">
           No paid receipts yet
         </p>
@@ -275,9 +275,9 @@ function quotaText(key: "intros" | "savedSearches" | "proposals" | "contractDraf
           </li>
         </ul>
         <div class="mt-6">
-          <BaseBadge v-if="tier.id === subscription?.plan" tone="accent">
+          <p v-if="tier.id === subscription?.plan" class="text-sm text-[var(--accent)] font-semibold">
             Current plan
-          </BaseBadge>
+          </p>
           <BaseButton v-else-if="tier.id === 'team'" block variant="secondary" to="/contact">
             {{ tier.ctaLabel }}
           </BaseButton>
@@ -289,9 +289,9 @@ function quotaText(key: "intros" | "savedSearches" | "proposals" | "contractDraf
           >
             {{ pendingPlan === tier.id ? "Redirecting..." : tier.ctaLabel }}
           </BaseButton>
-          <BaseBadge v-else tone="neutral">
+          <p v-else class="muted text-sm">
             Always available
-          </BaseBadge>
+          </p>
         </div>
       </article>
     </div>

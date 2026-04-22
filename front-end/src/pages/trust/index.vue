@@ -7,7 +7,7 @@ usePageSeo("Trust Center", "Learn how CoFoundry handles visibility, outreach lim
 </script>
 
 <template>
-  <div class="page-shell py-16 md:py-20">
+  <div class="reading-shell page-section">
     <PageIntro
       eyebrow="Trust Center"
       title="How CoFoundry handles privacy, outreach, and misuse."
@@ -37,7 +37,7 @@ usePageSeo("Trust Center", "Learn how CoFoundry handles visibility, outreach lim
       <h2 class="text-2xl font-semibold">
         Across every trust page
       </h2>
-      <div class="mt-6 gap-4 grid md:grid-cols-3">
+      <div class="subtle-grid mt-6 md:grid-cols-3">
         <div class="panel-inset p-4">
           <p class="font-semibold">
             Mutual-intent contact

@@ -54,7 +54,7 @@ function decline(requestId: string) {
 
       <TrustSignalStrip :profile="item.counterpart" compact />
 
-      <div class="panel-inset p-4">
+      <div class="surface-divider">
         <p class="text-sm font-semibold">
           {{ item.request.structuredIntro.roleContext }}
         </p>

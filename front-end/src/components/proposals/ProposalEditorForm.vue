@@ -58,7 +58,7 @@ function submitForm() {
 
 <template>
   <form class="gap-4 grid" @submit.prevent="submitForm">
-    <div class="panel-inset p-4 gap-4 grid">
+    <div class="panel p-4 gap-4 grid">
       <div>
         <h3 class="text-sm font-semibold">
           Partnership shape
@@ -91,7 +91,7 @@ function submitForm() {
       />
     </div>
 
-    <div class="panel-inset p-4 gap-4 grid">
+    <div class="panel p-4 gap-4 grid">
       <div>
         <h3 class="text-sm font-semibold">
           Scope and trial
@@ -123,7 +123,7 @@ function submitForm() {
       />
     </div>
 
-    <div class="panel-inset p-4 gap-4 grid">
+    <div class="panel p-4 gap-4 grid">
       <div>
         <h3 class="text-sm font-semibold">
           Economics and governance
@@ -140,7 +140,7 @@ function submitForm() {
         <TextInput v-model="form.vestingSchedule" label="Vesting schedule" :error="errors.vestingSchedule" />
         <TextInput v-model="form.cliff" label="Cliff" :error="errors.cliff" />
       </div>
-      <div class="panel-inset p-4">
+      <div class="surface-divider">
         <p class="text-sm font-semibold">
           Vesting explainer
         </p>
@@ -151,7 +151,7 @@ function submitForm() {
       <TextareaInput v-model="form.decisionRights" label="Decision rights" :error="errors.decisionRights" :rows="4" />
     </div>
 
-    <div class="panel-inset p-4 gap-4 grid">
+    <div class="panel p-4 gap-4 grid">
       <div>
         <h3 class="text-sm font-semibold">
           IP, confidentiality, and off-ramp

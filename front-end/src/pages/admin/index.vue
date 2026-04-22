@@ -19,7 +19,7 @@ const recentActions = computed(() => buildAdminAuditEntries(workspaceStore.data)
 </script>
 
 <template>
-  <div class="gap-6 grid">
+  <div class="gap-5 grid md:gap-6">
     <PageIntro
       eyebrow="Admin"
       title="Platform operations"
@@ -35,7 +35,7 @@ const recentActions = computed(() => buildAdminAuditEntries(workspaceStore.data)
       <MetricTile label="Actions in 7 days" :value="queueSummary.actionsLast7Days" context="Recent moderation and enforcement activity." />
     </div>
 
-    <div class="gap-4 grid xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+    <div class="gap-5 grid md:gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
       <section class="panel p-6">
         <div class="flex flex-wrap gap-3 items-start justify-between">
           <div>
@@ -51,8 +51,8 @@ const recentActions = computed(() => buildAdminAuditEntries(workspaceStore.data)
           </BaseButton>
         </div>
 
-        <div class="mt-5 gap-3 grid">
-          <article v-for="row in pendingReports" :key="row.report.id" class="panel-inset p-4">
+        <div class="surface-row-list mt-5">
+          <article v-for="row in pendingReports" :key="row.report.id" class="surface-row">
             <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div class="min-w-0">
                 <div class="flex flex-wrap gap-2">
@@ -62,13 +62,13 @@ const recentActions = computed(() => buildAdminAuditEntries(workspaceStore.data)
                   <BaseBadge :tone="row.report.status === 'open' ? 'warning' : 'accent'">
                     {{ formatReportStatus(row.report.status) }}
                   </BaseBadge>
-                  <BaseBadge tone="neutral">
-                    {{ row.report.targetType }}
-                  </BaseBadge>
                 </div>
                 <h3 class="text-base font-semibold mt-4">
                   {{ formatReportReason(row.report.reason) }} on {{ row.targetLabel }}
                 </h3>
+                <p class="muted text-xs tracking-[0.12em] mt-2 uppercase">
+                  {{ row.report.targetType }}
+                </p>
                 <p class="muted text-sm leading-6 mt-2">
                   {{ row.report.details }}
                 </p>
@@ -106,8 +106,8 @@ const recentActions = computed(() => buildAdminAuditEntries(workspaceStore.data)
           </BaseButton>
         </div>
 
-        <div class="mt-5 gap-3 grid">
-          <article v-for="entry in recentActions" :key="entry.action.id" class="panel-inset p-4">
+        <div class="surface-row-list mt-5">
+          <article v-for="entry in recentActions" :key="entry.action.id" class="surface-row">
             <div class="flex gap-3 items-start justify-between">
               <div class="min-w-0">
                 <p class="text-sm font-semibold">

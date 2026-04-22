@@ -199,7 +199,7 @@ function removeFilterChip(chip: { type: string, value?: string }) {
 </script>
 
 <template>
-  <div class="gap-6 grid">
+  <div class="gap-5 grid md:gap-6">
     <PageIntro
       eyebrow="Discover"
       title="Search founders, collaborators, and startup opportunities."
@@ -256,7 +256,7 @@ function removeFilterChip(chip: { type: string, value?: string }) {
       </div>
     </div>
 
-    <div class="panel-inset p-5 flex flex-col gap-4">
+    <div class="panel p-5 flex flex-col gap-4">
       <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p class="text-sm font-semibold">
@@ -269,9 +269,9 @@ function removeFilterChip(chip: { type: string, value?: string }) {
           </p>
         </div>
         <div class="flex flex-wrap gap-2 items-center">
-          <BaseBadge tone="neutral">
+          <p class="muted text-sm">
             {{ activeFilterChips.length }} active filter{{ activeFilterChips.length === 1 ? "" : "s" }}
-          </BaseBadge>
+          </p>
           <BaseButton variant="ghost" size="sm" @click="clearAllFilters">
             Clear all
           </BaseButton>
@@ -293,7 +293,7 @@ function removeFilterChip(chip: { type: string, value?: string }) {
     </div>
 
     <div v-if="usage" class="gap-4 grid md:grid-cols-3">
-      <div class="panel-inset p-4">
+      <div class="panel p-4">
         <p class="text-sm font-semibold">
           New intros
         </p>
@@ -301,7 +301,7 @@ function removeFilterChip(chip: { type: string, value?: string }) {
           {{ quotaText("intros") }}. Messaging stays available after a mutual match, but outbound intros are metered to keep discovery calmer.
         </p>
       </div>
-      <div class="panel-inset p-4">
+      <div class="panel p-4">
         <p class="text-sm font-semibold">
           Saved searches
         </p>
@@ -309,7 +309,7 @@ function removeFilterChip(chip: { type: string, value?: string }) {
           {{ quotaText("savedSearches") }}. Pro is built for people running a repeatable search process instead of one-off browsing.
         </p>
       </div>
-      <div class="panel-inset p-4">
+      <div class="panel p-4">
         <p class="text-sm font-semibold">
           Why the caps exist
         </p>
@@ -319,7 +319,7 @@ function removeFilterChip(chip: { type: string, value?: string }) {
       </div>
     </div>
 
-    <div v-if="currentProfile" class="panel-inset p-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <div v-if="currentProfile" class="panel p-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
       <div>
         <p class="text-sm font-semibold">
           Start with the tightest wedge that could actually convert
@@ -328,12 +328,12 @@ function removeFilterChip(chip: { type: string, value?: string }) {
           CoFoundry now nudges search toward {{ currentProfile.location }}, {{ currentProfile.startupStagePreferences[0] || "your target stage" }}, and the company shapes you already declared before widening the pool.
         </p>
       </div>
-      <BaseBadge tone="neutral">
+      <p class="muted text-sm">
         {{ currentProfile.intent.introCapacity || "Set intro capacity" }}
-      </BaseBadge>
+      </p>
     </div>
 
-    <div v-if="scope === 'profiles'" class="panel-inset p-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <div v-if="scope === 'profiles'" class="panel p-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
       <div>
         <p class="text-sm font-semibold">
           Ranked for mutual fit, reply likelihood, and local density
@@ -342,9 +342,9 @@ function removeFilterChip(chip: { type: string, value?: string }) {
           Discovery now favors reciprocity, recent activity, commitment fit, and same-city wedges before it broadens out to the wider network.
         </p>
       </div>
-      <BaseBadge tone="accent">
+      <p class="text-sm text-[var(--accent)] font-semibold">
         Reciprocal ranking
-      </BaseBadge>
+      </p>
     </div>
 
     <div v-if="scope === 'profiles'" class="gap-4 grid" :class="viewMode === 'card' ? 'lg:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1'">

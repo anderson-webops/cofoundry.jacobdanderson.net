@@ -15,7 +15,7 @@ const readiness = computed(() => buildProfileReadiness(props.profile))
 </script>
 
 <template>
-  <div class="panel-inset p-5 gap-4 grid">
+  <div class="panel p-5 gap-4 grid">
     <div class="flex flex-wrap gap-3 items-start justify-between">
       <div>
         <h2 class="text-lg font-semibold">
@@ -30,11 +30,11 @@ const readiness = computed(() => buildProfileReadiness(props.profile))
       </BaseBadge>
     </div>
 
-    <div class="gap-3 grid">
+    <div class="surface-row-list">
       <div
         v-for="item in readiness.trustChecklist"
         :key="item.id"
-        class="p-4 border border-[var(--line)] rounded-[1.25rem] bg-[var(--panel)]"
+        class="surface-row"
       >
         <div class="flex gap-3 items-center justify-between">
           <p class="text-sm font-semibold">

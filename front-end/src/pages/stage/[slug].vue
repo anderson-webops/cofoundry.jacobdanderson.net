@@ -22,7 +22,7 @@ usePageSeo(`${hub.label} startup searches`, hub.description, {
 </script>
 
 <template>
-  <div class="page-shell py-16 md:py-20">
+  <div class="page-shell page-section">
     <PageIntro
       eyebrow="Stage hub"
       :title="hub.label"
@@ -85,12 +85,12 @@ usePageSeo(`${hub.label} startup searches`, hub.description, {
         <h2 class="text-2xl font-semibold">
           Related role hubs
         </h2>
-        <div class="mt-6 gap-4 grid">
+        <div class="surface-row-list mt-6">
           <NuxtLink
             v-for="entry in relatedRoles"
             :key="entry.slug"
             :to="`/roles/${entry.slug}`"
-            class="panel-inset p-4 transition hover:border-[var(--accent)]"
+            class="surface-row block transition hover:text-[var(--accent)]"
           >
             <p class="font-semibold">
               {{ entry.label }}
@@ -106,10 +106,10 @@ usePageSeo(`${hub.label} startup searches`, hub.description, {
         <h2 class="text-2xl font-semibold">
           Make the next step more explicit
         </h2>
-        <div class="mt-6 gap-4 grid">
+        <div class="surface-row-list mt-6">
           <NuxtLink
             :to="`/trust/${visibilityGuide.slug}`"
-            class="panel-inset p-4 transition hover:border-[var(--accent)]"
+            class="surface-row block transition hover:text-[var(--accent)]"
           >
             <p class="font-semibold">
               {{ visibilityGuide.title }}
@@ -120,7 +120,7 @@ usePageSeo(`${hub.label} startup searches`, hub.description, {
           </NuxtLink>
           <NuxtLink
             :to="`/contracts/${vestingGuide.slug}`"
-            class="panel-inset p-4 transition hover:border-[var(--accent)]"
+            class="surface-row block transition hover:text-[var(--accent)]"
           >
             <p class="font-semibold">
               {{ vestingGuide.title }}

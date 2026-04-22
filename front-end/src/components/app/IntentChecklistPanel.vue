@@ -15,11 +15,11 @@ const checklist = computed(() => buildIntentChecklist(props.profile))
     <h2 class="text-lg font-semibold">
       {{ title || "Seriousness checklist" }}
     </h2>
-    <div class="mt-4 gap-3 grid">
+    <div class="surface-row-list mt-4">
       <div
         v-for="item in checklist"
         :key="item.id"
-        class="panel-inset p-4 flex gap-3 items-start justify-between"
+        class="surface-row flex gap-3 items-start justify-between"
       >
         <div>
           <p class="text-sm font-semibold">

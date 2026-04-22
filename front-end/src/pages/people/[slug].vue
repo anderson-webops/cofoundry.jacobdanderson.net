@@ -44,7 +44,7 @@ usePageSeo(profile.displayName, profile.headline, {
 </script>
 
 <template>
-  <div class="page-shell py-16 md:py-20">
+  <div class="page-shell page-section">
     <PageIntro
       eyebrow="Public profile"
       :title="profile.displayName"
@@ -65,13 +65,13 @@ usePageSeo(profile.displayName, profile.headline, {
         <div class="flex gap-4 items-start">
           <ProfileAvatar :display-name="profile.displayName" :photo-url="profile.photoUrl" size="lg" />
           <div>
-            <div class="flex flex-wrap gap-2">
-              <BaseBadge :tone="readiness.trustReady ? 'success' : 'accent'">
+            <div class="flex flex-wrap gap-3 items-center">
+              <p class="text-sm text-[var(--accent)] font-semibold">
                 {{ readiness.trustPercent }}% profile signals
-              </BaseBadge>
-              <BaseBadge tone="neutral">
+              </p>
+              <p class="muted text-sm">
                 Public-lite profile
-              </BaseBadge>
+              </p>
             </div>
             <p class="muted text-sm leading-6 mt-4">
               CoFoundry does not expose a public trust score. Public pages show the evidence and verification surface instead.
@@ -79,17 +79,9 @@ usePageSeo(profile.displayName, profile.headline, {
           </div>
         </div>
 
-        <div class="flex flex-wrap gap-2">
-          <BaseBadge tone="neutral">
-            {{ formatRemotePreference(profile.remotePreference) }}
-          </BaseBadge>
-          <BaseBadge tone="neutral">
-            {{ profile.location }}
-          </BaseBadge>
-          <BaseBadge tone="accent">
-            {{ profile.roleScope.primaryRole || profile.roles[0] }}
-          </BaseBadge>
-        </div>
+        <p class="muted text-sm mt-4">
+          {{ formatRemotePreference(profile.remotePreference) }} · {{ profile.location }} · {{ profile.roleScope.primaryRole || profile.roles[0] }}
+        </p>
 
         <div class="mt-4">
           <TrustSignalStrip :profile="profile" />
@@ -127,7 +119,7 @@ usePageSeo(profile.displayName, profile.headline, {
         </div>
       </section>
 
-      <section class="gap-6 grid">
+      <section class="gap-5 grid">
         <div class="panel p-6">
           <h2 class="text-lg font-semibold">
             Role and company fit
@@ -168,14 +160,14 @@ usePageSeo(profile.displayName, profile.headline, {
           <h2 class="text-lg font-semibold">
             Evidence and proof of work
           </h2>
-          <div class="mt-4 gap-4 grid">
+          <div class="surface-row-list mt-4">
             <a
               v-for="artifact in profile.trustSignals.builderProofs"
               :key="artifact.id"
               :href="artifact.url"
               target="_blank"
               rel="ugc nofollow noopener noreferrer"
-              class="panel-inset p-4"
+              class="surface-row block"
             >
               <p class="font-semibold">
                 {{ artifact.title }}
@@ -194,11 +186,11 @@ usePageSeo(profile.displayName, profile.headline, {
           <h2 class="text-lg font-semibold">
             Public links
           </h2>
-          <div class="mt-4 gap-3 grid">
-            <a v-if="profile.links.linkedin" :href="profile.links.linkedin" target="_blank" rel="ugc nofollow noopener noreferrer" class="panel-inset p-4">LinkedIn</a>
-            <a v-if="profile.links.github" :href="profile.links.github" target="_blank" rel="ugc nofollow noopener noreferrer" class="panel-inset p-4">GitHub</a>
-            <a v-if="profile.links.portfolio" :href="profile.links.portfolio" target="_blank" rel="ugc nofollow noopener noreferrer" class="panel-inset p-4">Portfolio</a>
-            <a v-if="profile.links.website" :href="profile.links.website" target="_blank" rel="ugc nofollow noopener noreferrer" class="panel-inset p-4">Website</a>
+          <div class="surface-row-list mt-4">
+            <a v-if="profile.links.linkedin" :href="profile.links.linkedin" target="_blank" rel="ugc nofollow noopener noreferrer" class="surface-row block">LinkedIn</a>
+            <a v-if="profile.links.github" :href="profile.links.github" target="_blank" rel="ugc nofollow noopener noreferrer" class="surface-row block">GitHub</a>
+            <a v-if="profile.links.portfolio" :href="profile.links.portfolio" target="_blank" rel="ugc nofollow noopener noreferrer" class="surface-row block">Portfolio</a>
+            <a v-if="profile.links.website" :href="profile.links.website" target="_blank" rel="ugc nofollow noopener noreferrer" class="surface-row block">Website</a>
           </div>
         </div>
 
@@ -206,8 +198,8 @@ usePageSeo(profile.displayName, profile.headline, {
           <h2 class="text-lg font-semibold">
             Ventures
           </h2>
-          <div class="mt-4 gap-3 grid">
-            <div v-for="venture in profile.ventures" :key="venture.id" class="panel-inset p-4">
+          <div class="surface-row-list mt-4">
+            <div v-for="venture in profile.ventures" :key="venture.id" class="surface-row">
               <p class="font-semibold">
                 {{ venture.name }}
               </p>
