@@ -7,7 +7,7 @@ usePageSeo("Pricing")
 </script>
 
 <template>
-  <div class="page-shell py-16 md:py-20">
+  <div class="page-shell page-section">
     <PageIntro
       eyebrow="Pricing"
       title="Straightforward subscriptions for startup team formation."
@@ -49,7 +49,7 @@ usePageSeo("Pricing")
       <h2 class="text-2xl font-semibold">
         What paid plans add
       </h2>
-      <div class="mt-6 gap-4 grid md:grid-cols-3">
+      <div class="subtle-grid mt-6 md:grid-cols-3">
         <div class="panel-inset p-4">
           <p class="text-sm font-semibold">
             More new intros

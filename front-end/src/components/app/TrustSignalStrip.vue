@@ -14,36 +14,50 @@ const readiness = computed(() => buildProfileReadiness(props.profile))
 const trustTier = computed(() => buildProfileTrustTier(props.profile))
 const verifiedLinkCount = computed(() => buildVerifiedLinkCount(props.profile))
 const recentlyActive = computed(() => isRecentlyActive(props.profile.trustSignals.lastActiveAt))
+const badges = computed(() => {
+  const items: { label: string, tone: "success" | "accent" | "neutral" | "warning" }[] = [
+    {
+      label: formatTrustTier(trustTier.value),
+      tone: trustTier.value === "level_c" ? "success" : trustTier.value === "level_b" ? "accent" : "neutral",
+    },
+    {
+      label: `${readiness.value.trustCompletedCount}/${readiness.value.trustTotalCount} profile signals`,
+      tone: readiness.value.trustReady ? "success" : "accent",
+    },
+  ]
+
+  if (props.profile.trustSignals.builderProofs.length)
+    items.push({ label: `${props.profile.trustSignals.builderProofs.length} evidence card${props.profile.trustSignals.builderProofs.length === 1 ? "" : "s"}`, tone: "success" })
+
+  if (verifiedLinkCount.value)
+    items.push({ label: `${verifiedLinkCount.value} verified link${verifiedLinkCount.value === 1 ? "" : "s"}`, tone: verifiedLinkCount.value >= 2 ? "success" : "neutral" })
+
+  if (!props.compact && props.profile.trustSignals.phoneVerified)
+    items.push({ label: "Phone verified", tone: "neutral" })
+
+  if (!props.compact && props.profile.trustSignals.governmentIdVerified)
+    items.push({ label: "ID verified", tone: "success" })
+
+  items.push({
+    label: `~${props.profile.trustSignals.medianReplyHours}h response`,
+    tone: props.profile.trustSignals.medianReplyHours <= 24 ? "success" : "neutral",
+  })
+
+  if (!props.compact)
+    items.push({ label: recentlyActive.value ? "Recently active" : formatRelativeDate(props.profile.trustSignals.lastActiveAt), tone: recentlyActive.value ? "success" : "warning" })
+
+  return props.compact ? items.slice(0, 4) : items.slice(0, 6)
+})
 </script>
 
 <template>
   <div class="flex flex-wrap gap-2">
-    <BaseBadge :tone="trustTier === 'level_c' ? 'success' : trustTier === 'level_b' ? 'accent' : 'neutral'">
-      {{ formatTrustTier(trustTier) }}
-    </BaseBadge>
-    <BaseBadge :tone="readiness.trustReady ? 'success' : 'accent'">
-      {{ readiness.trustCompletedCount }}/{{ readiness.trustTotalCount }} profile signals
-    </BaseBadge>
-    <BaseBadge :tone="profile.trustSignals.builderProofs.length ? 'success' : 'neutral'">
-      {{ profile.trustSignals.builderProofs.length }} evidence card{{ profile.trustSignals.builderProofs.length === 1 ? "" : "s" }}
-    </BaseBadge>
-    <BaseBadge v-if="profile.trustSignals.phoneVerified" tone="neutral">
-      Phone verified
-    </BaseBadge>
-    <BaseBadge v-if="verifiedLinkCount" :tone="verifiedLinkCount >= 2 ? 'success' : 'neutral'">
-      {{ verifiedLinkCount }} verified link{{ verifiedLinkCount === 1 ? "" : "s" }}
-    </BaseBadge>
-    <BaseBadge v-if="profile.trustSignals.governmentIdVerified && !compact" tone="success">
-      ID verified
-    </BaseBadge>
-    <BaseBadge tone="neutral">
-      {{ profile.trustSignals.replyRatePercent }}% replies
-    </BaseBadge>
-    <BaseBadge :tone="profile.trustSignals.medianReplyHours <= 24 ? 'success' : 'neutral'">
-      ~{{ profile.trustSignals.medianReplyHours }}h response
-    </BaseBadge>
-    <BaseBadge v-if="!compact" :tone="recentlyActive ? 'success' : 'warning'">
-      {{ recentlyActive ? "Recently active" : formatRelativeDate(profile.trustSignals.lastActiveAt) }}
+    <BaseBadge
+      v-for="badge in badges"
+      :key="badge.label"
+      :tone="badge.tone"
+    >
+      {{ badge.label }}
     </BaseBadge>
   </div>
 </template>

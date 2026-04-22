@@ -17,7 +17,7 @@ usePageSeo("Privacy Policy", "Product-specific privacy disclosures for CoFoundry
 </script>
 
 <template>
-  <div class="page-shell py-16 md:py-20">
+  <div class="reading-shell page-section">
     <PageIntro
       eyebrow="Legal"
       title="Privacy Policy"
@@ -43,7 +43,7 @@ usePageSeo("Privacy Policy", "Product-specific privacy disclosures for CoFoundry
         </p>
       </div>
 
-      <div class="mt-6 gap-4 grid md:grid-cols-2 xl:grid-cols-4">
+      <div class="subtle-grid subtle-grid-4 mt-6">
         <div v-for="item in privacyKeyNotes" :key="item.title" class="panel-inset p-4">
           <p class="text-sm font-semibold">
             {{ item.title }}
@@ -111,19 +111,19 @@ usePageSeo("Privacy Policy", "Product-specific privacy disclosures for CoFoundry
             {{ category.category }}
           </h3>
           <p class="muted text-sm leading-6 mt-4">
-            <span class="text-[var(--copy)] font-semibold">Examples:</span> {{ category.examples }}
+            <span class="text-[var(--text)] font-semibold">Examples:</span> {{ category.examples }}
           </p>
           <p class="muted text-sm leading-6 mt-3">
-            <span class="text-[var(--copy)] font-semibold">Why we use it:</span> {{ category.purposes }}
+            <span class="text-[var(--text)] font-semibold">Why we use it:</span> {{ category.purposes }}
           </p>
           <p class="muted text-sm leading-6 mt-3">
-            <span class="text-[var(--copy)] font-semibold">Who can see it:</span> {{ category.visibility }}
+            <span class="text-[var(--text)] font-semibold">Who can see it:</span> {{ category.visibility }}
           </p>
         </div>
       </div>
     </div>
 
-    <div class="mt-10 gap-6 grid lg:grid-cols-[0.85fr_2.15fr]">
+    <div class="reading-layout mt-10">
       <aside class="panel p-6 h-fit lg:top-24 lg:sticky">
         <h2 class="text-lg font-semibold">
           On this page
@@ -133,7 +133,7 @@ usePageSeo("Privacy Policy", "Product-specific privacy disclosures for CoFoundry
             v-for="section in privacySections"
             :key="section.id"
             :href="`#${section.id}`"
-            class="muted text-sm leading-6 transition hover:text-[var(--copy)]"
+            class="muted text-sm leading-6 transition hover:text-[var(--text)]"
           >
             {{ section.title }}
           </a>
@@ -145,7 +145,7 @@ usePageSeo("Privacy Policy", "Product-specific privacy disclosures for CoFoundry
           </p>
           <p class="muted text-sm leading-6 mt-3">
             For access, correction, deletion, visibility, or safety-related privacy requests, contact
-            <a :href="`mailto:${supportEmail}`" class="text-[var(--copy)] underline underline-offset-4">{{ supportEmail }}</a>.
+            <a :href="`mailto:${supportEmail}`" class="text-[var(--text)] underline underline-offset-4">{{ supportEmail }}</a>.
           </p>
           <div class="mt-4 flex flex-wrap gap-3">
             <BaseButton variant="ghost" to="/contact">
@@ -174,7 +174,7 @@ usePageSeo("Privacy Policy", "Product-specific privacy disclosures for CoFoundry
         </div>
       </aside>
 
-      <div class="gap-6 grid">
+      <div class="reading-body">
         <section
           v-for="section in privacySections"
           :id="section.id"

@@ -59,9 +59,9 @@ function decline(requestId: string) {
           {{ item.request.structuredIntro.roleContext }}
         </p>
         <div class="muted text-sm leading-6 mt-3 gap-2 grid">
-          <div><span class="text-[var(--copy)] font-semibold">Why fit:</span> {{ item.request.structuredIntro.whyFit }}</div>
-          <div><span class="text-[var(--copy)] font-semibold">Why now:</span> {{ item.request.structuredIntro.whyNow }}</div>
-          <div><span class="text-[var(--copy)] font-semibold">Next step:</span> {{ formatConnectRequestNextStep(item.request.structuredIntro.proposedNextStep) }}</div>
+          <div><span class="text-[var(--text)] font-semibold">Why fit:</span> {{ item.request.structuredIntro.whyFit }}</div>
+          <div><span class="text-[var(--text)] font-semibold">Why now:</span> {{ item.request.structuredIntro.whyNow }}</div>
+          <div><span class="text-[var(--text)] font-semibold">Next step:</span> {{ formatConnectRequestNextStep(item.request.structuredIntro.proposedNextStep) }}</div>
         </div>
       </div>
 

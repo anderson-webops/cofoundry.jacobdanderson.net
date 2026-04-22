@@ -172,12 +172,12 @@ function submitForm() {
 
 <template>
   <form class="gap-8 grid" @submit.prevent="submitForm">
-    <div v-if="stepped" class="gap-4 grid md:grid-cols-5">
+    <div v-if="stepped" class="gap-3 grid md:grid-cols-5">
       <div
         v-for="(item, index) in steps"
         :key="item.title"
-        class="p-4 border rounded-[1.25rem]"
-        :class="index === step ? 'border-[var(--accent)] bg-[var(--accent-soft)]' : 'border-[var(--line)] bg-[var(--panel-inset)]'"
+        class="step-card"
+        :class="index === step ? 'step-card-active' : ''"
       >
         <p class="text-sm font-semibold">
           {{ item.title }}
