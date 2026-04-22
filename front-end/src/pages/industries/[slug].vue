@@ -23,7 +23,7 @@ usePageSeo(`${hub.label} founder searches`, hub.description, {
 </script>
 
 <template>
-  <div class="page-shell py-16 md:py-20">
+  <div class="page-shell page-section">
     <PageIntro
       eyebrow="Industry hub"
       :title="hub.label"
@@ -86,12 +86,12 @@ usePageSeo(`${hub.label} founder searches`, hub.description, {
         <h2 class="text-2xl font-semibold">
           Explore adjacent hubs
         </h2>
-        <div class="mt-6 gap-4 grid">
+        <div class="surface-row-list mt-6">
           <NuxtLink
             v-for="entry in relatedRoles"
             :key="`role-${entry.slug}`"
             :to="`/roles/${entry.slug}`"
-            class="panel-inset p-4 transition hover:border-[var(--accent)]"
+            class="surface-row block transition hover:text-[var(--accent)]"
           >
             <p class="font-semibold">
               {{ entry.label }}
@@ -104,7 +104,7 @@ usePageSeo(`${hub.label} founder searches`, hub.description, {
             v-for="entry in relatedStages"
             :key="`stage-${entry.slug}`"
             :to="`/stage/${entry.slug}`"
-            class="panel-inset p-4 transition hover:border-[var(--accent)]"
+            class="surface-row block transition hover:text-[var(--accent)]"
           >
             <p class="font-semibold">
               {{ entry.label }}
@@ -120,10 +120,10 @@ usePageSeo(`${hub.label} founder searches`, hub.description, {
         <h2 class="text-2xl font-semibold">
           Trust and contracts
         </h2>
-        <div class="mt-6 gap-4 grid">
+        <div class="surface-row-list mt-6">
           <NuxtLink
             :to="`/trust/${antiSpamGuide.slug}`"
-            class="panel-inset p-4 transition hover:border-[var(--accent)]"
+            class="surface-row block transition hover:text-[var(--accent)]"
           >
             <p class="font-semibold">
               {{ antiSpamGuide.title }}
@@ -134,7 +134,7 @@ usePageSeo(`${hub.label} founder searches`, hub.description, {
           </NuxtLink>
           <NuxtLink
             :to="`/contracts/${trialPlanGuide.slug}`"
-            class="panel-inset p-4 transition hover:border-[var(--accent)]"
+            class="surface-row block transition hover:text-[var(--accent)]"
           >
             <p class="font-semibold">
               {{ trialPlanGuide.title }}

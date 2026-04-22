@@ -34,7 +34,7 @@ const roleMix = computed(() => {
 </script>
 
 <template>
-  <div class="gap-6 grid">
+  <div class="gap-5 grid md:gap-6">
     <PageIntro
       eyebrow="Admin"
       title="Analytics"
@@ -57,8 +57,8 @@ const roleMix = computed(() => {
         <h2 class="text-lg font-semibold">
           Subscription mix
         </h2>
-        <div class="mt-5 gap-3 grid">
-          <div v-for="item in planMix" :key="item.plan" class="panel-inset p-4 flex items-center justify-between">
+        <div class="surface-row-list mt-5">
+          <div v-for="item in planMix" :key="item.plan" class="surface-row flex items-center justify-between">
             <div>
               <p class="text-sm font-semibold">
                 {{ formatPlanName(item.plan) }}
@@ -76,8 +76,8 @@ const roleMix = computed(() => {
         <h2 class="text-lg font-semibold">
           Role mix
         </h2>
-        <div class="mt-5 gap-3 grid">
-          <div v-for="item in roleMix" :key="item.role" class="panel-inset p-4 flex items-center justify-between">
+        <div class="surface-row-list mt-5">
+          <div v-for="item in roleMix" :key="item.role" class="surface-row flex items-center justify-between">
             <div>
               <p class="text-sm font-semibold capitalize">
                 {{ item.role.replaceAll("_", " ") }}

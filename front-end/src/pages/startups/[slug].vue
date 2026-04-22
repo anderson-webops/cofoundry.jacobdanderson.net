@@ -21,7 +21,7 @@ usePageSeo(opportunity.startupName, opportunity.oneLinePitch, {
 </script>
 
 <template>
-  <div class="page-shell py-16 md:py-20">
+  <div class="page-shell page-section">
     <PageIntro
       eyebrow="Public startup search"
       :title="opportunity.startupName"
@@ -57,8 +57,8 @@ usePageSeo(opportunity.startupName, opportunity.oneLinePitch, {
           </BaseBadge>
         </div>
 
-        <div class="mt-6 gap-6 grid">
-          <div>
+        <div class="surface-row-list mt-6">
+          <div class="surface-row">
             <h2 class="text-lg font-semibold">
               Problem
             </h2>
@@ -66,7 +66,7 @@ usePageSeo(opportunity.startupName, opportunity.oneLinePitch, {
               {{ opportunity.problem }}
             </p>
           </div>
-          <div>
+          <div class="surface-row">
             <h2 class="text-lg font-semibold">
               Target users
             </h2>
@@ -74,7 +74,7 @@ usePageSeo(opportunity.startupName, opportunity.oneLinePitch, {
               {{ opportunity.targetUsers }}
             </p>
           </div>
-          <div>
+          <div class="surface-row">
             <h2 class="text-lg font-semibold">
               Traction
             </h2>
@@ -85,7 +85,7 @@ usePageSeo(opportunity.startupName, opportunity.oneLinePitch, {
         </div>
       </section>
 
-      <section class="gap-6 grid">
+      <section class="gap-5 grid">
         <div class="panel p-6">
           <h2 class="text-lg font-semibold">
             Roles needed

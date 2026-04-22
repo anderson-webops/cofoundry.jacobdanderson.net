@@ -95,7 +95,7 @@ async function toggleSuspension(row: AdminUserRow) {
 </script>
 
 <template>
-  <div class="gap-6 grid">
+  <div class="gap-5 grid md:gap-6">
     <PageIntro
       eyebrow="Admin"
       title="Users"
@@ -152,19 +152,19 @@ async function toggleSuspension(row: AdminUserRow) {
                 </div>
               </td>
               <td class="px-4 py-4">
-                <div class="flex flex-wrap gap-2">
-                  <BaseBadge tone="neutral">
-                    {{ row.user.role }}
-                  </BaseBadge>
+                <div class="flex flex-wrap gap-2 items-center">
+                  <p class="text-sm font-semibold capitalize">
+                    {{ row.user.role.replaceAll("_", " ") }}
+                  </p>
                   <BaseBadge :tone="row.subscription?.plan === 'free' ? 'neutral' : 'accent'">
                     {{ formatPlanName(row.subscription?.plan || "free") }}
-                  </BaseBadge>
-                  <BaseBadge :tone="row.user.onboardingCompleted ? 'success' : 'warning'">
-                    {{ row.user.onboardingCompleted ? "Onboarded" : "Incomplete" }}
                   </BaseBadge>
                 </div>
                 <p class="muted text-xs mt-3">
                   Joined {{ formatDate(row.user.createdAt) }}
+                </p>
+                <p class="muted text-xs mt-2">
+                  {{ row.user.onboardingCompleted ? "Onboarding complete" : "Onboarding incomplete" }}
                 </p>
               </td>
               <td class="px-4 py-4">
