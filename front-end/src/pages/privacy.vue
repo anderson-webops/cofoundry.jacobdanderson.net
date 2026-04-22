@@ -26,7 +26,7 @@ usePageSeo("Privacy Policy", "Product-specific privacy disclosures for CoFoundry
     <PageIntro
       eyebrow="Legal"
       title="Privacy Policy"
-      description="This policy is written for CoFoundry's actual data flows: public-lite profiles, member-only discovery, mutual-match messaging, proposal and contract workflows, subscriptions, moderation, and the future gated investment module."
+      description="Privacy details for profiles, discovery, messaging, proposals, contracts, billing, and moderation inside CoFoundry."
     >
       <template #actions>
         <BaseButton variant="secondary" to="/terms">
@@ -50,10 +50,10 @@ usePageSeo("Privacy Policy", "Product-specific privacy disclosures for CoFoundry
         </div>
         <div class="max-w-xl">
           <p class="text-sm font-semibold">
-            Current deployment posture
+            Current services in use
           </p>
           <p class="muted text-sm leading-6 mt-2">
-            CoFoundry is currently configured for {{ backendModeLabel }} and {{ billingModeLabel }}, and deployed builds currently use a first-party analytics service at analytics.jacobdanderson.net. If additional live providers or materially different tracking features are enabled later, CoFoundry will update this policy and any required notices before changing production behavior.
+            CoFoundry currently runs with {{ backendModeLabel }} and {{ billingModeLabel }}, and deployed builds use a first-party analytics service at analytics.jacobdanderson.net. If live providers or tracking features change later, this policy will be updated before production behavior changes.
           </p>
         </div>
       </div>
@@ -81,7 +81,7 @@ usePageSeo("Privacy Policy", "Product-specific privacy disclosures for CoFoundry
           </h2>
         </div>
         <p class="muted text-sm leading-6 max-w-2xl">
-          This is the main privacy risk surface for CoFoundry. Public profile content can help discovery, but it also creates indexing and scraping risk if you choose public visibility.
+          Public profile content can help discovery, but it also creates indexing and scraping risk if you choose public visibility.
         </p>
       </div>
 
@@ -116,7 +116,7 @@ usePageSeo("Privacy Policy", "Product-specific privacy disclosures for CoFoundry
           </h2>
         </div>
         <p class="muted text-sm leading-6 max-w-2xl">
-          The categories below reflect the actual founder-matching product surface: onboarding, discovery, relationship formation, billing, and trust-and-safety operations.
+          These categories cover account setup, discovery, collaboration, billing, and trust-and-safety operations.
         </p>
       </div>
 

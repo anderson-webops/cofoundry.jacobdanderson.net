@@ -93,8 +93,8 @@ async function submitForm() {
   <div class="page-shell py-16 md:py-20">
     <PageIntro
       eyebrow="Contact"
-      title="Talk to the team behind CoFoundry."
-      description="Use this form for product feedback, pilot requests, venture studio pricing, or questions about how the founder agreement workflow should fit your process."
+      title="Contact CoFoundry."
+      description="Use this form for support, access, pricing, or partnership questions."
     />
 
     <div class="mt-10 gap-6 grid lg:grid-cols-[0.8fr_1.2fr]">
@@ -105,7 +105,7 @@ async function submitForm() {
         <ul class="muted text-sm leading-7 mt-5 gap-4 grid">
           <li>General support: <a :href="`mailto:${runtimeConfig.public.supportEmail}`" class="text-[var(--copy)] underline underline-offset-4">{{ runtimeConfig.public.supportEmail }}</a></li>
           <li>Use this form for access requests, product questions, pricing conversations, or support follow-up.</li>
-          <li>Founder agreement templates remain editable product tools and should still be reviewed by counsel.</li>
+          <li>We reply through the email address you provide here.</li>
         </ul>
       </div>
 

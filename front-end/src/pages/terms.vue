@@ -14,7 +14,7 @@ usePageSeo("Terms of Service", "Product-specific terms for CoFoundry's founder m
     <PageIntro
       eyebrow="Legal"
       title="Terms of Service"
-      description="These terms are written for CoFoundry's actual product surface: founder matching, structured intros, messaging, proposal workflow, agreement templates, paid subscriptions, moderation, and the future gated investment module."
+      description="Terms for using CoFoundry's matching, messaging, proposal, contract, billing, and moderation features."
     >
       <template #actions>
         <BaseButton variant="secondary" to="/privacy">
@@ -41,7 +41,7 @@ usePageSeo("Terms of Service", "Product-specific terms for CoFoundry's founder m
             Drafting note
           </p>
           <p class="muted text-sm leading-6 mt-2">
-            This version is product-specific, but CoFoundry should still finalize contracting-entity details, billing flow compliance, and jurisdiction-specific language with counsel before a broad public launch.
+            This version is product-specific, but the company entity, jurisdiction, and billing language should still be finalized with counsel before a broad public launch.
           </p>
         </div>
       </div>

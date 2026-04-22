@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { appDescription, appTagline } from "~/shared/constants/app"
-import { heroMetrics, howItWorksSteps, pricingTiers, researchPrinciples, testimonials } from "~/shared/data/marketing"
+import { heroMetrics, howItWorksSteps, pricingTiers, researchPrinciples } from "~/shared/data/marketing"
 import { contractGuidePages, trustCenterPages } from "~/shared/data/public-content"
 import { workspaceSeed } from "~/shared/data/seed"
 import { getIndustryHubs, getRoleHubs, getStageHubs } from "~/shared/utils/directory"
@@ -29,7 +29,7 @@ usePageSeo("Build startup teams with more structure", appDescription, {
             {{ appTagline }}
           </h1>
           <p class="muted text-lg leading-8 mt-6 max-w-2xl">
-            CoFoundry is built for founder relationships, not freelance gigs. Find aligned partners, compare commitment and governance early, run a short working sprint, and only then turn the relationship into something explicit enough to sign.
+            Meet founders and early collaborators who want to build a company together. Compare fit, commitment, and working style early, then move from first call to trial sprint, proposal, and agreement in one workflow.
           </p>
           <div class="mt-8 flex flex-wrap gap-3">
             <BaseButton size="lg" :to="heroAccessCta.to">
@@ -53,11 +53,11 @@ usePageSeo("Build startup teams with more structure", appDescription, {
                   Formation workflow
                 </p>
                 <p class="muted text-sm mt-1">
-                  High-trust by design
+                  From intro to agreement
                 </p>
               </div>
               <BaseBadge tone="accent">
-                Research-backed
+                Versioned terms
               </BaseBadge>
             </div>
             <div class="hero-preview-frame grid-soft">
@@ -102,8 +102,8 @@ usePageSeo("Build startup teams with more structure", appDescription, {
       <div class="page-shell">
         <PageIntro
           eyebrow="How CoFoundry works"
-          title="A calmer path from first signal to signed agreement."
-          description="Each section of the product is designed to reduce ambiguity: clearer profiles, more intentional matching, and a structured way to negotiate the relationship."
+          title="From first signal to written terms."
+          description="Profiles, intros, trial sprints, proposals, and agreements follow one clear sequence."
         />
         <div class="mt-10 gap-5 grid lg:grid-cols-4">
           <article v-for="step in howItWorksSteps" :key="step.id" class="panel p-6">
@@ -125,8 +125,8 @@ usePageSeo("Build startup teams with more structure", appDescription, {
       <div class="page-shell">
         <PageIntro
           eyebrow="Search entry points"
-          title="A public layer built around real search intent."
-          description="CoFoundry now exposes public role, industry, stage, profile, and startup-search pages so serious users can evaluate the market before they commit to joining it."
+          title="Browse by role, industry, and stage."
+          description="Public pages help people evaluate the network before they request access or create a profile."
         >
           <template #actions>
             <BaseButton variant="secondary" to="/find-cofounder">
@@ -188,9 +188,9 @@ usePageSeo("Build startup teams with more structure", appDescription, {
     <section class="py-16">
       <div class="page-shell">
         <PageIntro
-          eyebrow="Research-backed product principles"
-          title="The site now reflects what actually reduces failed founder matches."
-          description="The best improvements were not more social features. They were tighter intent, faster trust assessment, and a better path from match to real working relationship."
+          eyebrow="Why teams use CoFoundry"
+          title="Clarity earlier in the process."
+          description="The workflow is built to help you see fit sooner, test the relationship, and keep the terms organized."
         />
         <div class="mt-10 gap-5 grid lg:grid-cols-4">
           <article v-for="principle in researchPrinciples" :key="principle.title" class="panel p-6">
@@ -212,7 +212,7 @@ usePageSeo("Build startup teams with more structure", appDescription, {
             Trust Center
           </p>
           <h2 class="text-3xl tracking-tight font-semibold mt-3">
-            Search visibility without a safety model is noise.
+            Understand how privacy, outreach, and moderation work.
           </h2>
           <div class="mt-6 gap-4 grid">
             <NuxtLink
@@ -236,7 +236,7 @@ usePageSeo("Build startup teams with more structure", appDescription, {
             Contract resources
           </p>
           <h2 class="text-3xl tracking-tight font-semibold mt-3">
-            The workflow differentiator now has public entry points.
+            Learn the founder terms before you need them.
           </h2>
           <div class="mt-6 gap-4 grid">
             <NuxtLink
@@ -258,42 +258,11 @@ usePageSeo("Build startup teams with more structure", appDescription, {
     </section>
 
     <section class="py-16">
-      <div class="page-shell gap-8 grid lg:grid-cols-[0.75fr_1.25fr]">
-        <div>
-          <p class="section-kicker">
-            Proof, not fluff
-          </p>
-          <h2 class="text-3xl tracking-tight font-semibold mt-3">
-            Teams come here because the hard conversations happen early.
-          </h2>
-          <p class="muted text-base leading-7 mt-4">
-            CoFoundry is not optimized for volume. It is optimized for founder fit, explicit expectations, and cleaner transitions into actual working relationships.
-          </p>
-        </div>
-        <div class="gap-5 grid md:grid-cols-3">
-          <article v-for="testimonial in testimonials" :key="testimonial.id" class="panel p-6">
-            <p class="text-base leading-7">
-              “{{ testimonial.quote }}”
-            </p>
-            <div class="mt-6">
-              <p class="font-semibold">
-                {{ testimonial.author }}
-              </p>
-              <p class="muted text-sm">
-                {{ testimonial.role }} · {{ testimonial.company }}
-              </p>
-            </div>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <section class="py-16">
       <div class="page-shell panel p-6 overflow-hidden md:p-8">
         <PageIntro
           eyebrow="Pricing"
           title="Free to start. Paid when the workflow matters."
-          description="The core monetization in V1 is subscription SaaS. CoFoundry charges for better workflow outcomes, not mandatory platform equity."
+          description="Start free, then pay for more outreach and the full proposal-and-agreement workflow."
         >
           <template #actions>
             <BaseButton to="/pricing">

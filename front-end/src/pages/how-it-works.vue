@@ -8,8 +8,8 @@ usePageSeo("How it works")
   <div class="page-shell py-16 md:py-20">
     <PageIntro
       eyebrow="Process"
-      title="Built for startup team formation, not loose networking."
-      description="The product experience is deliberately structured around the failure points the research surfaced most often: low intent, poor trust signals, weak first calls, and vague post-match commitments."
+      title="From first intro to working agreement."
+      description="CoFoundry keeps the early steps clear: profile, fit, first call, trial sprint, proposal, and agreement."
     />
 
     <div class="mt-10 gap-6 grid">
@@ -32,31 +32,31 @@ usePageSeo("How it works")
 
     <div class="panel mt-10 p-6 md:p-8">
       <h2 class="text-2xl font-semibold">
-        Why the workflow is this opinionated
+        Why it follows this order
       </h2>
       <div class="mt-6 gap-4 grid md:grid-cols-3">
         <div class="panel-inset p-4">
           <p class="text-sm font-semibold">
-            Reduce search costs
+            See fit sooner
           </p>
           <p class="muted text-sm leading-6 mt-2">
-            Intent and proof-of-work let serious users rule people in or out faster.
+            Clear profiles and proof help you decide whether a conversation is worth having.
           </p>
         </div>
         <div class="panel-inset p-4">
           <p class="text-sm font-semibold">
-            Catch misalignment early
+            Test before you commit
           </p>
           <p class="muted text-sm leading-6 mt-2">
-            First-call prompts and trial sprints expose pace, communication, and decision-rights issues before they become equity fights.
+            First-call prompts and trial sprints expose pace, communication, and decision issues before they become harder to unwind.
           </p>
         </div>
         <div class="panel-inset p-4">
           <p class="text-sm font-semibold">
-            Monetize workflow value
+            Keep the terms in one place
           </p>
           <p class="muted text-sm leading-6 mt-2">
-            CoFoundry is strongest when it owns the path from match to signed agreement, not when it behaves like another noisy directory.
+            Proposal versions, comments, and agreement drafts stay attached to the same relationship.
           </p>
         </div>
       </div>

@@ -63,15 +63,15 @@ async function signInWithProvider(provider: "google" | "github") {
     </p>
     <h2 class="text-3xl tracking-tight font-semibold mt-3">
       {{ policy.marketingShellOnly
-        ? "Sign in if you already have workspace credentials."
-        : "Pick up the founder conversation where you left it." }}
+        ? "Sign in if you already have access."
+        : "Sign in to your workspace." }}
     </h2>
     <p class="muted text-sm leading-6 mt-3">
       {{ policy.marketingShellOnly
-        ? "New workspace creation is opening in phases, but existing members and invited teams can continue below with their credentials."
+        ? "Existing members and invited teams can continue below with their credentials."
         : policy.showDemoConveniences
-          ? "This environment supports temporary review access for product review and local development."
-          : "Use your account credentials to continue discovery, messaging, and the proposal workflow." }}
+          ? "Use a review account or your own credentials to continue."
+          : "Use your account credentials to continue discovery, messaging, proposals, and agreements." }}
     </p>
 
     <form class="mt-8 gap-4 grid" @submit.prevent="submitForm">
@@ -94,9 +94,9 @@ async function signInWithProvider(provider: "google" | "github") {
           Need a workspace instead?
         </p>
         <div class="muted text-sm leading-6 mt-3 gap-3 grid">
-          <div>Browse public founder profiles, startup searches, trust resources, and contract guides first.</div>
-          <div>Request workspace access if you want discovery, messaging, proposals, and agreements inside the product.</div>
-          <div>Contact the team for pricing, pilot access, or venture-studio setup.</div>
+          <div>Browse public profiles, startup searches, trust pages, and guides first.</div>
+          <div>Request access if you want discovery, messaging, proposals, and agreements inside the product.</div>
+          <div>Contact the team for pricing or studio access.</div>
         </div>
       </div>
 

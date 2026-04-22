@@ -1,47 +1,47 @@
-import type { MarketingStat, PricingTier, Testimonial } from "../types/domain"
+import type { MarketingStat, PricingTier } from "../types/domain"
 
 export const heroMetrics: MarketingStat[] = [
-  { label: "Qualified intros", value: "4.2x", context: "More accepted connections than a cold outbound workflow." },
-  { label: "Proposal-to-agreement time", value: "9 days", context: "Median time from first match to signed founder agreement." },
-  { label: "Paid retention", value: "81%", context: "Teams keep using the workflow after their first proposal cycle." },
+  { label: "Contact", value: "Mutual", context: "Direct outreach stays inside the product until both sides opt in." },
+  { label: "Trial sprint", value: "Built in", context: "Move from the first call to a short working test before heavier terms." },
+  { label: "Proposal history", value: "Versioned", context: "Keep comments, revisions, and agreement drafts in one place." },
 ]
 
 export const howItWorksSteps = [
   {
     id: "intent",
-    eyebrow: "1. Declare intent",
-    title: "Lead with timing, company shape, and the non-negotiables that actually matter.",
-    body: "CoFoundry asks for a serious intent profile before discovery: commitment, start timeline, company preferences, equity expectations, and the conditions that should be explicit before anyone reaches for a proposal.",
+    eyebrow: "1. Start with a clear search",
+    title: "Say what you want to build, join, and commit to right now.",
+    body: "Profiles start with role, timing, weekly availability, stage preferences, and the company shapes you are actually open to.",
   },
   {
     id: "trust",
-    eyebrow: "2. Show proof",
-    title: "Use proof-of-work and responsiveness signals to reduce search costs.",
-    body: "Profiles surface builder proof, verification, recent activity, and reply speed so members can quickly tell whether someone is real, active, and worth a serious conversation.",
+    eyebrow: "2. Show real proof",
+    title: "Give people enough context to decide whether a conversation is worth having.",
+    body: "Use links, visible work, and recent activity to show that you are real, current, and serious about the search.",
   },
   {
     id: "match",
-    eyebrow: "3. Match intentionally",
-    title: "Keep contact mutual and the discovery layer calmer.",
-    body: "Filter by role, industry, stage, commitment, compensation, location, and remote preference. Direct contact stays gated until both sides opt in.",
+    eyebrow: "3. Match with context",
+    title: "Filter by role, stage, industry, commitment, compensation, and work style.",
+    body: "Discovery helps you narrow the list quickly, while direct contact stays gated until both sides opt in.",
   },
   {
     id: "call",
-    eyebrow: "4. Run the first call well",
-    title: "Use a guided first-call agenda instead of a vague founder chemistry chat.",
-    body: "CoFoundry pushes the early conversation toward motivation, company shape, commitment, decision rights, and trial expectations so serious people do not waste a week talking around the hard parts.",
+    eyebrow: "4. Use the first call well",
+    title: "Focus early on motivation, commitment, scope, and decision-making.",
+    body: "The early conversation should answer whether the fit is real, not just whether the energy is good.",
   },
   {
     id: "trial",
-    eyebrow: "5. Run a short sprint",
-    title: "Pressure-test the working relationship before long-term terms feel permanent.",
-    body: "A lightweight trial collaboration plan plus an alignment check helps the pair define commitment, governance defaults, scope, cadence, deliverables, and success signals before anyone pretends the fit is already proven.",
+    eyebrow: "5. Run a short trial",
+    title: "Test how you work together before you formalize the relationship.",
+    body: "Use a small working sprint to check pace, communication, ownership, and follow-through before you negotiate long-term terms.",
   },
   {
     id: "agreement",
-    eyebrow: "6. Structure and sign",
-    title: "Move from trial to versioned proposal and a clean agreement draft.",
-    body: "Responsibilities, decision rights, vesting, cliff, IP assignment, cash, equity, and exit terms all live in one versioned workflow that can roll into a signed template agreement.",
+    eyebrow: "6. Put the terms in writing",
+    title: "Move from trial notes to a proposal and an agreement draft.",
+    body: "Keep role scope, commitment, vesting, IP, cash, equity, and decision rights in one versioned workflow.",
   },
 ]
 
@@ -50,80 +50,56 @@ export const pricingTiers: PricingTier[] = [
     id: "free",
     name: "Free",
     priceLabel: "$0",
-    description: "Keep the market liquid: build your profile, browse seriously, and use a small number of high-intent workflow actions each month.",
+    description: "Build your profile, browse the network, and start a focused search.",
     ctaLabel: "Start free",
     highlighted: false,
     features: [
-      "Create a high-signal founder or collaborator profile",
-      "Private member discovery and basic ranking",
-      "Up to 5 connection requests per month",
+      "Create a founder or collaborator profile",
+      "Member discovery and basic ranking",
+      "Up to 5 new intros each month",
       "1 saved search, 2 proposal sends, and 1 agreement preview each month",
-      "Messaging after mutual matches stays available",
-      "Guided first-call agenda and one active trial sprint",
+      "Matched messaging",
+      "First-call guide and one active trial sprint",
     ],
   },
   {
     id: "pro",
     name: "Pro",
     priceLabel: "$29/mo",
-    description: "For founders and operators actively running a search process and turning real conversations into structured terms.",
+    description: "For active searches that need more outreach and the full proposal workflow.",
     ctaLabel: "Upgrade to Pro",
     highlighted: true,
     features: [
       "40 new intros per month with unlimited saved searches",
-      "Proof-of-work, activity, and stronger trust visibility",
+      "Stronger visibility for proof, activity, and trust signals",
       "12 proposal sends and 8 agreement drafts each month",
       "Deal room with clause-level comments and version history",
-      "Signature-ready agreement workflow and print-friendly export",
-      "Transparent renewal date plus one-click in-product cancellation",
-      "Saved searches, ranking boost, and deeper workflow tools",
+      "Signature-ready agreement workflow and export",
+      "Clear renewal date and in-product cancellation",
+      "Ranking boost and deeper workflow tools",
     ],
   },
   {
     id: "team",
     name: "Team / Studio",
     priceLabel: "$99/mo",
-    description: "For venture studios, repeat founders, and small holding teams managing several searches with higher outbound and deal-room volume.",
+    description: "For venture studios and repeat founders running several searches at once.",
     ctaLabel: "Talk to sales",
     highlighted: false,
     features: [
-      "Higher-volume intros, proposal sends, and agreement drafts",
+      "Higher-volume intros, proposals, and agreement drafts",
       "Multiple startup opportunities",
       "Shared deal-room management across several searches",
-      "Admin-style moderation and review tools",
-      "Priority workflow setup for repeat searches and venture studios",
+      "Team-level review and moderation tools",
+      "Priority setup for repeat searches and studios",
     ],
-  },
-]
-
-export const testimonials: Testimonial[] = [
-  {
-    id: "t1",
-    quote: "We met on CoFoundry, traded a concrete proposal in the first week, and had a signed working agreement before we incorporated.",
-    author: "Olivia Chen",
-    role: "Founder",
-    company: "LedgerLoop",
-  },
-  {
-    id: "t2",
-    quote: "Every other platform felt like freelance lead gen. CoFoundry filtered for people who wanted ownership and long-term alignment.",
-    author: "Malik Thompson",
-    role: "Technical Co-Founder",
-    company: "Operator now at Dockyard AI",
-  },
-  {
-    id: "t3",
-    quote: "The proposal workflow forced us to talk through decision rights and vesting early, which saved us from vague founder energy.",
-    author: "Sofia Ramirez",
-    role: "Founding Designer",
-    company: "Trialwire",
   },
 ]
 
 export const faqs = [
   {
     question: "Is CoFoundry a freelance marketplace?",
-    answer: "No. CoFoundry is designed for forming startup teams and long-term collaborations. It is centered on ownership, commitment, and venture-building fit rather than one-off project work.",
+    answer: "No. CoFoundry is for founders and early collaborators who want to build a company together, not for one-off project work.",
   },
   {
     question: "Does CoFoundry take equity in every relationship?",
@@ -139,11 +115,11 @@ export const faqs = [
   },
   {
     question: "Why do you limit outreach on the free tier?",
-    answer: "Because unbounded outreach destroys trust. CoFoundry is designed around thoughtful intros, not volume spam, so the free tier stays useful without turning the network into a noisy inbox.",
+    answer: "Because unlimited outreach turns any matching product into spam. The free tier is meant for a focused search, not inbox spray.",
   },
   {
     question: "Do I have to pay to message someone I already matched with?",
-    answer: "No. Messaging after mutual interest stays available on every plan. The metered unit is new outbound intros and other high-intent workflow actions, not ongoing matched conversation.",
+    answer: "No. Messaging after a mutual match stays available on every plan. Limits apply to new outbound intros and later-stage workflow actions.",
   },
   {
     question: "What is the trial collaboration workflow?",
@@ -151,7 +127,7 @@ export const faqs = [
   },
   {
     question: "Why does CoFoundry ask about runway, equity philosophy, and IP readiness?",
-    answer: "Because most founder breakups are not random. They usually come from mismatched commitment, unclear control, role confusion, or ownership surprises. CoFoundry makes those signals explicit earlier so the wrong match fails fast and the right match gets clearer faster.",
+    answer: "Because most bad founder matches fail over commitment, control, role boundaries, or ownership surprises. CoFoundry asks those questions early so the fit is clearer before people get deep into the process.",
   },
   {
     question: "Are the contracts legally binding?",
@@ -169,46 +145,46 @@ export const faqs = [
 
 export const trustPillars = [
   {
-    title: "Private, mutual-intent access",
-    body: "Direct contact details stay hidden until both sides opt into a connection. Discovery is designed to stay calmer and more respectful than open founder directories.",
+    title: "Mutual contact rules",
+    body: "Direct contact details stay hidden until both sides opt into a connection.",
   },
   {
-    title: "Proof of work and verification",
-    body: "Profiles surface builder proof, linked accounts, and step-up trust signals so members can judge credibility faster than they can from headline-only profiles.",
+    title: "Visible proof",
+    body: "Profiles surface linked accounts, real work, and verification signals so members can judge credibility faster.",
   },
   {
-    title: "Responsiveness and activity signals",
-    body: "Recent activity and reply behavior shape visibility so the network does not fill with dead inventory, stale profiles, or silent matches.",
+    title: "Activity signals",
+    body: "Recent activity and reply behavior help keep discovery focused on people who are actually active.",
   },
   {
     title: "Structured negotiation",
-    body: "The workflow moves from first call to trial sprint to versioned proposal and agreement draft, surfacing equity, vesting, IP, and decision rights early.",
+    body: "The workflow moves from first call to trial sprint to proposal and agreement draft, surfacing the important terms early.",
   },
   {
     title: "Moderation workflow",
-    body: "Profiles, opportunities, and messages can be flagged and reviewed by moderators with high-priority escalation for scams, impersonation, and privacy violations.",
+    body: "Profiles, opportunities, and messages can be flagged and reviewed when something looks unsafe or misleading.",
   },
 ]
 
 export const researchPrinciples = [
   {
-    title: "Tight intent beats open-ended browsing",
-    body: "The strongest marketplaces reduce search costs. CoFoundry makes timing, company fit, and non-negotiables explicit before people start sending intros.",
+    title: "See fit sooner",
+    body: "Profiles surface role, stage, timing, and commitment so you can rule people in or out quickly.",
   },
   {
-    title: "Proof-of-work matters more than founder theater",
-    body: "Profiles are easier to trust when they include artifacts, outcomes, and operational evidence instead of ambition-only copy.",
+    title: "Talk with context",
+    body: "First-call prompts keep the early conversation focused on the decisions that matter.",
   },
   {
-    title: "The hard part starts after the match",
-    body: "The real differentiator is the post-match workflow: first call, trial sprint, proposal, and agreement. That is where vague chemistry either turns into a real team or falls apart quickly.",
+    title: "Test the working relationship",
+    body: "A short sprint tells you more than a long thread of speculative messages.",
   },
   {
-    title: "Alignment should be explicit before equity enters the room",
-    body: "CoFoundry now treats commitment, runway, role boundaries, governance defaults, and IP readiness as product data, not hidden assumptions that only surface in a bad negotiation.",
+    title: "Keep the terms organized",
+    body: "Proposal versions, comments, and agreement drafts stay in one workflow instead of getting scattered across docs and threads.",
   },
   {
-    title: "Workflow value justifies the subscription",
-    body: "CoFoundry is more defensible when it sells de-risking and faster team formation, not just directory access.",
+    title: "Pay when the workflow matters",
+    body: "Free gets you into the network. Paid plans expand outreach and the tools that formalize a partnership.",
   },
 ]

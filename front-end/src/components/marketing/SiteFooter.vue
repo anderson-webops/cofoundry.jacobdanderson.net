@@ -10,7 +10,7 @@ const primaryAccessCta = computed(() => getPrimaryAccessCta("site-footer"))
       <div>
         <AppLogo />
         <p class="muted text-sm leading-6 mt-3 max-w-md">
-          CoFoundry is a software platform for forming startup teams, structuring proposals, and generating working agreements. Contracts are templates and not legal advice.
+          CoFoundry helps founders and early collaborators find the right fit, test the working relationship, and put terms in writing.
         </p>
         <div class="mt-4 flex flex-wrap gap-3 items-center">
           <BaseButton size="sm" variant="secondary" :to="primaryAccessCta.to">

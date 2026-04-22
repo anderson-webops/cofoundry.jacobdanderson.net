@@ -13,8 +13,8 @@ const noindexRoute = computed(() => privateRoutePattern.test(route.path))
 const analyticsScripts = import.meta.env.PROD
   ? [
       {
-        defer: true,
-        src: "https://analytics.jacobdanderson.net/script.js",
+        "defer": true,
+        "src": "https://analytics.jacobdanderson.net/script.js",
         "data-website-id": "89771691-ddd3-439b-bf75-7b62c50c41c2",
       },
     ]

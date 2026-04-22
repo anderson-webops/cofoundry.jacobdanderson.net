@@ -30,8 +30,8 @@ export const termsLastUpdated = "April 11, 2026"
 
 export const termsKeyNotes = [
   {
-    title: "Startup team formation only",
-    body: "CoFoundry is for founders, co-founders, and startup collaborators. It is not a freelance marketplace, recruiting agency, or generic job board.",
+    title: "Built for founders and early collaborators",
+    body: "CoFoundry is for founders, co-founders, and startup collaborators working toward real company formation.",
   },
   {
     title: "Structured workflow, not guaranteed outcomes",
@@ -471,7 +471,7 @@ export const privacySections: LegalSection[] = [
     title: "11. Your Choices and Privacy Rights",
     summary: "Members can change visibility settings, edit profile data, and request privacy-related action through support.",
     paragraphs: [
-      "You can update profile information, change visibility settings, manage linked accounts, cancel a paid plan, and close your account through the product surfaces CoFoundry makes available.",
+      "You can update profile information, change visibility settings, manage linked accounts, cancel a paid plan, and close your account through the settings and account tools CoFoundry makes available.",
       "You can also contact CoFoundry to request access, correction, deletion, or other privacy-related support. CoFoundry may need to verify your identity before acting on a request and may limit or deny a request where another user's rights, ongoing investigations, legal obligations, or record-retention duties prevent immediate deletion.",
       "Members can also control whether they receive marketing messages, decide what links to publish publicly, and choose whether to make a profile visible on the public web, only to signed-in members, or not broadly visible at all.",
     ],
