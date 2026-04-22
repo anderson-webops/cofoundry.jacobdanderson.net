@@ -10,6 +10,15 @@ const route = useRoute()
 const { scheme } = useThemeScheme()
 const privateRoutePattern = /^(?:\/admin|\/app|\/auth|\/api|\/onboarding)(?:\/|$)/
 const noindexRoute = computed(() => privateRoutePattern.test(route.path))
+const analyticsScripts = import.meta.env.PROD
+  ? [
+      {
+        defer: true,
+        src: "https://analytics.jacobdanderson.net/script.js",
+        "data-website-id": "89771691-ddd3-439b-bf75-7b62c50c41c2",
+      },
+    ]
+  : []
 const siteUrl = computed(() => {
   const configured = runtimeConfig.public.appUrl || "https://cofoundry.jacobdanderson.net"
   return new URL(route.path || "/", `${configured.replace(trailingSlashPattern, "")}/`).toString()
@@ -50,11 +59,14 @@ useHead(() => ({
       href: siteUrl.value,
     },
   ],
-  script: structuredData.value.map((entry, index) => ({
-    innerHTML: JSON.stringify(entry),
-    key: `structured-data-${index}`,
-    type: "application/ld+json",
-  })),
+  script: [
+    ...analyticsScripts,
+    ...structuredData.value.map((entry, index) => ({
+      innerHTML: JSON.stringify(entry),
+      key: `structured-data-${index}`,
+      type: "application/ld+json",
+    })),
+  ],
 }))
 
 useSeoMeta({

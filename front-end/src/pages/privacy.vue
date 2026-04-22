@@ -53,7 +53,7 @@ usePageSeo("Privacy Policy", "Product-specific privacy disclosures for CoFoundry
             Current deployment posture
           </p>
           <p class="muted text-sm leading-6 mt-2">
-            CoFoundry is currently configured for {{ backendModeLabel }} and {{ billingModeLabel }}. If live providers or new tracking features are enabled later, CoFoundry will update this policy and any required notices before changing production behavior.
+            CoFoundry is currently configured for {{ backendModeLabel }} and {{ billingModeLabel }}, and deployed builds currently use a first-party analytics service at analytics.jacobdanderson.net. If additional live providers or materially different tracking features are enabled later, CoFoundry will update this policy and any required notices before changing production behavior.
           </p>
         </div>
       </div>

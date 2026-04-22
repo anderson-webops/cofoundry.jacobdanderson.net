@@ -257,7 +257,7 @@ export const privacyKeyNotes = [
   },
   {
     title: "Current tracking posture is restrained",
-    body: "CoFoundry currently relies on essential session storage and first-party product state. It does not use third-party ad pixels or cross-context behavioral advertising in the current configuration.",
+    body: "CoFoundry currently relies on essential session storage, first-party product state, and a first-party analytics script hosted at analytics.jacobdanderson.net. It does not use third-party ad pixels or cross-context behavioral advertising in the current configuration.",
   },
   {
     title: "Live vendors are conditional",
@@ -431,7 +431,8 @@ export const privacySections: LegalSection[] = [
     paragraphs: [
       "CoFoundry currently uses essential technologies such as cookies and local storage to keep members signed in, preserve workspace state, remember product preferences, and maintain secure session handling.",
       "These technologies include the session cookie used for authentication and first-party browser storage used to preserve product state, product preferences, and local interaction continuity.",
-      "CoFoundry does not currently deploy third-party ad pixels, cross-site behavioral advertising tags, or similar tracking technologies in the present product configuration. If non-essential analytics or marketing cookies are introduced later, CoFoundry will update this policy and add any required notices or consent controls before using them.",
+      "CoFoundry also deploys a first-party analytics script from analytics.jacobdanderson.net on deployed versions of the product to understand service usage and performance. That service may receive pageview and technical request metadata, but it is not used for third-party advertising or cross-context behavioral profiling.",
+      "CoFoundry does not currently deploy third-party ad pixels, cross-site behavioral advertising tags, or similar tracking technologies in the present product configuration. If additional non-essential analytics or marketing cookies are introduced later, CoFoundry will update this policy and add any required notices or consent controls before using them.",
       "Because CoFoundry does not currently use cross-site behavioral advertising in this configuration, it does not presently offer a separate advertising opt-out flow. If that changes, CoFoundry will implement the required controls for the jurisdictions in which those features are offered.",
     ],
   },
