@@ -91,7 +91,7 @@ async function markNotificationRead(notificationId: string) {
 </script>
 
 <template>
-  <div class="gap-6 grid">
+  <div class="gap-5 grid md:gap-6">
     <PageIntro
       eyebrow="Inbox"
       title="Work the queue, not just the tools"
@@ -147,12 +147,12 @@ async function markNotificationRead(notificationId: string) {
         </BaseButton>
       </div>
 
-      <div v-if="inboxSnapshot?.actions.length" class="mt-5 gap-3 grid">
+      <div v-if="inboxSnapshot?.actions.length" class="surface-row-list mt-5">
         <NuxtLink
           v-for="item in inboxSnapshot.actions"
           :key="item.id"
           :to="item.href"
-          class="panel-inset p-4 block transition hover:-translate-y-0.5"
+          class="surface-row block transition hover:-translate-y-0.5"
           @click="item.kind === 'notification' ? markNotificationRead(item.id.replace('notification:', '')) : undefined"
         >
           <div class="flex gap-3 items-start justify-between">
@@ -189,8 +189,8 @@ async function markNotificationRead(notificationId: string) {
       </EmptyState>
     </div>
 
-    <div class="gap-4 grid xl:grid-cols-[1.15fr_0.85fr]">
-      <div class="gap-4 grid">
+    <div class="gap-5 grid md:gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+      <div class="gap-5 grid">
         <section class="panel p-6">
           <div class="flex flex-wrap gap-3 items-start justify-between">
             <div class="max-w-2xl">

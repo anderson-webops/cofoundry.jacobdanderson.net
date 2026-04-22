@@ -10,7 +10,7 @@ usePageSeo("Terms of Service", "Product-specific terms for CoFoundry's founder m
 </script>
 
 <template>
-  <div class="page-shell py-16 md:py-20">
+  <div class="reading-shell page-section">
     <PageIntro
       eyebrow="Legal"
       title="Terms of Service"
@@ -36,7 +36,7 @@ usePageSeo("Terms of Service", "Product-specific terms for CoFoundry's founder m
         </p>
       </div>
 
-      <div class="mt-6 gap-4 grid md:grid-cols-2 xl:grid-cols-4">
+      <div class="subtle-grid subtle-grid-4 mt-6">
         <div v-for="item in termsKeyNotes" :key="item.title" class="panel-inset p-4">
           <p class="text-sm font-semibold">
             {{ item.title }}
@@ -48,7 +48,7 @@ usePageSeo("Terms of Service", "Product-specific terms for CoFoundry's founder m
       </div>
     </div>
 
-    <div class="mt-10 gap-6 grid lg:grid-cols-[0.85fr_2.15fr]">
+    <div class="reading-layout mt-10">
       <aside class="panel p-6 h-fit lg:top-24 lg:sticky">
         <h2 class="text-lg font-semibold">
           On this page
@@ -58,7 +58,7 @@ usePageSeo("Terms of Service", "Product-specific terms for CoFoundry's founder m
             v-for="section in termsSections"
             :key="section.id"
             :href="`#${section.id}`"
-            class="muted text-sm leading-6 transition hover:text-[var(--copy)]"
+            class="muted text-sm leading-6 transition hover:text-[var(--text)]"
           >
             {{ section.title }}
           </a>
@@ -70,7 +70,7 @@ usePageSeo("Terms of Service", "Product-specific terms for CoFoundry's founder m
           </p>
           <p class="muted text-sm leading-6 mt-3">
             For support, trust and safety appeals, or intellectual property complaints, contact
-            <a :href="`mailto:${supportEmail}`" class="text-[var(--copy)] underline underline-offset-4">{{ supportEmail }}</a>.
+            <a :href="`mailto:${supportEmail}`" class="text-[var(--text)] underline underline-offset-4">{{ supportEmail }}</a>.
           </p>
           <div class="mt-4 flex flex-wrap gap-3">
             <BaseButton variant="ghost" to="/contact">
@@ -83,7 +83,7 @@ usePageSeo("Terms of Service", "Product-specific terms for CoFoundry's founder m
         </div>
       </aside>
 
-      <div class="gap-6 grid">
+      <div class="reading-body">
         <section
           v-for="section in termsSections"
           :id="section.id"

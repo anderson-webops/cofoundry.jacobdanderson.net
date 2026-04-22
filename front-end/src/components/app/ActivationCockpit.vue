@@ -72,11 +72,11 @@ const activationTasks = computed(() => [
       </p>
     </div>
 
-    <div class="mt-5 gap-3 grid">
+    <div class="surface-row-list mt-5">
       <div
         v-for="task in activationTasks"
         :key="task.id"
-        class="panel-inset p-4 flex gap-4 items-start justify-between"
+        class="surface-row flex flex-col gap-3 md:flex-row md:items-start md:justify-between"
       >
         <div>
           <p class="text-sm font-semibold">
@@ -86,7 +86,7 @@ const activationTasks = computed(() => [
             {{ task.description }}
           </p>
         </div>
-        <div class="flex flex-col gap-2 items-end">
+        <div class="flex gap-2 items-center md:flex-col md:items-end">
           <BaseBadge :tone="task.complete ? 'success' : 'warning'">
             {{ task.complete ? "Done" : "Next" }}
           </BaseBadge>

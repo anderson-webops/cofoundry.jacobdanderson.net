@@ -42,16 +42,11 @@ const profileRoleLabel = computed(() => {
       <BaseBadge :tone="readiness.trustReady ? 'success' : 'accent'">
         {{ readiness.trustPercent }}% profile signals
       </BaseBadge>
-      <BaseBadge tone="neutral">
-        {{ formatRemotePreference(profile.remotePreference) }}
-      </BaseBadge>
-      <BaseBadge tone="neutral">
-        {{ formatCommitment(profile.timeCommitment) }}
-      </BaseBadge>
-      <BaseBadge tone="neutral">
-        {{ profile.location }}
-      </BaseBadge>
     </div>
+
+    <p class="muted text-sm leading-6">
+      {{ formatRemotePreference(profile.remotePreference) }} · {{ formatCommitment(profile.timeCommitment) }} · {{ profile.location }}
+    </p>
 
     <p class="muted text-sm leading-6">
       {{ profile.bio }}
@@ -72,7 +67,7 @@ const profileRoleLabel = computed(() => {
     </div>
 
     <div class="flex flex-wrap gap-2">
-      <span v-for="skill in skills.slice(0, 4)" :key="skill" class="pill">
+      <span v-for="skill in skills.slice(0, 3)" :key="skill" class="pill">
         {{ skill }}
       </span>
     </div>

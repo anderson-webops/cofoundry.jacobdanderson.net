@@ -103,7 +103,7 @@ async function submitForm() {
           How to reach us
         </h2>
         <ul class="muted text-sm leading-7 mt-5 gap-4 grid">
-          <li>General support: <a :href="`mailto:${runtimeConfig.public.supportEmail}`" class="text-[var(--copy)] underline underline-offset-4">{{ runtimeConfig.public.supportEmail }}</a></li>
+          <li>General support: <a :href="`mailto:${runtimeConfig.public.supportEmail}`" class="text-[var(--text)] underline underline-offset-4">{{ runtimeConfig.public.supportEmail }}</a></li>
           <li>Use this form for access requests, product questions, pricing conversations, or support follow-up.</li>
           <li>We reply through the email address you provide here.</li>
         </ul>

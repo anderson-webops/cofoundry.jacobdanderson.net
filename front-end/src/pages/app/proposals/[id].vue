@@ -123,8 +123,8 @@ function contractQuotaText() {
 </script>
 
 <template>
-  <div v-if="proposal && version" class="gap-6 grid xl:grid-cols-[0.86fr_1.14fr]">
-    <section class="gap-4 grid">
+  <div v-if="proposal && version" class="gap-5 grid md:gap-6 xl:grid-cols-[0.86fr_1.14fr]">
+    <section class="gap-5 grid">
       <PageIntro
         eyebrow="Deal room"
         :title="proposal.title"
@@ -151,7 +151,7 @@ function contractQuotaText() {
             Version {{ version.versionNumber }}
           </BaseBadge>
         </div>
-        <div v-if="usage" class="panel-inset mt-4 p-4">
+        <div v-if="usage" class="surface-divider mt-4">
           <p class="text-sm font-semibold">
             Agreement draft usage
           </p>
@@ -195,11 +195,11 @@ function contractQuotaText() {
             {{ unresolvedSections.length ? `${unresolvedSections.length} active` : "Aligned" }}
           </BaseBadge>
         </div>
-        <div class="mt-4 gap-3 grid">
+        <div class="surface-row-list mt-4">
           <div
             v-for="section in unresolvedSections"
             :key="section.id"
-            class="panel-inset p-4"
+            class="surface-row"
           >
             <div class="flex gap-3 items-center justify-between">
               <p class="text-sm font-semibold">
@@ -220,8 +220,8 @@ function contractQuotaText() {
         <h2 class="text-lg font-semibold">
           Version history
         </h2>
-        <div class="mt-4 gap-3 grid">
-          <div v-for="entry in timeline" :key="entry.id" class="panel-inset p-4">
+        <div class="surface-row-list mt-4">
+          <div v-for="entry in timeline" :key="entry.id" class="surface-row">
             <div class="flex gap-3 items-center justify-between">
               <div>
                 <p class="text-sm font-semibold">
@@ -246,8 +246,8 @@ function contractQuotaText() {
         <h2 class="text-lg font-semibold">
           Clause comments
         </h2>
-        <div class="mt-4 gap-3 grid">
-          <div v-for="comment in comments" :key="comment.id" class="panel-inset p-4">
+        <div class="surface-row-list mt-4">
+          <div v-for="comment in comments" :key="comment.id" class="surface-row">
             <div class="flex gap-3 items-center justify-between">
               <p class="text-sm font-semibold">
                 {{ getProfileByUserId(workspaceStore.data, comment.authorUserId)?.displayName }}
@@ -279,7 +279,7 @@ function contractQuotaText() {
       </div>
     </section>
 
-    <section class="gap-4 grid">
+    <section class="gap-5 grid">
       <div class="panel p-6">
         <div class="flex gap-4 items-start justify-between">
           <div>
@@ -298,8 +298,8 @@ function contractQuotaText() {
           </BaseBadge>
         </div>
 
-        <div class="mt-6 gap-4 grid md:grid-cols-2">
-          <div v-for="item in termsSummary" :key="item.label" class="panel-inset p-4">
+        <div class="surface-row-list mt-6 md:gap-x-6 md:grid md:grid-cols-2">
+          <div v-for="item in termsSummary" :key="item.label" class="surface-row md:pr-4">
             <p class="text-sm font-semibold">
               {{ item.label }}
             </p>

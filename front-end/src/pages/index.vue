@@ -19,7 +19,7 @@ usePageSeo("Build startup teams with more structure", appDescription, {
 
 <template>
   <div>
-    <section class="py-16 relative overflow-hidden md:py-24">
+    <section class="page-section relative overflow-hidden">
       <div class="page-shell gap-12 grid lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
         <div class="fade-up">
           <p class="section-kicker">
@@ -43,7 +43,7 @@ usePageSeo("Build startup teams with more structure", appDescription, {
 
         <div class="panel p-6 relative overflow-hidden md:p-8">
           <div class="hero-spotlight" />
-          <div class="gap-6 grid">
+          <div class="surface-stack-lg">
             <div class="flex gap-4 items-center justify-between">
               <div>
                 <p class="text-sm font-semibold">
@@ -95,7 +95,7 @@ usePageSeo("Build startup teams with more structure", appDescription, {
       </div>
     </section>
 
-    <section class="py-16">
+    <section class="page-section-tight">
       <div class="page-shell">
         <PageIntro
           eyebrow="How CoFoundry works"
@@ -118,7 +118,7 @@ usePageSeo("Build startup teams with more structure", appDescription, {
       </div>
     </section>
 
-    <section class="py-16">
+    <section class="page-section-tight">
       <div class="page-shell">
         <PageIntro
           eyebrow="Search entry points"
@@ -182,7 +182,7 @@ usePageSeo("Build startup teams with more structure", appDescription, {
       </div>
     </section>
 
-    <section class="py-16">
+    <section class="page-section-tight">
       <div class="page-shell gap-8 grid lg:grid-cols-2">
         <div class="panel p-6 md:p-8">
           <p class="section-kicker">
@@ -234,7 +234,7 @@ usePageSeo("Build startup teams with more structure", appDescription, {
       </div>
     </section>
 
-    <section class="py-16">
+    <section class="page-section-tight">
       <div class="page-shell panel p-6 overflow-hidden md:p-8">
         <PageIntro
           eyebrow="Pricing"
@@ -274,10 +274,10 @@ usePageSeo("Build startup teams with more structure", appDescription, {
       </div>
     </section>
 
-    <section class="py-16">
+    <section class="page-section">
       <div class="page-shell marketing-cta-panel px-6 py-12 rounded-[2rem] md:px-10">
         <div class="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-          <div class="max-w-4xl">
+          <div class="max-w-[38rem]">
             <p class="section-kicker marketing-cta-kicker">
               Start the search
             </p>

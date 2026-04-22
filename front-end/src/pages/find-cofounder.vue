@@ -24,7 +24,7 @@ usePageSeo(
 
 <template>
   <div>
-    <section class="py-16 md:py-20">
+    <section class="page-section">
       <div class="page-shell gap-8 grid lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
         <div>
           <p class="section-kicker">
@@ -65,7 +65,7 @@ usePageSeo(
       </div>
     </section>
 
-    <section class="py-16">
+    <section class="page-section-tight">
       <div class="page-shell">
         <PageIntro
           eyebrow="Browse by role"
@@ -86,25 +86,21 @@ usePageSeo(
             :to="`/roles/${hub.slug}`"
             class="panel p-6 transition hover:border-[var(--accent)] hover:bg-[var(--accent-soft)]"
           >
-            <div class="flex gap-4 items-start justify-between">
-              <div>
-                <h2 class="text-xl font-semibold">
-                  {{ hub.label }}
-                </h2>
-                <p class="muted text-sm leading-6 mt-3">
-                  {{ hub.description }}
-                </p>
-              </div>
-              <BaseBadge tone="accent">
-                {{ hub.profileCount + hub.opportunityCount }} pages
-              </BaseBadge>
-            </div>
+            <h2 class="text-xl font-semibold">
+              {{ hub.label }}
+            </h2>
+            <p class="muted text-sm leading-6 mt-3">
+              {{ hub.description }}
+            </p>
+            <p class="muted text-sm mt-4">
+              {{ hub.profileCount }} profiles · {{ hub.opportunityCount }} searches
+            </p>
           </NuxtLink>
         </div>
       </div>
     </section>
 
-    <section class="py-16">
+    <section class="page-section-tight">
       <div class="page-shell gap-8 grid lg:grid-cols-2">
         <div>
           <PageIntro
@@ -164,7 +160,7 @@ usePageSeo(
       </div>
     </section>
 
-    <section class="py-16">
+    <section class="page-section-tight">
       <div class="page-shell">
         <PageIntro
           eyebrow="Public profiles"
@@ -193,7 +189,7 @@ usePageSeo(
       </div>
     </section>
 
-    <section class="py-16">
+    <section class="page-section-tight">
       <div class="page-shell">
         <PageIntro
           eyebrow="Public startup searches"
@@ -221,7 +217,7 @@ usePageSeo(
       </div>
     </section>
 
-    <section class="py-16">
+    <section class="page-section-tight">
       <div class="page-shell gap-8 grid lg:grid-cols-2">
         <div class="panel p-6 md:p-8">
           <p class="section-kicker">

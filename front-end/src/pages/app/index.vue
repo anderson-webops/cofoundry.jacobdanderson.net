@@ -201,7 +201,7 @@ function getContractVersion(contractId: string) {
 </script>
 
 <template>
-  <div class="gap-6 grid">
+  <div class="gap-5 grid md:gap-6">
     <PageIntro
       eyebrow="Workspace"
       :title="`Welcome back, ${profile?.displayName || authStore.currentUser?.name || 'there'}.`"
@@ -230,7 +230,7 @@ function getContractVersion(contractId: string) {
           </BaseBadge>
         </div>
 
-        <div class="panel-inset mt-5 p-5">
+        <div class="surface-divider mt-5">
           <p class="text-lg font-semibold">
             {{ primaryAction.title }}
           </p>
@@ -249,11 +249,11 @@ function getContractVersion(contractId: string) {
         <h2 class="text-sm font-semibold">
           Search status
         </h2>
-        <div class="mt-5 gap-3 grid">
+        <div class="surface-row-list mt-5">
           <div
             v-for="item in statusCards"
             :key="item.title"
-            class="panel-inset p-4"
+            class="surface-row"
           >
             <div class="flex gap-3 items-start justify-between">
               <p class="text-sm font-semibold">
@@ -278,8 +278,8 @@ function getContractVersion(contractId: string) {
       <MetricTile label="Open intros" :value="incomingRequests.length + outgoingRequests.length" context="Requests that still need a reply or follow-through." />
     </div>
 
-    <div class="gap-6 grid xl:grid-cols-[1.15fr_0.85fr]">
-      <section class="gap-4 grid">
+    <div class="gap-5 grid md:gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+      <section class="gap-5 grid">
         <PageIntro
           :eyebrow="showProfileRecommendations ? 'Recommended collaborators' : 'Recommended opportunities'"
           title="Best next conversations"
@@ -298,12 +298,9 @@ function getContractVersion(contractId: string) {
             <BaseBadge tone="accent">
               Match score {{ item.score }}
             </BaseBadge>
-            <BaseBadge v-if="item.reciprocityScore >= 6" tone="success">
-              Likely reply
-            </BaseBadge>
-            <BaseBadge v-if="item.localBias" tone="neutral">
-              Local-first
-            </BaseBadge>
+            <p v-if="item.reciprocityScore >= 6 || item.localBias" class="muted text-xs leading-5">
+              {{ [item.reciprocityScore >= 6 ? "Likely reply" : "", item.localBias ? "Local-first" : ""].filter(Boolean).join(" · ") }}
+            </p>
             <BaseButton variant="secondary" to="/app/discover">
               Review collaborator
             </BaseButton>
@@ -341,7 +338,7 @@ function getContractVersion(contractId: string) {
           description="Clear accepts and clear declines both keep the search moving."
         />
 
-        <div class="gap-4 grid lg:grid-cols-2">
+        <div class="gap-5 grid lg:grid-cols-2">
           <div class="gap-4 grid">
             <h3 class="text-base font-semibold">
               Incoming intros
@@ -416,7 +413,7 @@ function getContractVersion(contractId: string) {
         </div>
       </section>
 
-      <section class="gap-4 grid">
+      <section class="gap-5 grid">
         <ActivationCockpit
           v-if="profile"
           :profile="profile"
@@ -431,8 +428,8 @@ function getContractVersion(contractId: string) {
           <h2 class="text-lg font-semibold">
             Recent notifications
           </h2>
-          <div v-if="notifications.length" class="mt-5 gap-3 grid">
-            <div v-for="notification in notifications" :key="notification.id" class="p-4 border border-[var(--line)] rounded-[1.25rem]">
+          <div v-if="notifications.length" class="surface-row-list mt-5">
+            <div v-for="notification in notifications" :key="notification.id" class="surface-row">
               <div class="flex gap-3 items-start justify-between">
                 <div>
                   <p class="text-sm font-semibold">

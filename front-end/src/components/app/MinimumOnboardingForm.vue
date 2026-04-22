@@ -116,12 +116,12 @@ function submitForm() {
 
 <template>
   <form class="gap-8 grid" @submit.prevent="submitForm">
-    <div class="gap-4 grid md:grid-cols-3">
+    <div class="gap-3 grid md:grid-cols-3">
       <div
         v-for="(item, index) in steps"
         :key="item.title"
-        class="p-4 border rounded-[1.25rem]"
-        :class="index === step ? 'border-[var(--accent)] bg-[var(--accent-soft)]' : 'border-[var(--line)] bg-[var(--panel-inset)]'"
+        class="step-card"
+        :class="index === step ? 'step-card-active' : ''"
       >
         <p class="text-sm font-semibold">
           {{ item.title }}
@@ -175,7 +175,7 @@ function submitForm() {
       />
     </section>
 
-    <section v-show="step === 1" class="gap-4 grid">
+    <section v-show="step === 1" class="gap-5 grid">
       <TextInput
         v-model="form.headline"
         label="One-line summary"
@@ -213,7 +213,7 @@ function submitForm() {
       />
     </section>
 
-    <section v-show="step === 2" class="gap-4 grid">
+    <section v-show="step === 2" class="gap-5 grid">
       <PillPicker
         v-model="form.industries"
         label="Industries"

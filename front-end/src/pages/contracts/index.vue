@@ -7,7 +7,7 @@ usePageSeo("Founder agreement resources", "Learn how CoFoundry approaches propos
 </script>
 
 <template>
-  <div class="page-shell py-16 md:py-20">
+  <div class="reading-shell page-section">
     <PageIntro
       eyebrow="Contracts & Proposals"
       title="Guides for proposals, trials, vesting, and IP."
@@ -33,7 +33,7 @@ usePageSeo("Founder agreement resources", "Learn how CoFoundry approaches propos
       </NuxtLink>
     </div>
 
-    <div class="panel mt-10 p-6 md:p-8">
+    <div class="panel mt-10 p-6 max-w-[48rem] md:p-8">
       <h2 class="text-2xl font-semibold">
         Important disclaimer
       </h2>

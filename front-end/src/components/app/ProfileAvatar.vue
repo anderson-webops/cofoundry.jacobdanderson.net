@@ -33,7 +33,7 @@ const initials = computed(() => props.displayName
 
 <template>
   <div
-    class="text-[var(--copy)] font-semibold border border-[var(--line)] rounded-[1.5rem] bg-[var(--panel-inset)] flex shrink-0 items-center justify-center overflow-hidden"
+    class="text-[var(--text)] font-semibold border border-[var(--line)] rounded-[1.5rem] bg-[var(--panel-inset)] flex shrink-0 items-center justify-center overflow-hidden"
     :class="sizeClass"
   >
     <img

@@ -191,8 +191,8 @@ function quotaText(key: "proposals" | "contractDrafts") {
 </script>
 
 <template>
-  <div v-if="conversation && otherParticipant" class="gap-6 grid xl:grid-cols-[320px_minmax(0,1fr)]">
-    <section class="gap-4 grid">
+  <div v-if="conversation && otherParticipant" class="gap-5 grid md:gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+    <section class="gap-5 grid">
       <PageIntro
         eyebrow="Conversation"
         :title="otherParticipant.displayName"
@@ -228,8 +228,8 @@ function quotaText(key: "proposals" | "contractDrafts") {
         <p class="muted text-sm leading-6 mt-3">
           Free keeps the proposal and agreement tools visible, but the higher-intent actions are metered. Use the first call and trial sprint to qualify the relationship, then spend proposal and agreement capacity where the fit is real.
         </p>
-        <div v-if="usage" class="mt-4 gap-3 grid">
-          <div class="panel-inset p-4">
+        <div v-if="usage" class="surface-row-list mt-4">
+          <div class="surface-row">
             <p class="text-sm font-semibold">
               Proposal sends
             </p>
@@ -237,7 +237,7 @@ function quotaText(key: "proposals" | "contractDrafts") {
               {{ quotaText("proposals") }}. Deal rooms are metered because they mark the point where a conversation turns into real terms.
             </p>
           </div>
-          <div class="panel-inset p-4">
+          <div class="surface-row">
             <p class="text-sm font-semibold">
               Agreement drafts
             </p>
@@ -246,7 +246,7 @@ function quotaText(key: "proposals" | "contractDrafts") {
             </p>
           </div>
         </div>
-        <div v-if="proposal && proposalVersion" class="panel-inset mt-4 p-4">
+        <div v-if="proposal && proposalVersion" class="surface-divider mt-4">
           <div class="flex gap-3 items-start justify-between">
             <div>
               <p class="text-sm font-semibold">
@@ -313,7 +313,7 @@ function quotaText(key: "proposals" | "contractDrafts") {
         </BaseButton>
       </div>
 
-      <div class="px-5 py-5 flex-1 overflow-y-auto space-y-4">
+      <div class="px-5 py-5 flex-1 overflow-y-auto space-y-4 md:space-y-5">
         <div
           v-for="message in messages"
           :key="message.id"
@@ -339,7 +339,7 @@ function quotaText(key: "proposals" | "contractDrafts") {
         <div class="mt-4">
           <SafetyFlagsPanel :flags="draftFlags" title="Draft warning" />
         </div>
-        <div class="mt-4 flex flex-wrap gap-3 items-center justify-between">
+        <div class="mt-5 flex flex-wrap gap-3 items-center justify-between">
           <input type="file" multiple class="muted text-sm" @change="captureFiles">
           <div class="flex gap-3">
             <BaseButton v-if="latestIncomingMessage" variant="ghost" @click="messageReportDialogOpen = true">
