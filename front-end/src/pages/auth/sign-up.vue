@@ -52,7 +52,7 @@ async function submitForm() {
         Request workspace access.
       </h2>
       <p class="muted text-sm leading-6 mt-3">
-        Public pages are open now. Member workspaces are being opened deliberately.
+        Workspace access is approved directly so members and teams start with the right setup.
       </p>
 
       <div class="panel-inset mt-8 p-5">
@@ -62,7 +62,7 @@ async function submitForm() {
         <div class="muted text-sm leading-6 mt-3 gap-3 grid">
           <div>Your role in the search: founder, collaborator, or venture studio lead.</div>
           <div>The company or problem space you are actively working on.</div>
-          <div>Whether you need individual access, team setup, or pricing detail.</div>
+          <div>Whether you need individual access, team setup, or pricing.</div>
         </div>
       </div>
 
@@ -71,7 +71,7 @@ async function submitForm() {
           Request access
         </BaseButton>
         <BaseButton variant="secondary" :to="pricingPath">
-          Talk about pricing
+          View pricing
         </BaseButton>
         <BaseButton variant="secondary" to="/auth/sign-in">
           Sign in

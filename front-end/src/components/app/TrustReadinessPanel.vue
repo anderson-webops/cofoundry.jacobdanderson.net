@@ -7,8 +7,8 @@ const props = withDefaults(defineProps<{
   title?: string
   description?: string
 }>(), {
-  title: "Trust-critical completion",
-  description: "These are the signals CoFoundry uses to decide whether a profile feels real, credible, and worth replying to.",
+  title: "Proof and verification",
+  description: "These are the signals other members use to decide whether a profile feels real and worth replying to.",
 })
 
 const readiness = computed(() => buildProfileReadiness(props.profile))

@@ -112,7 +112,7 @@ async function createProposal(payload: any) {
   proposalDialogOpen.value = false
   toastStore.push({
     title: "Proposal sent",
-    message: "The proposal was added to the workflow and logged in the conversation.",
+    message: "The proposal was added and logged in the conversation.",
     tone: "success",
   })
   navigateTo(`/app/proposals/${proposalId}`)
@@ -223,10 +223,10 @@ function quotaText(key: "proposals" | "contractDrafts") {
       <AlignmentCheckPanel v-if="currentProfile" :current-profile="currentProfile" :counterpart-profile="otherParticipant" />
       <div class="panel p-5">
         <h2 class="text-lg font-semibold">
-          Workflow tools
+          Proposal and agreement tools
         </h2>
         <p class="muted text-sm leading-6 mt-3">
-          Free keeps the workflow visible, but the high-intent actions are metered. Use the first call and trial sprint to qualify the relationship, then spend proposal and agreement capacity where the fit is real.
+          Free keeps the proposal and agreement tools visible, but the higher-intent actions are metered. Use the first call and trial sprint to qualify the relationship, then spend proposal and agreement capacity where the fit is real.
         </p>
         <div v-if="usage" class="mt-4 gap-3 grid">
           <div class="panel-inset p-4">
@@ -234,7 +234,7 @@ function quotaText(key: "proposals" | "contractDrafts") {
               Proposal sends
             </p>
             <p class="muted text-sm leading-6 mt-2">
-              {{ quotaText("proposals") }}. Versioned deal rooms are metered because they are the point where CoFoundry shifts from conversation to real terms.
+              {{ quotaText("proposals") }}. Deal rooms are metered because they mark the point where a conversation turns into real terms.
             </p>
           </div>
           <div class="panel-inset p-4">
@@ -242,7 +242,7 @@ function quotaText(key: "proposals" | "contractDrafts") {
               Agreement drafts
             </p>
             <p class="muted text-sm leading-6 mt-2">
-              {{ quotaText("contractDrafts") }}. Free can preview agreement drafts, while Pro and Team unlock signature-ready workflow and print-friendly export.
+              {{ quotaText("contractDrafts") }}. Free can preview agreement drafts, while Pro and Team unlock signature-ready agreements and print-friendly export.
             </p>
           </div>
         </div>
@@ -276,7 +276,7 @@ function quotaText(key: "proposals" | "contractDrafts") {
                 Acknowledge trial
               </BaseButton>
               <BaseButton variant="secondary" to="/app/matches">
-                Match workflow
+                Match details
               </BaseButton>
             </div>
           </TrialCollaborationCard>

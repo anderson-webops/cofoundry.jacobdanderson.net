@@ -1,10 +1,4 @@
-import type { MarketingStat, PricingTier } from "../types/domain"
-
-export const heroMetrics: MarketingStat[] = [
-  { label: "Contact", value: "Mutual", context: "Direct outreach stays inside the product until both sides opt in." },
-  { label: "Trial sprint", value: "Built in", context: "Move from the first call to a short working test before heavier terms." },
-  { label: "Proposal history", value: "Versioned", context: "Keep comments, revisions, and agreement drafts in one place." },
-]
+import type { PricingTier } from "../types/domain"
 
 export const howItWorksSteps = [
   {
@@ -17,7 +11,7 @@ export const howItWorksSteps = [
     id: "trust",
     eyebrow: "2. Show real proof",
     title: "Give people enough context to decide whether a conversation is worth having.",
-    body: "Use links, visible work, and recent activity to show that you are real, current, and serious about the search.",
+    body: "Use links, visible work, and recent activity to show that you are real, current, and worth replying to.",
   },
   {
     id: "match",
@@ -41,7 +35,7 @@ export const howItWorksSteps = [
     id: "agreement",
     eyebrow: "6. Put the terms in writing",
     title: "Move from trial notes to a proposal and an agreement draft.",
-    body: "Keep role scope, commitment, vesting, IP, cash, equity, and decision rights in one versioned workflow.",
+    body: "Keep role scope, commitment, vesting, IP, cash, equity, and decision rights in one versioned record.",
   },
 ]
 
@@ -66,7 +60,7 @@ export const pricingTiers: PricingTier[] = [
     id: "pro",
     name: "Pro",
     priceLabel: "$29/mo",
-    description: "For active searches that need more outreach and the full proposal workflow.",
+    description: "For active searches that need more outreach and full proposal and agreement tools.",
     ctaLabel: "Upgrade to Pro",
     highlighted: true,
     features: [
@@ -74,9 +68,9 @@ export const pricingTiers: PricingTier[] = [
       "Stronger visibility for proof, activity, and trust signals",
       "12 proposal sends and 8 agreement drafts each month",
       "Deal room with clause-level comments and version history",
-      "Signature-ready agreement workflow and export",
+      "Signature-ready agreements and export",
       "Clear renewal date and in-product cancellation",
-      "Ranking boost and deeper workflow tools",
+      "Deeper search controls and visibility",
     ],
   },
   {
@@ -89,7 +83,7 @@ export const pricingTiers: PricingTier[] = [
     features: [
       "Higher-volume intros, proposals, and agreement drafts",
       "Multiple startup opportunities",
-      "Shared deal-room management across several searches",
+      "Shared proposal and agreement management across several searches",
       "Team-level review and moderation tools",
       "Priority setup for repeat searches and studios",
     ],
@@ -103,7 +97,7 @@ export const faqs = [
   },
   {
     question: "Does CoFoundry take equity in every relationship?",
-    answer: "No. V1 is subscription software. Teams may optionally apply for a future investment program if the feature is enabled, but platform equity is not part of the core workflow.",
+    answer: "No. V1 is subscription software. Teams may optionally apply for a future investment program if the feature is enabled, but platform equity is not part of the core product.",
   },
   {
     question: "Can I keep my profile private while browsing?",
@@ -119,10 +113,10 @@ export const faqs = [
   },
   {
     question: "Do I have to pay to message someone I already matched with?",
-    answer: "No. Messaging after a mutual match stays available on every plan. Limits apply to new outbound intros and later-stage workflow actions.",
+    answer: "No. Messaging after a mutual match stays available on every plan. Limits apply to new outbound intros and later-stage proposal and agreement actions.",
   },
   {
-    question: "What is the trial collaboration workflow?",
+    question: "How does the trial collaboration step work?",
     answer: "It is a short, structured working sprint that helps both sides pressure-test cadence, ownership, and communication before they finalize a proposal or agreement.",
   },
   {
@@ -158,33 +152,10 @@ export const trustPillars = [
   },
   {
     title: "Structured negotiation",
-    body: "The workflow moves from first call to trial sprint to proposal and agreement draft, surfacing the important terms early.",
+    body: "The product moves from first call to trial sprint to proposal and agreement draft, surfacing the important terms early.",
   },
   {
-    title: "Moderation workflow",
+    title: "Moderation and review",
     body: "Profiles, opportunities, and messages can be flagged and reviewed when something looks unsafe or misleading.",
-  },
-]
-
-export const researchPrinciples = [
-  {
-    title: "See fit sooner",
-    body: "Profiles surface role, stage, timing, and commitment so you can rule people in or out quickly.",
-  },
-  {
-    title: "Talk with context",
-    body: "First-call prompts keep the early conversation focused on the decisions that matter.",
-  },
-  {
-    title: "Test the working relationship",
-    body: "A short sprint tells you more than a long thread of speculative messages.",
-  },
-  {
-    title: "Keep the terms organized",
-    body: "Proposal versions, comments, and agreement drafts stay in one workflow instead of getting scattered across docs and threads.",
-  },
-  {
-    title: "Pay when the workflow matters",
-    body: "Free gets you into the network. Paid plans expand outreach and the tools that formalize a partnership.",
   },
 ]

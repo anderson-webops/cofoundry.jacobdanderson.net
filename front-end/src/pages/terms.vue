@@ -4,7 +4,7 @@ import { termsKeyNotes, termsLastUpdated, termsSections } from "~/shared/data/le
 const runtimeConfig = useRuntimeConfig()
 const supportEmail = computed(() => runtimeConfig.public.supportEmail)
 
-usePageSeo("Terms of Service", "Product-specific terms for CoFoundry's founder matching, messaging, proposal, contract, billing, and trust workflows.", {
+usePageSeo("Terms of Service", "Product-specific terms for CoFoundry's founder matching, messaging, proposals, contracts, billing, and trust controls.", {
   canonicalPath: "/terms",
 })
 </script>
@@ -14,7 +14,7 @@ usePageSeo("Terms of Service", "Product-specific terms for CoFoundry's founder m
     <PageIntro
       eyebrow="Legal"
       title="Terms of Service"
-      description="Terms for using CoFoundry's matching, messaging, proposal, contract, billing, and moderation features."
+      description="Terms for using CoFoundry."
     >
       <template #actions>
         <BaseButton variant="secondary" to="/privacy">
@@ -27,23 +27,13 @@ usePageSeo("Terms of Service", "Product-specific terms for CoFoundry's founder m
     </PageIntro>
 
     <div class="panel mt-10 p-6 md:p-8">
-      <div class="flex flex-wrap gap-4 items-start justify-between">
-        <div>
-          <p class="text-sm font-semibold">
-            Last updated
-          </p>
-          <p class="muted text-sm leading-6 mt-2">
-            {{ termsLastUpdated }}
-          </p>
-        </div>
-        <div class="max-w-xl">
-          <p class="text-sm font-semibold">
-            Drafting note
-          </p>
-          <p class="muted text-sm leading-6 mt-2">
-            This version is product-specific, but the company entity, jurisdiction, and billing language should still be finalized with counsel before a broad public launch.
-          </p>
-        </div>
+      <div>
+        <p class="text-sm font-semibold">
+          Last updated
+        </p>
+        <p class="muted text-sm leading-6 mt-2">
+          {{ termsLastUpdated }}
+        </p>
       </div>
 
       <div class="mt-6 gap-4 grid md:grid-cols-2 xl:grid-cols-4">
@@ -153,7 +143,7 @@ usePageSeo("Terms of Service", "Product-specific terms for CoFoundry's founder m
                 Contract Resources
               </p>
               <p class="muted text-sm leading-6 mt-2">
-                Explains what CoFoundry's agreement workflow is for and why generated documents still require legal review.
+                Explains how CoFoundry's proposal and agreement tools work and why generated documents still require legal review.
               </p>
             </NuxtLink>
           </div>

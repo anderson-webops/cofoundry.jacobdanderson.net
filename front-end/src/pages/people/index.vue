@@ -13,7 +13,7 @@ usePageSeo("Public founder profiles", "Browse opt-in public founder and collabor
   <div class="page-shell py-16 md:py-20">
     <PageIntro
       eyebrow="Public profiles"
-      title="Opt-in founder and collaborator pages built for serious discovery."
+      title="Public founder and collaborator profiles."
       description="These pages show enough signal to evaluate fit without exposing direct contact details or turning the network into a scraped directory."
     />
 

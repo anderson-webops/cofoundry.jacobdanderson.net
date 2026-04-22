@@ -83,10 +83,10 @@ async function submitProfile(payload: any) {
       Onboarding
     </p>
     <h1 class="text-3xl tracking-tight font-semibold mt-3">
-      Build a usable profile first.
+      Start with a strong profile.
     </h1>
     <p class="muted text-sm leading-6 mt-4">
-      This first pass is short on purpose. Add enough detail to see your first matches, then finish the deeper profile fields before you start outreach.
+      Add enough detail to unlock your first recommendations, then finish the deeper fields before you send intros.
     </p>
 
     <div v-if="!previewUnlocked" class="mt-8">
@@ -105,23 +105,23 @@ async function submitProfile(payload: any) {
               Match preview ready
             </p>
             <p class="muted text-sm leading-6 mt-2">
-              {{ shouldShowProfilePreview ? "These are the collaborators the product would show you first." : "These are the founder opportunities the product would show you first." }}
+              {{ shouldShowProfilePreview ? "These are the collaborators you would see first." : "These are the founder opportunities you would see first." }}
             </p>
           </div>
           <BaseBadge :tone="readiness?.trustReady ? 'success' : 'accent'">
-            {{ readiness?.trustPercent || 0 }}% trust-critical
+            {{ readiness?.trustPercent || 0 }}% profile signals
           </BaseBadge>
         </div>
 
         <div class="panel-inset mt-5 p-5">
           <p class="text-sm font-semibold">
-            Outreach
+            Outreach status
           </p>
           <p class="muted text-sm leading-6 mt-2">
             {{ readiness?.readyForOutreach ? "You are ready to send connect requests." : `Add ${readiness?.missingOutreachItems.join(", ")} to unlock outreach.` }}
           </p>
           <p class="muted text-sm leading-6 mt-2">
-            {{ readiness?.trustReady ? "Your trust-critical surface is complete." : `Trust-critical gaps: ${readiness?.missingTrustItems.join(", ")}.` }}
+            {{ readiness?.trustReady ? "Your proof and verification details are in place." : `Still missing: ${readiness?.missingTrustItems.join(", ")}.` }}
           </p>
         </div>
 
@@ -133,7 +133,7 @@ async function submitProfile(payload: any) {
             Finish full profile
           </BaseButton>
           <BaseButton variant="ghost" to="/app/settings">
-            Open trust settings
+            Open settings
           </BaseButton>
         </div>
       </div>

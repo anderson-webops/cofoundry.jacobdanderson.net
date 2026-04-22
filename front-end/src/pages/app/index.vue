@@ -52,27 +52,27 @@ const outgoingRequests = computed(() => {
 })
 const workspaceStage = computed(() => {
   if (contracts.value.length)
-    return { label: "Agreement stage", tone: "success" as const, summary: "Agreement drafts are already live. Finish those before opening new threads." }
+    return { label: "Agreement stage", tone: "success" as const, summary: "Finish the open agreement before starting more conversations." }
 
   if (proposals.value.length)
-    return { label: "Terms taking shape", tone: "accent" as const, summary: "A proposal is open. Keep the deal room moving and close open sections." }
+    return { label: "Terms taking shape", tone: "accent" as const, summary: "A proposal is live. Close the open sections first." }
 
   if (matches.value.length || trials.value.length)
-    return { label: "Qualified conversations", tone: "accent" as const, summary: "You have a real match or trial. Test how you work before you expand the search." }
+    return { label: "Qualified conversations", tone: "accent" as const, summary: "You have a real match or trial. Test the fit before widening the search." }
 
   if (incomingRequests.value.length || outgoingRequests.value.length)
-    return { label: "Active search", tone: "warning" as const, summary: "You have intros in flight. Reply quickly and keep the loop tight." }
+    return { label: "Active search", tone: "warning" as const, summary: "You have intros in flight. Reply quickly." }
 
   if (readiness.value?.readyForOutreach)
-    return { label: "Ready to reach out", tone: "success" as const, summary: "Your profile is ready. Pick a narrow search and send a few strong intros." }
+    return { label: "Ready to reach out", tone: "success" as const, summary: "Your profile is ready. Send a small number of strong intros." }
 
-  return { label: "Profile still gating outreach", tone: "warning" as const, summary: "Finish the missing profile details before you spend outreach." }
+  return { label: "Profile still gating outreach", tone: "warning" as const, summary: "Finish the missing profile details before you send intros." }
 })
 const primaryAction = computed(() => {
   if (inboxSnapshot.value?.counts.pendingIntros) {
     return {
       title: `Review ${inboxSnapshot.value.counts.pendingIntros} inbound intro${inboxSnapshot.value.counts.pendingIntros === 1 ? "" : "s"}`,
-      description: "Reply quickly while the context is still fresh.",
+      description: "Reply while the context is still fresh.",
       href: "/app/inbox",
       ctaLabel: "Open intro queue",
     }
@@ -81,7 +81,7 @@ const primaryAction = computed(() => {
   if (inboxSnapshot.value?.counts.contractsNeedingSignature) {
     return {
       title: "Finish the waiting agreement signature",
-      description: "The terms are already in contract form. Do not let the last step stall.",
+      description: "The terms are already in writing. Do not let the last step stall.",
       href: "/app/inbox",
       ctaLabel: "Open inbox",
     }
@@ -90,7 +90,7 @@ const primaryAction = computed(() => {
   if (inboxSnapshot.value?.counts.proposalsNeedingResponse || inboxSnapshot.value?.counts.unreadConversations) {
     return {
       title: "Clear the active response queue",
-      description: "The highest-leverage work is inside live conversations and proposal rooms.",
+      description: "The highest-leverage work is inside live conversations and proposals.",
       href: "/app/inbox",
       ctaLabel: "Open inbox",
     }
@@ -149,10 +149,10 @@ const statusCards = computed(() => [
       ? "A few outbound intros are live. Keep the scope tight until one converts."
       : readiness.value?.readyForOutreach
         ? "You can spend outreach on the strongest fits now."
-        : "Profile clarity matters more than sending more volume.",
+        : "Finish the profile before sending more volume.",
   },
   {
-    title: "Serious workflow",
+    title: "Live relationship",
     value: contracts.value.length ? `${contracts.value.length} agreement draft${contracts.value.length === 1 ? "" : "s"}` : proposals.value.length ? `${proposals.value.length} proposal${proposals.value.length === 1 ? "" : "s"}` : matches.value.length ? `${matches.value.length} match${matches.value.length === 1 ? "" : "es"}` : "Nothing live yet",
     description: contracts.value.length
       ? "The relationship is already being documented in writing."
@@ -205,7 +205,7 @@ function getContractVersion(contractId: string) {
     <PageIntro
       eyebrow="Workspace"
       :title="`Welcome back, ${profile?.displayName || authStore.currentUser?.name || 'there'}.`"
-      description="Your open intros, conversations, proposals, and agreements in one place."
+      description="Your intros, conversations, proposals, and agreements."
     >
       <template #actions>
         <BaseBadge tone="accent">
@@ -219,7 +219,7 @@ function getContractVersion(contractId: string) {
         <div class="flex flex-wrap gap-3 items-center justify-between">
           <div>
             <p class="text-sm font-semibold">
-              What needs attention next
+              Next up
             </p>
             <p class="muted text-sm leading-6 mt-2">
               {{ workspaceStage.summary }}
@@ -247,11 +247,8 @@ function getContractVersion(contractId: string) {
 
       <div class="panel p-6">
         <h2 class="text-sm font-semibold">
-          Current status
+          Search status
         </h2>
-        <p class="muted text-sm leading-6 mt-2">
-          A quick read on where your search stands right now.
-        </p>
         <div class="mt-5 gap-3 grid">
           <div
             v-for="item in statusCards"
@@ -276,7 +273,7 @@ function getContractVersion(contractId: string) {
 
     <div class="gap-4 grid md:grid-cols-4">
       <MetricTile label="Profile completion" :value="`${readiness?.percent || 0}%`" context="A stronger profile makes outreach and matching easier." />
-      <MetricTile label="Trust-critical fields" :value="`${readiness?.trustPercent || 0}%`" context="These are the proof and verification details that support outreach." />
+      <MetricTile label="Profile signals" :value="`${readiness?.trustPercent || 0}%`" context="Proof and verification details that support outreach." />
       <MetricTile label="Matches" :value="matches.length" context="Mutual connections that unlock messaging." />
       <MetricTile label="Open intros" :value="incomingRequests.length + outgoingRequests.length" context="Requests that still need a reply or follow-through." />
     </div>
@@ -340,7 +337,7 @@ function getContractVersion(contractId: string) {
 
         <PageIntro
           eyebrow="Intro queue"
-          title="Close the loop quickly."
+          title="Reply quickly."
           description="Clear accepts and clear declines both keep the search moving."
         />
 
@@ -387,8 +384,8 @@ function getContractVersion(contractId: string) {
         </div>
 
         <PageIntro
-          eyebrow="Formation workflow"
-          title="Run a short trial before the terms get heavy."
+          eyebrow="Trial step"
+          title="Run a short trial before setting terms."
           description="Use a short working sprint before you negotiate long-term terms."
         />
 
@@ -400,7 +397,7 @@ function getContractVersion(contractId: string) {
             :acknowledged="trial.acknowledgedByUserIds.includes(currentUserId)"
           >
             <BaseButton variant="secondary" to="/app/matches">
-              Open match workflow
+              Open match details
             </BaseButton>
           </TrialCollaborationCard>
         </div>

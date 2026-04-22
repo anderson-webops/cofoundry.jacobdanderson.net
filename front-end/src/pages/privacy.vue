@@ -9,14 +9,9 @@ import {
 } from "~/shared/data/legal"
 
 const runtimeConfig = useRuntimeConfig()
-const { getServiceLabels } = useProductAccess()
-const serviceLabels = getServiceLabels()
-
 const supportEmail = computed(() => runtimeConfig.public.supportEmail)
-const backendModeLabel = computed(() => serviceLabels.backend)
-const billingModeLabel = computed(() => serviceLabels.billing)
 
-usePageSeo("Privacy Policy", "Product-specific privacy disclosures for CoFoundry's founder matching, profile visibility, messaging, proposal, contract, and billing workflows.", {
+usePageSeo("Privacy Policy", "Product-specific privacy disclosures for CoFoundry's founder matching, profile visibility, messaging, proposals, contracts, and billing.", {
   canonicalPath: "/privacy",
 })
 </script>
@@ -26,7 +21,7 @@ usePageSeo("Privacy Policy", "Product-specific privacy disclosures for CoFoundry
     <PageIntro
       eyebrow="Legal"
       title="Privacy Policy"
-      description="Privacy details for profiles, discovery, messaging, proposals, contracts, billing, and moderation inside CoFoundry."
+      description="How CoFoundry handles profile, messaging, billing, and safety data."
     >
       <template #actions>
         <BaseButton variant="secondary" to="/terms">
@@ -39,23 +34,13 @@ usePageSeo("Privacy Policy", "Product-specific privacy disclosures for CoFoundry
     </PageIntro>
 
     <div class="panel mt-10 p-6 md:p-8">
-      <div class="flex flex-wrap gap-4 items-start justify-between">
-        <div>
-          <p class="text-sm font-semibold">
-            Last updated
-          </p>
-          <p class="muted text-sm leading-6 mt-2">
-            {{ privacyLastUpdated }}
-          </p>
-        </div>
-        <div class="max-w-xl">
-          <p class="text-sm font-semibold">
-            Current services in use
-          </p>
-          <p class="muted text-sm leading-6 mt-2">
-            CoFoundry currently runs with {{ backendModeLabel }} and {{ billingModeLabel }}, and deployed builds use a first-party analytics service at analytics.jacobdanderson.net. If live providers or tracking features change later, this policy will be updated before production behavior changes.
-          </p>
-        </div>
+      <div>
+        <p class="text-sm font-semibold">
+          Last updated
+        </p>
+        <p class="muted text-sm leading-6 mt-2">
+          {{ privacyLastUpdated }}
+        </p>
       </div>
 
       <div class="mt-6 gap-4 grid md:grid-cols-2 xl:grid-cols-4">
@@ -271,7 +256,7 @@ usePageSeo("Privacy Policy", "Product-specific privacy disclosures for CoFoundry
                 Trust & Safety
               </p>
               <p class="muted text-sm leading-6 mt-2">
-                Explains CoFoundry's anti-scam controls, reporting workflow, moderation approach, and contact-gating design.
+                Explains CoFoundry's anti-scam controls, reporting process, moderation approach, and contact-gating design.
               </p>
             </NuxtLink>
             <NuxtLink to="/contracts" class="panel-inset p-4 transition hover:border-[var(--accent)]">
@@ -279,7 +264,7 @@ usePageSeo("Privacy Policy", "Product-specific privacy disclosures for CoFoundry
                 Contract Resources
               </p>
               <p class="muted text-sm leading-6 mt-2">
-                Explains how CoFoundry's proposal and agreement workflow works and why generated documents still require legal review.
+                Explains how CoFoundry's proposal and agreement tools work and why generated documents still require legal review.
               </p>
             </NuxtLink>
           </div>

@@ -43,7 +43,7 @@ function submitApplication() {
     <PageIntro
       eyebrow="Investment"
       title="Future investment module"
-      description="This module is intentionally separated from the paid SaaS workflow. It is disabled by default and does not imply automatic platform equity."
+      description="This module is intentionally separated from the paid SaaS product. It is disabled by default and does not imply automatic platform equity."
     />
 
     <EmptyState

@@ -68,7 +68,7 @@ async function signContract() {
 
   if (previewOnly.value) {
     toastStore.push({
-      title: "Signature workflow is paid",
+      title: "Signatures are paid",
       message: "This draft is visible on Free, but typed signatures are only enabled on Pro and Team.",
       tone: "warning",
     })
@@ -105,7 +105,7 @@ async function signContract() {
           Important disclaimer
         </h2>
         <p class="muted text-sm leading-7 mt-3">
-          This contract is a startup workflow template. It is not legal advice, does not create an attorney-client relationship, and should be reviewed by counsel before execution.
+          This contract is a startup template. It is not legal advice, does not create an attorney-client relationship, and should be reviewed by counsel before execution.
         </p>
         <p v-if="previewOnly" class="muted text-sm leading-7 mt-3">
           This account is currently in preview mode for agreement drafts. You can review the structure and terms here, but printing and signature collection require a paid plan.

@@ -36,7 +36,7 @@ export const environmentGatedSurfaces = [
     condition: "Shown only for local development or when NUXT_PUBLIC_ENABLE_DEMO_ACCESS=\"true\".",
   },
   {
-    label: "Investment workflow",
+    label: "Investment module",
     route: "/app/investment",
     condition: "Shown only when NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE=\"true\".",
   },

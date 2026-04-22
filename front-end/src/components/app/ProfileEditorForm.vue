@@ -197,7 +197,7 @@ function submitForm() {
         v-model="form.photoUrl"
         label="Profile photo URL"
         type="url"
-        helper="Use a clear headshot or recognizable profile image. This counts toward trust-critical completion."
+        helper="Use a clear headshot or recognizable profile image. This counts toward profile readiness."
         :error="errors.photoUrl"
       />
       <TextInput v-model="form.headline" label="Headline" :error="errors.headline" helper="State the role you want and the kind of company you want to build." />
@@ -257,7 +257,7 @@ function submitForm() {
         <TextInput
           v-model="form.introCapacity"
           label="Conversation capacity"
-          helper="Example: Can take 2 serious founder conversations this month."
+          helper="Example: Can take 2 founder conversations this month."
           :error="errors.introCapacity"
         />
       </div>

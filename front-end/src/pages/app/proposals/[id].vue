@@ -141,10 +141,10 @@ function contractQuotaText() {
         <div class="flex gap-4 items-start justify-between">
           <div>
             <h2 class="text-lg font-semibold">
-              What this proposal is doing
+              What this proposal covers
             </h2>
             <p class="muted text-sm leading-6 mt-3">
-              CoFoundry treats the proposal as the primary collaboration artifact: trial scope, economics, governance, IP, and exit assumptions are versioned before a formal agreement draft exists.
+              Use the proposal to capture trial scope, economics, governance, IP, and exit terms before a formal agreement draft exists.
             </p>
           </div>
           <BaseBadge tone="neutral">
@@ -156,7 +156,7 @@ function contractQuotaText() {
             Agreement draft usage
           </p>
           <p class="muted text-sm leading-6 mt-2">
-            {{ contractQuotaText() }}. Free can still open one agreement preview each month, while Pro and Team unlock higher-volume signature-ready workflow.
+            {{ contractQuotaText() }}. Free can still open one agreement preview each month, while Pro and Team unlock higher-volume signature-ready agreements.
           </p>
         </div>
         <div class="mt-5 flex flex-wrap gap-3">

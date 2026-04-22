@@ -10,7 +10,7 @@ const primaryAccessCta = computed(() => getPrimaryAccessCta("site-footer"))
       <div>
         <AppLogo />
         <p class="muted text-sm leading-6 mt-3 max-w-md">
-          CoFoundry helps founders and early collaborators find the right fit, test the working relationship, and put terms in writing.
+          CoFoundry helps founders and collaborators find fit, test the relationship, and put terms in writing.
         </p>
         <div class="mt-4 flex flex-wrap gap-3 items-center">
           <BaseButton size="sm" variant="secondary" :to="primaryAccessCta.to">

@@ -15,7 +15,7 @@ const directoryAccessCta = computed(() => policy.value.accountsEnabled
 
 usePageSeo(
   "Find a cofounder",
-  "Browse public founder profiles, startup searches, and serious team-formation resources organized by role, industry, and stage.",
+  "Browse public founder profiles, startup searches, and team-formation resources organized by role, industry, and stage.",
   {
     canonicalPath: "/find-cofounder",
   },
@@ -34,7 +34,7 @@ usePageSeo(
             Browse founders, cofounders, and startup searches by role, stage, and market.
           </h1>
           <p class="muted text-lg leading-8 mt-6 max-w-2xl">
-            CoFoundry exposes opt-in public profiles and startup searches for people who want to be found. Direct contact still runs through the product.
+            Browse opt-in public profiles and startup searches. Direct contact stays inside CoFoundry until both sides opt in.
           </p>
           <div class="mt-8 flex flex-wrap gap-3">
             <BaseButton size="lg" :to="directoryAccessCta.to">
@@ -168,7 +168,7 @@ usePageSeo(
       <div class="page-shell">
         <PageIntro
           eyebrow="Public profiles"
-          title="Opt-in profiles that prove seriousness before contact unlocks."
+          title="Public profiles built to show fit before contact."
           description="These pages stay lightweight on purpose: enough context to decide whether a conversation is worth requesting."
         >
           <template #actions>

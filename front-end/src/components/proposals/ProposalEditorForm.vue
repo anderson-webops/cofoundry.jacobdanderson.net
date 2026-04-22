@@ -157,7 +157,7 @@ function submitForm() {
           IP, confidentiality, and off-ramp
         </h3>
         <p class="field-helper mt-1">
-          CoFoundry keeps this explicit so nobody mistakes the template workflow for unstated assumptions.
+          CoFoundry keeps this explicit so nobody mistakes the template for unstated assumptions.
         </p>
       </div>
       <label class="pill w-fit">

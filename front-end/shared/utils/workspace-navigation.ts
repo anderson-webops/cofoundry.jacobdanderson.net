@@ -79,7 +79,7 @@ const workspaceRouteMatchers: WorkspaceRouteMatcher[] = [
     prefix: "/app/proposals",
     areaLabel: "Workspace",
     title: "Proposals",
-    description: "Track structured offers, counters, and the relationships that are getting serious.",
+    description: "Track structured offers, counters, and the relationships moving toward written terms.",
   },
   {
     prefix: "/app/contracts/",
@@ -97,7 +97,7 @@ const workspaceRouteMatchers: WorkspaceRouteMatcher[] = [
     prefix: "/app/billing",
     areaLabel: "Workspace",
     title: "Billing",
-    description: "Understand plan limits, renewal state, and which workflows are unlocked on this account.",
+    description: "Understand plan limits, renewal state, and which proposal and agreement tools are unlocked on this account.",
   },
   {
     prefix: "/app/settings",
@@ -133,7 +133,7 @@ const workspaceRouteMatchers: WorkspaceRouteMatcher[] = [
     prefix: "/app/investment",
     areaLabel: "Workspace",
     title: "Investment",
-    description: "Review the gated investment workflow without mixing it into the main team-formation path.",
+    description: "Review the gated investment module without mixing it into the main team-formation path.",
   },
   {
     prefix: "/app",
@@ -146,7 +146,7 @@ const workspaceRouteMatchers: WorkspaceRouteMatcher[] = [
 const defaultRouteContext: WorkspaceRouteContext = {
   areaLabel: "Workspace",
   title: "Overview",
-  description: "Move from first signal to structured agreement without losing context.",
+  description: "Move from first signal to written terms without losing context.",
 }
 
 function normalizePath(path: string) {

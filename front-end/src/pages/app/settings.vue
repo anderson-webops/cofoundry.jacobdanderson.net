@@ -135,7 +135,7 @@ function verify(type: "phone" | "linkedin" | "github" | "website" | "work_domain
           <div>Current tier: {{ formatTrustTier(trustTier) }}</div>
           <div>Level A: verified email and baseline profile.</div>
           <div>Level B: verified identity rails, proof, availability, and intent clarity.</div>
-          <div>Level C: government ID assurance for higher-risk workflows like contract signing.</div>
+          <div>Level C: government ID assurance for higher-risk actions like contract signing.</div>
         </div>
         <div class="mt-5 flex flex-wrap gap-3">
           <BaseButton variant="secondary" @click="verify('phone', 'Phone verification')">

@@ -67,7 +67,7 @@ const intentOptions = [
   {
     value: "start",
     title: "Start a company",
-    body: "You have an idea or wedge and need a serious co-founder or early operator.",
+    body: "You have an idea or wedge and need a cofounder or early operator.",
   },
   {
     value: "join",
@@ -77,7 +77,7 @@ const intentOptions = [
   {
     value: "explore",
     title: "Explore both paths",
-    body: "You are open to starting with someone or joining the right company if the fit is real.",
+    body: "You are open to starting with someone or joining the right company if the fit is strong.",
   },
 ] as const
 
@@ -231,7 +231,7 @@ function submitForm() {
           What happens next
         </p>
         <p class="muted text-sm leading-6 mt-3">
-          You will get a match preview right away. Outreach unlocks after you finish the remaining profile and verification steps.
+          You will get a match preview right away. Intros unlock after you finish the remaining profile and verification details.
         </p>
       </div>
     </section>

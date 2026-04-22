@@ -63,12 +63,12 @@ async function signInWithProvider(provider: "google" | "github") {
     </p>
     <h2 class="text-3xl tracking-tight font-semibold mt-3">
       {{ policy.marketingShellOnly
-        ? "Sign in if you already have access."
+        ? "Sign in to an existing workspace."
         : "Sign in to your workspace." }}
     </h2>
     <p class="muted text-sm leading-6 mt-3">
       {{ policy.marketingShellOnly
-        ? "Existing members and invited teams can continue below with their credentials."
+        ? "Use the email already attached to your approved account or invitation."
         : policy.showDemoConveniences
           ? "Use a review account or your own credentials to continue."
           : "Use your account credentials to continue discovery, messaging, proposals, and agreements." }}
@@ -79,7 +79,7 @@ async function signInWithProvider(provider: "google" | "github") {
         v-model="form.email"
         label="Email"
         type="email"
-        :helper="policy.marketingShellOnly ? 'Use the email attached to your existing workspace or invitation.' : undefined"
+        :helper="policy.marketingShellOnly ? 'Use the email on your existing account or invitation.' : undefined"
         :error="errors.email || authStore.error"
       />
       <TextInput v-model="form.password" label="Password" type="password" :error="errors.password" />
@@ -91,12 +91,12 @@ async function signInWithProvider(provider: "google" | "github") {
     <template v-if="policy.marketingShellOnly">
       <div class="panel-inset mt-8 p-5">
         <p class="text-sm font-semibold">
-          Need a workspace instead?
+          Need access first?
         </p>
         <div class="muted text-sm leading-6 mt-3 gap-3 grid">
-          <div>Browse public profiles, startup searches, trust pages, and guides first.</div>
-          <div>Request access if you want discovery, messaging, proposals, and agreements inside the product.</div>
-          <div>Contact the team for pricing or studio access.</div>
+          <div>Browse public profiles, startup searches, trust pages, and founder guides first.</div>
+          <div>Request access when you want discovery, messaging, proposals, and agreements inside the workspace.</div>
+          <div>Contact the team for pricing or studio setup.</div>
         </div>
       </div>
 

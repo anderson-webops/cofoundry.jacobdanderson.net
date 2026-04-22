@@ -40,7 +40,7 @@ const profileRoleLabel = computed(() => {
 
     <div class="flex flex-wrap gap-2">
       <BaseBadge :tone="readiness.trustReady ? 'success' : 'accent'">
-        {{ readiness.trustPercent }}% trust-critical
+        {{ readiness.trustPercent }}% profile signals
       </BaseBadge>
       <BaseBadge tone="neutral">
         {{ formatRemotePreference(profile.remotePreference) }}
