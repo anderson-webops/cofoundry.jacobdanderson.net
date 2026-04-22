@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { appDescription, appTagline } from "~/shared/constants/app"
-import { heroMetrics, howItWorksSteps, pricingTiers, researchPrinciples } from "~/shared/data/marketing"
+import { howItWorksSteps, pricingTiers } from "~/shared/data/marketing"
 import { contractGuidePages, trustCenterPages } from "~/shared/data/public-content"
 import { workspaceSeed } from "~/shared/data/seed"
 import { getIndustryHubs, getRoleHubs, getStageHubs } from "~/shared/utils/directory"
@@ -23,24 +23,21 @@ usePageSeo("Build startup teams with more structure", appDescription, {
       <div class="page-shell gap-12 grid lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
         <div class="fade-up">
           <p class="section-kicker">
-            Founder matching for serious builders
+            Founder matching for startup teams
           </p>
           <h1 class="text-5xl tracking-tight font-semibold mt-4 max-w-3xl md:text-7xl">
             {{ appTagline }}
           </h1>
           <p class="muted text-lg leading-8 mt-6 max-w-2xl">
-            Meet founders and early collaborators who want to build a company together. Compare fit, commitment, and working style early, then move from first call to trial sprint, proposal, and agreement in one workflow.
+            Meet founders and early collaborators who want to build a company together. Compare fit, commitment, and working style early, then move from first call to trial sprint, proposal, and agreement in one place.
           </p>
           <div class="mt-8 flex flex-wrap gap-3">
             <BaseButton size="lg" :to="heroAccessCta.to">
               {{ heroAccessCta.label }}
             </BaseButton>
             <BaseButton size="lg" variant="secondary" to="/how-it-works">
-              See the workflow
+              See how it works
             </BaseButton>
-          </div>
-          <div class="mt-10 gap-4 grid sm:grid-cols-3">
-            <MetricTile v-for="metric in heroMetrics" :key="metric.label" :label="metric.label" :value="metric.value" :context="metric.context" />
           </div>
         </div>
 
@@ -50,14 +47,14 @@ usePageSeo("Build startup teams with more structure", appDescription, {
             <div class="flex gap-4 items-center justify-between">
               <div>
                 <p class="text-sm font-semibold">
-                  Formation workflow
+                  From intro to agreement
                 </p>
                 <p class="muted text-sm mt-1">
-                  From intro to agreement
+                  Built for real company conversations
                 </p>
               </div>
               <BaseBadge tone="accent">
-                Versioned terms
+                Version history
               </BaseBadge>
             </div>
             <div class="hero-preview-frame grid-soft">
@@ -78,7 +75,7 @@ usePageSeo("Build startup teams with more structure", appDescription, {
                 <div class="muted text-sm mt-4 gap-3 grid">
                   <div>Goal: pressure-test architecture ownership and customer cadence</div>
                   <div>Weekly commitment: 10 hours for 2 weeks</div>
-                  <div>Outputs: one workflow prototype, one written decision log, one retro</div>
+                  <div>Outputs: one product prototype, one written decision log, one retro</div>
                 </div>
               </div>
               <div class="hero-preview-summary">
@@ -87,7 +84,7 @@ usePageSeo("Build startup teams with more structure", appDescription, {
                     Proposal and agreement ready
                   </p>
                   <p class="muted text-sm mt-1">
-                    Structured terms only appear after the sprint creates conviction
+                    Move into written terms only after the trial creates real conviction
                   </p>
                 </div>
                 <span class="i-carbon-document-signed text-2xl text-[var(--accent)]" />
@@ -186,26 +183,6 @@ usePageSeo("Build startup teams with more structure", appDescription, {
     </section>
 
     <section class="py-16">
-      <div class="page-shell">
-        <PageIntro
-          eyebrow="Why teams use CoFoundry"
-          title="Clarity earlier in the process."
-          description="The workflow is built to help you see fit sooner, test the relationship, and keep the terms organized."
-        />
-        <div class="mt-10 gap-5 grid lg:grid-cols-4">
-          <article v-for="principle in researchPrinciples" :key="principle.title" class="panel p-6">
-            <h2 class="text-xl font-semibold">
-              {{ principle.title }}
-            </h2>
-            <p class="muted text-sm leading-7 mt-4">
-              {{ principle.body }}
-            </p>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <section class="py-16">
       <div class="page-shell gap-8 grid lg:grid-cols-2">
         <div class="panel p-6 md:p-8">
           <p class="section-kicker">
@@ -261,8 +238,8 @@ usePageSeo("Build startup teams with more structure", appDescription, {
       <div class="page-shell panel p-6 overflow-hidden md:p-8">
         <PageIntro
           eyebrow="Pricing"
-          title="Free to start. Paid when the workflow matters."
-          description="Start free, then pay for more outreach and the full proposal-and-agreement workflow."
+          title="Free to start. Paid for more reach and agreement tools."
+          description="Start free, then pay for more outreach, proposals, and agreements."
         >
           <template #actions>
             <BaseButton to="/pricing">
@@ -302,10 +279,10 @@ usePageSeo("Build startup teams with more structure", appDescription, {
         <div class="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div class="max-w-4xl">
             <p class="section-kicker marketing-cta-kicker">
-              Ready to build with more structure
+              Start the search
             </p>
             <h2 class="text-3xl tracking-tight font-semibold mt-4 md:text-4xl">
-              Start matching, proposing, and documenting the relationship in one place.
+              Find the right person, run a short trial, and put the terms in writing.
             </h2>
           </div>
           <div class="flex flex-wrap gap-3">

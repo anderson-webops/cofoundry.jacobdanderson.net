@@ -30,7 +30,7 @@ const highPriorityReportReasons = new Set<ReportReason>(["scam_fraud", "imperson
 export const firstCallAgenda = [
   {
     title: "Why now",
-    body: "Compare urgency, current commitments, and what would make this a serious build decision rather than a loose exploration.",
+    body: "Compare urgency, current commitments, and what would make this a real build decision rather than a loose exploration.",
   },
   {
     title: "Company shape",
@@ -200,7 +200,7 @@ function buildTrustReadinessChecklist(profile: Profile): ProfileReadinessItem[] 
       complete: availabilityComplete,
       description: availabilityComplete
         ? `${profile.commitmentProfile.weeklyAvailabilityHours}h/week · ${formatStartTimeline(profile.intent.startTimeline)}`
-        : "Declare hours per week, timing, and location so people can judge seriousness quickly.",
+        : "Declare hours per week, timing, and location so people can judge commitment quickly.",
     },
     {
       id: "intent_clarity",
@@ -208,7 +208,7 @@ function buildTrustReadinessChecklist(profile: Profile): ProfileReadinessItem[] 
       complete: intentClarityComplete,
       description: intentClarityComplete
         ? `${profile.intent.companyPreferences.slice(0, 2).join(", ")} · ${profile.intent.introCapacity}`
-        : "Explain what kind of company you want and how many serious conversations you can support now.",
+        : "Explain what kind of company you want and how many conversations you can support now.",
     },
   ]
 }
@@ -272,7 +272,7 @@ function buildProfileReadinessChecklist(profile: Profile): ProfileReadinessItem[
       complete: commitmentComplete,
       description: commitmentComplete
         ? `${profile.commitmentProfile.weeklyAvailabilityHours}h/week · ${formatStartTimeline(profile.intent.startTimeline)} · full-time by ${profile.commitmentProfile.fullTimeBy}`
-        : "Declare hours per week, full-time timing, and runway before people have to infer seriousness.",
+        : "Declare hours per week, full-time timing, and runway before people have to infer commitment.",
     },
     {
       id: "proof",
@@ -284,7 +284,7 @@ function buildProfileReadinessChecklist(profile: Profile): ProfileReadinessItem[
       id: "guardrails",
       title: "Outreach guardrails",
       complete: outreachGuardrailsComplete,
-      description: outreachGuardrailsComplete ? `${profile.intent.nonNegotiables.slice(0, 2).join(" · ")} · ${profile.intent.introCapacity}` : "State your non-negotiables and how many serious conversations you can take right now.",
+      description: outreachGuardrailsComplete ? `${profile.intent.nonNegotiables.slice(0, 2).join(" · ")} · ${profile.intent.introCapacity}` : "State your non-negotiables and how many conversations you can take right now.",
     },
     {
       id: "collaboration_style",
@@ -457,7 +457,7 @@ export function buildIntentChecklist(profile: Profile) {
       id: "capacity",
       title: "Conversation capacity",
       complete: Boolean(profile.intent.introCapacity),
-      description: profile.intent.introCapacity || "Declare how many serious intros you can take right now",
+      description: profile.intent.introCapacity || "Declare how many intros you can take right now",
     },
     {
       id: "commitment_profile",

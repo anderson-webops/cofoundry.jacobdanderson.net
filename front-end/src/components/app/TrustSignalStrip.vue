@@ -22,7 +22,7 @@ const recentlyActive = computed(() => isRecentlyActive(props.profile.trustSignal
       {{ formatTrustTier(trustTier) }}
     </BaseBadge>
     <BaseBadge :tone="readiness.trustReady ? 'success' : 'accent'">
-      {{ readiness.trustCompletedCount }}/{{ readiness.trustTotalCount }} trust-critical signals
+      {{ readiness.trustCompletedCount }}/{{ readiness.trustTotalCount }} profile signals
     </BaseBadge>
     <BaseBadge :tone="profile.trustSignals.builderProofs.length ? 'success' : 'neutral'">
       {{ profile.trustSignals.builderProofs.length }} evidence card{{ profile.trustSignals.builderProofs.length === 1 ? "" : "s" }}

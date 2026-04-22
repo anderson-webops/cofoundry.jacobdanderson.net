@@ -67,7 +67,7 @@ usePageSeo(profile.displayName, profile.headline, {
           <div>
             <div class="flex flex-wrap gap-2">
               <BaseBadge :tone="readiness.trustReady ? 'success' : 'accent'">
-                {{ readiness.trustPercent }}% trust-critical
+                {{ readiness.trustPercent }}% profile signals
               </BaseBadge>
               <BaseBadge tone="neutral">
                 Public-lite profile
@@ -101,7 +101,7 @@ usePageSeo(profile.displayName, profile.headline, {
 
         <div class="mt-6 gap-4 grid md:grid-cols-2">
           <MetricTile label="Start timeline" :value="formatStartTimeline(profile.intent.startTimeline)" />
-          <MetricTile label="Trust-critical fields" :value="`${readiness.trustPercent}%`" />
+          <MetricTile label="Profile signals" :value="`${readiness.trustPercent}%`" />
           <MetricTile label="Hours / week" :value="profile.commitmentProfile.weeklyAvailabilityHours" />
           <MetricTile label="Runway" :value="formatRunwayBucket(profile.commitmentProfile.runwayBucket)" />
           <MetricTile label="Contact rule" :value="formatContactRevealStage(profile.privacy.contactRevealStage)" />
@@ -110,8 +110,8 @@ usePageSeo(profile.displayName, profile.headline, {
         <div class="mt-6">
           <TrustReadinessPanel
             :profile="profile"
-            title="Public trust surface"
-            description="Public visitors see the signals that are fast to scan and hard to fake before any private details unlock."
+            title="Public proof and verification"
+            description="Public visitors see the signals that are fast to scan before any private details unlock."
           />
         </div>
 

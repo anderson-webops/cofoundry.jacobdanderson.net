@@ -32,7 +32,7 @@ const activationTasks = computed(() => [
     id: "match",
     title: "Move one match into a trial sprint",
     complete: props.matchCount > 0,
-    description: props.matchCount > 0 ? `${props.matchCount} mutual match${props.matchCount === 1 ? "" : "es"} can move into a working sprint.` : "Mutual interest unlocks messaging and the trial-project workflow.",
+    description: props.matchCount > 0 ? `${props.matchCount} mutual match${props.matchCount === 1 ? "" : "es"} can move into a working sprint.` : "Mutual interest unlocks messaging and a short trial sprint.",
     ctaLabel: "Open matches",
     href: "/app/matches",
   },
@@ -40,7 +40,7 @@ const activationTasks = computed(() => [
     id: "proposal",
     title: "Convert a conversation into a proposal",
     complete: props.proposalCount > 0,
-    description: props.proposalCount > 0 ? `${props.proposalCount} proposal${props.proposalCount === 1 ? "" : "s"} already exist in your workflow.` : "Use proposals once the role, commitment, and guardrails stop feeling hypothetical.",
+    description: props.proposalCount > 0 ? `${props.proposalCount} proposal${props.proposalCount === 1 ? "" : "s"} already exist in your account.` : "Open a proposal once the role, commitment, and guardrails are clear.",
     ctaLabel: "Open proposals",
     href: "/app/proposals",
   },
@@ -55,7 +55,7 @@ const activationTasks = computed(() => [
           First-week activation
         </h2>
         <p class="muted text-sm leading-6 mt-2">
-          Reach value fast, then earn the heavier workflows with stronger profile signal.
+          Get the profile in shape, then move one conversation forward.
         </p>
       </div>
       <BaseBadge :tone="readiness.profileComplete ? 'success' : 'accent'">

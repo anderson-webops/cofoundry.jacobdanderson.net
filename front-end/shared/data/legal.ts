@@ -34,16 +34,16 @@ export const termsKeyNotes = [
     body: "CoFoundry is for founders, co-founders, and startup collaborators working toward real company formation.",
   },
   {
-    title: "Structured workflow, not guaranteed outcomes",
+    title: "Tools, not guarantees",
     body: "Profiles, matches, messaging, proposals, and agreement templates help users form teams, but CoFoundry does not guarantee intros, funding, company success, or legal enforceability.",
   },
   {
     title: "Paid SaaS, not automatic platform equity",
-    body: "Subscriptions unlock workflow and visibility benefits. Paid plans do not give CoFoundry ownership in your company or a right to your cap table.",
+    body: "Subscriptions unlock product and visibility benefits. Paid plans do not give CoFoundry ownership in your company or a right to your cap table.",
   },
   {
     title: "Future investment module is separate",
-    body: "If CoFoundry later enables an investment workflow, that feature will be gated behind supplemental terms and distinct product controls.",
+    body: "If CoFoundry later enables an investment module, that feature will be gated behind supplemental terms and distinct product controls.",
   },
 ]
 
@@ -51,9 +51,9 @@ export const termsSections: LegalSection[] = [
   {
     id: "acceptance",
     title: "1. Acceptance and Eligibility",
-    summary: "Using CoFoundry creates a binding agreement and is limited to serious adult users.",
+    summary: "Using CoFoundry creates a binding agreement and is limited to adult users.",
     paragraphs: [
-      "By accessing or using CoFoundry's website, application, profiles, messaging, proposal workflow, contract builder, billing pages, or related services, you agree to these Terms of Service and the Privacy Policy.",
+      "By accessing or using CoFoundry's website, application, profiles, messaging, proposals, contract builder, billing pages, or related services, you agree to these Terms of Service and the Privacy Policy.",
       "You must be at least 18 years old, legally able to enter contracts, and not prohibited from using the service under applicable law. If you use CoFoundry on behalf of an organization, you represent that you have authority to bind that organization.",
       "If you do not agree to these Terms, do not use CoFoundry.",
     ],
@@ -63,9 +63,9 @@ export const termsSections: LegalSection[] = [
     title: "2. What CoFoundry Is",
     summary: "CoFoundry is software for forming startup teams and documenting collaboration terms.",
     paragraphs: [
-      "CoFoundry helps founders and startup collaborators create profiles, evaluate fit, express interest, message after a mutual connection, exchange structured proposals, run trial collaboration workflows, and generate editable collaboration agreement templates.",
+      "CoFoundry helps founders and startup collaborators create profiles, evaluate fit, express interest, message after a mutual connection, exchange structured proposals, run trial collaboration steps, and generate editable collaboration agreement templates.",
       "CoFoundry is not a freelance marketplace, staffing firm, employment agency, broker-dealer, funding portal, investment adviser, venture fund, law firm, tax adviser, or fiduciary for user relationships.",
-      "The core service is subscription software. Any future investment-related feature is separate from the main SaaS workflow and may be subject to additional eligibility rules, product gates, and supplemental terms.",
+      "The core service is subscription software. Any future investment-related feature is separate from the main SaaS product and may be subject to additional eligibility rules, product gates, and supplemental terms.",
     ],
   },
   {
@@ -76,15 +76,15 @@ export const termsSections: LegalSection[] = [
       "You are responsible for your account credentials, all activity under your account, and the accuracy of your profile, opportunity listings, uploaded materials, and communications.",
       "You may not impersonate another person, misstate your identity, create misleading trust signals, or present fabricated traction, role ownership, or availability.",
       "CoFoundry includes privacy controls such as public-lite visibility, member-only visibility, and gated contact-reveal rules. If you choose a public setting, profile or startup information may become visible on the public web and may be indexed by search engines or viewed by people outside the product.",
-      "Verification badges and trust markers only mean that a specific signal or workflow was completed inside CoFoundry or through a linked account. They are not a guarantee of character, legal compliance, background checks, business quality, or future performance.",
+      "Verification badges and trust markers only mean that a specific signal or step was completed inside CoFoundry or through a linked account. They are not a guarantee of character, legal compliance, background checks, business quality, or future performance.",
     ],
   },
   {
     id: "acceptable-use",
     title: "4. Acceptable Use and Network Integrity",
-    summary: "The platform is designed for serious startup formation, not spam, harvesting, or disguised consulting marketplaces.",
+    summary: "The platform is designed for startup formation, not spam, harvesting, or disguised consulting marketplaces.",
     paragraphs: [
-      "You may use CoFoundry only for lawful purposes tied to evaluating or forming startup teams, negotiating startup collaboration terms, or managing a legitimate company-building workflow.",
+      "You may use CoFoundry only for lawful purposes tied to evaluating or forming startup teams, negotiating startup collaboration terms, or managing a legitimate company-building search and negotiation process.",
       "You may not use CoFoundry in ways that degrade trust, create safety risk, or turn the network into a lead-generation channel for unrelated services.",
     ],
     bullets: [
@@ -106,7 +106,7 @@ export const termsSections: LegalSection[] = [
       "You retain ownership of the text, files, links, profile data, startup information, proposal inputs, agreement drafts, and other content you submit to CoFoundry.",
       "You grant CoFoundry a non-exclusive, worldwide, royalty-free license to host, store, reproduce, process, display, format, transmit, moderate, and distribute that content only as needed to operate, secure, improve, and support the service.",
       "You represent that you have the rights needed to upload your content and that your content does not violate confidentiality obligations, privacy rights, intellectual property rights, sanctions laws, or other applicable law.",
-      "If you send CoFoundry feedback, product ideas, or workflow suggestions, you grant CoFoundry the right to use that feedback without restriction or compensation to you.",
+      "If you send CoFoundry feedback or product ideas, you grant CoFoundry the right to use that feedback without restriction or compensation to you.",
     ],
   },
   {
@@ -114,7 +114,7 @@ export const termsSections: LegalSection[] = [
     title: "6. Matches, Messaging, and User Interactions",
     summary: "CoFoundry facilitates introductions but is not a party to user relationships or off-platform conduct.",
     paragraphs: [
-      "CoFoundry may gate messaging behind mutual interest, structured intros, trust-critical completion, or contact-reveal settings. Those controls are part of the product design and may change over time.",
+      "CoFoundry may gate messaging behind mutual interest, structured intros, profile completion, or contact-reveal settings. Those controls are part of the product design and may change over time.",
       "CoFoundry is not a party to any conversation, proposal, negotiation, trial sprint, collaboration, incorporation decision, employment relationship, or company agreement between users.",
       "You are responsible for deciding what information to share, when to move a conversation off-platform, whether to run a trial project, and whether another user is credible enough for deeper collaboration.",
       "CoFoundry does not guarantee that another user's identity, funding claims, traction, responsiveness, or intentions are accurate, even if some verification or trust markers are present.",
@@ -123,10 +123,10 @@ export const termsSections: LegalSection[] = [
   {
     id: "proposals-templates",
     title: "7. Proposals, Templates, and Professional Disclaimers",
-    summary: "CoFoundry's proposal and contract tools are workflow infrastructure, not legal or investment advice.",
+    summary: "CoFoundry's proposal and contract tools help structure discussions, but they are not legal or investment advice.",
     paragraphs: [
-      "Proposal builders, clause comments, deal-room summaries, and generated agreement templates are informational workflow tools. They help users structure discussions about role scope, time commitment, compensation, equity, vesting, confidentiality, decision rights, and IP assignment.",
-      "CoFoundry does not provide legal, tax, accounting, investment, employment, or regulatory advice. Using the proposal or contract workflow does not create an attorney-client, adviser-client, fiduciary, brokerage, or agency relationship with CoFoundry.",
+      "Proposal builders, clause comments, deal-room summaries, and generated agreement templates are informational product tools. They help users structure discussions about role scope, time commitment, compensation, equity, vesting, confidentiality, decision rights, and IP assignment.",
+      "CoFoundry does not provide legal, tax, accounting, investment, employment, or regulatory advice. Using the proposal or contract tools does not create an attorney-client, adviser-client, fiduciary, brokerage, or agency relationship with CoFoundry.",
       "Generated documents are editable templates. Their legal effect depends on the facts, jurisdiction, formation documents, signature method, and the final text the parties actually accept.",
       "You are responsible for obtaining qualified professional advice before relying on any proposal, agreement template, or negotiation summary for a real company, financing, employment, or ownership decision.",
     ],
@@ -136,7 +136,7 @@ export const termsSections: LegalSection[] = [
     title: "8. Subscriptions, Billing, Cancellation, and Refunds",
     summary: "Paid plans auto-renew unless canceled, and subscription benefits are software features rather than ownership rights.",
     paragraphs: [
-      "Some CoFoundry features require a paid subscription. Paid plans may unlock messaging capacity, saved searches, proposal workflow limits, agreement generation, visibility boosts, or other account benefits described at checkout or on the pricing page.",
+      "Some CoFoundry features require a paid subscription. Paid plans may unlock messaging capacity, saved searches, proposal and agreement limits, visibility boosts, or other account benefits described at checkout or on the pricing page.",
       "By starting a paid subscription, you authorize CoFoundry and its payment processors to charge the recurring fees, taxes, and other disclosed amounts for your selected plan until you cancel.",
       "Subscriptions renew automatically at the end of each billing period unless you cancel before renewal through the billing settings flow or another method CoFoundry makes available.",
       "Unless CoFoundry states otherwise at the time of purchase, fees are non-refundable, subscription periods are not prorated, and cancellation takes effect at the end of the current paid term. Nothing in a subscription gives CoFoundry automatic equity, ownership, or governance rights in your venture.",
@@ -159,8 +159,8 @@ export const termsSections: LegalSection[] = [
     title: "10. Future Investment Module and Supplemental Terms",
     summary: "Investment-related features, if ever enabled, are separate from the core matching product.",
     paragraphs: [
-      "The current core CoFoundry product is a founder-and-collaborator SaaS workflow. The future investment module is feature-flagged, disabled by default, and not part of the primary user experience unless CoFoundry expressly enables it.",
-      "If CoFoundry later offers investment-related workflows, those features may require additional eligibility checks, disclosures, approvals, regulated partners, or supplemental terms. CoFoundry may refuse access to those features at its sole discretion.",
+      "The current core CoFoundry product is founder-and-collaborator SaaS. The future investment module is feature-flagged, disabled by default, and not part of the primary user experience unless CoFoundry expressly enables it.",
+      "If CoFoundry later offers investment-related features, those features may require additional eligibility checks, disclosures, approvals, regulated partners, or supplemental terms. CoFoundry may refuse access to those features at its sole discretion.",
       "Nothing in these core Terms means CoFoundry is effecting securities transactions, soliciting investments, providing investment advice, guaranteeing financing, or acting as your broker, funding portal, or placement agent.",
     ],
   },
@@ -238,7 +238,7 @@ export const termsSections: LegalSection[] = [
     title: "18. Changes to the Service or These Terms",
     summary: "CoFoundry may evolve the product and update these Terms as the platform matures.",
     paragraphs: [
-      "CoFoundry may change, suspend, or discontinue features, plan limits, verification methods, integrations, trust controls, or workflow requirements at any time.",
+      "CoFoundry may change, suspend, or discontinue features, plan limits, verification methods, integrations, trust controls, or feature requirements at any time.",
       "CoFoundry may update these Terms from time to time. If CoFoundry makes a material change, it may provide notice through the website, the application, email, or another reasonable method. Your continued use of the service after the updated Terms become effective means you accept the revised Terms.",
     ],
   },
@@ -253,7 +253,7 @@ export const privacyKeyNotes = [
   },
   {
     title: "Direct contact stays gated",
-    body: "Email addresses, direct contact details, messages, proposal drafts, and contract workflows are not shown on public pages and are only exposed inside the product according to match and privacy controls.",
+    body: "Email addresses, direct contact details, messages, proposal drafts, and contract drafts are not shown on public pages and are only exposed inside the product according to match and privacy controls.",
   },
   {
     title: "Current tracking posture is restrained",
@@ -261,7 +261,7 @@ export const privacyKeyNotes = [
   },
   {
     title: "Live vendors are conditional",
-    body: "Some environments rely on CoFoundry-hosted internal services. When live vendors such as Supabase or Stripe are enabled, they process data only for the product workflows described in this policy.",
+    body: "Some environments rely on CoFoundry-hosted internal services. When live vendors such as Supabase or Stripe are enabled, they process data only for the product functions described in this policy.",
   },
 ]
 
@@ -276,12 +276,12 @@ export const privacyVisibilityTiers: PrivacyVisibilityTier[] = [
     title: "Signed-in members",
     audience: "Visible inside the product to authenticated users",
     details: "Member-only profile details, deeper fit signals, time commitment, startup preferences, structured intro context, and certain trust-readiness details may be visible only to logged-in members depending on the profile owner's settings.",
-    notes: "This tier is meant for serious founder matching, not public indexing.",
+    notes: "This tier is meant for founder matching, not public indexing.",
   },
   {
     title: "Mutual connections",
     audience: "Visible only after both sides unlock the relationship",
-    details: "Messaging history, shared attachments, proposal versions, contract drafts, signature events, and any direct contact details CoFoundry reveals are limited to the parties involved and authorized admins supporting the workflow.",
+    details: "Messaging history, shared attachments, proposal versions, contract drafts, signature events, and any direct contact details CoFoundry reveals are limited to the parties involved and authorized admins supporting the relationship.",
     notes: "Counterparties may retain copies of information they already received even if you later close your account.",
   },
   {
@@ -312,7 +312,7 @@ export const privacyDataCategories: PrivacyDataCategory[] = [
     visibility: "Mostly internal or visible only to the participants involved in the interaction.",
   },
   {
-    category: "Messages, proposals, and contract workflow data",
+    category: "Messages, proposals, and contract data",
     examples: "Messages, attachments, clause comments, proposal versions, negotiation notes, agreement drafts, typed-name signatures, and timeline events.",
     purposes: "Running the deal room, creating editable documents, preserving negotiation history, and supporting disputes or trust-and-safety reviews.",
     visibility: "Visible to the relevant participants and authorized admins when review is required.",
@@ -339,8 +339,8 @@ export const privacyRetentionRows: PrivacyRetentionRow[] = [
   },
   {
     category: "Messages, proposals, and contract drafts",
-    window: "While the relationship is active, then generally up to 36 months after the last workflow activity",
-    notes: "Needed so counterparties can preserve shared negotiation history and so CoFoundry can investigate reports tied to a collaboration workflow.",
+    window: "While the relationship is active, then generally up to 36 months after the last proposal or contract activity",
+    notes: "Needed so counterparties can preserve shared negotiation history and so CoFoundry can investigate reports tied to a collaboration.",
   },
   {
     category: "Security logs and session signals",
@@ -363,7 +363,7 @@ export const privacySections: LegalSection[] = [
   {
     id: "scope-contact",
     title: "1. Scope and Who This Policy Covers",
-    summary: "This policy covers CoFoundry's public website, application, and related founder-matching workflows.",
+    summary: "This policy covers CoFoundry's public website, application, and related founder-matching features.",
     paragraphs: [
       "This Privacy Policy explains how CoFoundry collects, uses, stores, shares, and protects information when you visit the marketing site, create an account, build a profile, search for collaborators, message other members, exchange proposals, generate contract templates, manage a subscription, contact support, or interact with the trust-and-safety process.",
       "It applies to both public pages and authenticated product pages. It also applies when CoFoundry processes information through service providers or through its internal service layer in environments where live third-party services are not enabled.",
@@ -377,17 +377,17 @@ export const privacySections: LegalSection[] = [
     paragraphs: [
       "CoFoundry is a discovery platform, so some profile and startup information may be deliberately visible to other people. Members can choose public-lite, member-only, or private settings for key profile surfaces, and some startup opportunities can also be published publicly.",
       "When you select a public setting, information such as your display name, headline, photo, broad location, role context, startup interests, public links, or startup listing details may appear on public directory pages and may be indexed by search engines.",
-      "CoFoundry keeps direct contact information gated. Email addresses, messages, proposal drafts, contract workflow data, and similar collaboration materials are not intended for public display and are only revealed within the product according to connection state, workflow permissions, and admin review rules.",
+      "CoFoundry keeps direct contact information gated. Email addresses, messages, proposal drafts, contract data, and similar collaboration materials are not intended for public display and are only revealed within the product according to connection state, product permissions, and admin review rules.",
       "Because public content can be copied by search engines, aggregators, or other users, changing a visibility setting later may not remove every historical copy that exists outside CoFoundry.",
     ],
   },
   {
     id: "information-collected",
     title: "3. Information We Collect",
-    summary: "We collect account, profile, workflow, billing, and safety data needed to operate the network.",
+    summary: "We collect account, profile, collaboration, billing, and safety data needed to operate the network.",
     paragraphs: [
       "CoFoundry collects information you provide directly, including account credentials, profile details, startup opportunity listings, values and work-style inputs, links to external profiles, messages, proposals, contract-template inputs, support requests, and report submissions.",
-      "We also collect information generated by your use of the product, including search filters, bookmarks, saved searches, connect requests, matches, workflow events, subscription activity, and trust-signal completion events.",
+      "We also collect information generated by your use of the product, including search filters, bookmarks, saved searches, connect requests, matches, collaboration events, subscription activity, and trust-signal completion events.",
       "Certain technical and security data are collected automatically, such as session state, device and browser metadata, IP-based security signals, and logs tied to authentication, rate limiting, or abuse detection.",
       "CoFoundry may also receive limited information from third-party providers when enabled, such as payment status from Stripe-backed billing, authentication state from live identity providers, or storage and database metadata from a Supabase-backed environment.",
     ],
@@ -397,7 +397,7 @@ export const privacySections: LegalSection[] = [
     title: "4. How We Use Information",
     summary: "We use personal information to operate the service, rank relevant results, protect the network, and support billing.",
     paragraphs: [
-      "CoFoundry uses information to create and maintain accounts, render profiles, power search and discovery, recommend relevant people or opportunities, manage structured intros, enable messaging after a mutual connection, and run proposal and contract workflows.",
+      "CoFoundry uses information to create and maintain accounts, render profiles, power search and discovery, recommend relevant people or opportunities, manage structured intros, enable messaging after a mutual connection, and support proposals and contracts.",
       "We also use information for trust and safety, including fraud detection, scam prevention, moderation, support, debugging, enforcing the Terms of Service, and protecting members from spam, impersonation, harassment, and data harvesting.",
       "Subscription and billing information is used to determine plan access, process checkout events, prevent chargeback abuse, and maintain accounting records.",
       "CoFoundry may also use aggregated or de-identified product data to understand usage patterns, improve ranking quality, refine onboarding, and operate internal analytics for the service.",
@@ -418,7 +418,7 @@ export const privacySections: LegalSection[] = [
     title: "6. How We Share Information",
     summary: "We share information with other members, service providers, and authorities only as needed for the service or legal obligations.",
     paragraphs: [
-      "CoFoundry shares information with other members according to profile visibility settings, startup listing settings, mutual-connection state, and workflow permissions. That includes profile content, intros, messages, proposals, contract drafts, and signatures when the relevant workflow calls for it.",
+      "CoFoundry shares information with other members according to profile visibility settings, startup listing settings, mutual-connection state, and product permissions. That includes profile content, intros, messages, proposals, contract drafts, and signatures when the relevant step calls for it.",
       "We share information with service providers that help us operate the product, such as infrastructure, storage, authentication, billing, email delivery, and security vendors. In some environments, equivalent functionality may be handled by CoFoundry's internal service layer instead of live third-party processors.",
       "We may disclose information to comply with law, respond to lawful requests, protect the rights or safety of members, investigate fraud or abuse, or support a merger, acquisition, financing, or similar business transaction.",
       "CoFoundry's current configuration does not use third-party advertising pixels or cross-context behavioral advertising, and CoFoundry does not currently sell or share personal information for that purpose. If that changes, CoFoundry will update this policy and any required opt-out controls before rollout.",
@@ -449,7 +449,7 @@ export const privacySections: LegalSection[] = [
   {
     id: "retention-deletion",
     title: "9. Retention and Deletion",
-    summary: "Different categories of data stay around for different reasons, and deletion is not absolute across every workflow.",
+    summary: "Different categories of data stay around for different reasons, and deletion is not absolute across every collaboration record.",
     paragraphs: [
       "CoFoundry retains information for as long as necessary to operate the service, preserve collaboration history, enforce the Terms, handle trust-and-safety reports, meet legal obligations, and protect against fraud or abuse.",
       "Account closure or deletion requests do not always erase every record immediately. Other members may still retain copies of messages, proposal drafts, and agreement materials they previously received, and CoFoundry may keep limited records for billing, security, legal compliance, or repeat-offender review.",
@@ -461,7 +461,7 @@ export const privacySections: LegalSection[] = [
     title: "10. Security, Moderation, and Investigations",
     summary: "Admins and service providers may access protected data when the platform or another member needs protection.",
     paragraphs: [
-      "CoFoundry uses technical and organizational safeguards designed to protect account data, workflow history, and payment-related metadata, including access controls, scoped service-provider access, and server-side handling for secret-backed integrations when enabled.",
+      "CoFoundry uses technical and organizational safeguards designed to protect account data, collaboration history, and payment-related metadata, including access controls, scoped service-provider access, and server-side handling for secret-backed integrations when enabled.",
       "No internet service is perfectly secure, and CoFoundry cannot guarantee absolute security. Members should still use strong passwords, protect their devices, and avoid oversharing sensitive data before they have enough trust in another party.",
       "Authorized admins may review messages, attachments, proposals, contracts, reports, and associated logs when needed for support, trust and safety, fraud prevention, technical troubleshooting, or legal compliance. CoFoundry does not promise that every interaction is proactively monitored, but it reserves the right to investigate when warranted.",
     ],
@@ -482,7 +482,7 @@ export const privacySections: LegalSection[] = [
     summary: "CoFoundry is built to stay aligned with U.S. privacy-policy and notice expectations as the platform scales.",
     paragraphs: [
       "CoFoundry aims to describe its data practices clearly enough to support U.S. state privacy-policy expectations, including disclosures about categories of information collected, how information is shared, how visibility works, and how members can request changes or deletion.",
-      "CoFoundry's current product configuration does not use cross-context behavioral advertising or sell personal information for that purpose. If CoFoundry later introduces targeted advertising, sale or sharing concepts, or additional state-law opt-out rights, CoFoundry will update this policy and any notice-at-collection or opt-out workflows required before the change goes live.",
+      "CoFoundry's current product configuration does not use cross-context behavioral advertising or sell personal information for that purpose. If CoFoundry later introduces targeted advertising, sale or sharing concepts, or additional state-law opt-out rights, CoFoundry will update this policy and any notice-at-collection or opt-out controls required before the change goes live.",
       "If CoFoundry becomes subject to broader state-law rights or threshold-based obligations, it may expand this section or add a supplemental U.S. state privacy notice describing category-based retention, rights procedures, and preference-signal handling in more detail.",
     ],
   },
@@ -498,7 +498,7 @@ export const privacySections: LegalSection[] = [
   {
     id: "children",
     title: "14. Children and Age Restrictions",
-    summary: "CoFoundry is intended for adults who are old enough to enter serious startup collaborations.",
+    summary: "CoFoundry is intended for adults who are old enough to enter startup collaborations.",
     paragraphs: [
       "CoFoundry is not directed to children, and members must be at least 18 years old to use the service.",
       "If CoFoundry learns that it has collected personal information from someone who is not allowed to use the service, CoFoundry may suspend the account and delete or restrict the related data as appropriate.",
@@ -509,7 +509,7 @@ export const privacySections: LegalSection[] = [
     title: "15. Future Investment Features",
     summary: "The future investment module is treated as a separate privacy mode because it may require different data and vendors.",
     paragraphs: [
-      "CoFoundry's investment module is currently feature-flagged and disabled by default. If it is ever enabled, CoFoundry may need to collect additional information such as enhanced identity, financial, diligence, or regulated-partner data that is not part of the core founder-matching workflow today.",
+      "CoFoundry's investment module is currently feature-flagged and disabled by default. If it is ever enabled, CoFoundry may need to collect additional information such as enhanced identity, financial, diligence, or regulated-partner data that is not part of the core founder-matching product today.",
       "If CoFoundry launches those features, it may segment the related data, introduce additional vendors or regulated partners, and provide a supplemental feature notice before collecting the new categories of information.",
       "Nothing about the existence of that dormant feature changes the current privacy posture of the core matching product today.",
     ],

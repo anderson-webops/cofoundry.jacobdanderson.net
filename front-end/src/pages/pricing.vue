@@ -10,8 +10,8 @@ usePageSeo("Pricing")
   <div class="page-shell py-16 md:py-20">
     <PageIntro
       eyebrow="Pricing"
-      title="Straightforward subscription pricing for startup team formation."
-      description="Start free. Pay when you need more outreach and the full proposal-and-agreement workflow. CoFoundry does not take automatic equity."
+      title="Straightforward subscriptions for startup team formation."
+      description="Start free. Pay when you need more outreach, more live searches, and proposal and agreement tools. CoFoundry does not take automatic equity."
     />
 
     <div class="mt-10 gap-6 grid lg:grid-cols-3">
@@ -47,7 +47,7 @@ usePageSeo("Pricing")
 
     <div class="panel mt-10 p-6 md:p-8">
       <h2 class="text-2xl font-semibold">
-        What paid plans unlock
+        What paid plans add
       </h2>
       <div class="mt-6 gap-4 grid md:grid-cols-3">
         <div class="panel-inset p-4">
@@ -60,50 +60,18 @@ usePageSeo("Pricing")
         </div>
         <div class="panel-inset p-4">
           <p class="text-sm font-semibold">
-            More room to manage live searches
+            More live searches
           </p>
           <p class="muted text-sm leading-6 mt-2">
-            Save more searches, keep more deal rooms moving, and manage several serious conversations at once.
+            Save more searches, keep more proposals moving, and manage several active conversations at once.
           </p>
         </div>
         <div class="panel-inset p-4">
           <p class="text-sm font-semibold">
-            Proposal and agreement workflow
+            Proposal and agreement tools
           </p>
           <p class="muted text-sm leading-6 mt-2">
             Paid plans unlock the tools that turn a promising relationship into written terms.
-          </p>
-        </div>
-      </div>
-    </div>
-
-    <div class="panel mt-10 p-6 md:p-8">
-      <h2 class="text-2xl font-semibold">
-        How limits work
-      </h2>
-      <div class="mt-6 gap-4 grid md:grid-cols-3">
-        <div class="panel-inset p-4">
-          <p class="text-sm font-semibold">
-            New intros
-          </p>
-          <p class="muted text-sm leading-6 mt-2">
-            Limits apply to new outbound introductions, not to the messages that happen after a match.
-          </p>
-        </div>
-        <div class="panel-inset p-4">
-          <p class="text-sm font-semibold">
-            Proposal sends
-          </p>
-          <p class="muted text-sm leading-6 mt-2">
-            Structured proposals stay visible on every plan, but higher proposal volume is part of the paid workflow.
-          </p>
-        </div>
-        <div class="panel-inset p-4">
-          <p class="text-sm font-semibold">
-            Agreement drafts and signatures
-          </p>
-          <p class="muted text-sm leading-6 mt-2">
-            Free can preview an agreement draft. Paid plans unlock signature-ready workflow and export.
           </p>
         </div>
       </div>

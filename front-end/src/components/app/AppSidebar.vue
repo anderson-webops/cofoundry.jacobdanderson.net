@@ -37,7 +37,7 @@ const investmentEnabled = useFeatureFlag("featureInvestmentModule")
     <div class="mt-auto gap-3 grid">
       <div class="panel-inset p-4">
         <p class="text-sm font-semibold">
-          Proposal workflow
+          Proposal tools
         </p>
         <p class="muted text-sm leading-6 mt-2">
           Keep equity, vesting, IP, and decision rights in writing before you make a big founder decision.

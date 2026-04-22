@@ -91,7 +91,7 @@ export const trustCenterPages: GuidePage[] = [
         bullets: [
           "If you need one-off execution, use a services marketplace.",
           "If you are hiring employees, use a recruiting product.",
-          "If you want a startup partner, use CoFoundry's match, proposal, and agreement workflow.",
+          "If you want a startup partner, use CoFoundry's matching, proposal, and agreement tools.",
         ],
       },
       {
@@ -138,7 +138,7 @@ export const contractGuidePages: GuidePage[] = [
     description: "A short working sprint reveals more than a long run of speculative calls.",
     eyebrow: "Contracts & Proposals",
     category: "contracts",
-    ctaLabel: "See the workflow",
+    ctaLabel: "See how it works",
     ctaTo: "/how-it-works",
     sections: [
       {
@@ -171,7 +171,7 @@ export const contractGuidePages: GuidePage[] = [
     sections: [
       {
         title: "Why vesting shows up early",
-        body: "Most serious founder conversations reach vesting quickly because it affects trust, incentives, and what happens if one person leaves before the company is real.",
+        body: "Most founder conversations reach vesting quickly because it affects trust, incentives, and what happens if one person leaves before the company is real.",
       },
       {
         title: "Questions that matter",
@@ -184,7 +184,7 @@ export const contractGuidePages: GuidePage[] = [
       },
       {
         title: "How CoFoundry helps",
-        body: "The proposal and agreement workflow forces vesting and cliff choices into the same conversation as role scope, commitment, and IP so the tradeoffs stay connected.",
+        body: "The proposal and agreement tools keep vesting and cliff choices in the same conversation as role scope, commitment, and IP so the tradeoffs stay connected.",
       },
     ],
   },
@@ -207,7 +207,7 @@ export const contractGuidePages: GuidePage[] = [
         ],
       },
       {
-        title: "Why this belongs in the workflow",
+        title: "Why this belongs in the process",
         body: "IP readiness is not a legal afterthought. People who cannot discuss constraints clearly should not be sending founder terms yet.",
       },
       {

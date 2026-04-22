@@ -110,7 +110,7 @@ function quotaText(key: "intros" | "savedSearches" | "proposals" | "contractDraf
     <PageIntro
       eyebrow="Billing"
       title="Transparent pricing, usage, and cancellation"
-      description="CoFoundry charges for higher-intent workflow: more outbound reach, saved search velocity, and proposal-to-agreement execution. Messaging after a mutual match stays available on every plan."
+      description="CoFoundry charges for more outbound reach and proposal-to-agreement tools. Messaging after a mutual match stays available on every plan."
     >
       <template #actions>
         <BaseBadge tone="accent">
@@ -185,7 +185,7 @@ function quotaText(key: "intros" | "savedSearches" | "proposals" | "contractDraf
 
       <section class="panel p-6">
         <h2 class="text-xl font-semibold">
-          What this plan meters
+          Plan usage
         </h2>
         <div v-if="usage" class="mt-5 gap-4 grid md:grid-cols-2">
           <div class="panel-inset p-4">
@@ -201,7 +201,7 @@ function quotaText(key: "intros" | "savedSearches" | "proposals" | "contractDraf
               Saved searches
             </p>
             <p class="muted text-sm leading-6 mt-2">
-              {{ quotaText("savedSearches") }}. Paid tiers are built for repeatable search workflows and alerts.
+              {{ quotaText("savedSearches") }}. Paid tiers are built for repeatable searches and alerts.
             </p>
           </div>
           <div class="panel-inset p-4">
@@ -217,7 +217,7 @@ function quotaText(key: "intros" | "savedSearches" | "proposals" | "contractDraf
               Agreement drafts
             </p>
             <p class="muted text-sm leading-6 mt-2">
-              {{ quotaText("contractDrafts") }}. Free keeps one preview path open, while paid plans unlock signature-ready workflow.
+              {{ quotaText("contractDrafts") }}. Free keeps one preview path open, while paid plans unlock signature-ready agreements.
             </p>
           </div>
         </div>

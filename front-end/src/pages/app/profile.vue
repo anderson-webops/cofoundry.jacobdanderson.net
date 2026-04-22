@@ -41,7 +41,7 @@ const readiness = computed(() => profile.value ? buildProfileReadiness(profile.v
                 {{ readiness?.profileComplete ? "Completed profile" : `Profile strength ${readiness?.percent}%` }}
               </BaseBadge>
               <BaseBadge :tone="readiness?.trustReady ? 'success' : 'accent'">
-                {{ readiness?.trustPercent || 0 }}% trust-critical
+                {{ readiness?.trustPercent || 0 }}% profile signals
               </BaseBadge>
               <BaseBadge :tone="profile.verificationBadges.emailVerified ? 'success' : 'warning'">
                 Verified email
@@ -51,7 +51,7 @@ const readiness = computed(() => profile.value ? buildProfileReadiness(profile.v
               </BaseBadge>
             </div>
             <p class="muted text-sm leading-6 mt-4">
-              A visible trust score is no longer shown to members. CoFoundry ranks profiles privately and exposes the underlying evidence instead.
+              Members see the underlying proof and verification details rather than a single score.
             </p>
           </div>
         </div>
@@ -75,7 +75,7 @@ const readiness = computed(() => profile.value ? buildProfileReadiness(profile.v
 
         <div class="mt-6 gap-4 grid md:grid-cols-2">
           <MetricTile label="Location" :value="profile.location" />
-          <MetricTile label="Trust-critical fields" :value="`${readiness?.trustPercent || 0}%`" context="Recognizable profile, verification rails, proof, role context, availability, and intent clarity." />
+          <MetricTile label="Profile signals" :value="`${readiness?.trustPercent || 0}%`" context="Recognizable profile, verification details, proof, role context, availability, and intent clarity." />
           <MetricTile label="Profile readiness" :value="`${readiness?.percent || 0}%`" />
           <MetricTile label="Commitment" :value="profile.timeCommitment.replaceAll('_', ' ')" />
           <MetricTile label="Start timeline" :value="formatStartTimeline(profile.intent.startTimeline)" />
@@ -135,7 +135,7 @@ const readiness = computed(() => profile.value ? buildProfileReadiness(profile.v
         </div>
 
         <div v-if="tab === 'public'" class="mt-6 gap-5 grid">
-          <IntentChecklistPanel :profile="profile" title="What serious matches can evaluate quickly" />
+          <IntentChecklistPanel :profile="profile" title="What matches can evaluate quickly" />
           <div>
             <h2 class="text-lg font-semibold">
               Public highlights

@@ -216,7 +216,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       profile.hasIdea && !profile.wantsToJoinIdea
         ? "Actively building and screening for a founding partner"
         : !profile.hasIdea && profile.wantsToJoinIdea
-            ? "Actively looking to join a serious founding team"
+            ? "Actively looking to join a founding team"
             : "Exploring both founder and collaborator paths",
       `${profile.roleScope.primaryRole || profile.roles[0] || "Generalist"} · ${profile.commitmentProfile.weeklyAvailabilityHours}h/week · ${profile.intent.startTimeline.replaceAll("_", " ")}`,
       profile.trustSignals.builderProofs.length
