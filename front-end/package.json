@@ -23,7 +23,8 @@
     "test:e2e": "playwright install chromium && npm run build && playwright test",
     "test:run": "vitest run",
     "test:unit": "vitest run",
-    "typecheck": "nuxt typecheck --dotenv ../.env"
+    "typecheck": "nuxt typecheck --dotenv ../.env",
+    "verify:analytics": "node scripts/verify-analytics-output.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.103.3",
