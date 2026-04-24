@@ -1,3 +1,11 @@
 export function cloneValue<T>(value: T): T {
-  return structuredClone(value)
+  try {
+    return structuredClone(value)
+  }
+  catch {
+    if (value == null)
+      return value
+
+    return JSON.parse(JSON.stringify(value)) as T
+  }
 }
