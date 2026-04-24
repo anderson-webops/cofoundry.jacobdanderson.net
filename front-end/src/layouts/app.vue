@@ -23,7 +23,7 @@ useHead({
           <AppLogo />
           <div class="flex gap-3 items-center">
             <ThemeToggle />
-            <button class="p-2 border border-[var(--line)] rounded-full" @click="mobileNavOpen = !mobileNavOpen">
+            <button class="p-2 border border-[var(--line)] rounded-full inline-flex items-center justify-center" aria-label="Toggle workspace navigation" @click="mobileNavOpen = !mobileNavOpen">
               <span class="i-carbon-menu" />
             </button>
           </div>

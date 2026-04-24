@@ -117,7 +117,93 @@ async function toggleSuspension(row: AdminUserRow) {
     </section>
 
     <section class="panel overflow-hidden">
-      <div class="overflow-x-auto">
+      <div v-if="rows.length" class="p-4 lg:hidden">
+        <div class="surface-row-list">
+          <article v-for="row in rows" :key="row.user.id" class="surface-row">
+            <div class="flex gap-3 items-start justify-between">
+              <div class="min-w-0">
+                <p class="font-semibold">
+                  {{ row.profile?.displayName || row.user.email }}
+                </p>
+                <p class="muted text-xs mt-1 break-all">
+                  {{ row.user.email }}
+                </p>
+              </div>
+              <BaseBadge :tone="row.user.suspendedAt ? 'danger' : 'success'">
+                {{ row.user.suspendedAt ? "Suspended" : "Active" }}
+              </BaseBadge>
+            </div>
+
+            <p v-if="row.profile?.headline" class="text-sm leading-6 mt-3">
+              {{ row.profile.headline }}
+            </p>
+
+            <div class="text-sm mt-4 gap-3 grid grid-cols-2">
+              <div>
+                <p class="muted text-xs">
+                  Role
+                </p>
+                <p class="font-semibold mt-1 capitalize">
+                  {{ row.user.role.replaceAll("_", " ") }}
+                </p>
+              </div>
+              <div>
+                <p class="muted text-xs">
+                  Plan
+                </p>
+                <p class="font-semibold mt-1">
+                  {{ formatPlanName(row.subscription?.plan || "free") }}
+                </p>
+              </div>
+              <div>
+                <p class="muted text-xs">
+                  Reports
+                </p>
+                <p class="font-semibold mt-1">
+                  {{ row.openReportsCount }} open · {{ row.highPriorityReportsCount }} high
+                </p>
+              </div>
+              <div>
+                <p class="muted text-xs">
+                  Activity
+                </p>
+                <p class="font-semibold mt-1">
+                  {{ row.lastActiveAt ? formatRelativeDate(row.lastActiveAt) : "Unavailable" }}
+                </p>
+              </div>
+            </div>
+
+            <p class="muted text-xs mt-3">
+              Joined {{ formatDate(row.user.createdAt) }} · {{ row.user.onboardingCompleted ? "Onboarding complete" : "Onboarding incomplete" }}
+            </p>
+            <p v-if="row.lastAdminAction" class="text-xs leading-5 mt-3">
+              Last action: {{ row.lastAdminAction.notes }}
+            </p>
+
+            <div class="mt-4">
+              <label class="block">
+                <span class="sr-only">Moderation note</span>
+                <input
+                  v-model="moderationNotes[row.user.id]"
+                  :aria-label="`Moderation note for ${row.profile?.displayName || row.user.email}`"
+                  class="field-control text-xs"
+                  placeholder="Moderation note for the audit log"
+                >
+              </label>
+              <BaseButton
+                class="mt-3 w-full"
+                :disabled="pendingByUserId[row.user.id]"
+                :variant="row.user.suspendedAt ? 'secondary' : 'danger'"
+                @click="toggleSuspension(row)"
+              >
+                {{ pendingByUserId[row.user.id] ? "Saving..." : row.user.suspendedAt ? "Reinstate" : "Suspend" }}
+              </BaseButton>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <div v-if="rows.length" class="hidden overflow-x-auto lg:block">
         <table class="text-sm text-left min-w-[1100px] w-full">
           <thead class="bg-[var(--panel-inset)]">
             <tr>
@@ -213,7 +299,7 @@ async function toggleSuspension(row: AdminUserRow) {
         </table>
       </div>
 
-      <div v-if="!rows.length" class="p-6">
+      <div v-else class="p-6">
         <EmptyState
           title="No users match these filters"
           description="Try broadening the search or clearing one of the status filters."

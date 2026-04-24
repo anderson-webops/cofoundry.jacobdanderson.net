@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { reactive } from "vue"
 import { workspaceSeed } from "../../shared/data/seed"
 import { cloneValue } from "../../shared/utils/clone"
 import {
@@ -102,6 +103,15 @@ describe("collaboration helpers", () => {
     const cleared = markConversationReadTransition(withMessage.seed, "conversation_emma_sofia", "user_sofia")
     const clearedConversation = cleared.conversations.find(conversation => conversation.id === "conversation_emma_sofia")
     expect(clearedConversation?.unreadCountByUser.user_sofia).toBe(0)
+  })
+
+  it("handles reactive workspace state when clearing unread conversations", () => {
+    const reactiveSeed = reactive(cloneValue(workspaceSeed))
+
+    const cleared = markConversationReadTransition(reactiveSeed, "conversation_olivia_malik", "user_olivia")
+    const clearedConversation = cleared.conversations.find(conversation => conversation.id === "conversation_olivia_malik")
+
+    expect(clearedConversation?.unreadCountByUser.user_olivia).toBe(0)
   })
 
   it("detects when proposals and contracts still require the member", () => {
