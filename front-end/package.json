@@ -26,8 +26,8 @@
     "typecheck": "nuxt typecheck --dotenv ../.env"
   },
   "dependencies": {
-    "@supabase/supabase-js": "2.103.0",
-    "stripe": "22.0.1",
+    "@supabase/supabase-js": "2.103.3",
+    "stripe": "22.0.2",
     "zod": "4.3.6"
   },
   "devDependencies": {
@@ -50,8 +50,8 @@
     "tsx": "4.21.0",
     "typescript": "^6.0.3",
     "unocss": "66.6.8",
-    "vitest": "4.1.4",
-    "vue": "3.5.32",
-    "vue-tsc": "3.2.6"
+    "vitest": "4.1.5",
+    "vue": "3.5.33",
+    "vue-tsc": "3.2.7"
   }
 }
