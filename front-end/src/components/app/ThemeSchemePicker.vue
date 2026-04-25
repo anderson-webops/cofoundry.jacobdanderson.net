@@ -176,7 +176,7 @@ watch(panelAlignment, async () => {
       <span class="i-carbon-color-palette text-[var(--accent)]" />
       <span
         class="text-sm font-semibold"
-        :class="compact ? 'min-w-[4.75rem] text-left' : ''"
+        :class="props.compact ? 'min-w-[4.75rem] text-left' : ''"
       >{{ activeScheme.label }}</span>
       <span class="muted text-xs tracking-[0.14em] uppercase">
         {{ isDark ? "Dark" : "Light" }}

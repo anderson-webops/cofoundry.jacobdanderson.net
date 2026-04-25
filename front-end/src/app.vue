@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { appDescription, appName } from "~/shared/constants/app"
+import { themeSchemeStyleContent } from "~/shared/utils/theme"
 
 const trailingSlashPattern = /\/$/
 
@@ -73,6 +74,12 @@ useHead(() => ({
       key: `structured-data-${index}`,
       type: "application/ld+json",
     })),
+  ],
+  style: [
+    {
+      innerHTML: themeSchemeStyleContent,
+      key: "cofoundry-theme-schemes",
+    },
   ],
 }))
 
