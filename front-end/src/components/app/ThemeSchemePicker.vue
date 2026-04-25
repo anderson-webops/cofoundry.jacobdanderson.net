@@ -3,8 +3,9 @@ import type { ThemeSchemeId } from "~/shared/utils/theme"
 import { onClickOutside, useEventListener } from "@vueuse/core"
 import { isDarkThemeValue } from "~/shared/utils/theme"
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   align?: "start" | "end"
+  panelAlign?: "start" | "end"
   compact?: boolean
 }>(), {
   align: "end",
@@ -17,10 +18,30 @@ const { activeScheme, scheme, schemes } = useThemeScheme()
 const open = ref(false)
 const panelRef = ref<HTMLElement | null>(null)
 const triggerRef = ref<HTMLElement | null>(null)
+const panelStyle = ref<Record<string, string>>({})
 const isDark = computed(() => isDarkThemeValue(colorMode.value))
+const panelAlignment = computed(() => props.panelAlign ?? props.align)
 
 function toggleOpen() {
   open.value = !open.value
+}
+
+function updatePanelPosition() {
+  if (!open.value || !panelRef.value || !triggerRef.value)
+    return
+
+  const viewportMargin = 12
+  const triggerRect = triggerRef.value.getBoundingClientRect()
+  const panelRect = panelRef.value.getBoundingClientRect()
+  const preferredLeft = panelAlignment.value === "start"
+    ? triggerRect.left
+    : triggerRect.right - panelRect.width
+  const maxLeft = Math.max(viewportMargin, window.innerWidth - panelRect.width - viewportMargin)
+  const left = Math.min(Math.max(preferredLeft, viewportMargin), maxLeft)
+
+  panelStyle.value = {
+    transform: `translateX(${Math.round(left - triggerRect.left)}px)`,
+  }
 }
 
 function selectScheme(nextScheme: ThemeSchemeId) {
@@ -37,21 +58,41 @@ useEventListener("keydown", (event: KeyboardEvent) => {
   if (event.key === "Escape")
     open.value = false
 })
+
+useEventListener("resize", updatePanelPosition)
+
+watch(open, async (nextOpen) => {
+  if (!nextOpen) {
+    panelStyle.value = {}
+    return
+  }
+
+  await nextTick()
+  updatePanelPosition()
+})
+
+watch(panelAlignment, async () => {
+  if (!open.value)
+    return
+
+  await nextTick()
+  updatePanelPosition()
+})
 </script>
 
 <template>
   <div
     class="flex flex-col gap-3 relative z-[20]"
-    :class="align === 'start' ? 'items-start' : 'items-end'"
+    :class="props.align === 'start' ? 'items-start' : 'items-end'"
   >
     <div
       v-if="open"
       ref="panelRef"
-      class="panel p-4 shadow-[0_28px_80px_rgba(0,0,0,0.28)] bottom-[calc(100%+0.75rem)] absolute"
+      class="panel p-4 shadow-[0_28px_80px_rgba(0,0,0,0.28)] bottom-[calc(100%+0.75rem)] left-0 absolute"
       :class="[
-        align === 'start' ? 'left-0' : 'right-0',
-        compact ? 'w-[min(28rem,calc(100vw-1rem))]' : 'w-[min(30rem,calc(100vw-1rem))]',
+        props.compact ? 'w-[min(28rem,calc(100vw-1.5rem))]' : 'w-[min(30rem,calc(100vw-1.5rem))]',
       ]"
+      :style="panelStyle"
     >
       <div class="flex gap-4 items-start justify-between">
         <div>
@@ -127,7 +168,7 @@ useEventListener("keydown", (event: KeyboardEvent) => {
       ref="triggerRef"
       type="button"
       class="panel px-4 py-3 inline-flex gap-3 shadow-[0_20px_60px_rgba(0,0,0,0.16)] transition items-center hover:border-[var(--line-strong)]"
-      :class="compact ? 'w-full justify-between' : ''"
+      :class="props.compact ? 'w-full justify-between' : ''"
       :aria-expanded="open"
       aria-haspopup="dialog"
       @click="toggleOpen"
