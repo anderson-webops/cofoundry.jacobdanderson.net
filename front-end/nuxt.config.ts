@@ -3,6 +3,7 @@ import { appDescription, appName } from "./shared/constants/app"
 import { workspaceSeed } from "./shared/data/seed"
 import { getPublicRoutePaths } from "./shared/utils/directory"
 import { assertEnvironmentIsValid, readEnvironmentSnapshot } from "./shared/utils/environment"
+import { defaultThemeSchemeDefinition } from "./shared/utils/theme"
 
 const environment = readEnvironmentSnapshot(process.env)
 const publicRoutes = getPublicRoutePaths(workspaceSeed)
@@ -46,8 +47,8 @@ export default defineNuxtConfig({
         { name: "viewport", content: "width=device-width, initial-scale=1" },
         { name: "description", content: appDescription },
         { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
-        { name: "theme-color", media: "(prefers-color-scheme: light)", content: "#f7f6f2" },
-        { name: "theme-color", media: "(prefers-color-scheme: dark)", content: "#101313" },
+        { name: "theme-color", media: "(prefers-color-scheme: light)", content: defaultThemeSchemeDefinition.modes.light["--bg"] },
+        { name: "theme-color", media: "(prefers-color-scheme: dark)", content: defaultThemeSchemeDefinition.modes.dark["--bg"] },
       ],
     },
   },
