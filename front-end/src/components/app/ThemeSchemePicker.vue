@@ -108,11 +108,13 @@ watch(panelAlignment, async () => {
         </div>
         <button
           type="button"
-          class="text-[var(--text)] p-2 border border-[var(--line)] rounded-full transition hover:bg-[var(--accent-soft)]"
+          class="text-[var(--text)] border border-[var(--line)] rounded-full inline-flex shrink-0 h-9 w-9 transition items-center justify-center hover:bg-[var(--accent-soft)]"
           aria-label="Close color scheme picker"
           @click="open = false"
         >
-          <span class="i-carbon-close text-base" />
+          <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 16 16" width="16">
+            <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" />
+          </svg>
         </button>
       </div>
 
