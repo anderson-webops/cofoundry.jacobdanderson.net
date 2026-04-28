@@ -183,8 +183,11 @@ function contractQuotaText() {
 
       <details class="panel p-5">
         <summary class="text-lg font-semibold cursor-pointer">
-          Version history
+          Negotiation record
         </summary>
+        <p class="muted text-sm leading-6 mt-3">
+          Previous versions are kept here for auditability without competing with the current terms.
+        </p>
         <div class="surface-row-list mt-4">
           <div v-for="entry in timeline" :key="entry.id" class="surface-row">
             <div class="flex gap-3 items-center justify-between">

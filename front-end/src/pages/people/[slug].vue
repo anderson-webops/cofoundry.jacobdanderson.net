@@ -165,8 +165,11 @@ usePageSeo(profile.displayName, profile.headline, {
 
         <details v-if="publicLinks.length || profile.ventures.length" class="surface-row">
           <summary class="text-lg font-semibold cursor-pointer">
-            Outside context
+            External proof links
           </summary>
+          <p class="muted text-sm leading-6 mt-3">
+            Optional public links and venture context for extra diligence.
+          </p>
           <div class="surface-row-list mt-4">
             <a
               v-for="link in publicLinks"
