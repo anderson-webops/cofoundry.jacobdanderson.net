@@ -33,20 +33,22 @@ const pageCta = computed(() => getGuidePageCta(page.ctaLabel, page.ctaTo, `trust
       </template>
     </PageIntro>
 
-    <div class="mt-10 gap-6 grid">
-      <article v-for="section in page.sections" :key="section.title" class="panel p-6 md:p-8">
-        <h2 class="text-2xl font-semibold">
+    <div class="process-list mt-10">
+      <article v-for="section in page.sections" :key="section.title" class="process-list-item">
+        <p class="section-kicker process-list-kicker">
           {{ section.title }}
-        </h2>
-        <p class="muted text-base leading-7 mt-4 max-w-3xl">
-          {{ section.body }}
         </p>
-        <ul v-if="section.bullets?.length" class="muted text-sm leading-7 mt-6 gap-3 grid">
-          <li v-for="bullet in section.bullets" :key="bullet" class="flex gap-3">
-            <span class="i-carbon-checkmark-filled text-[var(--accent)] mt-1" />
-            <span>{{ bullet }}</span>
-          </li>
-        </ul>
+        <div>
+          <p class="text-base leading-7 max-w-3xl">
+            {{ section.body }}
+          </p>
+          <ul v-if="section.bullets?.length" class="muted text-sm leading-7 mt-6 gap-3 grid">
+            <li v-for="bullet in section.bullets" :key="bullet" class="flex gap-3">
+              <span class="i-carbon-checkmark-filled text-[var(--accent)] mt-1" />
+              <span>{{ bullet }}</span>
+            </li>
+          </ul>
+        </div>
       </article>
     </div>
   </div>

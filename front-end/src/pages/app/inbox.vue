@@ -54,6 +54,14 @@ const unreadConversations = computed(() => currentUserId.value ? getUnreadConver
 const proposalsNeedingResponse = computed(() => currentUserId.value ? getProposalsNeedingResponse(workspaceStore.data, currentUserId.value) : [])
 const contractsNeedingSignature = computed(() => currentUserId.value ? getContractsNeedingSignature(workspaceStore.data, currentUserId.value) : [])
 const unreadNotifications = computed(() => currentUserId.value ? getUnreadNotificationsForUser(workspaceStore.data, currentUserId.value) : [])
+const hasDetailQueues = computed(() => Boolean(
+  incomingRequests.value.length
+  || unreadConversations.value.length
+  || proposalsNeedingResponse.value.length
+  || contractsNeedingSignature.value.length
+  || unreadNotifications.value.length
+  || outgoingRequests.value.length,
+))
 
 function conversationTitle(conversationId: string) {
   const conversation = workspaceStore.data.conversations.find(item => item.id === conversationId)
@@ -103,34 +111,6 @@ async function markNotificationRead(notificationId: string) {
         </BaseBadge>
       </template>
     </PageIntro>
-
-    <div class="gap-4 grid md:grid-cols-5">
-      <MetricTile
-        label="Inbound intros"
-        :value="inboxSnapshot?.counts.pendingIntros || 0"
-        context="Requests waiting on your decision before messaging can unlock."
-      />
-      <MetricTile
-        label="Unread conversations"
-        :value="inboxSnapshot?.counts.unreadConversations || 0"
-        context="Matched threads where the next reply still belongs to you."
-      />
-      <MetricTile
-        label="Proposal replies"
-        :value="inboxSnapshot?.counts.proposalsNeedingResponse || 0"
-        context="Deal rooms where the latest version or status change needs your response."
-      />
-      <MetricTile
-        label="Signatures needed"
-        :value="inboxSnapshot?.counts.contractsNeedingSignature || 0"
-        context="Agreement drafts where your typed signature is still missing."
-      />
-      <MetricTile
-        label="Waiting on replies"
-        :value="inboxSnapshot?.counts.waitingOnReplies || 0"
-        context="Outbound intros that are still live but not blocked on you right now."
-      />
-    </div>
 
     <div class="panel p-6">
       <div class="flex flex-wrap gap-3 items-start justify-between">
@@ -189,9 +169,9 @@ async function markNotificationRead(notificationId: string) {
       </EmptyState>
     </div>
 
-    <div class="gap-5 grid md:gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+    <div v-if="hasDetailQueues" class="gap-5 grid md:gap-6 xl:grid-cols-[1.15fr_0.85fr]">
       <div class="gap-5 grid">
-        <section class="panel p-6">
+        <section v-if="incomingRequests.length" class="panel p-6">
           <div class="flex flex-wrap gap-3 items-start justify-between">
             <div class="max-w-2xl">
               <h2 class="text-lg font-semibold">
@@ -214,17 +194,9 @@ async function markNotificationRead(notificationId: string) {
             @accept="acceptConnectRequest"
             @decline="declineConnectRequest"
           />
-
-          <EmptyState
-            v-else
-            class="mt-6"
-            icon="i-carbon-user-follow"
-            title="No inbound intros waiting"
-            description="Your inbound queue is clear right now. New requests will land here before they become matches."
-          />
         </section>
 
-        <section class="panel p-6">
+        <section v-if="unreadConversations.length" class="panel p-6">
           <div class="flex flex-wrap gap-3 items-start justify-between">
             <div class="max-w-2xl">
               <h2 class="text-lg font-semibold">
@@ -250,19 +222,11 @@ async function markNotificationRead(notificationId: string) {
               :when="formatRelativeDate(conversation.lastMessageAt)"
             />
           </div>
-
-          <EmptyState
-            v-else
-            class="mt-6"
-            icon="i-carbon-chat"
-            title="No unread conversations"
-            description="The message queue is clear. Focus on intros, live proposals, or fresh discovery instead of reopening old threads."
-          />
         </section>
       </div>
 
       <div class="gap-4 grid">
-        <section class="panel p-6">
+        <section v-if="proposalsNeedingResponse.length" class="panel p-6">
           <div class="flex flex-wrap gap-3 items-start justify-between">
             <div class="max-w-xl">
               <h2 class="text-lg font-semibold">
@@ -286,17 +250,9 @@ async function markNotificationRead(notificationId: string) {
               :href="`/app/proposals/${proposal.id}`"
             />
           </div>
-
-          <EmptyState
-            v-else
-            class="mt-6"
-            icon="i-carbon-document-signed"
-            title="No proposal response needed"
-            description="Any live deal room is currently waiting on the other side or already settled."
-          />
         </section>
 
-        <section class="panel p-6">
+        <section v-if="contractsNeedingSignature.length" class="panel p-6">
           <div class="flex flex-wrap gap-3 items-start justify-between">
             <div class="max-w-xl">
               <h2 class="text-lg font-semibold">
@@ -320,17 +276,9 @@ async function markNotificationRead(notificationId: string) {
               :href="`/app/contracts/${contract.id}`"
             />
           </div>
-
-          <EmptyState
-            v-else
-            class="mt-6"
-            icon="i-carbon-license-global"
-            title="No signatures waiting"
-            description="There are no agreement drafts that still require your typed-name acceptance."
-          />
         </section>
 
-        <section class="panel p-6">
+        <section v-if="unreadNotifications.length" class="panel p-6">
           <div class="flex flex-wrap gap-3 items-start justify-between">
             <div class="max-w-xl">
               <h2 class="text-lg font-semibold">
@@ -368,17 +316,9 @@ async function markNotificationRead(notificationId: string) {
               </div>
             </NuxtLink>
           </div>
-
-          <EmptyState
-            v-else
-            class="mt-6"
-            icon="i-carbon-notification"
-            title="No unread updates"
-            description="System events are clear. Anything important should now be visible in the action queue above."
-          />
         </section>
 
-        <section class="panel p-6">
+        <section v-if="outgoingRequests.length" class="panel p-6">
           <div class="flex flex-wrap gap-3 items-start justify-between">
             <div class="max-w-xl">
               <h2 class="text-lg font-semibold">
@@ -400,14 +340,6 @@ async function markNotificationRead(notificationId: string) {
             :items="outgoingRequests"
             @accept="acceptConnectRequest"
             @decline="declineConnectRequest"
-          />
-
-          <EmptyState
-            v-else
-            class="mt-6"
-            icon="i-carbon-send"
-            title="No outbound intros waiting"
-            description="There is nothing currently pending on the other side. If the queue stays empty, search for one high-fit conversation instead of sending broad outreach."
           />
         </section>
       </div>

@@ -200,7 +200,7 @@ function quotaText(key: "proposals" | "contractDrafts") {
       />
       <div class="panel p-5">
         <h2 class="text-lg font-semibold">
-          Trust and intent
+          Counterpart summary
         </h2>
         <div class="mt-4">
           <TrustSignalStrip :profile="otherParticipant" />
@@ -209,43 +209,20 @@ function quotaText(key: "proposals" | "contractDrafts") {
           <div>Contact reveal rule: {{ formatContactRevealStage(otherParticipant.privacy.contactRevealStage) }}</div>
           <div>Keep sensitive information on-platform until that gate is satisfied.</div>
         </div>
-        <p class="muted text-sm leading-6 mt-4">
-          {{ otherParticipant.bio }}
-        </p>
         <div class="mt-4">
           <BaseButton variant="ghost" @click="profileReportDialogOpen = true">
             Report profile
           </BaseButton>
         </div>
       </div>
-      <SafetyFlagsPanel :flags="conversationFlags" title="Conversation warning" />
-      <FirstCallAgenda :profile="otherParticipant" />
-      <AlignmentCheckPanel v-if="currentProfile" :current-profile="currentProfile" :counterpart-profile="otherParticipant" />
+      <SafetyFlagsPanel v-if="conversationFlags.length" :flags="conversationFlags" title="Conversation warning" />
       <div class="panel p-5">
         <h2 class="text-lg font-semibold">
-          Proposal and agreement tools
+          Next action
         </h2>
         <p class="muted text-sm leading-6 mt-3">
-          Free keeps the proposal and agreement tools visible, but the higher-intent actions are metered. Use the first call and trial sprint to qualify the relationship, then spend proposal and agreement capacity where the fit is real.
+          Qualify the relationship with a call or short trial before spending proposal capacity.
         </p>
-        <div v-if="usage" class="surface-row-list mt-4">
-          <div class="surface-row">
-            <p class="text-sm font-semibold">
-              Proposal sends
-            </p>
-            <p class="muted text-sm leading-6 mt-2">
-              {{ quotaText("proposals") }}. Deal rooms are metered because they mark the point where a conversation turns into real terms.
-            </p>
-          </div>
-          <div class="surface-row">
-            <p class="text-sm font-semibold">
-              Agreement drafts
-            </p>
-            <p class="muted text-sm leading-6 mt-2">
-              {{ quotaText("contractDrafts") }}. Free can preview agreement drafts, while Pro and Team unlock signature-ready agreements and print-friendly export.
-            </p>
-          </div>
-        </div>
         <div v-if="proposal && proposalVersion" class="surface-divider mt-4">
           <div class="flex gap-3 items-start justify-between">
             <div>
@@ -281,6 +258,14 @@ function quotaText(key: "proposals" | "contractDrafts") {
             </div>
           </TrialCollaborationCard>
         </div>
+        <div v-else class="surface-divider mt-4">
+          <p class="text-sm font-semibold">
+            No trial attached yet
+          </p>
+          <p class="muted text-sm leading-6 mt-2">
+            Start a bounded sprint if the first conversation creates enough signal.
+          </p>
+        </div>
         <div class="mt-4 flex flex-wrap gap-3">
           <BaseButton v-if="!trial" variant="secondary" @click="startTrial">
             Start trial
@@ -296,6 +281,48 @@ function quotaText(key: "proposals" | "contractDrafts") {
           </BaseButton>
         </div>
       </div>
+
+      <details class="panel-inset p-5">
+        <summary class="text-base font-semibold cursor-pointer">
+          First-call agenda
+        </summary>
+        <div class="mt-4">
+          <FirstCallAgenda :profile="otherParticipant" />
+        </div>
+      </details>
+
+      <details v-if="currentProfile" class="panel-inset p-5">
+        <summary class="text-base font-semibold cursor-pointer">
+          Alignment check
+        </summary>
+        <div class="mt-4">
+          <AlignmentCheckPanel :current-profile="currentProfile" :counterpart-profile="otherParticipant" />
+        </div>
+      </details>
+
+      <details v-if="usage" class="panel-inset p-5">
+        <summary class="text-base font-semibold cursor-pointer">
+          Proposal capacity
+        </summary>
+        <div class="surface-row-list mt-4">
+          <div class="surface-row">
+            <p class="text-sm font-semibold">
+              Proposal sends
+            </p>
+            <p class="muted text-sm leading-6 mt-2">
+              {{ quotaText("proposals") }}. Use deal rooms when the relationship is ready for terms.
+            </p>
+          </div>
+          <div class="surface-row">
+            <p class="text-sm font-semibold">
+              Agreement drafts
+            </p>
+            <p class="muted text-sm leading-6 mt-2">
+              {{ quotaText("contractDrafts") }}. Paid plans unlock signature-ready agreements and export.
+            </p>
+          </div>
+        </div>
+      </details>
     </section>
 
     <section class="panel flex flex-col min-h-[70vh] overflow-hidden">

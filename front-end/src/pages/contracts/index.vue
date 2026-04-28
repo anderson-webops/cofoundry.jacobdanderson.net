@@ -33,13 +33,8 @@ usePageSeo("Founder agreement resources", "Learn how CoFoundry approaches propos
       </NuxtLink>
     </div>
 
-    <div class="panel mt-10 p-6 max-w-[48rem] md:p-8">
-      <h2 class="text-2xl font-semibold">
-        Important disclaimer
-      </h2>
-      <p class="muted text-base leading-7 mt-4 max-w-3xl">
-        CoFoundry's contract builder creates editable templates and preserves negotiation context. It does not replace counsel or legal advice.
-      </p>
-    </div>
+    <p class="muted text-sm leading-6 mt-8 pt-6 border-t border-[var(--line)]">
+      CoFoundry's contract builder creates editable templates and preserves negotiation context. It does not replace counsel or legal advice.
+    </p>
   </div>
 </template>

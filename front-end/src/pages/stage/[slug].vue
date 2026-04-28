@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { contractGuidePages, trustCenterPages } from "~/shared/data/public-content"
 import { workspaceSeed } from "~/shared/data/seed"
 import { getPublicOpportunitiesForStage, getPublicProfilesForStage, getRoleHubs, getStageHubs, pickRelatedHubEntries } from "~/shared/utils/directory"
 
@@ -13,8 +12,6 @@ if (!hub)
 const profiles = getPublicProfilesForStage(workspaceSeed, slug)
 const opportunities = getPublicOpportunitiesForStage(workspaceSeed, slug)
 const relatedRoles = pickRelatedHubEntries(getRoleHubs(workspaceSeed), "", 4)
-const visibilityGuide = trustCenterPages.find(entry => entry.slug === "profile-visibility")!
-const vestingGuide = contractGuidePages.find(entry => entry.slug === "founder-vesting")!
 
 usePageSeo(`${hub.label} startup searches`, hub.description, {
   canonicalPath: `/stage/${hub.slug}`,
@@ -35,10 +32,9 @@ usePageSeo(`${hub.label} startup searches`, hub.description, {
       </template>
     </PageIntro>
 
-    <div class="mt-8 gap-4 grid sm:grid-cols-3">
+    <div class="mt-8 gap-4 grid sm:grid-cols-2">
       <MetricTile label="Public profiles" :value="profiles.length" />
       <MetricTile label="Public startup searches" :value="opportunities.length" />
-      <MetricTile label="Bias" value="Commitment clarity" />
     </div>
 
     <section class="mt-10">
@@ -80,12 +76,12 @@ usePageSeo(`${hub.label} startup searches`, hub.description, {
       </div>
     </section>
 
-    <div class="mt-14 gap-6 grid lg:grid-cols-2">
+    <div class="mt-14">
       <div class="panel p-6">
         <h2 class="text-2xl font-semibold">
           Related role hubs
         </h2>
-        <div class="surface-row-list mt-6">
+        <div class="surface-row-list mt-6 lg:gap-x-8 lg:grid lg:grid-cols-2">
           <NuxtLink
             v-for="entry in relatedRoles"
             :key="entry.slug"
@@ -97,36 +93,6 @@ usePageSeo(`${hub.label} startup searches`, hub.description, {
             </p>
             <p class="muted text-sm leading-6 mt-2">
               {{ entry.profileCount }} profiles · {{ entry.opportunityCount }} searches
-            </p>
-          </NuxtLink>
-        </div>
-      </div>
-
-      <div class="panel p-6">
-        <h2 class="text-2xl font-semibold">
-          Make the next step more explicit
-        </h2>
-        <div class="surface-row-list mt-6">
-          <NuxtLink
-            :to="`/trust/${visibilityGuide.slug}`"
-            class="surface-row block transition hover:text-[var(--accent)]"
-          >
-            <p class="font-semibold">
-              {{ visibilityGuide.title }}
-            </p>
-            <p class="muted text-sm leading-6 mt-2">
-              {{ visibilityGuide.description }}
-            </p>
-          </NuxtLink>
-          <NuxtLink
-            :to="`/contracts/${vestingGuide.slug}`"
-            class="surface-row block transition hover:text-[var(--accent)]"
-          >
-            <p class="font-semibold">
-              {{ vestingGuide.title }}
-            </p>
-            <p class="muted text-sm leading-6 mt-2">
-              {{ vestingGuide.description }}
             </p>
           </NuxtLink>
         </div>

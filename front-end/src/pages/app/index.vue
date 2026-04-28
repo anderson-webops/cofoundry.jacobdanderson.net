@@ -134,35 +134,7 @@ const primaryAction = computed(() => {
     ctaLabel: "Open discover",
   }
 })
-const statusCards = computed(() => [
-  {
-    title: "Pending on you",
-    value: inboxSnapshot.value?.actions.length ? `${inboxSnapshot.value.actions.length} live item${inboxSnapshot.value.actions.length === 1 ? "" : "s"}` : "Nothing urgent",
-    description: inboxSnapshot.value?.actions.length
-      ? "The inbox tracks replies, proposal responses, and signatures in one queue."
-      : "Nothing is currently blocked on you.",
-  },
-  {
-    title: "Search state",
-    value: outgoingRequests.value.length ? `${outgoingRequests.value.length} open outbound` : readiness.value?.readyForOutreach ? "Ready to search" : "Profile still gating",
-    description: outgoingRequests.value.length
-      ? "A few outbound intros are live. Keep the scope tight until one converts."
-      : readiness.value?.readyForOutreach
-        ? "You can spend outreach on the strongest fits now."
-        : "Finish the profile before sending more volume.",
-  },
-  {
-    title: "Live relationship",
-    value: contracts.value.length ? `${contracts.value.length} agreement draft${contracts.value.length === 1 ? "" : "s"}` : proposals.value.length ? `${proposals.value.length} proposal${proposals.value.length === 1 ? "" : "s"}` : matches.value.length ? `${matches.value.length} match${matches.value.length === 1 ? "" : "es"}` : "Nothing live yet",
-    description: contracts.value.length
-      ? "The relationship is already being documented in writing."
-      : proposals.value.length
-        ? "A proposal is open and should stay moving."
-        : matches.value.length
-          ? "Mutual interest exists, but it still needs a real working test."
-          : "Discovery and intro quality still matter most.",
-  },
-])
+const hasLiveFollowUp = computed(() => Boolean(notifications.value.length || proposals.value.length || contracts.value.length))
 
 function skillLabels(profileId: string) {
   return getProfileSkills(workspaceStore.data, profileId).map(item => item.skill.label)
@@ -243,37 +215,10 @@ function getContractVersion(contractId: string) {
             </BaseButton>
           </div>
         </div>
-
-        <div class="process-list mt-6">
-          <article
-            v-for="item in statusCards"
-            :key="item.title"
-            class="process-list-item"
-          >
-            <div class="flex flex-wrap gap-2 items-center justify-between">
-              <p class="text-sm font-semibold">
-                {{ item.title }}
-              </p>
-              <BaseBadge tone="neutral">
-                {{ item.value }}
-              </BaseBadge>
-            </div>
-            <p class="muted text-sm leading-6 mt-3">
-              {{ item.description }}
-            </p>
-          </article>
-        </div>
       </div>
     </div>
 
-    <div class="gap-4 grid md:grid-cols-4">
-      <MetricTile label="Profile completion" :value="`${readiness?.percent || 0}%`" context="A stronger profile makes outreach and matching easier." />
-      <MetricTile label="Profile signals" :value="`${readiness?.trustPercent || 0}%`" context="Proof and verification details that support outreach." />
-      <MetricTile label="Matches" :value="matches.length" context="Mutual connections that unlock messaging." />
-      <MetricTile label="Open intros" :value="incomingRequests.length + outgoingRequests.length" context="Requests that still need a reply or follow-through." />
-    </div>
-
-    <div class="gap-5 grid md:gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+    <div class="gap-5 grid md:gap-6" :class="hasLiveFollowUp ? 'xl:grid-cols-[1.15fr_0.85fr]' : ''">
       <section class="gap-5 grid">
         <PageIntro
           :eyebrow="showProfileRecommendations ? 'Recommended collaborators' : 'Recommended opportunities'"
@@ -346,7 +291,7 @@ function getContractVersion(contractId: string) {
           </div>
 
           <div class="surface-row-list mt-5">
-            <section class="surface-row">
+            <section v-if="incomingRequests.length" class="surface-row">
               <div class="flex flex-wrap gap-3 items-center justify-between">
                 <h3 class="text-base font-semibold">
                   Incoming intros
@@ -363,12 +308,9 @@ function getContractVersion(contractId: string) {
                 @accept="acceptConnectRequest"
                 @decline="declineConnectRequest"
               />
-              <p v-else class="muted text-sm leading-6 mt-3">
-                Stronger profiles and better public visibility make it easier for the right people to find you.
-              </p>
             </section>
 
-            <section class="surface-row">
+            <section v-if="outgoingRequests.length" class="surface-row">
               <div class="flex flex-wrap gap-3 items-center justify-between">
                 <h3 class="text-base font-semibold">
                   Outgoing intros
@@ -383,12 +325,9 @@ function getContractVersion(contractId: string) {
                 mode="outgoing"
                 :items="outgoingRequests"
               />
-              <p v-else class="muted text-sm leading-6 mt-3">
-                Keep the search focused. A few strong intros beat a broad spray.
-              </p>
             </section>
 
-            <section class="surface-row">
+            <section v-if="trials.length" class="surface-row">
               <div class="flex flex-wrap gap-3 items-center justify-between">
                 <h3 class="text-base font-semibold">
                   Trial sprint
@@ -409,35 +348,26 @@ function getContractVersion(contractId: string) {
                   </BaseButton>
                 </TrialCollaborationCard>
               </div>
-              <div v-else class="mt-3 flex flex-col gap-4 items-start sm:flex-row sm:items-center sm:justify-between">
-                <p class="muted text-sm leading-6">
-                  Start from a mutual match, run one small working sprint, and then move into a proposal or agreement.
-                </p>
-                <BaseButton variant="secondary" to="/app/matches">
-                  Open matches
-                </BaseButton>
-              </div>
+            </section>
+
+            <section v-if="!incomingRequests.length && !outgoingRequests.length && !trials.length" class="surface-row flex flex-col gap-4 items-start sm:flex-row sm:items-center sm:justify-between">
+              <p class="muted text-sm leading-6">
+                No intro or trial is currently active. Pick one strong fit before opening more conversations.
+              </p>
+              <BaseButton variant="secondary" to="/app/discover">
+                Open discover
+              </BaseButton>
             </section>
           </div>
         </div>
       </section>
 
-      <section class="gap-5 grid">
-        <ActivationCockpit
-          v-if="profile"
-          :profile="profile"
-          :preview-count="showProfileRecommendations ? profileRecommendations.length : opportunityRecommendations.length"
-          :match-count="matches.length"
-          :proposal-count="proposals.length"
-        />
-
-        <IntentChecklistPanel v-if="profile" :profile="profile" />
-
-        <div class="panel p-5">
+      <section v-if="hasLiveFollowUp" class="gap-5 grid">
+        <div v-if="notifications.length" class="panel p-5">
           <h2 class="text-lg font-semibold">
             Recent notifications
           </h2>
-          <div v-if="notifications.length" class="surface-row-list mt-5">
+          <div class="surface-row-list mt-5">
             <div v-for="notification in notifications" :key="notification.id" class="surface-row">
               <div class="flex gap-3 items-start justify-between">
                 <div>
@@ -459,24 +389,13 @@ function getContractVersion(contractId: string) {
               </div>
             </div>
           </div>
-          <EmptyState
-            v-else
-            plain
-            icon="i-carbon-notification"
-            title="Nothing new is waiting on you"
-            description="New intros, proposal updates, and moderation events will show up here."
-          >
-            <BaseButton variant="secondary" to="/app/discover">
-              Open discover
-            </BaseButton>
-          </EmptyState>
         </div>
 
-        <div class="panel p-5">
+        <div v-if="proposals.length" class="panel p-5">
           <h2 class="text-lg font-semibold">
             Active proposals
           </h2>
-          <div v-if="proposals.length" class="mt-5 gap-3 grid">
+          <div class="mt-5 gap-3 grid">
             <ProposalCard
               v-for="proposal in proposals"
               :key="proposal.id"
@@ -485,24 +404,13 @@ function getContractVersion(contractId: string) {
               :href="`/app/proposals/${proposal.id}`"
             />
           </div>
-          <EmptyState
-            v-else
-            plain
-            icon="i-carbon-document-signed"
-            title="No live proposals yet"
-            description="Open proposals after a relationship has already survived a real fit check or trial sprint."
-          >
-            <BaseButton variant="secondary" to="/app/messages">
-              Open messages
-            </BaseButton>
-          </EmptyState>
         </div>
 
-        <div class="panel p-5">
+        <div v-if="contracts.length" class="panel p-5">
           <h2 class="text-lg font-semibold">
             Contract drafts
           </h2>
-          <div v-if="contracts.length" class="mt-5 gap-3 grid">
+          <div class="mt-5 gap-3 grid">
             <ContractCard
               v-for="contract in contracts"
               :key="contract.id"
@@ -511,17 +419,6 @@ function getContractVersion(contractId: string) {
               :href="`/app/contracts/${contract.id}`"
             />
           </div>
-          <EmptyState
-            v-else
-            plain
-            icon="i-carbon-license-global"
-            title="No agreement drafts yet"
-            description="Agreement drafts appear after a proposal is accepted and the relationship is ready for written terms."
-          >
-            <BaseButton variant="secondary" to="/app/proposals">
-              Open proposals
-            </BaseButton>
-          </EmptyState>
         </div>
       </section>
     </div>

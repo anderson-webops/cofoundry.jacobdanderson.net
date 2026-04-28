@@ -153,56 +153,70 @@ usePageSeo(
     <section class="page-section-tight">
       <div class="page-shell">
         <PageIntro
-          eyebrow="Public profiles"
-          title="Public profiles built to show fit before contact."
-          description="These pages stay lightweight on purpose: enough context to decide whether a conversation is worth requesting."
+          eyebrow="Featured public inventory"
+          title="Start with people or active searches."
+          description="Use the full profile and startup-search indexes when you are ready to scan more broadly."
         >
           <template #actions>
             <BaseButton variant="secondary" to="/people">
-              View all public profiles
+              All profiles
             </BaseButton>
-          </template>
-        </PageIntro>
-
-        <div class="mt-10 gap-5 grid xl:grid-cols-3">
-          <ProfileCard
-            v-for="entry in publicProfiles.slice(0, 3)"
-            :key="entry.slug"
-            :profile="entry.profile"
-            :skills="entry.skillLabels"
-          >
-            <BaseButton variant="secondary" :to="`/people/${entry.slug}`">
-              View public profile
-            </BaseButton>
-          </ProfileCard>
-        </div>
-      </div>
-    </section>
-
-    <section class="page-section-tight">
-      <div class="page-shell">
-        <PageIntro
-          eyebrow="Public startup searches"
-          title="See how founders frame the role before you ask for an intro."
-          description="Public startup searches show the problem, stage, role expectations, and commitment level before you ask for an intro."
-        >
-          <template #actions>
             <BaseButton variant="secondary" to="/startups">
-              View startup searches
+              All startup searches
             </BaseButton>
           </template>
         </PageIntro>
 
-        <div class="mt-10 gap-5 grid xl:grid-cols-3">
-          <OpportunityCard
-            v-for="entry in publicOpportunities.slice(0, 3)"
-            :key="entry.slug"
-            :opportunity="entry.opportunity"
-          >
-            <BaseButton variant="secondary" :to="`/startups/${entry.slug}`">
-              View startup search
-            </BaseButton>
-          </OpportunityCard>
+        <div class="mt-8 gap-6 grid lg:grid-cols-2">
+          <article class="panel p-6">
+            <div class="flex flex-wrap gap-3 items-center justify-between">
+              <h2 class="text-xl font-semibold">
+                Public profiles
+              </h2>
+              <BaseBadge tone="neutral">
+                {{ publicProfiles.length }}
+              </BaseBadge>
+            </div>
+            <div class="plain-link-list mt-5">
+              <NuxtLink
+                v-for="entry in publicProfiles.slice(0, 4)"
+                :key="entry.slug"
+                :to="`/people/${entry.slug}`"
+                class="plain-link-item"
+              >
+                <span>
+                  <span class="font-semibold block">{{ entry.profile.displayName }}</span>
+                  <span class="muted text-sm">{{ entry.profile.headline }}</span>
+                </span>
+                <span class="i-carbon-arrow-right text-[var(--accent)]" />
+              </NuxtLink>
+            </div>
+          </article>
+
+          <article class="panel p-6">
+            <div class="flex flex-wrap gap-3 items-center justify-between">
+              <h2 class="text-xl font-semibold">
+                Startup searches
+              </h2>
+              <BaseBadge tone="neutral">
+                {{ publicOpportunities.length }}
+              </BaseBadge>
+            </div>
+            <div class="plain-link-list mt-5">
+              <NuxtLink
+                v-for="entry in publicOpportunities.slice(0, 4)"
+                :key="entry.slug"
+                :to="`/startups/${entry.slug}`"
+                class="plain-link-item"
+              >
+                <span>
+                  <span class="font-semibold block">{{ entry.opportunity.startupName }}</span>
+                  <span class="muted text-sm">{{ entry.opportunity.oneLinePitch }}</span>
+                </span>
+                <span class="i-carbon-arrow-right text-[var(--accent)]" />
+              </NuxtLink>
+            </div>
+          </article>
         </div>
       </div>
     </section>

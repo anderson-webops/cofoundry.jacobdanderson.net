@@ -130,17 +130,20 @@ async function acknowledgeTrial(match: ReturnType<typeof getMatchesForUser>[numb
           </div>
         </div>
 
-        <AlignmentCheckPanel
-          v-if="currentProfile && matchPartner(match)"
-          :current-profile="currentProfile"
-          :counterpart-profile="matchPartner(match)!"
-        />
+        <details v-if="currentProfile && matchPartner(match)" class="panel-inset p-5">
+          <summary class="text-base font-semibold cursor-pointer">
+            Alignment check
+          </summary>
+          <div class="mt-4">
+            <AlignmentCheckPanel
+              :current-profile="currentProfile"
+              :counterpart-profile="matchPartner(match)!"
+            />
+          </div>
+        </details>
 
-        <div class="mt-1 flex items-center justify-between">
+        <div class="mt-1">
           <span class="muted text-sm">Matched on {{ formatDate(match.createdAt) }}</span>
-          <BaseButton variant="ghost" :to="`/app/messages/${match.conversationId}`">
-            Conversation
-          </BaseButton>
         </div>
       </article>
     </div>

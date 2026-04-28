@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { formatContactRevealStage, formatCurrentWorkStatus, formatDeadlockPreference, formatDecisionModelPreference, formatEquityPhilosophy, formatLeadershipPreference, formatRelativeDate, formatRunwayBucket, formatStartTimeline } from "~/shared/utils/format"
-import { buildProfileReadiness } from "~/shared/utils/formation"
 import { getProfileSkills } from "~/shared/utils/workspace"
 
 definePageMeta({
@@ -14,7 +13,6 @@ const { profile, workspaceStore } = useCurrentMember()
 const tab = ref<"public" | "private">("public")
 
 const skillEntries = computed(() => profile.value ? getProfileSkills(workspaceStore.data, profile.value.id) : [])
-const readiness = computed(() => profile.value ? buildProfileReadiness(profile.value) : null)
 </script>
 
 <template>
@@ -37,32 +35,20 @@ const readiness = computed(() => profile.value ? buildProfileReadiness(profile.v
           <ProfileAvatar :display-name="profile.displayName" :photo-url="profile.photoUrl" size="lg" />
           <div class="min-w-0">
             <div class="flex flex-wrap gap-2">
-              <BaseBadge :tone="readiness?.profileComplete ? 'success' : 'warning'">
-                {{ readiness?.profileComplete ? "Completed profile" : `Profile strength ${readiness?.percent}%` }}
+              <BaseBadge tone="neutral">
+                {{ profile.location }}
               </BaseBadge>
-              <BaseBadge :tone="readiness?.trustReady ? 'success' : 'accent'">
-                {{ readiness?.trustPercent || 0 }}% profile signals
+              <BaseBadge tone="neutral">
+                {{ profile.roleScope.primaryRole || profile.roles[0] }}
               </BaseBadge>
               <BaseBadge :tone="profile.verificationBadges.emailVerified ? 'success' : 'warning'">
-                Verified email
-              </BaseBadge>
-              <BaseBadge :tone="profile.verificationBadges.linkedAccounts ? 'accent' : 'neutral'">
-                {{ profile.verificationBadges.linkedAccounts ? "Linked accounts" : "No linked accounts" }}
+                {{ profile.verificationBadges.emailVerified ? "Verified email" : "Email pending" }}
               </BaseBadge>
             </div>
             <p class="muted text-sm leading-6 mt-4">
-              Members see the underlying proof and verification details rather than a single score.
+              This is the member-facing version of your public discovery profile.
             </p>
           </div>
-        </div>
-
-        <div class="flex flex-wrap gap-2">
-          <BaseBadge tone="neutral">
-            {{ profile.location }}
-          </BaseBadge>
-          <BaseBadge tone="neutral">
-            {{ profile.roleScope.primaryRole || profile.roles[0] }}
-          </BaseBadge>
         </div>
 
         <div class="mt-4">
@@ -72,16 +58,6 @@ const readiness = computed(() => profile.value ? buildProfileReadiness(profile.v
         <p class="muted text-base leading-7 mt-6">
           {{ profile.bio }}
         </p>
-
-        <div class="mt-6 gap-4 grid md:grid-cols-2">
-          <MetricTile label="Location" :value="profile.location" />
-          <MetricTile label="Profile signals" :value="`${readiness?.trustPercent || 0}%`" context="Recognizable profile, verification details, proof, role context, availability, and intent clarity." />
-          <MetricTile label="Profile readiness" :value="`${readiness?.percent || 0}%`" />
-          <MetricTile label="Commitment" :value="profile.timeCommitment.replaceAll('_', ' ')" />
-          <MetricTile label="Start timeline" :value="formatStartTimeline(profile.intent.startTimeline)" />
-          <MetricTile label="Hours / week" :value="profile.commitmentProfile.weeklyAvailabilityHours" />
-          <MetricTile label="Runway" :value="formatRunwayBucket(profile.commitmentProfile.runwayBucket)" />
-        </div>
 
         <div class="mt-6">
           <TrustReadinessPanel :profile="profile" />
@@ -127,15 +103,14 @@ const readiness = computed(() => profile.value ? buildProfileReadiness(profile.v
       <section class="panel p-6">
         <div class="flex gap-2">
           <button type="button" class="pill" :class="tab === 'public' ? 'pill-active' : ''" @click="tab = 'public'">
-            Public-lite view
+            Public profile
           </button>
           <button type="button" class="pill" :class="tab === 'private' ? 'pill-active' : ''" @click="tab = 'private'">
-            Private full view
+            Private details
           </button>
         </div>
 
         <div v-if="tab === 'public'" class="mt-6 gap-5 grid">
-          <IntentChecklistPanel :profile="profile" title="What matches can evaluate quickly" />
           <div>
             <h2 class="text-lg font-semibold">
               Public highlights
@@ -164,76 +139,52 @@ const readiness = computed(() => profile.value ? buildProfileReadiness(profile.v
         </div>
 
         <div v-else class="mt-6 gap-5 grid">
-          <div class="panel-inset p-4 gap-3 grid">
-            <h2 class="text-lg font-semibold">
+          <details class="panel-inset p-4">
+            <summary class="text-lg font-semibold cursor-pointer">
               Intent profile
-            </h2>
-            <div class="muted text-sm leading-6">
-              Start timeline: {{ formatStartTimeline(profile.intent.startTimeline) }}
+            </summary>
+            <div class="muted text-sm leading-6 mt-4 gap-3 grid">
+              <div>Start timeline: {{ formatStartTimeline(profile.intent.startTimeline) }}</div>
+              <div>Commitment: {{ profile.commitmentProfile.weeklyAvailabilityHours }}h/week · full-time by {{ profile.commitmentProfile.fullTimeBy }}</div>
+              <div>Runway and status: {{ formatRunwayBucket(profile.commitmentProfile.runwayBucket) }} · {{ formatCurrentWorkStatus(profile.commitmentProfile.currentStatus) }}</div>
+              <div>Conversation capacity: {{ profile.intent.introCapacity }}</div>
+              <div>Median reply time: {{ profile.trustSignals.medianReplyHours }} hours · last active {{ formatRelativeDate(profile.trustSignals.lastActiveAt) }}</div>
+              <div>Contact reveal rule: {{ formatContactRevealStage(profile.privacy.contactRevealStage) }}</div>
             </div>
-            <div class="muted text-sm leading-6">
-              Commitment: {{ profile.commitmentProfile.weeklyAvailabilityHours }}h/week · full-time by {{ profile.commitmentProfile.fullTimeBy }}
-            </div>
-            <div class="muted text-sm leading-6">
-              Runway and status: {{ formatRunwayBucket(profile.commitmentProfile.runwayBucket) }} · {{ formatCurrentWorkStatus(profile.commitmentProfile.currentStatus) }}
-            </div>
-            <div class="muted text-sm leading-6">
-              Conversation capacity: {{ profile.intent.introCapacity }}
-            </div>
-            <div class="muted text-sm leading-6">
-              Median reply time: {{ profile.trustSignals.medianReplyHours }} hours · last active {{ formatRelativeDate(profile.trustSignals.lastActiveAt) }}
-            </div>
-            <div class="muted text-sm leading-6">
-              Contact reveal rule: {{ formatContactRevealStage(profile.privacy.contactRevealStage) }}
-            </div>
-            <div class="flex flex-wrap gap-2">
+            <div class="mt-4 flex flex-wrap gap-2">
               <span v-for="preference in profile.intent.companyPreferences" :key="preference" class="pill">
                 {{ preference }}
               </span>
-            </div>
-            <div class="flex flex-wrap gap-2">
               <span v-for="item in profile.intent.nonNegotiables" :key="item" class="pill">
                 {{ item }}
               </span>
             </div>
-          </div>
-          <div class="panel-inset p-4 gap-3 grid">
-            <h2 class="text-lg font-semibold">
+          </details>
+
+          <details class="panel-inset p-4">
+            <summary class="text-lg font-semibold cursor-pointer">
               Governance defaults
-            </h2>
-            <div class="muted text-sm leading-6">
-              Equity philosophy: {{ formatEquityPhilosophy(profile.governancePreferences.equityPhilosophy) }}
+            </summary>
+            <div class="muted text-sm leading-6 mt-4 gap-3 grid">
+              <div>Equity philosophy: {{ formatEquityPhilosophy(profile.governancePreferences.equityPhilosophy) }}</div>
+              <div>Leadership preference: {{ formatLeadershipPreference(profile.governancePreferences.leadershipPreference) }}</div>
+              <div>Decision model: {{ formatDecisionModelPreference(profile.governancePreferences.decisionModelPreference) }}</div>
+              <div>Deadlock plan: {{ formatDeadlockPreference(profile.governancePreferences.deadlockPreference) }}</div>
             </div>
-            <div class="muted text-sm leading-6">
-              Leadership preference: {{ formatLeadershipPreference(profile.governancePreferences.leadershipPreference) }}
-            </div>
-            <div class="muted text-sm leading-6">
-              Decision model: {{ formatDecisionModelPreference(profile.governancePreferences.decisionModelPreference) }}
-            </div>
-            <div class="muted text-sm leading-6">
-              Deadlock plan: {{ formatDeadlockPreference(profile.governancePreferences.deadlockPreference) }}
-            </div>
-          </div>
-          <div class="panel-inset p-4 gap-3 grid">
-            <h2 class="text-lg font-semibold">
+          </details>
+
+          <details class="panel-inset p-4">
+            <summary class="text-lg font-semibold cursor-pointer">
               Role boundaries and IP readiness
-            </h2>
-            <div class="muted text-sm leading-6">
-              Primary role: {{ profile.roleScope.primaryRole }}
+            </summary>
+            <div class="muted text-sm leading-6 mt-4 gap-3 grid">
+              <div>Primary role: {{ profile.roleScope.primaryRole }}</div>
+              <div>Non-responsibilities: {{ profile.roleScope.nonResponsibilities.join(", ") }}</div>
+              <div>Accountability milestones: {{ profile.roleScope.accountabilityMilestones.join(", ") }}</div>
+              <div>Existing assets: {{ profile.ipReadiness.existingAssets.join(", ") }}</div>
+              <div>Prior constraints: {{ profile.ipReadiness.priorObligations.replaceAll("_", " ") }} · {{ profile.ipReadiness.readyToAssignIp ? "ready to assign IP" : "needs IP discussion" }}</div>
             </div>
-            <div class="muted text-sm leading-6">
-              Non-responsibilities: {{ profile.roleScope.nonResponsibilities.join(", ") }}
-            </div>
-            <div class="muted text-sm leading-6">
-              Accountability milestones: {{ profile.roleScope.accountabilityMilestones.join(", ") }}
-            </div>
-            <div class="muted text-sm leading-6">
-              Existing assets: {{ profile.ipReadiness.existingAssets.join(", ") }}
-            </div>
-            <div class="muted text-sm leading-6">
-              Prior constraints: {{ profile.ipReadiness.priorObligations.replaceAll("_", " ") }} · {{ profile.ipReadiness.readyToAssignIp ? "ready to assign IP" : "needs IP discussion" }}
-            </div>
-          </div>
+          </details>
           <div>
             <h2 class="text-lg font-semibold">
               Values and work style

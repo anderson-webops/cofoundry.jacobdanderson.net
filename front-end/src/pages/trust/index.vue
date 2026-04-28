@@ -32,37 +32,5 @@ usePageSeo("Trust Center", "Learn how CoFoundry handles visibility, outreach lim
         </p>
       </NuxtLink>
     </div>
-
-    <div class="panel mt-10 p-6 md:p-8">
-      <h2 class="text-2xl font-semibold">
-        Across every trust page
-      </h2>
-      <div class="subtle-grid mt-6 md:grid-cols-3">
-        <div class="panel-inset p-4">
-          <p class="font-semibold">
-            Mutual-intent contact
-          </p>
-          <p class="muted text-sm leading-6 mt-2">
-            Search visibility does not equal direct access. Contact still follows the member's reveal rule and product trust gates.
-          </p>
-        </div>
-        <div class="panel-inset p-4">
-          <p class="font-semibold">
-            Reviewable moderation
-          </p>
-          <p class="muted text-sm leading-6 mt-2">
-            Reports and account actions stay attached to the case so restrictions can be reviewed later.
-          </p>
-        </div>
-        <div class="panel-inset p-4">
-          <p class="font-semibold">
-            Focused use
-          </p>
-          <p class="muted text-sm leading-6 mt-2">
-            The network is for founders and early collaborators, not recruiting spam or off-platform lead harvesting.
-          </p>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
