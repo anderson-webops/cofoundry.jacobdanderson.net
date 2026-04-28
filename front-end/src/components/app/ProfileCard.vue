@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Profile } from "~/shared/types/domain"
-import { formatCommitment, formatEquityPhilosophy, formatRemotePreference, formatRunwayBucket } from "~/shared/utils/format"
+import { formatCommitment, formatRemotePreference, formatRunwayBucket } from "~/shared/utils/format"
 import { buildProfileReadiness, buildResponsivenessLabel } from "~/shared/utils/formation"
 
 const props = defineProps<{
@@ -20,7 +20,7 @@ const profileRoleLabel = computed(() => {
 </script>
 
 <template>
-  <article class="panel p-5 flex flex-col gap-5 h-full">
+  <article class="panel p-5 flex flex-col gap-4 h-full">
     <div class="flex gap-4 items-start justify-between">
       <div class="flex gap-4 items-start">
         <ProfileAvatar :display-name="profile.displayName" :photo-url="profile.photoUrl" size="md" />
@@ -52,10 +52,11 @@ const profileRoleLabel = computed(() => {
       {{ profile.bio }}
     </p>
 
-    <TrustSignalStrip :profile="profile" compact />
-
-    <div v-if="leadProof" class="panel-inset p-4">
-      <h3 class="text-lg font-semibold">
+    <div v-if="leadProof" class="surface-divider">
+      <p class="section-kicker">
+        Featured proof
+      </p>
+      <h3 class="text-base font-semibold mt-2">
         {{ leadProof.title }}
       </h3>
       <p class="muted text-sm leading-6 mt-2">
@@ -77,8 +78,6 @@ const profileRoleLabel = computed(() => {
       <div>Company fit: {{ profile.intent.companyPreferences.slice(0, 2).join(", ") }}</div>
       <div>Commitment: {{ profile.commitmentProfile.weeklyAvailabilityHours }}h/week · {{ formatRunwayBucket(profile.commitmentProfile.runwayBucket) }}</div>
       <div>Responsiveness: {{ buildResponsivenessLabel(profile) }}</div>
-      <div>Equity philosophy: {{ formatEquityPhilosophy(profile.governancePreferences.equityPhilosophy) }}</div>
-      <div>Equity range: {{ profile.equityExpectationRange }}</div>
     </div>
 
     <div class="mt-auto flex flex-wrap gap-3">

@@ -44,37 +44,5 @@ usePageSeo("Pricing")
         </div>
       </article>
     </div>
-
-    <div class="panel mt-10 p-6 md:p-8">
-      <h2 class="text-2xl font-semibold">
-        What paid plans add
-      </h2>
-      <div class="subtle-grid mt-6 md:grid-cols-3">
-        <div class="panel-inset p-4">
-          <p class="text-sm font-semibold">
-            More new intros
-          </p>
-          <p class="muted text-sm leading-6 mt-2">
-            Reach more people each month without losing the structure that keeps outreach usable.
-          </p>
-        </div>
-        <div class="panel-inset p-4">
-          <p class="text-sm font-semibold">
-            More live searches
-          </p>
-          <p class="muted text-sm leading-6 mt-2">
-            Save more searches, keep more proposals moving, and manage several active conversations at once.
-          </p>
-        </div>
-        <div class="panel-inset p-4">
-          <p class="text-sm font-semibold">
-            Proposal and agreement tools
-          </p>
-          <p class="muted text-sm leading-6 mt-2">
-            Paid plans unlock the tools that turn a promising relationship into written terms.
-          </p>
-        </div>
-      </div>
-    </div>
   </div>
 </template>

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { appDescription, appTagline } from "~/shared/constants/app"
-import { howItWorksSteps, pricingTiers } from "~/shared/data/marketing"
-import { contractGuidePages, trustCenterPages } from "~/shared/data/public-content"
+import { howItWorksSteps } from "~/shared/data/marketing"
 import { workspaceSeed } from "~/shared/data/seed"
 import { getIndustryHubs, getRoleHubs, getStageHubs } from "~/shared/utils/directory"
 
@@ -58,25 +57,21 @@ usePageSeo("Build startup teams with more structure", appDescription, {
               </BaseBadge>
             </div>
             <div class="hero-preview-frame grid-soft">
-              <div class="hero-preview-card">
-                <div class="flex gap-4 items-center justify-between">
-                  <div>
-                    <p class="text-sm font-semibold">
-                      First call → trial sprint
-                    </p>
-                    <p class="muted text-sm mt-1">
-                      LedgerLoop → Malik Thompson
-                    </p>
-                  </div>
+              <div class="surface-row">
+                <div class="flex flex-wrap gap-3 items-center justify-between">
+                  <p class="text-sm font-semibold">
+                    First call → trial sprint
+                  </p>
                   <BaseBadge tone="accent">
                     Active trial
                   </BaseBadge>
                 </div>
-                <div class="muted text-sm mt-4 gap-3 grid">
-                  <div>Goal: pressure-test architecture ownership and customer cadence</div>
-                  <div>Weekly commitment: 10 hours for 2 weeks</div>
-                  <div>Outputs: one product prototype, one written decision log, one retro</div>
-                </div>
+                <p class="muted text-sm mt-2">
+                  LedgerLoop → Malik Thompson
+                </p>
+                <p class="muted text-sm leading-6 mt-4">
+                  Pressure-test architecture ownership, customer cadence, and weekly commitment before proposal work starts.
+                </p>
               </div>
               <div class="hero-preview-summary">
                 <div>
@@ -102,17 +97,19 @@ usePageSeo("Build startup teams with more structure", appDescription, {
           title="From first signal to written terms."
           description="Profiles, intros, trial sprints, proposals, and agreements follow one clear sequence."
         />
-        <div class="mt-10 gap-5 grid lg:grid-cols-4">
-          <article v-for="step in howItWorksSteps" :key="step.id" class="panel p-6">
-            <p class="section-kicker">
+        <div class="process-list mt-10">
+          <article v-for="step in howItWorksSteps" :key="step.id" class="process-list-item">
+            <p class="section-kicker process-list-kicker">
               {{ step.eyebrow }}
             </p>
-            <h2 class="text-xl font-semibold mt-4">
-              {{ step.title }}
-            </h2>
-            <p class="muted text-sm leading-7 mt-4">
-              {{ step.body }}
-            </p>
+            <div>
+              <h2 class="text-xl font-semibold">
+                {{ step.title }}
+              </h2>
+              <p class="muted text-sm leading-7 mt-3">
+                {{ step.body }}
+              </p>
+            </div>
           </article>
         </div>
       </div>
@@ -132,143 +129,39 @@ usePageSeo("Build startup teams with more structure", appDescription, {
           </template>
         </PageIntro>
 
-        <div class="mt-10 gap-5 grid lg:grid-cols-3">
-          <article class="panel p-6">
+        <div class="mt-10 gap-8 grid lg:grid-cols-3">
+          <article>
             <p class="section-kicker">
               Roles
             </p>
-            <div class="mt-4 gap-3 grid">
-              <NuxtLink v-for="hub in roleHubs.slice(0, 4)" :key="hub.slug" :to="`/roles/${hub.slug}`" class="panel-inset p-4">
-                <p class="font-semibold">
-                  {{ hub.label }}
-                </p>
-                <p class="muted text-sm mt-2">
-                  {{ hub.profileCount }} profiles · {{ hub.opportunityCount }} searches
-                </p>
+            <div class="plain-link-list mt-4">
+              <NuxtLink v-for="hub in roleHubs.slice(0, 4)" :key="hub.slug" :to="`/roles/${hub.slug}`" class="plain-link-item">
+                <span class="font-semibold">{{ hub.label }}</span>
+                <span class="muted text-sm">{{ hub.profileCount }} profiles · {{ hub.opportunityCount }} searches</span>
               </NuxtLink>
             </div>
           </article>
-          <article class="panel p-6">
+          <article>
             <p class="section-kicker">
               Industries
             </p>
-            <div class="mt-4 gap-3 grid">
-              <NuxtLink v-for="hub in industryHubs.slice(0, 4)" :key="hub.slug" :to="`/industries/${hub.slug}`" class="panel-inset p-4">
-                <p class="font-semibold">
-                  {{ hub.label }}
-                </p>
-                <p class="muted text-sm mt-2">
-                  {{ hub.profileCount }} profiles · {{ hub.opportunityCount }} searches
-                </p>
+            <div class="plain-link-list mt-4">
+              <NuxtLink v-for="hub in industryHubs.slice(0, 4)" :key="hub.slug" :to="`/industries/${hub.slug}`" class="plain-link-item">
+                <span class="font-semibold">{{ hub.label }}</span>
+                <span class="muted text-sm">{{ hub.profileCount }} profiles · {{ hub.opportunityCount }} searches</span>
               </NuxtLink>
             </div>
           </article>
-          <article class="panel p-6">
+          <article>
             <p class="section-kicker">
               Stages
             </p>
-            <div class="mt-4 gap-3 grid">
-              <NuxtLink v-for="hub in stageHubs.slice(0, 4)" :key="hub.slug" :to="`/stage/${hub.slug}`" class="panel-inset p-4">
-                <p class="font-semibold">
-                  {{ hub.label }}
-                </p>
-                <p class="muted text-sm mt-2">
-                  {{ hub.profileCount }} profiles · {{ hub.opportunityCount }} searches
-                </p>
+            <div class="plain-link-list mt-4">
+              <NuxtLink v-for="hub in stageHubs.slice(0, 4)" :key="hub.slug" :to="`/stage/${hub.slug}`" class="plain-link-item">
+                <span class="font-semibold">{{ hub.label }}</span>
+                <span class="muted text-sm">{{ hub.profileCount }} profiles · {{ hub.opportunityCount }} searches</span>
               </NuxtLink>
             </div>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <section class="page-section-tight">
-      <div class="page-shell gap-8 grid lg:grid-cols-2">
-        <div class="panel p-6 md:p-8">
-          <p class="section-kicker">
-            Trust Center
-          </p>
-          <h2 class="text-3xl tracking-tight font-semibold mt-3">
-            Understand how privacy, outreach, and moderation work.
-          </h2>
-          <div class="mt-6 gap-4 grid">
-            <NuxtLink
-              v-for="page in trustCenterPages"
-              :key="page.slug"
-              :to="`/trust/${page.slug}`"
-              class="panel-inset p-4"
-            >
-              <p class="font-semibold">
-                {{ page.title }}
-              </p>
-              <p class="muted text-sm leading-6 mt-2">
-                {{ page.description }}
-              </p>
-            </NuxtLink>
-          </div>
-        </div>
-
-        <div class="panel p-6 md:p-8">
-          <p class="section-kicker">
-            Contract resources
-          </p>
-          <h2 class="text-3xl tracking-tight font-semibold mt-3">
-            Learn the founder terms before you need them.
-          </h2>
-          <div class="mt-6 gap-4 grid">
-            <NuxtLink
-              v-for="page in contractGuidePages"
-              :key="page.slug"
-              :to="`/contracts/${page.slug}`"
-              class="panel-inset p-4"
-            >
-              <p class="font-semibold">
-                {{ page.title }}
-              </p>
-              <p class="muted text-sm leading-6 mt-2">
-                {{ page.description }}
-              </p>
-            </NuxtLink>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="page-section-tight">
-      <div class="page-shell panel p-6 overflow-hidden md:p-8">
-        <PageIntro
-          eyebrow="Pricing"
-          title="Free to start. Paid for more reach and agreement tools."
-          description="Start free, then pay for more outreach, proposals, and agreements."
-        >
-          <template #actions>
-            <BaseButton to="/pricing">
-              View pricing
-            </BaseButton>
-          </template>
-        </PageIntro>
-
-        <div class="mt-10 gap-5 grid lg:grid-cols-3">
-          <article v-for="tier in pricingTiers" :key="tier.id" class="p-6 border rounded-[1.5rem]" :class="tier.highlighted ? 'border-[var(--accent)] bg-[var(--accent-soft)]' : 'border-[var(--line)] bg-[var(--panel-strong)]'">
-            <div class="flex gap-3 items-start justify-between">
-              <div>
-                <h3 class="text-xl font-semibold">
-                  {{ tier.name }}
-                </h3>
-                <p class="muted text-sm leading-6 mt-2">
-                  {{ tier.description }}
-                </p>
-              </div>
-              <BaseBadge :tone="tier.highlighted ? 'accent' : 'neutral'">
-                {{ tier.priceLabel }}
-              </BaseBadge>
-            </div>
-            <ul class="text-sm leading-6 mt-6 gap-3 grid">
-              <li v-for="feature in tier.features" :key="feature" class="flex gap-2 items-start">
-                <span class="i-carbon-checkmark-outline text-[var(--accent)] mt-1" />
-                <span>{{ feature }}</span>
-              </li>
-            </ul>
           </article>
         </div>
       </div>

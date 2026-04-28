@@ -214,7 +214,7 @@ function getContractVersion(contractId: string) {
       </template>
     </PageIntro>
 
-    <div class="gap-4 grid xl:grid-cols-[1.1fr_0.9fr]">
+    <div>
       <div class="panel p-6">
         <div class="flex flex-wrap gap-3 items-center justify-between">
           <div>
@@ -243,19 +243,14 @@ function getContractVersion(contractId: string) {
             </BaseButton>
           </div>
         </div>
-      </div>
 
-      <div class="panel p-6">
-        <h2 class="text-sm font-semibold">
-          Search status
-        </h2>
-        <div class="surface-row-list mt-5">
-          <div
+        <div class="process-list mt-6">
+          <article
             v-for="item in statusCards"
             :key="item.title"
-            class="surface-row"
+            class="process-list-item"
           >
-            <div class="flex gap-3 items-start justify-between">
+            <div class="flex flex-wrap gap-2 items-center justify-between">
               <p class="text-sm font-semibold">
                 {{ item.title }}
               </p>
@@ -266,7 +261,7 @@ function getContractVersion(contractId: string) {
             <p class="muted text-sm leading-6 mt-3">
               {{ item.description }}
             </p>
-          </div>
+          </article>
         </div>
       </div>
     </div>
@@ -332,83 +327,97 @@ function getContractVersion(contractId: string) {
           </BaseButton>
         </EmptyState>
 
-        <PageIntro
-          eyebrow="Intro queue"
-          title="Reply quickly."
-          description="Clear accepts and clear declines both keep the search moving."
-        />
-
-        <div class="gap-5 grid lg:grid-cols-2">
-          <div class="gap-4 grid">
-            <h3 class="text-base font-semibold">
-              Incoming intros
-            </h3>
-            <ConnectRequestInbox
-              v-if="incomingRequests.length"
-              mode="incoming"
-              :items="incomingRequests"
-              @accept="acceptConnectRequest"
-              @decline="declineConnectRequest"
-            />
-            <div v-else class="panel p-5">
-              <p class="text-sm font-semibold">
-                Nothing waiting on you right now
+        <div class="panel p-5">
+          <div class="flex flex-wrap gap-3 items-start justify-between">
+            <div>
+              <p class="section-kicker">
+                Formation pipeline
               </p>
+              <h2 class="text-xl font-semibold mt-2">
+                Move one relationship forward.
+              </h2>
               <p class="muted text-sm leading-6 mt-3">
+                Keep intros, trial sprints, and written terms in sequence.
+              </p>
+            </div>
+            <BaseBadge tone="neutral">
+              {{ incomingRequests.length + outgoingRequests.length }} open intro{{ incomingRequests.length + outgoingRequests.length === 1 ? "" : "s" }}
+            </BaseBadge>
+          </div>
+
+          <div class="surface-row-list mt-5">
+            <section class="surface-row">
+              <div class="flex flex-wrap gap-3 items-center justify-between">
+                <h3 class="text-base font-semibold">
+                  Incoming intros
+                </h3>
+                <BaseBadge :tone="incomingRequests.length ? 'accent' : 'neutral'">
+                  {{ incomingRequests.length || "None" }}
+                </BaseBadge>
+              </div>
+              <ConnectRequestInbox
+                v-if="incomingRequests.length"
+                class="mt-4"
+                mode="incoming"
+                :items="incomingRequests"
+                @accept="acceptConnectRequest"
+                @decline="declineConnectRequest"
+              />
+              <p v-else class="muted text-sm leading-6 mt-3">
                 Stronger profiles and better public visibility make it easier for the right people to find you.
               </p>
-            </div>
-          </div>
+            </section>
 
-          <div class="gap-4 grid">
-            <h3 class="text-base font-semibold">
-              Outgoing intros
-            </h3>
-            <ConnectRequestInbox
-              v-if="outgoingRequests.length"
-              mode="outgoing"
-              :items="outgoingRequests"
-            />
-            <div v-else class="panel p-5">
-              <p class="text-sm font-semibold">
-                No open outbound intros
-              </p>
-              <p class="muted text-sm leading-6 mt-3">
+            <section class="surface-row">
+              <div class="flex flex-wrap gap-3 items-center justify-between">
+                <h3 class="text-base font-semibold">
+                  Outgoing intros
+                </h3>
+                <BaseBadge :tone="outgoingRequests.length ? 'accent' : 'neutral'">
+                  {{ outgoingRequests.length || "None" }}
+                </BaseBadge>
+              </div>
+              <ConnectRequestInbox
+                v-if="outgoingRequests.length"
+                class="mt-4"
+                mode="outgoing"
+                :items="outgoingRequests"
+              />
+              <p v-else class="muted text-sm leading-6 mt-3">
                 Keep the search focused. A few strong intros beat a broad spray.
               </p>
-            </div>
-          </div>
-        </div>
+            </section>
 
-        <PageIntro
-          eyebrow="Trial step"
-          title="Run a short trial before setting terms."
-          description="Use a short working sprint before you negotiate long-term terms."
-        />
-
-        <div v-if="trials.length" class="gap-4 grid">
-          <TrialCollaborationCard
-            v-for="trial in trials"
-            :key="trial.id"
-            :trial="trial"
-            :acknowledged="trial.acknowledgedByUserIds.includes(currentUserId)"
-          >
-            <BaseButton variant="secondary" to="/app/matches">
-              Open match details
-            </BaseButton>
-          </TrialCollaborationCard>
-        </div>
-        <div v-else class="panel p-5">
-          <p class="text-sm font-semibold">
-            No active trial sprints yet
-          </p>
-          <p class="muted text-sm leading-6 mt-3">
-            Start from a mutual match, run one small working sprint, and then move into a proposal or agreement.
-          </p>
-          <div class="mt-4">
-            <BaseButton to="/app/matches">
-              Open matches
-            </BaseButton>
+            <section class="surface-row">
+              <div class="flex flex-wrap gap-3 items-center justify-between">
+                <h3 class="text-base font-semibold">
+                  Trial sprint
+                </h3>
+                <BaseBadge :tone="trials.length ? 'accent' : 'neutral'">
+                  {{ trials.length ? `${trials.length} active` : "Not started" }}
+                </BaseBadge>
+              </div>
+              <div v-if="trials.length" class="mt-4 gap-4 grid">
+                <TrialCollaborationCard
+                  v-for="trial in trials"
+                  :key="trial.id"
+                  :trial="trial"
+                  :acknowledged="trial.acknowledgedByUserIds.includes(currentUserId)"
+                >
+                  <BaseButton variant="secondary" to="/app/matches">
+                    Open match details
+                  </BaseButton>
+                </TrialCollaborationCard>
+              </div>
+              <div v-else class="mt-3 flex flex-col gap-4 items-start sm:flex-row sm:items-center sm:justify-between">
+                <p class="muted text-sm leading-6">
+                  Start from a mutual match, run one small working sprint, and then move into a proposal or agreement.
+                </p>
+                <BaseButton variant="secondary" to="/app/matches">
+                  Open matches
+                </BaseButton>
+              </div>
+            </section>
           </div>
         </div>
       </section>
@@ -452,6 +461,7 @@ function getContractVersion(contractId: string) {
           </div>
           <EmptyState
             v-else
+            plain
             icon="i-carbon-notification"
             title="Nothing new is waiting on you"
             description="New intros, proposal updates, and moderation events will show up here."
@@ -477,6 +487,7 @@ function getContractVersion(contractId: string) {
           </div>
           <EmptyState
             v-else
+            plain
             icon="i-carbon-document-signed"
             title="No live proposals yet"
             description="Open proposals after a relationship has already survived a real fit check or trial sprint."
@@ -502,6 +513,7 @@ function getContractVersion(contractId: string) {
           </div>
           <EmptyState
             v-else
+            plain
             icon="i-carbon-license-global"
             title="No agreement drafts yet"
             description="Agreement drafts appear after a proposal is accepted and the relationship is ready for written terms."

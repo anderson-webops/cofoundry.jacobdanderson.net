@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { trustPillars } from "~/shared/data/marketing"
-import { trustCenterPages } from "~/shared/data/public-content"
 
 usePageSeo("Trust & Safety", "Designed to reduce spam, ambiguity, and bad-faith founder behavior.", {
   canonicalPath: "/safety",
@@ -15,50 +14,50 @@ usePageSeo("Trust & Safety", "Designed to reduce spam, ambiguity, and bad-faith 
       description="The platform keeps contact gated until interest is mutual, exposes moderation tooling early, and treats structured negotiation as a safety feature rather than a growth tactic."
     />
 
-    <div class="mt-10 gap-6 grid lg:grid-cols-3">
-      <article v-for="pillar in trustPillars" :key="pillar.title" class="panel p-6">
-        <h2 class="text-xl font-semibold">
+    <div class="process-list mt-10">
+      <article v-for="pillar in trustPillars" :key="pillar.title" class="process-list-item">
+        <h2 class="text-lg font-semibold">
           {{ pillar.title }}
         </h2>
-        <p class="muted text-sm leading-7 mt-4">
+        <p class="muted text-sm leading-7">
           {{ pillar.body }}
         </p>
       </article>
     </div>
 
-    <div class="panel mt-10 p-6 md:p-8">
+    <section class="mt-12">
       <h2 class="text-2xl font-semibold">
         Trust tiers
       </h2>
-      <div class="subtle-grid mt-6 md:grid-cols-3">
-        <div class="panel-inset p-4">
+      <div class="process-list mt-6">
+        <article class="process-list-item">
           <p class="text-sm font-semibold">
             Level A
           </p>
-          <p class="muted text-sm leading-6 mt-3">
+          <p class="muted text-sm leading-6">
             Verified email plus a baseline profile. Good for browsing and getting set up, but not enough for outbound outreach.
           </p>
-        </div>
-        <div class="panel-inset p-4">
+        </article>
+        <article class="process-list-item">
           <p class="text-sm font-semibold">
             Level B
           </p>
-          <p class="muted text-sm leading-6 mt-3">
+          <p class="muted text-sm leading-6">
             Phone verification plus a completed profile. This is the baseline required before cold message requests leave your account.
           </p>
-        </div>
-        <div class="panel-inset p-4">
+        </article>
+        <article class="process-list-item">
           <p class="text-sm font-semibold">
             Level C
           </p>
-          <p class="muted text-sm leading-6 mt-3">
+          <p class="muted text-sm leading-6">
             Higher-assurance identity checks for higher-risk actions like contract signing or sensitive-role claims. This is step-up trust, not mandatory signup friction.
           </p>
-        </div>
+        </article>
       </div>
-    </div>
+    </section>
 
-    <div class="panel mt-10 p-6 md:p-8">
+    <section class="mt-12">
       <h2 class="text-2xl font-semibold">
         Enforcement in the MVP
       </h2>
@@ -92,14 +91,14 @@ usePageSeo("Trust & Safety", "Designed to reduce spam, ambiguity, and bad-faith 
           <span>High-priority reports like impersonation, scam language, and privacy violations are escalated separately from normal moderation noise.</span>
         </li>
       </ul>
-    </div>
+    </section>
 
-    <div class="panel mt-10 p-6 md:p-8">
+    <section class="mt-12">
       <h2 class="text-2xl font-semibold">
         Behavior that degrades the network
       </h2>
-      <div class="subtle-grid mt-6 md:grid-cols-2">
-        <div class="panel-inset p-4">
+      <div class="process-list mt-6">
+        <article class="process-list-item">
           <p class="text-sm font-semibold">
             Not acceptable
           </p>
@@ -109,8 +108,8 @@ usePageSeo("Trust & Safety", "Designed to reduce spam, ambiguity, and bad-faith 
             <li>Harvesting contact details or pushing people off-platform before consent.</li>
             <li>Repeatedly matching and then disappearing without response.</li>
           </ul>
-        </div>
-        <div class="panel-inset p-4">
+        </article>
+        <article class="process-list-item">
           <p class="text-sm font-semibold">
             Expected behavior
           </p>
@@ -120,16 +119,16 @@ usePageSeo("Trust & Safety", "Designed to reduce spam, ambiguity, and bad-faith 
             <li>Use first-call agendas, trial sprints, and proposal comments to surface disagreement early.</li>
             <li>Review any generated agreements with qualified legal counsel before execution.</li>
           </ul>
-        </div>
+        </article>
       </div>
-    </div>
+    </section>
 
-    <div class="panel mt-10 p-6 md:p-8">
+    <section class="mt-12">
       <h2 class="text-2xl font-semibold">
         Official communication rules
       </h2>
-      <div class="subtle-grid mt-6 md:grid-cols-2">
-        <div class="panel-inset p-4">
+      <div class="process-list mt-6">
+        <article class="process-list-item">
           <p class="text-sm font-semibold">
             What CoFoundry will do
           </p>
@@ -138,8 +137,8 @@ usePageSeo("Trust & Safety", "Designed to reduce spam, ambiguity, and bad-faith 
             <li>Warn when conversations contain common off-platform or payment-related scam patterns.</li>
             <li>Keep direct contact gated by mutual consent and each member's chosen reveal stage.</li>
           </ul>
-        </div>
-        <div class="panel-inset p-4">
+        </article>
+        <article class="process-list-item">
           <p class="text-sm font-semibold">
             What CoFoundry will not do
           </p>
@@ -148,38 +147,17 @@ usePageSeo("Trust & Safety", "Designed to reduce spam, ambiguity, and bad-faith 
             <li>Tell you to move a conversation to WhatsApp or Telegram before trust is established.</li>
             <li>Represent an investor's intent or ability to fund a company just because an identity signal is present.</li>
           </ul>
-        </div>
+        </article>
       </div>
-    </div>
+    </section>
 
-    <div class="panel mt-10 p-6 md:p-8">
+    <section class="surface-row mt-12">
       <h2 class="text-2xl font-semibold">
         Appeals and redress
       </h2>
       <p class="muted text-sm leading-7 mt-4">
         Reports, restrictions, and suspensions are meant to be reviewable. CoFoundry tracks moderation actions, keeps report context attached to the case, and expects an appeal path for users who believe a decision was incorrect.
       </p>
-    </div>
-
-    <div class="panel mt-10 p-6 md:p-8">
-      <h2 class="text-2xl font-semibold">
-        Trust Center guides
-      </h2>
-      <div class="subtle-grid mt-6 md:grid-cols-3">
-        <NuxtLink
-          v-for="page in trustCenterPages"
-          :key="page.slug"
-          :to="`/trust/${page.slug}`"
-          class="panel-inset p-4 transition hover:border-[var(--accent)]"
-        >
-          <p class="font-semibold">
-            {{ page.title }}
-          </p>
-          <p class="muted text-sm leading-6 mt-2">
-            {{ page.description }}
-          </p>
-        </NuxtLink>
-      </div>
-    </div>
+    </section>
   </div>
 </template>

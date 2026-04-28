@@ -26,26 +26,26 @@ usePageSeo("Terms of Service", "Product-specific terms for CoFoundry's founder m
       </template>
     </PageIntro>
 
-    <div class="panel mt-10 p-6 md:p-8">
-      <div>
+    <div class="process-list mt-10">
+      <div class="process-list-item">
         <p class="text-sm font-semibold">
           Last updated
         </p>
-        <p class="muted text-sm leading-6 mt-2">
+        <p class="muted text-sm leading-6">
           {{ termsLastUpdated }}
         </p>
       </div>
 
-      <div class="subtle-grid subtle-grid-4 mt-6">
-        <div v-for="item in termsKeyNotes" :key="item.title" class="panel-inset p-4">
+      <article v-for="item in termsKeyNotes" :key="item.title" class="process-list-item">
+        <div>
           <p class="text-sm font-semibold">
             {{ item.title }}
           </p>
-          <p class="muted text-sm leading-6 mt-3">
-            {{ item.body }}
-          </p>
         </div>
-      </div>
+        <p class="muted text-sm leading-6">
+          {{ item.body }}
+        </p>
+      </article>
     </div>
 
     <div class="reading-layout mt-10">
@@ -64,7 +64,7 @@ usePageSeo("Terms of Service", "Product-specific terms for CoFoundry's founder m
           </a>
         </nav>
 
-        <div class="panel-inset mt-6 p-4">
+        <div class="surface-divider mt-6 pt-6">
           <p class="text-sm font-semibold">
             Notices and support
           </p>
@@ -88,7 +88,7 @@ usePageSeo("Terms of Service", "Product-specific terms for CoFoundry's founder m
           v-for="section in termsSections"
           :id="section.id"
           :key="section.id"
-          class="panel p-6 scroll-mt-28 md:p-8"
+          class="surface-row scroll-mt-28"
         >
           <h2 class="text-2xl font-semibold">
             {{ section.title }}
@@ -116,38 +116,6 @@ usePageSeo("Terms of Service", "Product-specific terms for CoFoundry's founder m
             </li>
           </ul>
         </section>
-
-        <div class="panel p-6 md:p-8">
-          <h2 class="text-2xl font-semibold">
-            Related Policies
-          </h2>
-          <div class="mt-6 gap-4 grid md:grid-cols-3">
-            <NuxtLink to="/privacy" class="panel-inset p-4 transition hover:border-[var(--accent)]">
-              <p class="font-semibold">
-                Privacy Policy
-              </p>
-              <p class="muted text-sm leading-6 mt-2">
-                Explains what CoFoundry collects, how profile visibility works, and how trust, billing, and moderation data are handled.
-              </p>
-            </NuxtLink>
-            <NuxtLink to="/safety" class="panel-inset p-4 transition hover:border-[var(--accent)]">
-              <p class="font-semibold">
-                Trust & Safety
-              </p>
-              <p class="muted text-sm leading-6 mt-2">
-                Describes the product-level controls behind moderation, verification, contact gating, and acceptable behavior.
-              </p>
-            </NuxtLink>
-            <NuxtLink to="/contracts" class="panel-inset p-4 transition hover:border-[var(--accent)]">
-              <p class="font-semibold">
-                Contract Resources
-              </p>
-              <p class="muted text-sm leading-6 mt-2">
-                Explains how CoFoundry's proposal and agreement tools work and why generated documents still require legal review.
-              </p>
-            </NuxtLink>
-          </div>
-        </div>
       </div>
     </div>
   </div>
