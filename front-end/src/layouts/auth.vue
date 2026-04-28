@@ -10,7 +10,7 @@ useHead({
 </script>
 
 <template>
-  <div class="px-4 py-8 min-h-screen">
+  <div class="py-8 min-h-screen">
     <div class="page-shell">
       <div class="mb-8 flex items-center justify-between">
         <AppLogo />

@@ -12,8 +12,8 @@ useHead({
 </script>
 
 <template>
-  <div class="px-3 py-4 min-h-screen lg:px-4 lg:py-5">
-    <div class="workspace-shell gap-5 grid min-h-[calc(100vh-2rem)] lg:grid-cols-[292px_minmax(0,1fr)]">
+  <div class="py-4 min-h-screen lg:py-5">
+    <div class="workspace-shell gap-5 grid min-h-[calc(100vh-2rem)] lg:grid-cols-[292px_minmax(0,1fr)] lg:min-h-[calc(100vh-2.5rem)]">
       <div class="hidden lg:block">
         <AppSidebar />
       </div>
