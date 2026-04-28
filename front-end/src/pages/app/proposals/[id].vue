@@ -147,8 +147,8 @@ function contractQuotaText() {
               Version {{ version.versionNumber }} · updated {{ formatDate(version.createdAt) }}.
             </p>
           </div>
-          <BaseBadge tone="neutral">
-            Version {{ version.versionNumber }}
+          <BaseBadge :tone="unresolvedSections.length ? 'warning' : 'success'">
+            {{ unresolvedSections.length ? `${unresolvedSections.length} open term${unresolvedSections.length === 1 ? "" : "s"}` : "Terms aligned" }}
           </BaseBadge>
         </div>
         <div v-if="usage?.contractDrafts.exhausted" class="surface-divider mt-4">
@@ -179,41 +179,6 @@ function contractQuotaText() {
             Open agreement
           </BaseButton>
         </div>
-      </div>
-
-      <div class="panel p-5">
-        <div class="flex gap-4 items-start justify-between">
-          <div>
-            <h2 class="text-lg font-semibold">
-              Open terms
-            </h2>
-            <p class="muted text-sm leading-6 mt-2">
-              These are the sections that still need explicit agreement before this should become a signed template.
-            </p>
-          </div>
-          <BaseBadge :tone="unresolvedSections.length ? 'warning' : 'success'">
-            {{ unresolvedSections.length ? `${unresolvedSections.length} active` : "Aligned" }}
-          </BaseBadge>
-        </div>
-        <div v-if="unresolvedSections.length" class="surface-row-list mt-4">
-          <div
-            v-for="section in unresolvedSections"
-            :key="section.id"
-            class="surface-row"
-          >
-            <div class="flex gap-3 items-center justify-between">
-              <p class="text-sm font-semibold">
-                {{ section.title }}
-              </p>
-              <BaseBadge :tone="section.state === 'agreed' ? 'success' : section.state === 'countered' ? 'warning' : 'neutral'">
-                {{ formatProposalSectionState(section.state) }}
-              </BaseBadge>
-            </div>
-          </div>
-        </div>
-        <p v-else class="muted text-sm leading-6 mt-4">
-          All tracked sections are aligned on the current version.
-        </p>
       </div>
 
       <details class="panel p-5">
@@ -279,8 +244,8 @@ function contractQuotaText() {
       </details>
     </section>
 
-    <section class="gap-5 grid">
-      <div class="panel p-6">
+    <section>
+      <div class="panel p-6 xl:top-24 xl:sticky">
         <div class="flex gap-4 items-start justify-between">
           <div>
             <p class="muted text-sm">
@@ -293,6 +258,9 @@ function contractQuotaText() {
               {{ formatProposalRelationshipType(version.relationshipType) }} · Updated {{ formatDate(version.createdAt) }}
             </p>
           </div>
+          <BaseBadge :tone="getProposalStatusTone(proposal.status)">
+            {{ formatProposalStatus(proposal.status) }}
+          </BaseBadge>
         </div>
 
         <div class="surface-row-list mt-6 md:gap-x-6 md:grid md:grid-cols-2">
@@ -305,36 +273,52 @@ function contractQuotaText() {
             </p>
           </div>
         </div>
-      </div>
 
-      <div class="gap-4 grid">
-        <article
-          v-for="section in sections"
-          :key="section.id"
-          class="panel p-5"
-        >
-          <div class="flex gap-4 items-start justify-between">
+        <div class="surface-divider mt-6">
+          <div class="flex flex-wrap gap-3 items-start justify-between">
             <div>
               <h3 class="text-lg font-semibold">
-                {{ section.title }}
+                Proposal sections
               </h3>
-              <p class="muted text-sm leading-6 mt-3">
-                {{ section.body }}
+              <p class="muted text-sm leading-6 mt-2">
+                Current terms and open section status.
               </p>
             </div>
-            <BaseBadge :tone="sectionTone(section.state)">
-              {{ formatProposalSectionState(section.state) }}
+            <BaseBadge :tone="unresolvedSections.length ? 'warning' : 'success'">
+              {{ unresolvedSections.length ? `${unresolvedSections.length} open` : "Aligned" }}
             </BaseBadge>
           </div>
-          <ul v-if="section.supporting.length" class="muted text-sm leading-6 mt-4 gap-2 grid">
-            <li v-for="item in section.supporting" :key="item">
-              {{ item }}
-            </li>
-          </ul>
-          <p v-if="section.commentCount" class="muted text-xs mt-4">
-            {{ section.commentCount }} clause comment{{ section.commentCount > 1 ? "s" : "" }} on the current version.
-          </p>
-        </article>
+
+          <div class="surface-row-list mt-5">
+            <article
+              v-for="section in sections"
+              :key="section.id"
+              class="surface-row"
+            >
+              <div class="flex gap-4 items-start justify-between">
+                <div>
+                  <h4 class="text-base font-semibold">
+                    {{ section.title }}
+                  </h4>
+                  <p class="muted text-sm leading-6 mt-2">
+                    {{ section.body }}
+                  </p>
+                </div>
+                <BaseBadge :tone="sectionTone(section.state)">
+                  {{ formatProposalSectionState(section.state) }}
+                </BaseBadge>
+              </div>
+              <ul v-if="section.supporting.length" class="muted text-sm leading-6 mt-4 gap-2 grid">
+                <li v-for="item in section.supporting" :key="item">
+                  {{ item }}
+                </li>
+              </ul>
+              <p v-if="section.commentCount" class="muted text-xs mt-4">
+                {{ section.commentCount }} clause comment{{ section.commentCount > 1 ? "s" : "" }} on the current version.
+              </p>
+            </article>
+          </div>
+        </div>
       </div>
     </section>
 

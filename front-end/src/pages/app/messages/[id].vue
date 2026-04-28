@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { MessageAttachment } from "~/shared/types/domain"
-import { buildSubscriptionUsage, formatUsageQuota, getSubscriptionEntitlements } from "~/shared/utils/billing"
+import { buildSubscriptionUsage, getSubscriptionEntitlements } from "~/shared/utils/billing"
 import { formatContactRevealStage, formatDate, formatProposalRelationshipType, formatProposalStatus } from "~/shared/utils/format"
 import { buildConversationRiskFlags, buildMessageRiskFlags, canOpenProposalWorkflow } from "~/shared/utils/formation"
 import { buildParticipantProfiles, getCurrentProposalVersion, getMatchByConversation, getMessagesForConversation, getProfileByUserId, getProposalByConversation, getTrialForMatch } from "~/shared/utils/workspace"
@@ -183,11 +183,6 @@ function openProposalWorkflow() {
   if (!proposal.value)
     proposalDialogOpen.value = true
 }
-
-function quotaText(key: "proposals" | "contractDrafts") {
-  const quota = usage.value?.[key]
-  return quota ? formatUsageQuota(quota) : ""
-}
 </script>
 
 <template>
@@ -282,45 +277,13 @@ function quotaText(key: "proposals" | "contractDrafts") {
         </div>
       </div>
 
-      <details class="panel-inset p-5">
+      <details v-if="!proposal" class="panel-inset p-5">
         <summary class="text-base font-semibold cursor-pointer">
-          First-call agenda
+          Planning aids
         </summary>
-        <div class="mt-4">
+        <div class="mt-4 gap-4 grid">
           <FirstCallAgenda :profile="otherParticipant" />
-        </div>
-      </details>
-
-      <details v-if="currentProfile" class="panel-inset p-5">
-        <summary class="text-base font-semibold cursor-pointer">
-          Alignment check
-        </summary>
-        <div class="mt-4">
-          <AlignmentCheckPanel :current-profile="currentProfile" :counterpart-profile="otherParticipant" />
-        </div>
-      </details>
-
-      <details v-if="usage" class="panel-inset p-5">
-        <summary class="text-base font-semibold cursor-pointer">
-          Proposal capacity
-        </summary>
-        <div class="surface-row-list mt-4">
-          <div class="surface-row">
-            <p class="text-sm font-semibold">
-              Proposal sends
-            </p>
-            <p class="muted text-sm leading-6 mt-2">
-              {{ quotaText("proposals") }}. Use deal rooms when the relationship is ready for terms.
-            </p>
-          </div>
-          <div class="surface-row">
-            <p class="text-sm font-semibold">
-              Agreement drafts
-            </p>
-            <p class="muted text-sm leading-6 mt-2">
-              {{ quotaText("contractDrafts") }}. Paid plans unlock signature-ready agreements and export.
-            </p>
-          </div>
+          <AlignmentCheckPanel v-if="currentProfile" :current-profile="currentProfile" :counterpart-profile="otherParticipant" />
         </div>
       </details>
     </section>
@@ -362,7 +325,7 @@ function quotaText(key: "proposals" | "contractDrafts") {
       </div>
 
       <div class="p-5 border-t border-[var(--line)]">
-        <TextareaInput v-model="draftMessage" label="Message" helper="Attachments are mocked in local mode and stored as metadata in the conversation." :rows="4" />
+        <TextareaInput v-model="draftMessage" label="Message" helper="Attach context files when they help clarify the next step." :rows="4" />
         <div class="mt-4">
           <SafetyFlagsPanel :flags="draftFlags" title="Draft warning" />
         </div>

@@ -146,7 +146,7 @@ const hasActiveWork = computed(() => Boolean(
   || proposals.value.length
   || contracts.value.length,
 ))
-const hasLiveFollowUp = computed(() => Boolean(notifications.value.length || proposals.value.length || contracts.value.length))
+const hasLiveFollowUp = computed(() => Boolean(notifications.value.length))
 
 function skillLabels(profileId: string) {
   return getProfileSkills(workspaceStore.data, profileId).map(item => item.skill.label)
@@ -171,16 +171,6 @@ async function declineConnectRequest(requestId: string, reason: "timing" | "doma
     message: "The other side now gets an explicit reason instead of silence.",
     tone: "info",
   })
-}
-
-function getProposalVersion(proposalId: string) {
-  const proposal = workspaceStore.data.proposals.find(item => item.id === proposalId)
-  return proposal ? workspaceStore.data.proposalVersions.find(version => version.id === proposal.currentVersionId) : undefined
-}
-
-function getContractVersion(contractId: string) {
-  const contract = workspaceStore.data.contracts.find(item => item.id === contractId)
-  return contract ? workspaceStore.data.contractVersions.find(version => version.id === contract.currentVersionId) : undefined
 }
 </script>
 
@@ -232,7 +222,7 @@ function getContractVersion(contractId: string) {
 
     <div class="gap-5 grid md:gap-6" :class="hasLiveFollowUp ? 'xl:grid-cols-[1.15fr_0.85fr]' : ''">
       <section class="gap-5 grid">
-        <div class="gap-5 grid" :class="hasActiveWork ? 'order-2' : 'order-1'">
+        <div v-if="!hasActiveWork" class="gap-5 grid order-1">
           <PageIntro
             :eyebrow="showProfileRecommendations ? 'Recommended collaborators' : 'Recommended opportunities'"
             title="Best next conversations"
@@ -402,36 +392,6 @@ function getContractVersion(contractId: string) {
                 </BaseButton>
               </div>
             </div>
-          </div>
-        </div>
-
-        <div v-if="proposals.length" class="panel p-5">
-          <h2 class="text-lg font-semibold">
-            Active proposals
-          </h2>
-          <div class="mt-5 gap-3 grid">
-            <ProposalCard
-              v-for="proposal in proposals"
-              :key="proposal.id"
-              :proposal="proposal"
-              :version="getProposalVersion(proposal.id)"
-              :href="`/app/proposals/${proposal.id}`"
-            />
-          </div>
-        </div>
-
-        <div v-if="contracts.length" class="panel p-5">
-          <h2 class="text-lg font-semibold">
-            Contract drafts
-          </h2>
-          <div class="mt-5 gap-3 grid">
-            <ContractCard
-              v-for="contract in contracts"
-              :key="contract.id"
-              :contract="contract"
-              :version="getContractVersion(contract.id)"
-              :href="`/app/contracts/${contract.id}`"
-            />
           </div>
         </div>
       </section>

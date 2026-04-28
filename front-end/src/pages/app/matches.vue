@@ -15,6 +15,7 @@ const currentUserId = computed(() => authStore.currentUser?.id || "")
 const currentProfile = computed(() => currentUserId.value ? getProfileByUserId(workspaceStore.data, currentUserId.value) : null)
 
 const matches = computed(() => authStore.currentUser ? getMatchesForUser(workspaceStore.data, authStore.currentUser.id) : [])
+const primaryMatchId = computed(() => matches.value[0]?.id || "")
 
 function matchPartner(match: ReturnType<typeof getMatchesForUser>[number]) {
   if (!authStore.currentUser)
@@ -91,7 +92,7 @@ async function acknowledgeTrial(match: ReturnType<typeof getMatchesForUser>[numb
         </p>
 
         <div class="gap-4 grid lg:grid-cols-[0.95fr_1.05fr]">
-          <details class="panel-inset p-5">
+          <details v-if="match.id === primaryMatchId" class="panel-inset p-5">
             <summary class="text-base font-semibold cursor-pointer">
               First-call agenda
             </summary>

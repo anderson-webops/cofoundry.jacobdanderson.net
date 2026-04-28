@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Profile } from "~/shared/types/domain"
-import { formatCommitment, formatRemotePreference, formatRunwayBucket } from "~/shared/utils/format"
-import { buildProfileReadiness, buildResponsivenessLabel } from "~/shared/utils/formation"
+import { formatCommitment, formatRemotePreference } from "~/shared/utils/format"
+import { buildProfileReadiness } from "~/shared/utils/formation"
 
 const props = defineProps<{
   profile: Profile
@@ -48,10 +48,6 @@ const profileRoleLabel = computed(() => {
       {{ formatRemotePreference(profile.remotePreference) }} · {{ formatCommitment(profile.timeCommitment) }} · {{ profile.location }}
     </p>
 
-    <p class="muted text-sm leading-6">
-      {{ profile.bio }}
-    </p>
-
     <div v-if="leadProof" class="surface-divider">
       <p class="section-kicker">
         Featured proof
@@ -59,9 +55,6 @@ const profileRoleLabel = computed(() => {
       <h3 class="text-base font-semibold mt-2">
         {{ leadProof.title }}
       </h3>
-      <p class="muted text-sm leading-6 mt-2">
-        {{ leadProof.summary }}
-      </p>
       <p class="text-sm mt-3">
         {{ leadProof.outcome }}
       </p>
@@ -71,13 +64,6 @@ const profileRoleLabel = computed(() => {
       <span v-for="skill in skills.slice(0, 3)" :key="skill" class="pill">
         {{ skill }}
       </span>
-    </div>
-
-    <div class="muted text-sm gap-2 grid">
-      <div>Industries: {{ profile.industries.join(", ") }}</div>
-      <div>Company fit: {{ profile.intent.companyPreferences.slice(0, 2).join(", ") }}</div>
-      <div>Commitment: {{ profile.commitmentProfile.weeklyAvailabilityHours }}h/week · {{ formatRunwayBucket(profile.commitmentProfile.runwayBucket) }}</div>
-      <div>Responsiveness: {{ buildResponsivenessLabel(profile) }}</div>
     </div>
 
     <div class="mt-auto flex flex-wrap gap-3">

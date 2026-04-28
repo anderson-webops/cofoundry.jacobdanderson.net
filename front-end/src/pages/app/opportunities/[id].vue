@@ -129,10 +129,10 @@ function onReportCreated() {
           </div>
         </section>
 
-        <section class="gap-4 grid">
+        <section>
           <div class="panel p-6">
             <h2 class="text-lg font-semibold">
-              Founder
+              Founder and roles
             </h2>
             <p class="text-sm font-semibold mt-3">
               {{ ownerProfile?.displayName }}
@@ -152,13 +152,12 @@ function onReportCreated() {
                 Contact reveal rule: {{ ownerProfile ? formatContactRevealStage(ownerProfile.privacy.contactRevealStage) : "After a mutual match" }}
               </div>
             </div>
-          </div>
-
-          <div class="panel p-6">
-            <h2 class="text-lg font-semibold">
-              Roles needed
-            </h2>
-            <div class="mt-4 gap-4 grid">
+            <div class="surface-divider mt-5">
+              <p class="text-sm font-semibold">
+                Roles needed
+              </p>
+            </div>
+            <div class="mt-4 gap-3 grid">
               <div v-for="role in roles" :key="role.id" class="panel-inset p-4">
                 <p class="font-semibold">
                   {{ role.title }}

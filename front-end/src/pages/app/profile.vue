@@ -71,10 +71,6 @@ const profileLinks = computed(() => {
         </p>
 
         <div class="mt-6">
-          <TrustReadinessPanel :profile="profile" />
-        </div>
-
-        <div class="mt-6">
           <h2 class="text-lg font-semibold">
             Evidence and proof of work
           </h2>
@@ -121,31 +117,22 @@ const profileLinks = computed(() => {
           </button>
         </div>
 
-        <div v-if="tab === 'public'" class="mt-6 gap-5 grid">
-          <div>
+        <div v-if="tab === 'public'" class="surface-row-list mt-6">
+          <div class="surface-row">
             <h2 class="text-lg font-semibold">
-              Public highlights
+              Public summary
             </h2>
-            <ul class="muted text-sm leading-7 mt-4 gap-3 grid">
-              <li v-for="item in profile.summaryHighlights" :key="item">
-                {{ item }}
-              </li>
-            </ul>
+            <p class="muted text-sm leading-6 mt-3">
+              {{ profile.summaryHighlights.join(" ") }}
+            </p>
           </div>
-          <div>
+          <div v-if="profile.portfolio.length" class="surface-row">
             <h2 class="text-lg font-semibold">
               Portfolio
             </h2>
-            <div class="mt-4 gap-3 grid">
-              <div v-for="project in profile.portfolio" :key="project.id" class="panel-inset p-4">
-                <p class="font-semibold">
-                  {{ project.name }}
-                </p>
-                <p class="muted text-sm leading-6 mt-2">
-                  {{ project.summary }}
-                </p>
-              </div>
-            </div>
+            <p class="muted text-sm leading-6 mt-3">
+              {{ profile.portfolio.map(project => project.name).join(" · ") }}
+            </p>
           </div>
         </div>
 
