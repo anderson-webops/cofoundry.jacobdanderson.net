@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { contractGuidePages, trustCenterPages } from "~/shared/data/public-content"
 import { workspaceSeed } from "~/shared/data/seed"
 import { getIndustryHubs, getPublicOpportunitiesForIndustry, getPublicProfilesForIndustry, getRoleHubs, getStageHubs, pickRelatedHubEntries } from "~/shared/utils/directory"
 
@@ -14,8 +13,6 @@ const profiles = getPublicProfilesForIndustry(workspaceSeed, slug)
 const opportunities = getPublicOpportunitiesForIndustry(workspaceSeed, slug)
 const relatedRoles = pickRelatedHubEntries(getRoleHubs(workspaceSeed), "", 3)
 const relatedStages = pickRelatedHubEntries(getStageHubs(workspaceSeed), "", 3)
-const antiSpamGuide = trustCenterPages.find(entry => entry.slug === "anti-spam")!
-const trialPlanGuide = contractGuidePages.find(entry => entry.slug === "trial-project-plan")!
 
 usePageSeo(`${hub.label} founder searches`, hub.description, {
   canonicalPath: `/industries/${hub.slug}`,
@@ -36,10 +33,9 @@ usePageSeo(`${hub.label} founder searches`, hub.description, {
       </template>
     </PageIntro>
 
-    <div class="mt-8 gap-4 grid sm:grid-cols-3">
+    <div class="mt-8 gap-4 grid sm:grid-cols-2">
       <MetricTile label="Public profiles" :value="profiles.length" />
       <MetricTile label="Public startup searches" :value="opportunities.length" />
-      <MetricTile label="Signal" value="Market fit first" />
     </div>
 
     <section class="mt-10">
@@ -81,12 +77,12 @@ usePageSeo(`${hub.label} founder searches`, hub.description, {
       </div>
     </section>
 
-    <div class="mt-14 gap-6 grid lg:grid-cols-2">
+    <div class="mt-14">
       <div class="panel p-6">
         <h2 class="text-2xl font-semibold">
           Explore adjacent hubs
         </h2>
-        <div class="surface-row-list mt-6">
+        <div class="surface-row-list mt-6 lg:gap-x-8 lg:grid lg:grid-cols-2">
           <NuxtLink
             v-for="entry in relatedRoles"
             :key="`role-${entry.slug}`"
@@ -111,36 +107,6 @@ usePageSeo(`${hub.label} founder searches`, hub.description, {
             </p>
             <p class="muted text-sm leading-6 mt-2">
               {{ entry.profileCount }} profiles · {{ entry.opportunityCount }} searches
-            </p>
-          </NuxtLink>
-        </div>
-      </div>
-
-      <div class="panel p-6">
-        <h2 class="text-2xl font-semibold">
-          Trust and contracts
-        </h2>
-        <div class="surface-row-list mt-6">
-          <NuxtLink
-            :to="`/trust/${antiSpamGuide.slug}`"
-            class="surface-row block transition hover:text-[var(--accent)]"
-          >
-            <p class="font-semibold">
-              {{ antiSpamGuide.title }}
-            </p>
-            <p class="muted text-sm leading-6 mt-2">
-              {{ antiSpamGuide.description }}
-            </p>
-          </NuxtLink>
-          <NuxtLink
-            :to="`/contracts/${trialPlanGuide.slug}`"
-            class="surface-row block transition hover:text-[var(--accent)]"
-          >
-            <p class="font-semibold">
-              {{ trialPlanGuide.title }}
-            </p>
-            <p class="muted text-sm leading-6 mt-2">
-              {{ trialPlanGuide.description }}
             </p>
           </NuxtLink>
         </div>

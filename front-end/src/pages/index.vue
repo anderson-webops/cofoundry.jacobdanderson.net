@@ -1,12 +1,7 @@
 <script setup lang="ts">
 import { appDescription, appTagline } from "~/shared/constants/app"
 import { howItWorksSteps } from "~/shared/data/marketing"
-import { workspaceSeed } from "~/shared/data/seed"
-import { getIndustryHubs, getRoleHubs, getStageHubs } from "~/shared/utils/directory"
 
-const roleHubs = getRoleHubs(workspaceSeed)
-const industryHubs = getIndustryHubs(workspaceSeed)
-const stageHubs = getStageHubs(workspaceSeed)
 const { getPrimaryAccessCta } = useProductAccess()
 const heroAccessCta = computed(() => getPrimaryAccessCta("home-hero"))
 const footerAccessCta = computed(() => getPrimaryAccessCta("home-footer"))
@@ -109,58 +104,6 @@ usePageSeo("Build startup teams with more structure", appDescription, {
               <p class="muted text-sm leading-7 mt-3">
                 {{ step.body }}
               </p>
-            </div>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <section class="page-section-tight">
-      <div class="page-shell">
-        <PageIntro
-          eyebrow="Search entry points"
-          title="Browse by role, industry, and stage."
-          description="Public pages help people evaluate the network before they request access or create a profile."
-        >
-          <template #actions>
-            <BaseButton variant="secondary" to="/find-cofounder">
-              Browse public directory
-            </BaseButton>
-          </template>
-        </PageIntro>
-
-        <div class="mt-10 gap-8 grid lg:grid-cols-3">
-          <article>
-            <p class="section-kicker">
-              Roles
-            </p>
-            <div class="plain-link-list mt-4">
-              <NuxtLink v-for="hub in roleHubs.slice(0, 4)" :key="hub.slug" :to="`/roles/${hub.slug}`" class="plain-link-item">
-                <span class="font-semibold">{{ hub.label }}</span>
-                <span class="muted text-sm">{{ hub.profileCount }} profiles · {{ hub.opportunityCount }} searches</span>
-              </NuxtLink>
-            </div>
-          </article>
-          <article>
-            <p class="section-kicker">
-              Industries
-            </p>
-            <div class="plain-link-list mt-4">
-              <NuxtLink v-for="hub in industryHubs.slice(0, 4)" :key="hub.slug" :to="`/industries/${hub.slug}`" class="plain-link-item">
-                <span class="font-semibold">{{ hub.label }}</span>
-                <span class="muted text-sm">{{ hub.profileCount }} profiles · {{ hub.opportunityCount }} searches</span>
-              </NuxtLink>
-            </div>
-          </article>
-          <article>
-            <p class="section-kicker">
-              Stages
-            </p>
-            <div class="plain-link-list mt-4">
-              <NuxtLink v-for="hub in stageHubs.slice(0, 4)" :key="hub.slug" :to="`/stage/${hub.slug}`" class="plain-link-item">
-                <span class="font-semibold">{{ hub.label }}</span>
-                <span class="muted text-sm">{{ hub.profileCount }} profiles · {{ hub.opportunityCount }} searches</span>
-              </NuxtLink>
             </div>
           </article>
         </div>

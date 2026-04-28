@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { pricingTiers } from "~/shared/data/marketing"
-import { buildSubscriptionUsage, formatUsageQuota, getPlanPriceLabel } from "~/shared/utils/billing"
+import { getPlanPriceLabel } from "~/shared/utils/billing"
 import { formatBillingCycle, formatDate, formatPlanName } from "~/shared/utils/format"
 
 definePageMeta({
@@ -17,32 +17,8 @@ const { authStore, subscription, workspaceStore } = useCurrentMember()
 const serviceLabels = getServiceLabels()
 
 const pendingPlan = ref("")
-const usage = computed(() => authStore.currentUser ? buildSubscriptionUsage(workspaceStore.data, authStore.currentUser.id, subscription.value || undefined) : null)
 const billingModeLabel = computed(() => serviceLabels.billing)
 const currentPriceLabel = computed(() => getPlanPriceLabel(subscription.value?.plan || "free", subscription.value?.billingCycle || "monthly"))
-const billingMoments = computed(() => {
-  if (!subscription.value?.renewsAt)
-    return []
-
-  const renewalDate = new Date(subscription.value.renewsAt)
-  const intervalDays = subscription.value.billingCycle === "annual" ? 365 : 30
-  const lastCharge = new Date(renewalDate.getTime() - intervalDays * 24 * 60 * 60 * 1000)
-
-  return [
-    {
-      id: "last",
-      label: "Last receipt",
-      detail: `${currentPriceLabel.value} · ${formatPlanName(subscription.value.plan)}`,
-      date: lastCharge.toISOString(),
-    },
-    {
-      id: "next",
-      label: subscription.value.cancelAtPeriodEnd ? "Plan ends" : "Next renewal",
-      detail: subscription.value.cancelAtPeriodEnd ? "Cancellation already scheduled in-product." : `${currentPriceLabel.value} will renew automatically unless you cancel first.`,
-      date: subscription.value.renewsAt,
-    },
-  ]
-})
 
 watchEffect(() => {
   const checkout = route.query.checkout
@@ -98,11 +74,6 @@ function toggleCancellation() {
     tone: "info",
   })
 }
-
-function quotaText(key: "intros" | "savedSearches" | "proposals" | "contractDrafts") {
-  const quota = usage.value?.[key]
-  return quota ? formatUsageQuota(quota) : ""
-}
 </script>
 
 <template>
@@ -119,139 +90,73 @@ function quotaText(key: "intros" | "savedSearches" | "proposals" | "contractDraf
       </template>
     </PageIntro>
 
-    <div class="gap-4 grid md:grid-cols-4">
-      <MetricTile label="Current plan" :value="formatPlanName(subscription?.plan || 'free')" :context="currentPriceLabel" />
-      <MetricTile
-        label="Renewal"
-        :value="subscription?.renewsAt ? formatDate(subscription.renewsAt) : 'No renewal'"
-        :context="subscription?.cancelAtPeriodEnd ? 'Cancels at period end' : 'One-click cancel in-product'"
-      />
-      <MetricTile label="Intros" :value="quotaText('intros')" context="New outbound introductions this month." />
-      <MetricTile label="Deal rooms" :value="quotaText('proposals')" context="Structured proposal sends this month." />
-    </div>
-
-    <div class="gap-5 grid md:gap-6 xl:grid-cols-[0.88fr_1.12fr]">
-      <section class="panel p-6">
-        <div class="flex gap-4 items-start justify-between">
-          <div>
-            <h2 class="text-xl font-semibold">
-              Billing state
-            </h2>
-            <p class="muted text-sm leading-6 mt-3">
-              Renewal date, billing mode, and cancellation status stay visible here at all times. There is no hidden auto-renew logic and no off-platform cancellation step.
-            </p>
-          </div>
-          <BaseBadge :tone="subscription?.cancelAtPeriodEnd ? 'warning' : 'neutral'">
-            {{ subscription?.cancelAtPeriodEnd ? "Cancels at period end" : "Active" }}
-          </BaseBadge>
+    <section class="panel p-6">
+      <div class="flex gap-4 items-start justify-between">
+        <div>
+          <h2 class="text-xl font-semibold">
+            Current plan
+          </h2>
+          <p class="muted text-sm leading-6 mt-3">
+            Renewal and cancellation controls stay visible here. There is no off-platform cancellation step.
+          </p>
         </div>
+        <BaseBadge :tone="subscription?.cancelAtPeriodEnd ? 'warning' : 'neutral'">
+          {{ subscription?.cancelAtPeriodEnd ? "Cancels at period end" : "Active" }}
+        </BaseBadge>
+      </div>
 
-        <div class="surface-row-list mt-5 md:gap-x-6 md:grid md:grid-cols-2">
-          <div class="surface-row md:pr-4">
-            <p class="text-sm font-semibold">
-              Current charge
-            </p>
-            <p class="muted text-sm leading-6 mt-2">
-              {{ currentPriceLabel }} · {{ formatBillingCycle(subscription?.billingCycle || "monthly") }}
-            </p>
-          </div>
-          <div class="surface-row md:pr-4">
-            <p class="text-sm font-semibold">
-              Cancellation
-            </p>
-            <p class="muted text-sm leading-6 mt-2">
-              {{ subscription?.plan === "free"
-                ? "Free does not renew."
-                : subscription?.cancelAtPeriodEnd
-                  ? "Already scheduled. The plan stays active until the current term ends."
-                  : "Available in-product with one click. No support ticket required." }}
-            </p>
-          </div>
+      <div class="surface-row-list mt-5 md:gap-x-6 md:grid md:grid-cols-2">
+        <div class="surface-row md:pr-4">
+          <p class="text-sm font-semibold">
+            Plan
+          </p>
+          <p class="muted text-sm leading-6 mt-2">
+            {{ formatPlanName(subscription?.plan || "free") }} · {{ billingModeLabel }}
+          </p>
         </div>
-
-        <div class="mt-5 flex flex-wrap gap-3">
-          <BaseButton
-            v-if="subscription?.plan !== 'free'"
-            :variant="subscription?.cancelAtPeriodEnd ? 'secondary' : 'danger'"
-            @click="toggleCancellation"
-          >
-            {{ subscription?.cancelAtPeriodEnd ? "Resume renewal" : "Cancel at period end" }}
-          </BaseButton>
-          <BaseButton v-else to="/pricing" variant="secondary">
-            Compare plans
-          </BaseButton>
+        <div class="surface-row md:pr-4">
+          <p class="text-sm font-semibold">
+            Current charge
+          </p>
+          <p class="muted text-sm leading-6 mt-2">
+            {{ currentPriceLabel }} · {{ formatBillingCycle(subscription?.billingCycle || "monthly") }}
+          </p>
         </div>
-      </section>
-
-      <section class="panel p-6">
-        <h2 class="text-xl font-semibold">
-          Plan usage
-        </h2>
-        <div v-if="usage" class="surface-row-list mt-5 md:gap-x-6 md:grid md:grid-cols-2">
-          <div class="surface-row md:pr-4">
-            <p class="text-sm font-semibold">
-              New intros
-            </p>
-            <p class="muted text-sm leading-6 mt-2">
-              {{ quotaText("intros") }}. This is the main anti-spam meter, not matched messaging.
-            </p>
-          </div>
-          <div class="surface-row md:pr-4">
-            <p class="text-sm font-semibold">
-              Saved searches
-            </p>
-            <p class="muted text-sm leading-6 mt-2">
-              {{ quotaText("savedSearches") }}. Paid tiers are built for repeatable searches and alerts.
-            </p>
-          </div>
-          <div class="surface-row md:pr-4">
-            <p class="text-sm font-semibold">
-              Proposal sends
-            </p>
-            <p class="muted text-sm leading-6 mt-2">
-              {{ quotaText("proposals") }}. Deal rooms are metered because they mark a real commitment event.
-            </p>
-          </div>
-          <div class="surface-row md:pr-4">
-            <p class="text-sm font-semibold">
-              Agreement drafts
-            </p>
-            <p class="muted text-sm leading-6 mt-2">
-              {{ quotaText("contractDrafts") }}. Free keeps one preview path open, while paid plans unlock signature-ready agreements.
-            </p>
-          </div>
+        <div class="surface-row md:pr-4">
+          <p class="text-sm font-semibold">
+            Renewal
+          </p>
+          <p class="muted text-sm leading-6 mt-2">
+            {{ subscription?.renewsAt ? formatDate(subscription.renewsAt) : "No renewal scheduled" }}
+          </p>
         </div>
-      </section>
-    </div>
-
-    <div class="panel p-6">
-      <h2 class="text-xl font-semibold">
-        Recent billing activity
-      </h2>
-      <div v-if="billingMoments.length" class="surface-row-list mt-5">
-        <div v-for="item in billingMoments" :key="item.id" class="surface-row flex gap-4 items-start justify-between">
-          <div>
-            <p class="text-sm font-semibold">
-              {{ item.label }}
-            </p>
-            <p class="muted text-sm leading-6 mt-2">
-              {{ item.detail }}
-            </p>
-          </div>
-          <BaseBadge tone="neutral">
-            {{ formatDate(item.date) }}
-          </BaseBadge>
+        <div class="surface-row md:pr-4">
+          <p class="text-sm font-semibold">
+            Cancellation
+          </p>
+          <p class="muted text-sm leading-6 mt-2">
+            {{ subscription?.plan === "free"
+              ? "Free does not renew."
+              : subscription?.cancelAtPeriodEnd
+                ? "Already scheduled. The plan stays active until the current term ends."
+                : "Available in-product with one click. No support ticket required." }}
+          </p>
         </div>
       </div>
-      <div v-else class="surface-divider mt-5">
-        <p class="text-sm font-semibold">
-          No paid receipts yet
-        </p>
-        <p class="muted text-sm leading-6 mt-2">
-          Start with Free, validate the market, then upgrade when you need more outbound velocity or proposal capacity.
-        </p>
+
+      <div class="mt-5 flex flex-wrap gap-3">
+        <BaseButton
+          v-if="subscription?.plan !== 'free'"
+          :variant="subscription?.cancelAtPeriodEnd ? 'secondary' : 'danger'"
+          @click="toggleCancellation"
+        >
+          {{ subscription?.cancelAtPeriodEnd ? "Resume renewal" : "Cancel at period end" }}
+        </BaseButton>
+        <BaseButton v-else to="/pricing" variant="secondary">
+          Compare plans
+        </BaseButton>
       </div>
-    </div>
+    </section>
 
     <div class="gap-6 grid lg:grid-cols-3">
       <article v-for="tier in pricingTiers" :key="tier.id" class="panel p-6">

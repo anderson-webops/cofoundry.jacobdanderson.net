@@ -11,7 +11,6 @@ definePageMeta({
 
 usePageSeo("Settings")
 
-const runtimeConfig = useRuntimeConfig()
 const toastStore = useToastStore()
 const { policy } = useProductAccess()
 const { authStore, profile, workspaceStore } = useCurrentMember()
@@ -88,7 +87,7 @@ function verify(type: "phone" | "linkedin" | "github" | "website" | "work_domain
     <PageIntro
       eyebrow="Settings"
       title="Workspace settings"
-      description="Profile visibility, runtime configuration, support details, and environment-specific controls live here."
+      description="Manage profile visibility, contact rules, and trust verification."
     />
 
     <div class="gap-6 grid xl:grid-cols-2">
@@ -124,13 +123,6 @@ function verify(type: "phone" | "linkedin" | "github" | "website" | "work_domain
         <div class="mt-5">
           <TrustSignalStrip v-if="profile" :profile="profile" />
         </div>
-        <div v-if="profile" class="mt-5">
-          <TrustReadinessPanel
-            :profile="profile"
-            title="Trust-critical checklist"
-            description="These are the fields and verifications CoFoundry expects before a profile should rank as high-trust."
-          />
-        </div>
         <div class="muted text-sm mt-4 gap-3 grid">
           <div>Current tier: {{ formatTrustTier(trustTier) }}</div>
           <div>Level A: verified email and baseline profile.</div>
@@ -159,17 +151,6 @@ function verify(type: "phone" | "linkedin" | "github" | "website" | "work_domain
         </div>
       </div>
 
-      <div class="panel p-6">
-        <h2 class="text-lg font-semibold">
-          Runtime modes
-        </h2>
-        <div class="muted text-sm mt-5 gap-3 grid">
-          <div>Backend mode: {{ runtimeConfig.public.backendMode }}</div>
-          <div>Billing mode: {{ runtimeConfig.public.billingMode }}</div>
-          <div>Investment module: {{ runtimeConfig.public.featureInvestmentModule ? "Enabled" : "Disabled" }}</div>
-        </div>
-      </div>
-
       <div v-if="policy.showDemoConveniences" class="panel p-6">
         <h2 class="text-lg font-semibold">
           Development controls
@@ -187,13 +168,16 @@ function verify(type: "phone" | "linkedin" | "github" | "website" | "work_domain
 
       <div class="panel p-6">
         <h2 class="text-lg font-semibold">
-          Official communications
+          Support and safety
         </h2>
         <div class="muted text-sm mt-5 gap-3 grid">
-          <div>Support email: {{ runtimeConfig.public.supportEmail }}</div>
-          <div>App URL: {{ runtimeConfig.public.appUrl }}</div>
           <div>CoFoundry will not ask for diligence fees, wire transfers, or crypto payments in chat.</div>
           <div>Move off-platform only after a mutual match and only when the contact reveal rule has been satisfied.</div>
+        </div>
+        <div class="mt-5">
+          <BaseButton variant="secondary" to="/contact">
+            Contact support
+          </BaseButton>
         </div>
       </div>
     </div>
