@@ -30,36 +30,8 @@ usePageSeo("How it works")
       </article>
     </div>
 
-    <div class="panel mt-10 p-6 md:p-8">
-      <h2 class="text-2xl font-semibold">
-        Why it follows this order
-      </h2>
-      <div class="subtle-grid mt-6 md:grid-cols-3">
-        <div class="panel-inset p-4">
-          <p class="text-sm font-semibold">
-            See fit sooner
-          </p>
-          <p class="muted text-sm leading-6 mt-2">
-            Clear profiles and proof help you decide whether a conversation is worth having.
-          </p>
-        </div>
-        <div class="panel-inset p-4">
-          <p class="text-sm font-semibold">
-            Test before you commit
-          </p>
-          <p class="muted text-sm leading-6 mt-2">
-            First-call prompts and trial sprints expose pace, communication, and decision issues before they become harder to unwind.
-          </p>
-        </div>
-        <div class="panel-inset p-4">
-          <p class="text-sm font-semibold">
-            Keep the terms in one place
-          </p>
-          <p class="muted text-sm leading-6 mt-2">
-            Proposal versions, comments, and agreement drafts stay attached to the same relationship.
-          </p>
-        </div>
-      </div>
-    </div>
+    <p class="muted text-sm leading-6 mt-8 max-w-3xl">
+      The order is deliberate: scan fit, test working cadence, then write terms once the relationship has signal.
+    </p>
   </div>
 </template>

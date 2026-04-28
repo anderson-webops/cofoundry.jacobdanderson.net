@@ -258,7 +258,7 @@ function quotaText(key: "proposals" | "contractDrafts") {
             </div>
           </TrialCollaborationCard>
         </div>
-        <div v-else class="surface-divider mt-4">
+        <div v-else-if="!proposal" class="surface-divider mt-4">
           <p class="text-sm font-semibold">
             No trial attached yet
           </p>
@@ -371,13 +371,6 @@ function quotaText(key: "proposals" | "contractDrafts") {
           <div class="flex gap-3">
             <BaseButton v-if="latestIncomingMessage" variant="ghost" @click="messageReportDialogOpen = true">
               Report message
-            </BaseButton>
-            <BaseButton
-              variant="secondary"
-              :to="proposal ? `/app/proposals/${proposal.id}` : undefined"
-              @click="openProposalWorkflow"
-            >
-              {{ proposal ? "Open deal room" : proposalGateOpen ? "Proposal" : "Alignment gate" }}
             </BaseButton>
             <BaseButton @click="sendMessage">
               Send message

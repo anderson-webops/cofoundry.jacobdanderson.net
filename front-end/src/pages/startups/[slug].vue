@@ -125,24 +125,19 @@ usePageSeo(opportunity.startupName, opportunity.oneLinePitch, {
           <div class="mt-4">
             <TrustSignalStrip :profile="ownerProfile" />
           </div>
-          <NuxtLink :to="`/people/${buildPublicProfileSlug(ownerProfile)}`" class="text-sm text-[var(--accent)] mt-4 inline-flex">
-            View public founder profile
-          </NuxtLink>
-        </div>
-
-        <div class="panel p-6">
-          <h2 class="text-lg font-semibold">
-            Public listing rules
-          </h2>
-          <div class="muted text-sm leading-6 mt-4 gap-2 grid">
-            <div>Contact stays gated until a qualified intro happens inside CoFoundry.</div>
-            <div>Verification state is shown so public pages do not flatten every listing into the same trust level.</div>
-            <div v-if="opportunity.officialWebsite">
-              Official website:
-              <a :href="opportunity.officialWebsite" target="_blank" rel="ugc nofollow noopener noreferrer" class="underline underline-offset-4">
-                {{ opportunity.officialWebsite }}
-              </a>
-            </div>
+          <div class="mt-4 flex flex-wrap gap-4">
+            <NuxtLink :to="`/people/${buildPublicProfileSlug(ownerProfile)}`" class="text-sm text-[var(--accent)] inline-flex">
+              View public founder profile
+            </NuxtLink>
+            <a
+              v-if="opportunity.officialWebsite"
+              :href="opportunity.officialWebsite"
+              target="_blank"
+              rel="ugc nofollow noopener noreferrer"
+              class="text-sm text-[var(--accent)] inline-flex"
+            >
+              Official website
+            </a>
           </div>
         </div>
       </section>

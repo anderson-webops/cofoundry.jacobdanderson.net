@@ -33,11 +33,6 @@ usePageSeo(`${hub.label} founder searches`, hub.description, {
       </template>
     </PageIntro>
 
-    <div class="mt-8 gap-4 grid sm:grid-cols-2">
-      <MetricTile label="Public profiles" :value="profiles.length" />
-      <MetricTile label="Public startup searches" :value="opportunities.length" />
-    </div>
-
     <section class="mt-10">
       <PageIntro
         eyebrow="Profiles"
@@ -77,40 +72,28 @@ usePageSeo(`${hub.label} founder searches`, hub.description, {
       </div>
     </section>
 
-    <div class="mt-14">
-      <div class="panel p-6">
-        <h2 class="text-2xl font-semibold">
-          Explore adjacent hubs
-        </h2>
-        <div class="surface-row-list mt-6 lg:gap-x-8 lg:grid lg:grid-cols-2">
-          <NuxtLink
-            v-for="entry in relatedRoles"
-            :key="`role-${entry.slug}`"
-            :to="`/roles/${entry.slug}`"
-            class="surface-row block transition hover:text-[var(--accent)]"
-          >
-            <p class="font-semibold">
-              {{ entry.label }}
-            </p>
-            <p class="muted text-sm leading-6 mt-2">
-              {{ entry.profileCount }} profiles · {{ entry.opportunityCount }} searches
-            </p>
-          </NuxtLink>
-          <NuxtLink
-            v-for="entry in relatedStages"
-            :key="`stage-${entry.slug}`"
-            :to="`/stage/${entry.slug}`"
-            class="surface-row block transition hover:text-[var(--accent)]"
-          >
-            <p class="font-semibold">
-              {{ entry.label }}
-            </p>
-            <p class="muted text-sm leading-6 mt-2">
-              {{ entry.profileCount }} profiles · {{ entry.opportunityCount }} searches
-            </p>
-          </NuxtLink>
-        </div>
+    <nav class="surface-row mt-14">
+      <h2 class="text-lg font-semibold">
+        Explore adjacent hubs
+      </h2>
+      <div class="mt-4 flex flex-wrap gap-2">
+        <NuxtLink
+          v-for="entry in relatedRoles"
+          :key="`role-${entry.slug}`"
+          :to="`/roles/${entry.slug}`"
+          class="pill"
+        >
+          {{ entry.label }}
+        </NuxtLink>
+        <NuxtLink
+          v-for="entry in relatedStages"
+          :key="`stage-${entry.slug}`"
+          :to="`/stage/${entry.slug}`"
+          class="pill"
+        >
+          {{ entry.label }}
+        </NuxtLink>
       </div>
-    </div>
+    </nav>
   </div>
 </template>
