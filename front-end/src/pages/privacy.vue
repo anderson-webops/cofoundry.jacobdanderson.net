@@ -154,22 +154,6 @@ usePageSeo("Privacy Policy", "Product-specific privacy disclosures for CoFoundry
             </BaseButton>
           </div>
         </div>
-
-        <div class="surface-divider mt-6 pt-6">
-          <p class="text-sm font-semibold">
-            Retention snapshot
-          </p>
-          <div class="mt-3 gap-3 grid">
-            <div v-for="row in privacyRetentionRows" :key="row.category">
-              <p class="text-sm font-semibold">
-                {{ row.category }}
-              </p>
-              <p class="muted text-sm leading-6 mt-2">
-                {{ row.window }}
-              </p>
-            </div>
-          </div>
-        </div>
       </aside>
 
       <div class="reading-body">

@@ -128,7 +128,7 @@ async function signContract() {
         </div>
       </details>
 
-      <div class="panel p-5">
+      <div class="panel p-5 xl:top-24 xl:sticky">
         <h2 class="text-lg font-semibold">
           Signatures
         </h2>

@@ -5,6 +5,7 @@ import { howItWorksSteps } from "~/shared/data/marketing"
 const { getPrimaryAccessCta } = useProductAccess()
 const heroAccessCta = computed(() => getPrimaryAccessCta("home-hero"))
 const footerAccessCta = computed(() => getPrimaryAccessCta("home-footer"))
+const homepageSteps = howItWorksSteps.slice(0, 3)
 
 usePageSeo("Build startup teams with more structure", appDescription, {
   canonicalPath: "/",
@@ -48,7 +49,7 @@ usePageSeo("Build startup teams with more structure", appDescription, {
                 </p>
               </div>
               <BaseBadge tone="accent">
-                Version history
+                Trial first
               </BaseBadge>
             </div>
             <div class="hero-preview-frame grid-soft">
@@ -93,7 +94,7 @@ usePageSeo("Build startup teams with more structure", appDescription, {
           description="Profiles, intros, trial sprints, proposals, and agreements follow one clear sequence."
         />
         <div class="process-list mt-10">
-          <article v-for="step in howItWorksSteps" :key="step.id" class="process-list-item">
+          <article v-for="step in homepageSteps" :key="step.id" class="process-list-item">
             <p class="section-kicker process-list-kicker">
               {{ step.eyebrow }}
             </p>

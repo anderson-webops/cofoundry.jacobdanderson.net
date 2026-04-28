@@ -163,10 +163,10 @@ usePageSeo(profile.displayName, profile.headline, {
           </div>
         </div>
 
-        <div v-if="publicLinks.length || profile.ventures.length" class="panel p-6">
-          <h2 class="text-lg font-semibold">
+        <details v-if="publicLinks.length || profile.ventures.length" class="surface-row">
+          <summary class="text-lg font-semibold cursor-pointer">
             Outside context
-          </h2>
+          </summary>
           <div class="surface-row-list mt-4">
             <a
               v-for="link in publicLinks"
@@ -190,7 +190,7 @@ usePageSeo(profile.displayName, profile.headline, {
           <p class="muted text-xs mt-4">
             Profile availability snapshot last updated {{ formatDate(profile.trustSignals.lastActiveAt) }}.
           </p>
-        </div>
+        </details>
       </section>
     </div>
   </div>

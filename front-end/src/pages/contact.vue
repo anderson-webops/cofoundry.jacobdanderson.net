@@ -97,18 +97,10 @@ async function submitForm() {
       description="Use this form for support, access, pricing, or partnership questions."
     />
 
-    <div class="mt-10 gap-6 grid lg:grid-cols-[0.8fr_1.2fr]">
-      <div class="panel p-6">
-        <h2 class="text-xl font-semibold">
-          How to reach us
-        </h2>
-        <ul class="muted text-sm leading-7 mt-5 gap-4 grid">
-          <li>General support: <a :href="`mailto:${runtimeConfig.public.supportEmail}`" class="text-[var(--text)] underline underline-offset-4">{{ runtimeConfig.public.supportEmail }}</a></li>
-          <li>Use this form for access requests, product questions, pricing conversations, or support follow-up.</li>
-          <li>We reply through the email address you provide here.</li>
-        </ul>
-      </div>
-
+    <div class="mt-10 max-w-3xl">
+      <p class="muted text-sm leading-6 mb-5">
+        Use the form below, or email <a :href="`mailto:${runtimeConfig.public.supportEmail}`" class="text-[var(--text)] underline underline-offset-4">{{ runtimeConfig.public.supportEmail }}</a>. We reply through the address you provide.
+      </p>
       <form class="panel p-6 gap-5 grid" @submit.prevent="submitForm">
         <TextInput v-model="form.name" label="Name" :error="errors.name" />
         <TextInput v-model="form.email" label="Email" type="email" :error="errors.email" />

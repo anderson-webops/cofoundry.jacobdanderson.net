@@ -85,36 +85,10 @@ usePageSeo(opportunity.startupName, opportunity.oneLinePitch, {
         </div>
       </section>
 
-      <section class="gap-5 grid">
+      <section>
         <div class="panel p-6">
           <h2 class="text-lg font-semibold">
-            Roles needed
-          </h2>
-          <div class="mt-4 flex flex-wrap gap-2">
-            <NuxtLink
-              v-for="role in opportunity.rolesNeeded"
-              :key="role"
-              :to="`/roles/${slugifySegment(role)}`"
-              class="pill"
-            >
-              {{ role }}
-            </NuxtLink>
-          </div>
-          <div class="mt-4 flex flex-wrap gap-2">
-            <NuxtLink
-              v-for="industry in opportunity.industries"
-              :key="industry"
-              :to="`/industries/${slugifySegment(industry)}`"
-              class="pill"
-            >
-              {{ industry }}
-            </NuxtLink>
-          </div>
-        </div>
-
-        <div class="panel p-6">
-          <h2 class="text-lg font-semibold">
-            Founder context
+            Founder and roles
           </h2>
           <p class="font-semibold mt-4">
             {{ ownerProfile.displayName }}
@@ -138,6 +112,31 @@ usePageSeo(opportunity.startupName, opportunity.oneLinePitch, {
             >
               Official website
             </a>
+          </div>
+          <div class="surface-divider mt-5">
+            <p class="text-sm font-semibold">
+              Roles needed
+            </p>
+          </div>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <NuxtLink
+              v-for="role in opportunity.rolesNeeded"
+              :key="role"
+              :to="`/roles/${slugifySegment(role)}`"
+              class="pill"
+            >
+              {{ role }}
+            </NuxtLink>
+          </div>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <NuxtLink
+              v-for="industry in opportunity.industries"
+              :key="industry"
+              :to="`/industries/${slugifySegment(industry)}`"
+              class="pill"
+            >
+              {{ industry }}
+            </NuxtLink>
           </div>
         </div>
       </section>
