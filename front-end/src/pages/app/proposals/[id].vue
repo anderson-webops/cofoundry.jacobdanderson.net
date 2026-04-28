@@ -141,22 +141,22 @@ function contractQuotaText() {
         <div class="flex gap-4 items-start justify-between">
           <div>
             <h2 class="text-lg font-semibold">
-              What this proposal covers
+              Proposal actions
             </h2>
             <p class="muted text-sm leading-6 mt-3">
-              Use the proposal to capture trial scope, economics, governance, IP, and exit terms before a formal agreement draft exists.
+              Version {{ version.versionNumber }} · updated {{ formatDate(version.createdAt) }}.
             </p>
           </div>
           <BaseBadge tone="neutral">
             Version {{ version.versionNumber }}
           </BaseBadge>
         </div>
-        <div v-if="usage" class="surface-divider mt-4">
+        <div v-if="usage?.contractDrafts.exhausted" class="surface-divider mt-4">
           <p class="text-sm font-semibold">
-            Agreement draft usage
+            Agreement draft limit reached
           </p>
           <p class="muted text-sm leading-6 mt-2">
-            {{ contractQuotaText() }}. Free can still open one agreement preview each month, while Pro and Team unlock higher-volume signature-ready agreements.
+            {{ contractQuotaText() }}. Upgrade before generating another agreement draft from this proposal.
           </p>
         </div>
         <div class="mt-5 flex flex-wrap gap-3">
@@ -195,7 +195,7 @@ function contractQuotaText() {
             {{ unresolvedSections.length ? `${unresolvedSections.length} active` : "Aligned" }}
           </BaseBadge>
         </div>
-        <div class="surface-row-list mt-4">
+        <div v-if="unresolvedSections.length" class="surface-row-list mt-4">
           <div
             v-for="section in unresolvedSections"
             :key="section.id"
@@ -209,17 +209,17 @@ function contractQuotaText() {
                 {{ formatProposalSectionState(section.state) }}
               </BaseBadge>
             </div>
-            <p class="muted text-sm leading-6 mt-3">
-              {{ section.body }}
-            </p>
           </div>
         </div>
+        <p v-else class="muted text-sm leading-6 mt-4">
+          All tracked sections are aligned on the current version.
+        </p>
       </div>
 
-      <div class="panel p-5">
-        <h2 class="text-lg font-semibold">
+      <details class="panel p-5">
+        <summary class="text-lg font-semibold cursor-pointer">
           Version history
-        </h2>
+        </summary>
         <div class="surface-row-list mt-4">
           <div v-for="entry in timeline" :key="entry.id" class="surface-row">
             <div class="flex gap-3 items-center justify-between">
@@ -240,12 +240,12 @@ function contractQuotaText() {
             </p>
           </div>
         </div>
-      </div>
+      </details>
 
-      <div class="panel p-5">
-        <h2 class="text-lg font-semibold">
+      <details class="panel p-5">
+        <summary class="text-lg font-semibold cursor-pointer">
           Clause comments
-        </h2>
+        </summary>
         <div class="surface-row-list mt-4">
           <div v-for="comment in comments" :key="comment.id" class="surface-row">
             <div class="flex gap-3 items-center justify-between">
@@ -276,7 +276,7 @@ function contractQuotaText() {
             </BaseButton>
           </div>
         </div>
-      </div>
+      </details>
     </section>
 
     <section class="gap-5 grid">
@@ -284,7 +284,7 @@ function contractQuotaText() {
         <div class="flex gap-4 items-start justify-between">
           <div>
             <p class="muted text-sm">
-              Current proposal snapshot
+              Current proposal
             </p>
             <h2 class="text-xl font-semibold mt-2">
               {{ version.roleTitle }}
@@ -293,9 +293,6 @@ function contractQuotaText() {
               {{ formatProposalRelationshipType(version.relationshipType) }} · Updated {{ formatDate(version.createdAt) }}
             </p>
           </div>
-          <BaseBadge tone="neutral">
-            Counsel-ready summary
-          </BaseBadge>
         </div>
 
         <div class="surface-row-list mt-6 md:gap-x-6 md:grid md:grid-cols-2">

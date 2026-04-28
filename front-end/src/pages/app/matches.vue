@@ -91,7 +91,14 @@ async function acknowledgeTrial(match: ReturnType<typeof getMatchesForUser>[numb
         </p>
 
         <div class="gap-4 grid lg:grid-cols-[0.95fr_1.05fr]">
-          <FirstCallAgenda :profile="matchPartner(match)" />
+          <details class="panel-inset p-5">
+            <summary class="text-base font-semibold cursor-pointer">
+              First-call agenda
+            </summary>
+            <div class="mt-4">
+              <FirstCallAgenda :profile="matchPartner(match)" />
+            </div>
+          </details>
 
           <TrialCollaborationCard
             v-if="trialForMatch(match)"

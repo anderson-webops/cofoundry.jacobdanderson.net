@@ -165,21 +165,14 @@ function verify(type: "phone" | "linkedin" | "github" | "website" | "work_domain
           </BaseButton>
         </div>
       </div>
+    </div>
 
-      <div class="panel p-6">
-        <h2 class="text-lg font-semibold">
-          Support and safety
-        </h2>
-        <div class="muted text-sm mt-5 gap-3 grid">
-          <div>CoFoundry will not ask for diligence fees, wire transfers, or crypto payments in chat.</div>
-          <div>Move off-platform only after a mutual match and only when the contact reveal rule has been satisfied.</div>
-        </div>
-        <div class="mt-5">
-          <BaseButton variant="secondary" to="/contact">
-            Contact support
-          </BaseButton>
-        </div>
-      </div>
+    <div class="surface-row">
+      <p class="muted text-sm leading-6">
+        For support or safety concerns, <NuxtLink to="/contact" class="text-[var(--accent)]">
+          contact support
+        </NuxtLink>. CoFoundry will not ask for diligence fees, wire transfers, or crypto payments in chat.
+      </p>
     </div>
   </div>
 </template>

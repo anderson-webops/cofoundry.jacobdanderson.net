@@ -13,6 +13,17 @@ const { profile, workspaceStore } = useCurrentMember()
 const tab = ref<"public" | "private">("public")
 
 const skillEntries = computed(() => profile.value ? getProfileSkills(workspaceStore.data, profile.value.id) : [])
+const profileLinks = computed(() => {
+  if (!profile.value)
+    return []
+
+  return [
+    { label: "LinkedIn", href: profile.value.links.linkedin },
+    { label: "GitHub", href: profile.value.links.github },
+    { label: "Portfolio", href: profile.value.links.portfolio },
+    { label: "Website", href: profile.value.links.website },
+  ].filter((link): link is { label: string, href: string } => Boolean(link.href))
+})
 </script>
 
 <template>
@@ -198,15 +209,21 @@ const skillEntries = computed(() => profile.value ? getProfileSkills(workspaceSt
               </span>
             </div>
           </div>
-          <div>
+          <div v-if="profileLinks.length">
             <h2 class="text-lg font-semibold">
               Links
             </h2>
             <div class="text-sm mt-4 gap-3 grid">
-              <a :href="profile.links.linkedin" target="_blank" class="panel-inset p-4">LinkedIn</a>
-              <a :href="profile.links.github || '#'" target="_blank" class="panel-inset p-4">GitHub</a>
-              <a :href="profile.links.portfolio || '#'" target="_blank" class="panel-inset p-4">Portfolio</a>
-              <a :href="profile.links.website || '#'" target="_blank" class="panel-inset p-4">Website</a>
+              <a
+                v-for="link in profileLinks"
+                :key="link.label"
+                :href="link.href"
+                target="_blank"
+                rel="ugc nofollow noopener noreferrer"
+                class="panel-inset p-4"
+              >
+                {{ link.label }}
+              </a>
             </div>
           </div>
         </div>

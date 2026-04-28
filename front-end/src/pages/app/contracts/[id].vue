@@ -100,11 +100,8 @@ async function signContract() {
         </template>
       </PageIntro>
 
-      <div class="panel p-5">
-        <h2 class="text-lg font-semibold">
-          Important disclaimer
-        </h2>
-        <p class="muted text-sm leading-7 mt-3">
+      <div class="surface-row">
+        <p class="muted text-sm leading-7">
           This contract is a startup template. It is not legal advice, does not create an attorney-client relationship, and should be reviewed by counsel before execution.
         </p>
         <p v-if="previewOnly" class="muted text-sm leading-7 mt-3">
@@ -112,15 +109,15 @@ async function signContract() {
         </p>
       </div>
 
-      <div v-if="proposal && proposalSummary.length" class="panel p-5">
-        <h2 class="text-lg font-semibold">
+      <details v-if="proposal && proposalSummary.length" class="panel-inset p-5">
+        <summary class="text-lg font-semibold cursor-pointer">
           Staged proposal snapshot
-        </h2>
+        </summary>
         <p class="muted text-sm leading-7 mt-3">
-          This agreement draft was generated from the accepted or active proposal terms below. Keep this summary aligned with the deal room before anyone signs.
+          Source terms for this agreement draft.
         </p>
-        <div class="mt-4 gap-3 grid">
-          <div v-for="item in proposalSummary" :key="item.label" class="panel-inset p-4">
+        <div class="surface-row-list mt-4">
+          <div v-for="item in proposalSummary" :key="item.label" class="surface-row">
             <p class="text-sm font-semibold">
               {{ item.label }}
             </p>
@@ -129,7 +126,7 @@ async function signContract() {
             </p>
           </div>
         </div>
-      </div>
+      </details>
 
       <div class="panel p-5">
         <h2 class="text-lg font-semibold">

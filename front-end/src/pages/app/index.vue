@@ -25,7 +25,11 @@ const proposals = computed(() => currentUserId.value ? getProposalsForUser(works
 const matches = computed(() => currentUserId.value ? getMatchesForUser(workspaceStore.data, currentUserId.value).slice(0, 3) : [])
 const contracts = computed(() => currentUserId.value ? getContractsForUser(workspaceStore.data, currentUserId.value).slice(0, 2) : [])
 const trials = computed(() => currentUserId.value ? getTrialsForUser(workspaceStore.data, currentUserId.value).slice(0, 2) : [])
-const notifications = computed(() => currentUserId.value ? workspaceStore.data.notifications.filter(notification => notification.userId === currentUserId.value).slice(0, 4) : [])
+const notifications = computed(() => currentUserId.value
+  ? workspaceStore.data.notifications
+      .filter(notification => notification.userId === currentUserId.value && !notification.readAt)
+      .slice(0, 4)
+  : [])
 const incomingRequests = computed(() => {
   if (!currentUserId.value)
     return []
@@ -134,6 +138,14 @@ const primaryAction = computed(() => {
     ctaLabel: "Open discover",
   }
 })
+const hasActiveWork = computed(() => Boolean(
+  inboxSnapshot.value?.actions.length
+  || incomingRequests.value.length
+  || outgoingRequests.value.length
+  || trials.value.length
+  || proposals.value.length
+  || contracts.value.length,
+))
 const hasLiveFollowUp = computed(() => Boolean(notifications.value.length || proposals.value.length || contracts.value.length))
 
 function skillLabels(profileId: string) {
@@ -220,59 +232,61 @@ function getContractVersion(contractId: string) {
 
     <div class="gap-5 grid md:gap-6" :class="hasLiveFollowUp ? 'xl:grid-cols-[1.15fr_0.85fr]' : ''">
       <section class="gap-5 grid">
-        <PageIntro
-          :eyebrow="showProfileRecommendations ? 'Recommended collaborators' : 'Recommended opportunities'"
-          title="Best next conversations"
-          :description="showProfileRecommendations
-            ? 'These people are ranked for fit, commitment, and likely reply.'
-            : 'These opportunities are ranked for role, stage, and compensation fit.'"
-        />
+        <div class="gap-5 grid" :class="hasActiveWork ? 'order-2' : 'order-1'">
+          <PageIntro
+            :eyebrow="showProfileRecommendations ? 'Recommended collaborators' : 'Recommended opportunities'"
+            title="Best next conversations"
+            :description="showProfileRecommendations
+              ? 'These people are ranked for fit, commitment, and likely reply.'
+              : 'These opportunities are ranked for role, stage, and compensation fit.'"
+          />
 
-        <div v-if="showProfileRecommendations && profileRecommendations.length" class="gap-4 grid lg:grid-cols-2">
-          <ProfileCard
-            v-for="item in profileRecommendations"
-            :key="item.profile.id"
-            :profile="item.profile"
-            :skills="skillLabels(item.profile.id)"
+          <div v-if="showProfileRecommendations && profileRecommendations.length" class="gap-4 grid lg:grid-cols-2">
+            <ProfileCard
+              v-for="item in profileRecommendations"
+              :key="item.profile.id"
+              :profile="item.profile"
+              :skills="skillLabels(item.profile.id)"
+            >
+              <BaseBadge tone="accent">
+                Match score {{ item.score }}
+              </BaseBadge>
+              <p v-if="item.reciprocityScore >= 6 || item.localBias" class="muted text-xs leading-5">
+                {{ [item.reciprocityScore >= 6 ? "Likely reply" : "", item.localBias ? "Local-first" : ""].filter(Boolean).join(" · ") }}
+              </p>
+              <BaseButton variant="secondary" to="/app/discover">
+                Review collaborator
+              </BaseButton>
+            </ProfileCard>
+          </div>
+
+          <div v-else-if="opportunityRecommendations.length" class="gap-4 grid lg:grid-cols-2">
+            <OpportunityCard
+              v-for="item in opportunityRecommendations"
+              :key="item.opportunity.id"
+              :opportunity="item.opportunity"
+            >
+              <BaseBadge tone="accent">
+                Match score {{ item.score }}
+              </BaseBadge>
+              <BaseButton variant="secondary" :to="`/app/opportunities/${item.opportunity.id}`">
+                View opportunity
+              </BaseButton>
+            </OpportunityCard>
+          </div>
+          <EmptyState
+            v-else
+            icon="i-carbon-search"
+            title="No recommendations yet"
+            description="Complete your profile and set your stage, compensation, and role preferences to unlock better matching."
           >
-            <BaseBadge tone="accent">
-              Match score {{ item.score }}
-            </BaseBadge>
-            <p v-if="item.reciprocityScore >= 6 || item.localBias" class="muted text-xs leading-5">
-              {{ [item.reciprocityScore >= 6 ? "Likely reply" : "", item.localBias ? "Local-first" : ""].filter(Boolean).join(" · ") }}
-            </p>
-            <BaseButton variant="secondary" to="/app/discover">
-              Review collaborator
+            <BaseButton to="/app/profile/edit">
+              Finish profile
             </BaseButton>
-          </ProfileCard>
+          </EmptyState>
         </div>
 
-        <div v-else-if="opportunityRecommendations.length" class="gap-4 grid lg:grid-cols-2">
-          <OpportunityCard
-            v-for="item in opportunityRecommendations"
-            :key="item.opportunity.id"
-            :opportunity="item.opportunity"
-          >
-            <BaseBadge tone="accent">
-              Match score {{ item.score }}
-            </BaseBadge>
-            <BaseButton variant="secondary" :to="`/app/opportunities/${item.opportunity.id}`">
-              View opportunity
-            </BaseButton>
-          </OpportunityCard>
-        </div>
-        <EmptyState
-          v-else
-          icon="i-carbon-search"
-          title="No recommendations yet"
-          description="Complete your profile and set your stage, compensation, and role preferences to unlock better matching."
-        >
-          <BaseButton to="/app/profile/edit">
-            Finish profile
-          </BaseButton>
-        </EmptyState>
-
-        <div class="panel p-5">
+        <div class="panel p-5" :class="hasActiveWork ? 'order-1' : 'order-2'">
           <div class="flex flex-wrap gap-3 items-start justify-between">
             <div>
               <p class="section-kicker">
@@ -365,7 +379,7 @@ function getContractVersion(contractId: string) {
       <section v-if="hasLiveFollowUp" class="gap-5 grid">
         <div v-if="notifications.length" class="panel p-5">
           <h2 class="text-lg font-semibold">
-            Recent notifications
+            Unread notifications
           </h2>
           <div class="surface-row-list mt-5">
             <div v-for="notification in notifications" :key="notification.id" class="surface-row">

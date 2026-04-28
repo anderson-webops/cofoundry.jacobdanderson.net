@@ -18,7 +18,6 @@ const toastStore = useToastStore()
 const { authStore, subscription, workspaceStore } = useCurrentMember()
 
 const scope = ref<"profiles" | "opportunities">("profiles")
-const viewMode = ref<"card" | "list">("card")
 const filters = reactive(createEmptySearchFilters())
 const connectDialogOpen = ref(false)
 const connectTargetUserId = ref("")
@@ -27,6 +26,7 @@ const currentUserId = computed(() => authStore.currentUser?.id || "")
 const currentProfile = computed(() => currentUserId.value ? workspaceStore.data.profiles.find(profile => profile.userId === currentUserId.value) : null)
 const currentReadiness = computed(() => currentProfile.value ? buildProfileReadiness(currentProfile.value) : null)
 const usage = computed(() => authStore.currentUser ? buildSubscriptionUsage(workspaceStore.data, authStore.currentUser.id, subscription.value || undefined) : null)
+const showPlanLimitNotice = computed(() => Boolean(usage.value?.intros.exhausted || usage.value?.savedSearches.exhausted))
 const connectTargetProfile = computed(() => connectTargetUserId.value ? workspaceStore.data.profiles.find(profile => profile.userId === connectTargetUserId.value) : null)
 
 const profileResults = computed(() => filterProfiles(workspaceStore.data, filters, currentProfile.value || undefined))
@@ -223,12 +223,6 @@ function removeFilterChip(chip: { type: string, value?: string }) {
         <button type="button" class="pill" :class="scope === 'opportunities' ? 'pill-active' : ''" @click="scope = 'opportunities'">
           Opportunities
         </button>
-        <button type="button" class="pill" :class="viewMode === 'card' ? 'pill-active' : ''" @click="viewMode = 'card'">
-          Cards
-        </button>
-        <button type="button" class="pill" :class="viewMode === 'list' ? 'pill-active' : ''" @click="viewMode = 'list'">
-          List
-        </button>
       </div>
 
       <div class="gap-4 grid md:grid-cols-2 xl:grid-cols-6">
@@ -292,11 +286,11 @@ function removeFilterChip(chip: { type: string, value?: string }) {
       </div>
     </div>
 
-    <p v-if="usage" class="muted text-sm leading-6">
+    <p v-if="showPlanLimitNotice" class="muted text-sm leading-6">
       Plan limits: {{ quotaText("intros") }}; {{ quotaText("savedSearches") }}. Matched conversations remain available after mutual interest.
     </p>
 
-    <div v-if="scope === 'profiles'" class="gap-4 grid" :class="viewMode === 'card' ? 'lg:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1'">
+    <div v-if="scope === 'profiles'" class="gap-4 grid lg:grid-cols-2 xl:grid-cols-3">
       <ProfileCard
         v-for="profileItem in profileResults"
         :key="profileItem.id"
@@ -329,7 +323,7 @@ function removeFilterChip(chip: { type: string, value?: string }) {
       </EmptyState>
     </div>
 
-    <div v-else class="gap-4 grid" :class="viewMode === 'card' ? 'lg:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1'">
+    <div v-else class="gap-4 grid lg:grid-cols-2 xl:grid-cols-3">
       <OpportunityCard
         v-for="opportunity in opportunityResults"
         :key="opportunity.id"

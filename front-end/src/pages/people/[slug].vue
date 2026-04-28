@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { workspaceSeed } from "~/shared/data/seed"
 import { buildPublicProfileSlug, getPublicProfileBySlug, getRoleHubs, slugifySegment } from "~/shared/utils/directory"
-import { formatContactRevealStage, formatDate, formatRemotePreference, formatRunwayBucket, formatStage, formatStartTimeline } from "~/shared/utils/format"
-import { buildProfileReadiness } from "~/shared/utils/formation"
+import { formatContactRevealStage, formatDate, formatRemotePreference, formatStage, formatStartTimeline } from "~/shared/utils/format"
 
 const route = useRoute()
 const slug = String(route.params.slug)
@@ -12,7 +11,6 @@ if (!entry)
   throw createError({ statusCode: 404, statusMessage: "Public profile not found" })
 
 const { profile } = entry
-const readiness = buildProfileReadiness(profile)
 const runtimeConfig = useRuntimeConfig()
 const { getIntroCta } = useProductAccess()
 const introCta = computed(() => getIntroCta(`public-profile-${entry.slug}`))
@@ -22,6 +20,12 @@ const publicProfileUrl = runtimeConfig.public.appUrl
 const roleHubSlugs = new Set(getRoleHubs(workspaceSeed).map(entry => entry.slug))
 const linkedRoles = [...new Set([profile.roleScope.primaryRole, ...profile.roles])]
   .filter((role): role is string => Boolean(role) && roleHubSlugs.has(slugifySegment(role)))
+const publicLinks = [
+  { label: "LinkedIn", href: profile.links.linkedin },
+  { label: "GitHub", href: profile.links.github },
+  { label: "Portfolio", href: profile.links.portfolio },
+  { label: "Website", href: profile.links.website },
+].filter((link): link is { label: string, href: string } => Boolean(link.href))
 const structuredData = {
   "@context": "https://schema.org",
   "@type": "ProfilePage",
@@ -65,16 +69,11 @@ usePageSeo(profile.displayName, profile.headline, {
         <div class="flex gap-4 items-start">
           <ProfileAvatar :display-name="profile.displayName" :photo-url="profile.photoUrl" size="lg" />
           <div>
-            <div class="flex flex-wrap gap-3 items-center">
-              <p class="text-sm text-[var(--accent)] font-semibold">
-                {{ readiness.trustPercent }}% profile signals
-              </p>
-              <p class="muted text-sm">
-                Public-lite profile
-              </p>
-            </div>
-            <p class="muted text-sm leading-6 mt-4">
-              CoFoundry does not expose a public trust score. Public pages show the evidence and verification surface instead.
+            <p class="text-sm text-[var(--accent)] font-semibold">
+              Public discovery profile
+            </p>
+            <p class="muted text-sm leading-6 mt-3">
+              Evidence, fit, and verified context are shown before private contact details unlock.
             </p>
           </div>
         </div>
@@ -91,31 +90,13 @@ usePageSeo(profile.displayName, profile.headline, {
           {{ profile.bio }}
         </p>
 
-        <div class="mt-6 gap-4 grid md:grid-cols-2">
-          <MetricTile label="Start timeline" :value="formatStartTimeline(profile.intent.startTimeline)" />
-          <MetricTile label="Profile signals" :value="`${readiness.trustPercent}%`" />
-          <MetricTile label="Hours / week" :value="profile.commitmentProfile.weeklyAvailabilityHours" />
-          <MetricTile label="Runway" :value="formatRunwayBucket(profile.commitmentProfile.runwayBucket)" />
-          <MetricTile label="Contact rule" :value="formatContactRevealStage(profile.privacy.contactRevealStage)" />
-        </div>
-
-        <div class="mt-6">
-          <TrustReadinessPanel
-            :profile="profile"
-            title="Public proof and verification"
-            description="Public visitors see the signals that are fast to scan before any private details unlock."
-          />
-        </div>
-
-        <div class="mt-6">
-          <h2 class="text-lg font-semibold">
-            Public highlights
-          </h2>
-          <ul class="muted text-sm leading-7 mt-4 gap-3 grid">
-            <li v-for="item in profile.summaryHighlights" :key="item">
-              {{ item }}
-            </li>
-          </ul>
+        <div class="surface-row mt-6">
+          <p class="text-sm font-semibold">
+            Availability snapshot
+          </p>
+          <p class="muted text-sm leading-6 mt-2">
+            Starts {{ formatStartTimeline(profile.intent.startTimeline) }} · {{ profile.commitmentProfile.weeklyAvailabilityHours }}h/week · contact {{ formatContactRevealStage(profile.privacy.contactRevealStage) }}.
+          </p>
         </div>
       </section>
 
@@ -182,23 +163,21 @@ usePageSeo(profile.displayName, profile.headline, {
           </div>
         </div>
 
-        <div class="panel p-6">
+        <div v-if="publicLinks.length || profile.ventures.length" class="panel p-6">
           <h2 class="text-lg font-semibold">
-            Public links
+            Outside context
           </h2>
           <div class="surface-row-list mt-4">
-            <a v-if="profile.links.linkedin" :href="profile.links.linkedin" target="_blank" rel="ugc nofollow noopener noreferrer" class="surface-row block">LinkedIn</a>
-            <a v-if="profile.links.github" :href="profile.links.github" target="_blank" rel="ugc nofollow noopener noreferrer" class="surface-row block">GitHub</a>
-            <a v-if="profile.links.portfolio" :href="profile.links.portfolio" target="_blank" rel="ugc nofollow noopener noreferrer" class="surface-row block">Portfolio</a>
-            <a v-if="profile.links.website" :href="profile.links.website" target="_blank" rel="ugc nofollow noopener noreferrer" class="surface-row block">Website</a>
-          </div>
-        </div>
-
-        <div class="panel p-6">
-          <h2 class="text-lg font-semibold">
-            Ventures
-          </h2>
-          <div class="surface-row-list mt-4">
+            <a
+              v-for="link in publicLinks"
+              :key="link.label"
+              :href="link.href"
+              target="_blank"
+              rel="ugc nofollow noopener noreferrer"
+              class="surface-row block transition hover:text-[var(--accent)]"
+            >
+              {{ link.label }}
+            </a>
             <div v-for="venture in profile.ventures" :key="venture.id" class="surface-row">
               <p class="font-semibold">
                 {{ venture.name }}
