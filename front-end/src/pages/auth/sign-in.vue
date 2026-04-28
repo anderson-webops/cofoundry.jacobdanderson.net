@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { demoAccounts } from "~/shared/constants/app"
 import { signInSchema } from "~/shared/utils/validation"
 
 definePageMeta({
@@ -12,16 +11,12 @@ usePageSeo("Sign in")
 const authStore = useAuthStore()
 const toastStore = useToastStore()
 const { buildAccessRequestPath, policy } = useProductAccess()
-const defaultDemoAccount = demoAccounts[0] || { email: "", password: "" }
 const accessRequestPath = buildAccessRequestPath("auth-sign-in", "access")
 const talkToTeamPath = buildAccessRequestPath("auth-sign-in", "contact")
-const defaultCredentials = policy.value.showDemoConveniences
-  ? defaultDemoAccount
-  : { email: "", password: "" }
 
 const form = reactive({
-  email: defaultCredentials.email,
-  password: defaultCredentials.password,
+  email: "",
+  password: "",
 })
 const errors = ref<Record<string, string>>({})
 
@@ -44,16 +39,6 @@ async function submitForm() {
   }
   catch {}
 }
-
-async function signInWithProvider(provider: "google" | "github") {
-  const session = await authStore.signInWithProvider(provider)
-  toastStore.push({
-    title: `Signed in with ${provider === "google" ? "Google" : "GitHub"}`,
-    message: `Signed in as ${session.name}.`,
-    tone: "success",
-  })
-  await navigateTo(session.onboardingCompleted ? "/app" : "/onboarding")
-}
 </script>
 
 <template>
@@ -69,9 +54,7 @@ async function signInWithProvider(provider: "google" | "github") {
     <p class="muted text-sm leading-6 mt-3">
       {{ policy.marketingShellOnly
         ? "Use the email already attached to your approved account or invitation."
-        : policy.showDemoConveniences
-          ? "Use a review account or your own credentials to continue."
-          : "Use your account credentials to continue discovery, messaging, proposals, and agreements." }}
+        : "Use your account credentials to continue discovery, messaging, proposals, and agreements." }}
     </p>
 
     <form class="mt-8 gap-4 grid" @submit.prevent="submitForm">
@@ -113,43 +96,6 @@ async function signInWithProvider(provider: "google" | "github") {
       </div>
     </template>
     <template v-else>
-      <template v-if="policy.showDemoConveniences">
-        <div class="muted text-xs tracking-[0.18em] my-6 flex gap-3 uppercase items-center">
-          <span class="bg-[var(--line)] flex-1 h-px" />
-          <span>Or continue with</span>
-          <span class="bg-[var(--line)] flex-1 h-px" />
-        </div>
-
-        <div class="gap-3 grid md:grid-cols-2">
-          <BaseButton variant="secondary" block @click="signInWithProvider('google')">
-            <span class="i-carbon-logo-google" />
-            Google
-          </BaseButton>
-          <BaseButton variant="secondary" block @click="signInWithProvider('github')">
-            <span class="i-carbon-logo-github" />
-            GitHub
-          </BaseButton>
-        </div>
-
-        <div class="panel-inset mt-8 p-4">
-          <p class="text-sm font-semibold">
-            Review accounts
-          </p>
-          <div class="muted text-sm mt-3 gap-2 grid">
-            <button
-              v-for="account in demoAccounts"
-              :key="account.email"
-              type="button"
-              class="px-3 py-2 text-left rounded-2xl bg-[var(--panel-strong)] flex items-center justify-between"
-              @click="form.email = account.email; form.password = account.password"
-            >
-              <span>{{ account.label }}</span>
-              <span>{{ account.email }}</span>
-            </button>
-          </div>
-        </div>
-      </template>
-
       <p class="muted text-sm mt-6">
         New to CoFoundry?
         <NuxtLink to="/auth/sign-up" class="text-[var(--accent)] font-semibold">

@@ -3,7 +3,7 @@ const router = useRouter()
 const { getPrimaryAccessCta } = useProductAccess()
 const primaryAccessCta = computed(() => getPrimaryAccessCta("not-found"))
 
-usePageSeo("Page not found", "The requested CoFoundry page could not be found.", {
+usePageSeo("Page unavailable", "The requested CoFoundry page is unavailable or may have moved.", {
   robots: "noindex, nofollow",
 })
 </script>
@@ -15,10 +15,10 @@ usePageSeo("Page not found", "The requested CoFoundry page could not be found.",
         <span class="i-carbon-warning" />
       </div>
       <h1 class="text-3xl font-semibold">
-        Page not found
+        Page unavailable
       </h1>
       <p class="muted text-sm leading-7 mx-auto mt-4 max-w-lg">
-        The page you requested is unavailable or may have moved. Use the main navigation, return home, or contact the team if you need help finding a route.
+        The page you requested is unavailable or may have moved. Use the main navigation, return home, or contact support if you need help finding the right page.
       </p>
       <div class="mt-8 flex gap-3 justify-center">
         <BaseButton variant="secondary" @click="router.back()">
