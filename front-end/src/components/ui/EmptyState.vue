@@ -3,11 +3,12 @@ defineProps<{
   title: string
   description: string
   icon?: string
+  plain?: boolean
 }>()
 </script>
 
 <template>
-  <div class="panel-inset p-6 flex flex-col gap-4 items-start">
+  <div :class="plain ? 'surface-row flex flex-col gap-4 items-start' : 'panel-inset p-6 flex flex-col gap-4 items-start'">
     <div v-if="icon" class="text-xl text-[var(--accent)] p-3 rounded-2xl bg-[var(--accent-soft)]">
       <span :class="icon" />
     </div>

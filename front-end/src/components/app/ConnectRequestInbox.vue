@@ -36,7 +36,7 @@ function decline(requestId: string) {
       v-for="item in items"
       :id="`${mode === 'incoming' ? 'intro' : 'request'}-${item.request.id}`"
       :key="item.request.id"
-      class="panel p-5 gap-4 grid scroll-mt-28"
+      class="surface-row gap-4 grid scroll-mt-28"
     >
       <div class="flex gap-4 items-start justify-between">
         <div>

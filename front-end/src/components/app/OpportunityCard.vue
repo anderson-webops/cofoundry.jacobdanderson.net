@@ -9,7 +9,7 @@ defineProps<{
 </script>
 
 <template>
-  <article class="panel p-5 flex flex-col gap-5 h-full">
+  <article class="panel p-5 flex flex-col gap-4 h-full">
     <div class="flex gap-4 items-start justify-between">
       <div>
         <h3 class="text-lg font-semibold">
@@ -52,9 +52,6 @@ defineProps<{
     <div class="muted text-sm gap-2 grid">
       <div>Traction: {{ opportunity.traction }}</div>
       <div>Equity range: {{ opportunity.equityRange }}</div>
-      <div v-if="opportunity.officialWebsite">
-        Website: {{ opportunity.officialWebsite }}
-      </div>
     </div>
 
     <div class="mt-auto flex flex-wrap gap-3">

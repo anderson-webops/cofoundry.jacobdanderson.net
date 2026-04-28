@@ -33,29 +33,29 @@ usePageSeo("Privacy Policy", "Product-specific privacy disclosures for CoFoundry
       </template>
     </PageIntro>
 
-    <div class="panel mt-10 p-6 md:p-8">
-      <div>
+    <div class="process-list mt-10">
+      <div class="process-list-item">
         <p class="text-sm font-semibold">
           Last updated
         </p>
-        <p class="muted text-sm leading-6 mt-2">
+        <p class="muted text-sm leading-6">
           {{ privacyLastUpdated }}
         </p>
       </div>
 
-      <div class="subtle-grid subtle-grid-4 mt-6">
-        <div v-for="item in privacyKeyNotes" :key="item.title" class="panel-inset p-4">
+      <article v-for="item in privacyKeyNotes" :key="item.title" class="process-list-item">
+        <div>
           <p class="text-sm font-semibold">
             {{ item.title }}
           </p>
-          <p class="muted text-sm leading-6 mt-3">
-            {{ item.body }}
-          </p>
         </div>
-      </div>
+        <p class="muted text-sm leading-6">
+          {{ item.body }}
+        </p>
+      </article>
     </div>
 
-    <div class="panel mt-10 p-6 md:p-8">
+    <section class="mt-12">
       <div class="flex flex-wrap gap-3 items-end justify-between">
         <div>
           <p class="text-sm font-semibold">
@@ -70,8 +70,8 @@ usePageSeo("Privacy Policy", "Product-specific privacy disclosures for CoFoundry
         </p>
       </div>
 
-      <div class="mt-6 gap-4 grid lg:grid-cols-2">
-        <div v-for="tier in privacyVisibilityTiers" :key="tier.title" class="panel-inset p-5">
+      <div class="process-list mt-6">
+        <article v-for="tier in privacyVisibilityTiers" :key="tier.title" class="process-list-item">
           <div class="flex flex-wrap gap-3 items-center justify-between">
             <h3 class="text-lg font-semibold">
               {{ tier.title }}
@@ -80,17 +80,19 @@ usePageSeo("Privacy Policy", "Product-specific privacy disclosures for CoFoundry
               {{ tier.audience }}
             </BaseBadge>
           </div>
-          <p class="muted text-sm leading-6 mt-4">
-            {{ tier.details }}
-          </p>
-          <p class="text-sm font-semibold mt-4">
-            {{ tier.notes }}
-          </p>
-        </div>
+          <div>
+            <p class="muted text-sm leading-6">
+              {{ tier.details }}
+            </p>
+            <p class="text-sm font-semibold mt-4">
+              {{ tier.notes }}
+            </p>
+          </div>
+        </article>
       </div>
-    </div>
+    </section>
 
-    <div class="panel mt-10 p-6 md:p-8">
+    <section class="mt-12">
       <div class="flex flex-wrap gap-3 items-end justify-between">
         <div>
           <p class="text-sm font-semibold">
@@ -105,23 +107,19 @@ usePageSeo("Privacy Policy", "Product-specific privacy disclosures for CoFoundry
         </p>
       </div>
 
-      <div class="mt-6 gap-4 grid lg:grid-cols-2">
-        <div v-for="category in privacyDataCategories" :key="category.category" class="panel-inset p-5">
+      <div class="process-list mt-6">
+        <article v-for="category in privacyDataCategories" :key="category.category" class="process-list-item">
           <h3 class="text-lg font-semibold">
             {{ category.category }}
           </h3>
-          <p class="muted text-sm leading-6 mt-4">
-            <span class="text-[var(--text)] font-semibold">Examples:</span> {{ category.examples }}
-          </p>
-          <p class="muted text-sm leading-6 mt-3">
-            <span class="text-[var(--text)] font-semibold">Why we use it:</span> {{ category.purposes }}
-          </p>
-          <p class="muted text-sm leading-6 mt-3">
-            <span class="text-[var(--text)] font-semibold">Who can see it:</span> {{ category.visibility }}
-          </p>
-        </div>
+          <div class="muted text-sm leading-6 gap-3 grid">
+            <p><span class="text-[var(--text)] font-semibold">Examples:</span> {{ category.examples }}</p>
+            <p><span class="text-[var(--text)] font-semibold">Why we use it:</span> {{ category.purposes }}</p>
+            <p><span class="text-[var(--text)] font-semibold">Who can see it:</span> {{ category.visibility }}</p>
+          </div>
+        </article>
       </div>
-    </div>
+    </section>
 
     <div class="reading-layout mt-10">
       <aside class="panel p-6 h-fit lg:top-24 lg:sticky">
@@ -139,7 +137,7 @@ usePageSeo("Privacy Policy", "Product-specific privacy disclosures for CoFoundry
           </a>
         </nav>
 
-        <div class="panel-inset mt-6 p-4">
+        <div class="surface-divider mt-6 pt-6">
           <p class="text-sm font-semibold">
             Privacy requests
           </p>
@@ -157,12 +155,12 @@ usePageSeo("Privacy Policy", "Product-specific privacy disclosures for CoFoundry
           </div>
         </div>
 
-        <div class="panel-inset mt-4 p-4">
+        <div class="surface-divider mt-6 pt-6">
           <p class="text-sm font-semibold">
             Retention snapshot
           </p>
           <div class="mt-3 gap-3 grid">
-            <div v-for="row in privacyRetentionRows" :key="row.category" class="p-3 border border-[var(--line)] rounded-2xl">
+            <div v-for="row in privacyRetentionRows" :key="row.category">
               <p class="text-sm font-semibold">
                 {{ row.category }}
               </p>
@@ -179,7 +177,7 @@ usePageSeo("Privacy Policy", "Product-specific privacy disclosures for CoFoundry
           v-for="section in privacySections"
           :id="section.id"
           :key="section.id"
-          class="panel p-6 scroll-mt-28 md:p-8"
+          class="surface-row scroll-mt-28"
         >
           <h2 class="text-2xl font-semibold">
             {{ section.title }}
@@ -208,7 +206,7 @@ usePageSeo("Privacy Policy", "Product-specific privacy disclosures for CoFoundry
           </ul>
         </section>
 
-        <div class="panel p-6 md:p-8">
+        <section class="surface-row">
           <div class="flex flex-wrap gap-3 items-end justify-between">
             <div>
               <p class="text-sm font-semibold">
@@ -223,52 +221,22 @@ usePageSeo("Privacy Policy", "Product-specific privacy disclosures for CoFoundry
             </p>
           </div>
 
-          <div class="mt-6 gap-4 grid md:grid-cols-2 xl:grid-cols-3">
-            <div v-for="row in privacyRetentionRows" :key="`${row.category}-detail`" class="panel-inset p-4">
+          <div class="process-list mt-6">
+            <article v-for="row in privacyRetentionRows" :key="`${row.category}-detail`" class="process-list-item">
               <p class="font-semibold">
                 {{ row.category }}
               </p>
-              <p class="text-sm font-semibold mt-3">
-                {{ row.window }}
-              </p>
-              <p class="muted text-sm leading-6 mt-3">
-                {{ row.notes }}
-              </p>
-            </div>
+              <div>
+                <p class="text-sm font-semibold">
+                  {{ row.window }}
+                </p>
+                <p class="muted text-sm leading-6 mt-3">
+                  {{ row.notes }}
+                </p>
+              </div>
+            </article>
           </div>
-        </div>
-
-        <div class="panel p-6 md:p-8">
-          <h2 class="text-2xl font-semibold">
-            Related Policies
-          </h2>
-          <div class="mt-6 gap-4 grid md:grid-cols-3">
-            <NuxtLink to="/terms" class="panel-inset p-4 transition hover:border-[var(--accent)]">
-              <p class="font-semibold">
-                Terms of Service
-              </p>
-              <p class="muted text-sm leading-6 mt-2">
-                Defines the legal rules for accounts, content, paid plans, proposals, contract templates, and dispute handling.
-              </p>
-            </NuxtLink>
-            <NuxtLink to="/safety" class="panel-inset p-4 transition hover:border-[var(--accent)]">
-              <p class="font-semibold">
-                Trust & Safety
-              </p>
-              <p class="muted text-sm leading-6 mt-2">
-                Explains CoFoundry's anti-scam controls, reporting process, moderation approach, and contact-gating design.
-              </p>
-            </NuxtLink>
-            <NuxtLink to="/contracts" class="panel-inset p-4 transition hover:border-[var(--accent)]">
-              <p class="font-semibold">
-                Contract Resources
-              </p>
-              <p class="muted text-sm leading-6 mt-2">
-                Explains how CoFoundry's proposal and agreement tools work and why generated documents still require legal review.
-              </p>
-            </NuxtLink>
-          </div>
-        </div>
+        </section>
       </div>
     </div>
   </div>

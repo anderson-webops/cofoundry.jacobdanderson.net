@@ -10,7 +10,7 @@ defineProps<{
 </script>
 
 <template>
-  <NuxtLink :to="href" class="panel p-5 block transition hover:-translate-y-0.5">
+  <NuxtLink :to="href" class="surface-row block transition hover:bg-[var(--accent-soft)]">
     <div class="flex gap-4 items-start justify-between">
       <div>
         <h3 class="text-lg font-semibold">

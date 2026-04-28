@@ -256,7 +256,7 @@ function removeFilterChip(chip: { type: string, value?: string }) {
       </div>
     </div>
 
-    <div class="panel p-5 flex flex-col gap-4">
+    <div class="surface-row flex flex-col gap-4">
       <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p class="text-sm font-semibold">
@@ -292,60 +292,9 @@ function removeFilterChip(chip: { type: string, value?: string }) {
       </div>
     </div>
 
-    <div v-if="usage" class="gap-4 grid md:grid-cols-3">
-      <div class="panel p-4">
-        <p class="text-sm font-semibold">
-          New intros
-        </p>
-        <p class="muted text-sm leading-6 mt-2">
-          {{ quotaText("intros") }}. Messaging stays available after a mutual match, but outbound intros are metered to keep discovery calmer.
-        </p>
-      </div>
-      <div class="panel p-4">
-        <p class="text-sm font-semibold">
-          Saved searches
-        </p>
-        <p class="muted text-sm leading-6 mt-2">
-          {{ quotaText("savedSearches") }}. Pro is built for people running a repeatable search process instead of one-off browsing.
-        </p>
-      </div>
-      <div class="panel p-4">
-        <p class="text-sm font-semibold">
-          Why the caps exist
-        </p>
-        <p class="muted text-sm leading-6 mt-2">
-          CoFoundry sells speed and clarity, not inbox spam. Limits apply to high-intent actions so matched conversations can stay free to continue on-platform.
-        </p>
-      </div>
-    </div>
-
-    <div v-if="currentProfile" class="panel p-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-      <div>
-        <p class="text-sm font-semibold">
-          Start with the tightest wedge that could actually convert
-        </p>
-        <p class="muted text-sm leading-6 mt-1">
-          CoFoundry now nudges search toward {{ currentProfile.location }}, {{ currentProfile.startupStagePreferences[0] || "your target stage" }}, and the company shapes you already declared before widening the pool.
-        </p>
-      </div>
-      <p class="muted text-sm">
-        {{ currentProfile.intent.introCapacity || "Set intro capacity" }}
-      </p>
-    </div>
-
-    <div v-if="scope === 'profiles'" class="panel p-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-      <div>
-        <p class="text-sm font-semibold">
-          Ranked for mutual fit, reply likelihood, and local density
-        </p>
-        <p class="muted text-sm leading-6 mt-1">
-          Discovery now favors reciprocity, recent activity, commitment fit, and same-city wedges before it broadens out to the wider network.
-        </p>
-      </div>
-      <p class="text-sm text-[var(--accent)] font-semibold">
-        Reciprocal ranking
-      </p>
-    </div>
+    <p v-if="usage" class="muted text-sm leading-6">
+      Plan limits: {{ quotaText("intros") }}; {{ quotaText("savedSearches") }}. Matched conversations remain available after mutual interest.
+    </p>
 
     <div v-if="scope === 'profiles'" class="gap-4 grid" :class="viewMode === 'card' ? 'lg:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1'">
       <ProfileCard
