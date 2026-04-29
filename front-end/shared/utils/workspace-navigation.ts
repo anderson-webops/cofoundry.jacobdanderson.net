@@ -34,6 +34,12 @@ const workspaceRouteMatchers: WorkspaceRouteMatcher[] = [
     description: "Trace moderation and account actions with a durable record of who changed what.",
   },
   {
+    prefix: "/admin/operations",
+    areaLabel: "Admin workspace",
+    title: "Operations",
+    description: "Review delivery, file scanning, backup, and operational-event records from Supabase-backed production systems.",
+  },
+  {
     prefix: "/admin",
     areaLabel: "Admin workspace",
     title: "Overview",
@@ -62,6 +68,12 @@ const workspaceRouteMatchers: WorkspaceRouteMatcher[] = [
     areaLabel: "Workspace",
     title: "Conversation",
     description: "Keep trust, fit, and next steps visible while a match moves toward a proposal.",
+  },
+  {
+    prefix: "/app/relationships/",
+    areaLabel: "Workspace",
+    title: "Relationship",
+    description: "Work one match through conversation, trial, proposal, agreement, and next action from a single surface.",
   },
   {
     prefix: "/app/messages",

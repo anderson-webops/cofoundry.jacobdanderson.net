@@ -1,6 +1,7 @@
 import { billingCheckoutSchema } from "~/shared/utils/validation"
 import { resolveServerAppUrl } from "../../utils/app-url"
 import { requireAuthenticatedSession } from "../../utils/auth"
+import { createOrReuseStripeCustomer, recordStripeCheckoutSession } from "../../utils/billing-persistence"
 import { assertRateLimit, buildRateLimitKey } from "../../utils/rate-limit"
 import { createStripeClient } from "../../utils/stripe"
 
@@ -42,12 +43,27 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  const customerId = await createOrReuseStripeCustomer(event, stripe, session)
   const checkoutSession = await stripe.checkout.sessions.create({
+    client_reference_id: session.id,
+    customer: customerId,
+    metadata: {
+      cofoundryPlan: payload.plan,
+      cofoundryUserId: session.id,
+    },
     mode: "subscription",
     line_items: [{ price: priceId, quantity: 1 }],
+    subscription_data: {
+      metadata: {
+        cofoundryPlan: payload.plan,
+        cofoundryUserId: session.id,
+      },
+    },
     success_url: `${appUrl}/app/billing?checkout=success&plan=${payload.plan}`,
     cancel_url: `${appUrl}/app/billing?checkout=cancelled`,
   })
+
+  await recordStripeCheckoutSession(event, session.id, checkoutSession.id, customerId)
 
   return {
     mode: "stripe",

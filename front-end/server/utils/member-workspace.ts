@@ -28,6 +28,12 @@ interface PersistedSubscriptionRow {
   proposal_workflow: boolean
   renews_at: string | null
   status: Subscription["status"]
+  stripe_checkout_session_id?: string | null
+  stripe_current_period_end?: string | null
+  stripe_customer_id?: string | null
+  stripe_price_id?: string | null
+  stripe_status?: string | null
+  stripe_subscription_id?: string | null
   unlimited_messaging: boolean
   user_id: string
   visibility_boost: boolean
@@ -140,6 +146,12 @@ function toSubscriptionRow(subscription: Subscription): PersistedSubscriptionRow
     unlimited_messaging: subscription.unlimitedMessaging,
     proposal_workflow: subscription.proposalWorkflow,
     contract_builder: subscription.contractBuilder,
+    stripe_customer_id: subscription.stripeCustomerId || null,
+    stripe_subscription_id: subscription.stripeSubscriptionId || null,
+    stripe_price_id: subscription.stripePriceId || null,
+    stripe_checkout_session_id: subscription.stripeCheckoutSessionId || null,
+    stripe_current_period_end: subscription.stripeCurrentPeriodEnd || null,
+    stripe_status: subscription.stripeStatus || null,
   }
 }
 
@@ -156,6 +168,12 @@ function fromSubscriptionRow(row: PersistedSubscriptionRow): Subscription {
     unlimitedMessaging: row.unlimited_messaging,
     proposalWorkflow: row.proposal_workflow,
     contractBuilder: row.contract_builder,
+    stripeCustomerId: row.stripe_customer_id || null,
+    stripeSubscriptionId: row.stripe_subscription_id || null,
+    stripePriceId: row.stripe_price_id || null,
+    stripeCheckoutSessionId: row.stripe_checkout_session_id || null,
+    stripeCurrentPeriodEnd: row.stripe_current_period_end || null,
+    stripeStatus: row.stripe_status || null,
   }
 }
 
