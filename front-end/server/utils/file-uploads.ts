@@ -3,6 +3,7 @@ import type { z } from "zod"
 import type { SessionUser } from "~/shared/types/domain"
 import type { fileScanResultSchema, fileUploadPolicySchema } from "~/shared/utils/validation"
 import { randomUUID } from "node:crypto"
+import { listLocalPendingFileScans, recordLocalFileScanResult, recordLocalFileUploadPolicy } from "./local-operations-store"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
 
 type FileUploadPolicyPayload = z.infer<typeof fileUploadPolicySchema>
@@ -93,6 +94,9 @@ export async function createFileUploadPolicy(event: H3Event, session: SessionUse
     signedUploadUrl = signed.data.signedUrl
     uploadToken = signed.data.token
   }
+  else {
+    await recordLocalFileUploadPolicy(session, { bucket: privateFileBucket, id: uploadId, objectPath }, payload)
+  }
 
   return {
     bucket: privateFileBucket,
@@ -108,7 +112,7 @@ export async function createFileUploadPolicy(event: H3Event, session: SessionUse
 
 export async function recordFileScanResult(event: H3Event, uploadId: string, payload: FileScanResultPayload) {
   if (!isSupabaseEnabled(event))
-    return null
+    return recordLocalFileScanResult(uploadId, payload)
 
   const adminClient = createSupabaseAdminClient(event)
   if (!adminClient)
@@ -134,7 +138,7 @@ export async function recordFileScanResult(event: H3Event, uploadId: string, pay
 
 export async function listPendingFileScans(event: H3Event, limit: number) {
   if (!isSupabaseEnabled(event))
-    return []
+    return listLocalPendingFileScans(limit)
 
   const adminClient = createSupabaseAdminClient(event)
   if (!adminClient)

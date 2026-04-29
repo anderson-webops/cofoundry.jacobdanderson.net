@@ -64,7 +64,7 @@ function rowDate(row: OpsRow) {
     <PageIntro
       eyebrow="Operations"
       title="Production control surfaces"
-      description="Read-only admin visibility into delivery, file scanning, backups, and operational events once Supabase mode is active."
+      description="Read-only admin visibility into delivery, file scanning, backups, and operational events from Supabase mode or the local mock-mode operations store."
     >
       <template #actions>
         <BaseBadge :tone="data?.mode === 'supabase' ? 'success' : 'neutral'">

@@ -91,6 +91,8 @@ Server-only secrets:
 - `STRIPE_WEBHOOK_SECRET`
 - `SESSION_SIGNING_SECRET`
 - `COFOUNDRY_OPERATIONS_TOKEN`
+- `COFOUNDRY_LOCAL_DATA_DIR`
+- `COFOUNDRY_OPERATIONS_RETENTION_LIMIT`
 - `CONTACT_FROM_EMAIL`
 - `CONTACT_FROM_NAME`
 - `CONTACT_TO_EMAIL`
@@ -108,7 +110,7 @@ If a non-mock mode is enabled without the required public values and server secr
 
 The public contact form now delivers through the server instead of only validating the payload. For production, prefer SMTP so the envelope sender is explicitly controlled by `CONTACT_FROM_EMAIL`. The current delivery target should remain `contacts@jacobdanderson.net`. To move later to an alias-based outbound pattern, set `CONTACT_FROM_EMAIL` to the sending alias, `CONTACT_TO_EMAIL` to the primary destination, and `CONTACT_BCC_EMAIL` to `contacts@jacobdanderson.net`. `CONTACT_USE_SENDMAIL=true` remains available as a local or fallback transport.
 
-The same server mail transport now powers on-demand unread workspace digests from `/app/inbox`. Scheduled digests are exposed through the worker-authenticated `/api/operations/notification-digests/run` endpoint and should be called by a server cron/timer with `COFOUNDRY_OPERATIONS_TOKEN`.
+The same server mail transport now powers on-demand unread workspace digests from `/app/inbox`. Scheduled digests are exposed through the worker-authenticated `/api/operations/notification-digests/run` endpoint and should be called by a server cron/timer with `COFOUNDRY_OPERATIONS_TOKEN`. In mock/access-request mode, operations telemetry is persisted to `.data/operations-telemetry.json` by default, or to `COFOUNDRY_LOCAL_DATA_DIR` when set.
 
 ## Local review accounts
 
@@ -218,6 +220,8 @@ Optional when self-serve billing is live:
 Optional for server-side workers:
 
 - `COFOUNDRY_OPERATIONS_TOKEN`
+- `COFOUNDRY_LOCAL_DATA_DIR`
+- `COFOUNDRY_OPERATIONS_RETENTION_LIMIT`
 
 Provisioning after merge:
 
@@ -228,6 +232,7 @@ Provisioning after merge:
 5. Assign the first real admin user server-side before using `/admin`.
 6. Turn on Stripe env only when checkout and webhook infrastructure are ready.
 7. Configure `COFOUNDRY_OPERATIONS_TOKEN` before enabling scheduled digests, backup-run reporting, operational event ingestion, or file-scan callbacks.
+8. In mock/access-request mode, ensure the app process can write to `.data/operations-telemetry.json` or set `COFOUNDRY_LOCAL_DATA_DIR` to a durable writable host path.
 
 ## Production control surfaces
 
@@ -248,6 +253,8 @@ Worker-authenticated operations endpoints:
 - `POST /api/operations/file-scans/:id` records malware/content scan results for uploaded files.
 
 Each endpoint requires `Authorization: Bearer <COFOUNDRY_OPERATIONS_TOKEN>` or `x-cofoundry-operations-token`. The token is intentionally optional at startup so mock production remains unchanged, but the endpoints fail closed if called before the token is configured.
+
+When Supabase is disabled, these endpoints write durable local telemetry rows to `operations-telemetry.json` with a default retention limit of 200 rows per collection. Set `COFOUNDRY_OPERATIONS_RETENTION_LIMIT` to tune that per-collection limit.
 
 The server-side handoff prompt for wiring these jobs lives at `docs/server-ai-operations-prompt.md`.
 
@@ -290,7 +297,7 @@ Current deployments can stay in mock mode with no secret-backed services enabled
 - `NUXT_PUBLIC_APP_URL` falls back to `http://localhost:3000` only for local development. Production SSR avoids localhost-style defaults and derives request origin when needed.
 - If `NUXT_PUBLIC_BACKEND_MODE="mock"` in a production deployment, the product should stay in marketing-shell mode unless `NUXT_PUBLIC_ENABLE_DEMO_ACCESS="true"` is set deliberately for a staging/demo environment.
 - `SESSION_SIGNING_SECRET`, `COFOUNDRY_OPERATIONS_TOKEN`, `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`, and `STRIPE_WEBHOOK_SECRET` should stay externalized through Vault-managed or host-managed secret injection, not committed env files.
-- Backup and observability migrations create `backup_runs` and `operational_events` tables. Source routes now accept worker reports, but the actual backup schedule, restore drill, log drain, and alerting provider are still server/operator provisioning tasks.
+- Backup and observability migrations create `backup_runs` and `operational_events` tables. Source routes now accept worker reports and persist them locally in mock mode, but the actual backup schedule, restore drill, log drain, and alerting provider are still server/operator provisioning tasks.
 
 ## Route surfaces
 

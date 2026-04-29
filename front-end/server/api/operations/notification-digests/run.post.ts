@@ -1,7 +1,9 @@
 import type { User } from "~/shared/types/domain"
+import { workspaceSeed } from "~/shared/data/seed"
 import { operationsDigestRunSchema } from "~/shared/utils/validation"
+import { buildSessionUser } from "~/shared/utils/workspace"
 import { loadMemberWorkspaceState } from "../../../utils/member-workspace"
-import { sendUnreadNotificationDigest } from "../../../utils/notification-delivery"
+import { buildDigestSubject, recordNotificationDelivery, sendUnreadNotificationDigest } from "../../../utils/notification-delivery"
 import { requireOperationsWorker } from "../../../utils/operations-auth"
 import { assertRateLimit, buildRateLimitKey } from "../../../utils/rate-limit"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "../../../utils/supabase"
@@ -15,6 +17,19 @@ interface DigestUserRow {
 
 function displayNameForEmail(email: string) {
   return email.split("@")[0] || "CoFoundry member"
+}
+
+function unreadCountForUser(userId: string) {
+  return workspaceSeed.notifications.filter(notification => notification.userId === userId && !notification.readAt).length
+}
+
+function selectMockDigestSessions(options: { maxUsers: number, onlyWithUnread: boolean, userId?: string }) {
+  return workspaceSeed.users
+    .filter(user => !options.userId || user.id === options.userId)
+    .map(user => buildSessionUser(workspaceSeed, user.id))
+    .filter((session): session is NonNullable<typeof session> => Boolean(session))
+    .filter(session => !options.onlyWithUnread || unreadCountForUser(session.id) > 0)
+    .slice(0, options.maxUsers)
 }
 
 async function selectUnreadUserIds(adminClient: NonNullable<ReturnType<typeof createSupabaseAdminClient>>, maxUsers: number) {
@@ -73,14 +88,54 @@ export default defineEventHandler(async (event) => {
   const payload = operationsDigestRunSchema.parse(await readBody(event))
 
   if (!isSupabaseEnabled(event)) {
+    const sessions = selectMockDigestSessions(payload)
+    const results = []
+
+    for (const session of sessions) {
+      const unreadCount = unreadCountForUser(session.id)
+      const reason = payload.dryRun ? "dry_run" : "mock_mode"
+
+      await recordNotificationDelivery(event, session, {
+        configured: false,
+        delivered: false,
+        error: reason === "dry_run" ? "Dry run; no email sent." : "Mock mode records scheduled digest runs without sending email.",
+        subject: buildDigestSubject(unreadCount),
+        unreadCount,
+      })
+
+      results.push({
+        delivered: false,
+        reason,
+        unreadCount,
+        userId: session.id,
+      })
+    }
+
+    if (!sessions.length) {
+      await recordNotificationDelivery(event, {
+        email: "operations-worker@cofoundry.local",
+        id: "operations-worker",
+        name: "Operations worker",
+        onboardingCompleted: true,
+        role: "admin",
+        subscriptionPlan: "free",
+      }, {
+        configured: false,
+        delivered: false,
+        error: "No mock users matched the scheduled digest criteria.",
+        subject: "CoFoundry: scheduled digest run",
+        unreadCount: 0,
+      })
+    }
+
     return {
       dryRun: payload.dryRun,
       failures: [],
       mode: "mock",
-      processed: 0,
-      results: [],
+      processed: sessions.length,
+      results,
       sent: 0,
-      skipped: 0,
+      skipped: sessions.length || 1,
     }
   }
 
