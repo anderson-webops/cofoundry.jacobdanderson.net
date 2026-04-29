@@ -154,3 +154,8 @@ export const adminReportStatusSchema = z.object({
   status: z.enum(["reviewed", "resolved"]),
   notes: z.string().trim().min(8, "Add a short moderation note.").max(500, "Keep the moderation note concise."),
 })
+
+export const privacyRequestSchema = z.object({
+  details: z.string().trim().min(12, "Add enough detail for support to handle the request.").max(1000, "Keep the request concise."),
+  type: z.enum(["data_export", "account_deletion", "correction", "visibility", "safety_privacy"]),
+})

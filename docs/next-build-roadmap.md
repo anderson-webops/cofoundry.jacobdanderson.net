@@ -63,16 +63,11 @@ Current persisted slice:
 - frontend workspace hydration from `/api/workspace`
 - safe member-owned writes through `/api/workspace/member`
 
-Still local/mock for now:
+Still local/mock or partially server-backed for now:
 
-- connect requests
-- matches
-- conversations and messages
-- trial collaborations
-- proposals and proposal comments
-- contracts and signatures
-- notifications
-- moderation persistence
+- collaboration writes are server-routed and Supabase-persisted when Supabase mode is active, but the relationship workspace still needs more granular read endpoints and realtime refresh
+- notifications persist with collaboration state, but outbound email/digest delivery is not implemented
+- moderation enforcement now persists user/report/admin-action updates in Supabase mode, but privacy-request resolution still needs richer operator workflow and user notification
 
 Backend-owned entities:
 
@@ -105,12 +100,18 @@ Required result:
 
 Backend requirements:
 
-- user role claims
-- admin role enforcement
-- audit log persistence
-- suspend / reinstate
-- report review / resolve
+- user role claims: started
+- admin role enforcement: started
+- audit log persistence: started for admin user/report actions in Supabase mode
+- suspend / reinstate: started with Supabase persistence
+- report review / resolve: started with Supabase persistence
 - bootstrap admin creation path
+
+Additional production controls now started:
+
+- server-side rate limits on auth, contact, billing, collaboration, member writes, inbox reads, admin actions, exports, and privacy requests
+- JSON account data export from settings
+- privacy request submission from settings and `/admin/privacy` review queue
 
 ### 4. Production billing path
 

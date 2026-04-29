@@ -3,6 +3,7 @@ import { createError, setResponseStatus } from "h3"
 import { contactSchema } from "~/shared/utils/validation"
 
 import { isContactMailConfigured, sendContactMessage } from "../utils/contact"
+import { assertRateLimit, buildRateLimitKey } from "../utils/rate-limit"
 
 export default defineEventHandler(async (event) => {
   const payload = contactSchema.parse(await readBody(event))
@@ -11,6 +12,13 @@ export default defineEventHandler(async (event) => {
     setResponseStatus(event, 202)
     return { success: true }
   }
+
+  assertRateLimit(event, {
+    key: buildRateLimitKey(event, payload.email),
+    limit: 5,
+    scope: "contact",
+    windowMs: 10 * 60 * 1000,
+  })
 
   if (!isContactMailConfigured()) {
     throw createError({

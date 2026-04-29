@@ -28,6 +28,8 @@ export type InvestmentApplicationStatus = "draft" | "submitted" | "under_review"
 export type NotificationType = "match" | "message" | "proposal" | "contract" | "billing" | "admin"
 export type BookmarkTargetType = "profile" | "opportunity"
 export type SavedSearchScope = "profiles" | "opportunities"
+export type PrivacyRequestStatus = "open" | "reviewed" | "resolved"
+export type PrivacyRequestType = "data_export" | "account_deletion" | "correction" | "visibility" | "safety_privacy"
 export type StartTimeline = "immediately" | "30_days" | "90_days" | "exploring"
 export type TrialStatus = "draft" | "active" | "completed"
 export type ContactRevealStage = "matches" | "proposal_accepted" | "contract_generated"
@@ -487,6 +489,21 @@ export interface AdminAction {
   targetType: AdminActionTargetType
   notes: string
   createdAt: string
+}
+
+export interface PrivacyRequest {
+  id: string
+  userId: string
+  type: PrivacyRequestType
+  details: string
+  status: PrivacyRequestStatus
+  createdAt: string
+  reviewNotes: string | null
+  reviewedAt: string | null
+  reviewedByUserId: string | null
+  resolutionNotes: string | null
+  resolvedAt: string | null
+  resolvedByUserId: string | null
 }
 
 export interface InvestmentApplication {
