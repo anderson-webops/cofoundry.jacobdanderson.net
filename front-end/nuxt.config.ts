@@ -58,6 +58,7 @@ export default defineNuxtConfig({
     classSuffix: "",
   },
   runtimeConfig: {
+    operationsWorkerToken: environment.secret.operationsWorkerToken,
     stripeSecretKey: environment.secret.stripeSecretKey,
     stripeWebhookSecret: environment.secret.stripeWebhookSecret,
     supabaseServiceRoleKey: environment.secret.supabaseServiceRoleKey,
