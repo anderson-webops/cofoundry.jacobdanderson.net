@@ -24,6 +24,7 @@ export interface PublicEnvironment {
 }
 
 export interface SecretEnvironment {
+  operationsWorkerToken: string
   sessionSigningSecret: string
   stripeSecretKey: string
   stripeWebhookSecret: string
@@ -85,6 +86,7 @@ export function readPublicEnvironment(env: EnvironmentSource): PublicEnvironment
 
 export function readSecretEnvironment(env: EnvironmentSource): SecretEnvironment {
   return {
+    operationsWorkerToken: readValue(env, "COFOUNDRY_OPERATIONS_TOKEN") || readValue(env, "OPERATIONS_WORKER_TOKEN"),
     sessionSigningSecret: readValue(env, "NUXT_SESSION_SIGNING_SECRET") || readValue(env, "SESSION_SIGNING_SECRET"),
     stripeSecretKey: readValue(env, "STRIPE_SECRET_KEY"),
     stripeWebhookSecret: readValue(env, "STRIPE_WEBHOOK_SECRET"),

@@ -155,6 +155,34 @@ export const fileScanResultSchema = z.object({
   status: z.enum(["uploaded", "blocked", "deleted"]).optional(),
 })
 
+export const operationsBackupRunSchema = z.object({
+  artifactUri: z.string().trim().max(500, "Artifact URI is too long.").nullable().optional(),
+  completedAt: z.string().datetime("Use an ISO timestamp.").nullable().optional(),
+  id: z.string().trim().min(1).max(120).optional(),
+  metadata: z.record(z.string(), z.unknown()).default({}),
+  notes: z.string().trim().max(1000, "Backup notes are too long.").nullable().optional(),
+  provider: z.string().trim().min(2).max(120).default("external"),
+  startedAt: z.string().datetime("Use an ISO timestamp.").optional(),
+  status: z.enum(["scheduled", "running", "succeeded", "failed"]),
+})
+
+export const operationsDigestRunSchema = z.object({
+  dryRun: z.boolean().default(false),
+  maxUsers: z.number().int().min(1).max(200).default(100),
+  onlyWithUnread: z.boolean().default(true),
+  userId: z.string().trim().min(1).max(120).optional(),
+})
+
+export const operationsEventSchema = z.object({
+  actorUserId: z.string().trim().min(1).max(120).nullable().optional(),
+  eventType: z.string().trim().min(2).max(120),
+  metadata: z.record(z.string(), z.unknown()).default({}),
+  severity: z.enum(["info", "warning", "error"]).default("info"),
+  source: z.string().trim().min(2).max(120),
+  targetId: z.string().trim().min(1).max(120).nullable().optional(),
+  targetType: z.string().trim().min(1).max(80).nullable().optional(),
+})
+
 export const reportSchema = z.object({
   reason: z.enum(["spam", "misrepresentation", "harassment", "off_platform_solicitation", "scam_fraud", "impersonation", "data_harvesting", "privacy_violation"]),
   details: z.string().min(12, "Add enough detail for moderation to understand the issue."),

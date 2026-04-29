@@ -90,6 +90,7 @@ Server-only secrets:
 - `STRIPE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET`
 - `SESSION_SIGNING_SECRET`
+- `COFOUNDRY_OPERATIONS_TOKEN`
 - `CONTACT_FROM_EMAIL`
 - `CONTACT_FROM_NAME`
 - `CONTACT_TO_EMAIL`
@@ -107,7 +108,7 @@ If a non-mock mode is enabled without the required public values and server secr
 
 The public contact form now delivers through the server instead of only validating the payload. For production, prefer SMTP so the envelope sender is explicitly controlled by `CONTACT_FROM_EMAIL`. The current delivery target should remain `contacts@jacobdanderson.net`. To move later to an alias-based outbound pattern, set `CONTACT_FROM_EMAIL` to the sending alias, `CONTACT_TO_EMAIL` to the primary destination, and `CONTACT_BCC_EMAIL` to `contacts@jacobdanderson.net`. `CONTACT_USE_SENDMAIL=true` remains available as a local or fallback transport.
 
-The same server mail transport now powers on-demand unread workspace digests from `/app/inbox`. Scheduled digests still require an external cron or queue worker to call the digest endpoint or a future internal scheduler.
+The same server mail transport now powers on-demand unread workspace digests from `/app/inbox`. Scheduled digests are exposed through the worker-authenticated `/api/operations/notification-digests/run` endpoint and should be called by a server cron/timer with `COFOUNDRY_OPERATIONS_TOKEN`.
 
 ## Local review accounts
 
@@ -214,6 +215,10 @@ Optional when self-serve billing is live:
 - `STRIPE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET`
 
+Optional for server-side workers:
+
+- `COFOUNDRY_OPERATIONS_TOKEN`
+
 Provisioning after merge:
 
 1. Apply all SQL migrations in `back-end/supabase/migrations/` in timestamp order.
@@ -222,6 +227,7 @@ Provisioning after merge:
 4. Enable the desired auth providers in Supabase.
 5. Assign the first real admin user server-side before using `/admin`.
 6. Turn on Stripe env only when checkout and webhook infrastructure are ready.
+7. Configure `COFOUNDRY_OPERATIONS_TOKEN` before enabling scheduled digests, backup-run reporting, operational event ingestion, or file-scan callbacks.
 
 ## Production control surfaces
 
@@ -230,8 +236,20 @@ Provisioning after merge:
 - Account settings include a JSON data export and a privacy-request submission path.
 - Admins can review Supabase-backed privacy requests at `/admin/privacy`.
 - Supabase migrations include RLS policies for user-owned, participant-owned, admin-only, notification, privacy, file-upload, backup, and operational tables.
-- File uploads are represented by server-owned metadata and signed Supabase upload policies against the private `cofoundry-private-files` bucket. A malware/content scanner still needs to run outside the app and report results through the admin scan endpoint.
+- File uploads are represented by server-owned metadata and signed Supabase upload policies against the private `cofoundry-private-files` bucket. A malware/content scanner still needs to run outside the app and report results through `/api/operations/file-scans/:id`.
 - Relationship workspaces now have a server read endpoint and `/app/relationships/:id` page that aggregates conversation, trial, proposal, agreement, unread, and next-action state.
+
+Worker-authenticated operations endpoints:
+
+- `POST /api/operations/notification-digests/run` sends unread workspace digests across Supabase users. It accepts `{ "dryRun": true, "maxUsers": 100, "onlyWithUnread": true }` for safe verification.
+- `POST /api/operations/backup-runs` records backup job lifecycle events in `backup_runs`.
+- `POST /api/operations/events` records deploy, worker, scanner, backup, and monitoring events in `operational_events`.
+- `GET /api/operations/file-scans/pending?limit=25` returns pending upload metadata with short-lived signed download URLs for a scanner worker.
+- `POST /api/operations/file-scans/:id` records malware/content scan results for uploaded files.
+
+Each endpoint requires `Authorization: Bearer <COFOUNDRY_OPERATIONS_TOKEN>` or `x-cofoundry-operations-token`. The token is intentionally optional at startup so mock production remains unchanged, but the endpoints fail closed if called before the token is configured.
+
+The server-side handoff prompt for wiring these jobs lives at `docs/server-ai-operations-prompt.md`.
 
 ## Billing notes
 
@@ -271,8 +289,8 @@ Current deployments can stay in mock mode with no secret-backed services enabled
 - The repo is already wired so that moving from mock mode to Supabase or Stripe is a config change, not another refactor.
 - `NUXT_PUBLIC_APP_URL` falls back to `http://localhost:3000` only for local development. Production SSR avoids localhost-style defaults and derives request origin when needed.
 - If `NUXT_PUBLIC_BACKEND_MODE="mock"` in a production deployment, the product should stay in marketing-shell mode unless `NUXT_PUBLIC_ENABLE_DEMO_ACCESS="true"` is set deliberately for a staging/demo environment.
-- `SESSION_SIGNING_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`, and `STRIPE_WEBHOOK_SECRET` should stay externalized through Vault-managed or host-managed secret injection, not committed env files.
-- Backup and observability migrations create `backup_runs` and `operational_events` tables, but the actual backup schedule, restore drill, log drain, and alerting provider are still server/operator provisioning tasks.
+- `SESSION_SIGNING_SECRET`, `COFOUNDRY_OPERATIONS_TOKEN`, `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`, and `STRIPE_WEBHOOK_SECRET` should stay externalized through Vault-managed or host-managed secret injection, not committed env files.
+- Backup and observability migrations create `backup_runs` and `operational_events` tables. Source routes now accept worker reports, but the actual backup schedule, restore drill, log drain, and alerting provider are still server/operator provisioning tasks.
 
 ## Route surfaces
 

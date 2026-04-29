@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { adminReportStatusSchema, adminUserModerationSchema, billingCheckoutSchema, contactSchema, minimumOnboardingSchema, onboardingSchema, opportunitySchema, privacyRequestSchema, proposalSchema, reportSchema, signUpSchema } from "../../shared/utils/validation"
+import { adminReportStatusSchema, adminUserModerationSchema, billingCheckoutSchema, contactSchema, minimumOnboardingSchema, onboardingSchema, operationsBackupRunSchema, operationsDigestRunSchema, operationsEventSchema, opportunitySchema, privacyRequestSchema, proposalSchema, reportSchema, signUpSchema } from "../../shared/utils/validation"
 
 describe("validation schemas", () => {
   it("accepts a valid sign-up payload", () => {
@@ -188,5 +188,31 @@ describe("validation schemas", () => {
 
     expect(valid.success).toBe(true)
     expect(invalid.success).toBe(false)
+  })
+
+  it("accepts operations worker payloads", () => {
+    const digestRun = operationsDigestRunSchema.parse({})
+    const backupRun = operationsBackupRunSchema.safeParse({
+      artifactUri: "s3://cofoundry-backups/prod/2026-04-29.sql.gz",
+      completedAt: "2026-04-29T04:10:00.000Z",
+      metadata: { bytes: 1024 },
+      provider: "supabase-pg-dump",
+      startedAt: "2026-04-29T04:00:00.000Z",
+      status: "succeeded",
+    })
+    const operationalEvent = operationsEventSchema.safeParse({
+      eventType: "backup.completed",
+      metadata: { runId: "backup-20260429" },
+      severity: "info",
+      source: "systemd-timer",
+    })
+
+    expect(digestRun).toEqual({
+      dryRun: false,
+      maxUsers: 100,
+      onlyWithUnread: true,
+    })
+    expect(backupRun.success).toBe(true)
+    expect(operationalEvent.success).toBe(true)
   })
 })

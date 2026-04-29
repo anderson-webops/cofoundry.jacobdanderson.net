@@ -23,6 +23,7 @@ export interface PublicEnvironment {
 }
 
 export interface SecretEnvironment {
+  operationsWorkerToken: string
   stripeSecretKey: string
   stripeWebhookSecret: string
   supabaseServiceRoleKey: string
@@ -77,6 +78,7 @@ export function readPublicEnvironment(env: EnvironmentSource): PublicEnvironment
 
 export function readSecretEnvironment(env: EnvironmentSource): SecretEnvironment {
   return {
+    operationsWorkerToken: readValue(env, "COFOUNDRY_OPERATIONS_TOKEN") || readValue(env, "OPERATIONS_WORKER_TOKEN"),
     stripeSecretKey: readValue(env, "STRIPE_SECRET_KEY"),
     stripeWebhookSecret: readValue(env, "STRIPE_WEBHOOK_SECRET"),
     supabaseServiceRoleKey: readValue(env, "SUPABASE_SERVICE_ROLE_KEY"),

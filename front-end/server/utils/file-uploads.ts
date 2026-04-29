@@ -8,6 +8,20 @@ import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
 type FileUploadPolicyPayload = z.infer<typeof fileUploadPolicySchema>
 type FileScanResultPayload = z.infer<typeof fileScanResultSchema>
 
+interface PendingFileScanRow {
+  bucket: string
+  created_at: string
+  id: string
+  mime_type: string
+  object_path: string
+  original_filename: string
+  owner_user_id: string
+  purpose: string
+  related_id: string | null
+  related_type: string | null
+  size_bytes: number
+}
+
 const privateFileBucket = "cofoundry-private-files"
 const allowedMimeTypes = new Set([
   "application/pdf",
@@ -116,4 +130,47 @@ export async function recordFileScanResult(event: H3Event, uploadId: string, pay
     throw error
 
   return data
+}
+
+export async function listPendingFileScans(event: H3Event, limit: number) {
+  if (!isSupabaseEnabled(event))
+    return []
+
+  const adminClient = createSupabaseAdminClient(event)
+  if (!adminClient)
+    throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
+
+  const { data, error } = await adminClient
+    .from("file_uploads")
+    .select("id,owner_user_id,bucket,object_path,original_filename,mime_type,size_bytes,purpose,related_type,related_id,created_at")
+    .eq("scan_status", "pending")
+    .eq("status", "pending")
+    .order("created_at", { ascending: true })
+    .limit(limit)
+
+  if (error)
+    throw error
+
+  const rows = (data || []) as PendingFileScanRow[]
+  return Promise.all(rows.map(async (row) => {
+    const signed = await adminClient.storage
+      .from(row.bucket)
+      .createSignedUrl(row.object_path, 10 * 60)
+
+    return {
+      bucket: row.bucket,
+      createdAt: row.created_at,
+      id: row.id,
+      mimeType: row.mime_type,
+      objectPath: row.object_path,
+      originalFilename: row.original_filename,
+      ownerUserId: row.owner_user_id,
+      purpose: row.purpose,
+      relatedId: row.related_id,
+      relatedType: row.related_type,
+      signedDownloadError: signed.error?.message || null,
+      signedDownloadUrl: signed.data?.signedUrl || null,
+      sizeBytes: row.size_bytes,
+    }
+  }))
 }
