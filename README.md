@@ -107,13 +107,13 @@ If a non-mock mode is enabled without the required public values and server secr
 
 The public contact form now delivers through the server instead of only validating the payload. For production, prefer SMTP so the envelope sender is explicitly controlled by `CONTACT_FROM_EMAIL`. The current delivery target should remain `contacts@jacobdanderson.net`. To move later to an alias-based outbound pattern, set `CONTACT_FROM_EMAIL` to the sending alias, `CONTACT_TO_EMAIL` to the primary destination, and `CONTACT_BCC_EMAIL` to `contacts@jacobdanderson.net`. `CONTACT_USE_SENDMAIL=true` remains available as a local or fallback transport.
 
-## Review accounts
+## Local review accounts
 
 - Founder review account: `olivia@cofoundry.dev` / `founder123`
 - Collaborator review account: `malik@cofoundry.dev` / `builder123`
 - Admin review account: `ava@cofoundry.dev` / `admin123`
 
-Google and GitHub buttons work in local review mode by signing into seeded review identities.
+Seeded review credentials remain available for local and explicitly enabled staging review environments. They are no longer advertised as one-click review shortcuts in the sign-in UI.
 
 ## Root scripts
 
@@ -214,12 +214,19 @@ Optional when self-serve billing is live:
 
 Provisioning after merge:
 
-1. Apply `back-end/supabase/migrations/20260410190000_initial.sql`.
+1. Apply all SQL migrations in `back-end/supabase/migrations/` in timestamp order.
 2. Run `npm run seed` against the target Supabase project.
 3. Configure `SESSION_SIGNING_SECRET` in the server environment or Vault injection.
 4. Enable the desired auth providers in Supabase.
 5. Assign the first real admin user server-side before using `/admin`.
 6. Turn on Stripe env only when checkout and webhook infrastructure are ready.
+
+## Production control surfaces
+
+- Sensitive endpoints now have server-side rate limits for auth, contact, billing checkout, collaboration writes, member workspace writes, admin actions, inbox read transitions, data exports, and privacy requests.
+- Admin moderation actions persist user suspension, report status changes, and audit actions in Supabase mode.
+- Account settings include a JSON data export and a privacy-request submission path.
+- Admins can review Supabase-backed privacy requests at `/admin/privacy`.
 
 ## Billing notes
 

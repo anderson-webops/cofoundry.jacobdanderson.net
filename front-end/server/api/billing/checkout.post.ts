@@ -1,9 +1,18 @@
 import { billingCheckoutSchema } from "~/shared/utils/validation"
 import { resolveServerAppUrl } from "../../utils/app-url"
+import { requireAuthenticatedSession } from "../../utils/auth"
+import { assertRateLimit, buildRateLimitKey } from "../../utils/rate-limit"
 import { createStripeClient } from "../../utils/stripe"
 
 export default defineEventHandler(async (event) => {
   const runtimeConfig = useRuntimeConfig(event)
+  const session = await requireAuthenticatedSession(event)
+  assertRateLimit(event, {
+    key: buildRateLimitKey(event, session.id),
+    limit: 10,
+    scope: "billing:checkout",
+    windowMs: 10 * 60 * 1000,
+  })
   const payload = billingCheckoutSchema.parse(await readBody(event))
   const appUrl = resolveServerAppUrl(event)
 
@@ -33,7 +42,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const session = await stripe.checkout.sessions.create({
+  const checkoutSession = await stripe.checkout.sessions.create({
     mode: "subscription",
     line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${appUrl}/app/billing?checkout=success&plan=${payload.plan}`,
@@ -42,6 +51,6 @@ export default defineEventHandler(async (event) => {
 
   return {
     mode: "stripe",
-    checkoutUrl: session.url,
+    checkoutUrl: checkoutSession.url,
   }
 })

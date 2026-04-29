@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ContactRevealStage } from "~/shared/types/domain"
+import type { ContactRevealStage, PrivacyRequestType } from "~/shared/types/domain"
 import { contactRevealStageOptions } from "~/shared/constants/options"
 import { formatContactRevealStage, formatTrustTier } from "~/shared/utils/format"
 import { buildProfileTrustTier } from "~/shared/utils/formation"
@@ -15,7 +15,18 @@ const toastStore = useToastStore()
 const { policy } = useProductAccess()
 const { authStore, profile, workspaceStore } = useCurrentMember()
 const contactRevealStage = ref<ContactRevealStage>(profile.value?.privacy.contactRevealStage || "matches")
+const exportingData = ref(false)
+const privacyRequestDetails = ref("")
+const privacyRequestSubmitting = ref(false)
+const privacyRequestType = ref<PrivacyRequestType>("account_deletion")
 const trustTier = computed(() => profile.value ? buildProfileTrustTier(profile.value) : "level_a")
+const privacyRequestOptions = [
+  { label: "Account deletion", value: "account_deletion" },
+  { label: "Data export help", value: "data_export" },
+  { label: "Data correction", value: "correction" },
+  { label: "Visibility request", value: "visibility" },
+  { label: "Safety or privacy concern", value: "safety_privacy" },
+]
 
 watch(profile, (value) => {
   contactRevealStage.value = value?.privacy.contactRevealStage || "matches"
@@ -40,6 +51,58 @@ function resetDemoData() {
     message: "The local review workspace was restored to the seeded state.",
     tone: "success",
   })
+}
+
+async function downloadDataExport() {
+  if (!import.meta.client)
+    return
+
+  exportingData.value = true
+
+  try {
+    const payload = await $fetch("/api/account/export")
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" })
+    const href = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = href
+    link.download = `cofoundry-data-export-${new Date().toISOString().slice(0, 10)}.json`
+    link.click()
+    URL.revokeObjectURL(href)
+    toastStore.push({
+      title: "Export prepared",
+      message: "Your account export was generated locally as a JSON file.",
+      tone: "success",
+    })
+  }
+  finally {
+    exportingData.value = false
+  }
+}
+
+async function submitPrivacyRequest() {
+  if (!privacyRequestDetails.value.trim())
+    return
+
+  privacyRequestSubmitting.value = true
+
+  try {
+    await $fetch("/api/account/privacy-request", {
+      method: "POST",
+      body: {
+        details: privacyRequestDetails.value,
+        type: privacyRequestType.value,
+      },
+    })
+    privacyRequestDetails.value = ""
+    toastStore.push({
+      title: "Request recorded",
+      message: "The privacy request was recorded for operator follow-up.",
+      tone: "success",
+    })
+  }
+  finally {
+    privacyRequestSubmitting.value = false
+  }
 }
 
 function verify(type: "phone" | "linkedin" | "github" | "website" | "work_domain" | "government_id", label: string) {
@@ -163,6 +226,38 @@ function verify(type: "phone" | "linkedin" | "github" | "website" | "work_domain
           <BaseButton variant="secondary" @click="resetDemoData">
             Reset review workspace
           </BaseButton>
+        </div>
+      </div>
+
+      <div class="panel p-6">
+        <h2 class="text-lg font-semibold">
+          Data and privacy requests
+        </h2>
+        <p class="muted text-sm leading-6 mt-4">
+          Download your current account data or create a privacy request for deletion, correction, visibility, or safety follow-up.
+        </p>
+        <div class="mt-5 flex flex-wrap gap-3">
+          <BaseButton variant="secondary" :disabled="exportingData" @click="downloadDataExport">
+            {{ exportingData ? "Preparing export..." : "Download data export" }}
+          </BaseButton>
+        </div>
+        <div class="surface-divider mt-5 gap-4 grid">
+          <SelectInput
+            v-model="privacyRequestType"
+            label="Request type"
+            :options="privacyRequestOptions"
+          />
+          <TextareaInput
+            v-model="privacyRequestDetails"
+            label="Request details"
+            helper="Include the account, data, or visibility issue you want reviewed."
+            :rows="4"
+          />
+          <div class="flex justify-end">
+            <BaseButton :disabled="privacyRequestSubmitting || privacyRequestDetails.trim().length < 12" @click="submitPrivacyRequest">
+              {{ privacyRequestSubmitting ? "Recording..." : "Submit privacy request" }}
+            </BaseButton>
+          </div>
         </div>
       </div>
     </div>

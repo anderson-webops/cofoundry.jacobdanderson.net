@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { adminReportStatusSchema, adminUserModerationSchema, billingCheckoutSchema, contactSchema, minimumOnboardingSchema, onboardingSchema, opportunitySchema, proposalSchema, reportSchema, signUpSchema } from "../../shared/utils/validation"
+import { adminReportStatusSchema, adminUserModerationSchema, billingCheckoutSchema, contactSchema, minimumOnboardingSchema, onboardingSchema, opportunitySchema, privacyRequestSchema, proposalSchema, reportSchema, signUpSchema } from "../../shared/utils/validation"
 
 describe("validation schemas", () => {
   it("accepts a valid sign-up payload", () => {
@@ -174,5 +174,19 @@ describe("validation schemas", () => {
 
     expect(userAction.success).toBe(true)
     expect(reportAction.success).toBe(true)
+  })
+
+  it("requires useful detail for privacy requests", () => {
+    const valid = privacyRequestSchema.safeParse({
+      details: "Please delete my account and confirm whether any legal hold applies.",
+      type: "account_deletion",
+    })
+    const invalid = privacyRequestSchema.safeParse({
+      details: "Delete it.",
+      type: "account_deletion",
+    })
+
+    expect(valid.success).toBe(true)
+    expect(invalid.success).toBe(false)
   })
 })
