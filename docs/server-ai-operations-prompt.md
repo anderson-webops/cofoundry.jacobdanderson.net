@@ -15,14 +15,16 @@ Source/runtime context:
 - Backend production start remains `node dist/server.js`; do not add dotenv/dotenvx loading to production startup.
 - Server-only secrets must come from Vault-managed or host-managed env files.
 - The app now supports a server-only `COFOUNDRY_OPERATIONS_TOKEN`.
+- In mock/access-request mode, operations telemetry persists to `.data/operations-telemetry.json` unless `COFOUNDRY_LOCAL_DATA_DIR` points at another durable writable directory.
 
 Tasks:
 1. Pull and deploy the latest `main` commit or the current `v1.x` release tag.
 2. Generate a long random `COFOUNDRY_OPERATIONS_TOKEN` and add it to the Vault/host env file consumed by the Nuxt server process only.
-3. Restart the app and verify production logs do not mention loading `../.env`.
-4. If Supabase mode is not intentionally enabled, leave `NUXT_PUBLIC_BACKEND_MODE="mock"` and verify the public site remains a marketing/access-request shell.
-5. If Supabase mode is intentionally enabled, verify all migrations in `back-end/supabase/migrations/` have been applied and that `SUPABASE_SERVICE_ROLE_KEY`, `NUXT_PUBLIC_SUPABASE_URL`, `NUXT_PUBLIC_SUPABASE_ANON_KEY`, and `SESSION_SIGNING_SECRET` are present.
-6. Create a systemd timer or equivalent cron for unread digests. First run dry-run mode:
+3. Ensure the app process can write to `.data/operations-telemetry.json`, or set `COFOUNDRY_LOCAL_DATA_DIR` to a durable writable host path and optionally set `COFOUNDRY_OPERATIONS_RETENTION_LIMIT`.
+4. Restart the app and verify production logs do not mention loading `../.env`.
+5. If Supabase mode is not intentionally enabled, leave `NUXT_PUBLIC_BACKEND_MODE="mock"` and verify the public site remains a marketing/access-request shell.
+6. If Supabase mode is intentionally enabled, verify all migrations in `back-end/supabase/migrations/` have been applied and that `SUPABASE_SERVICE_ROLE_KEY`, `NUXT_PUBLIC_SUPABASE_URL`, `NUXT_PUBLIC_SUPABASE_ANON_KEY`, and `SESSION_SIGNING_SECRET` are present.
+7. Create a systemd timer or equivalent cron for unread digests. First run dry-run mode:
 
    curl -fsS -X POST "$NUXT_PUBLIC_APP_URL/api/operations/notification-digests/run" \
      -H "Authorization: Bearer $COFOUNDRY_OPERATIONS_TOKEN" \
@@ -31,7 +33,7 @@ Tasks:
 
    After dry-run verification and SMTP verification, switch `dryRun` to `false`.
 
-7. Wire the database backup job to report lifecycle state:
+8. Wire the database backup job to report lifecycle state:
 
    curl -fsS -X POST "$NUXT_PUBLIC_APP_URL/api/operations/backup-runs" \
      -H "Authorization: Bearer $COFOUNDRY_OPERATIONS_TOKEN" \
@@ -40,7 +42,7 @@ Tasks:
 
    On success or failure, call the same endpoint with `status`, `completedAt`, `artifactUri`, `notes`, and useful metadata.
 
-8. Wire the file scanner worker to read the app-managed pending scan queue:
+9. Wire the file scanner worker to read the app-managed pending scan queue:
 
    curl -fsS "$NUXT_PUBLIC_APP_URL/api/operations/file-scans/pending?limit=25" \
      -H "Authorization: Bearer $COFOUNDRY_OPERATIONS_TOKEN"
@@ -52,13 +54,13 @@ Tasks:
      -H "Content-Type: application/json" \
      --data '{"scanStatus":"clean","status":"uploaded","notes":"Scanner name/version and signature timestamp"}'
 
-9. Wire deploy, backup, scanner, and monitoring failures into:
+10. Wire deploy, backup, scanner, and monitoring failures into:
 
    curl -fsS -X POST "$NUXT_PUBLIC_APP_URL/api/operations/events" \
      -H "Authorization: Bearer $COFOUNDRY_OPERATIONS_TOKEN" \
      -H "Content-Type: application/json" \
      --data '{"eventType":"backup.failed","severity":"error","source":"systemd-timer","metadata":{"runId":"backup-YYYYMMDD-HHMM"}}'
 
-10. Verify `/admin/operations` shows backup runs, operational events, file uploads, and notification deliveries when logged in as an admin.
-11. Document timer names, log paths, backup artifact location, scanner command, restore test procedure, and rollback command in the server runbook.
+11. Verify `/admin/operations` shows backup runs, operational events, file uploads, and notification deliveries when logged in as an admin.
+12. Document timer names, log paths, backup artifact location, scanner command, restore test procedure, local telemetry path, retention limit, and rollback command in the server runbook.
 ```

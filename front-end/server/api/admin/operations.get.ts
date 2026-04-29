@@ -1,4 +1,5 @@
 import { requireAdminSession } from "../../utils/admin"
+import { readLocalOperationsRows } from "../../utils/local-operations-store"
 import { assertRateLimit, buildRateLimitKey } from "../../utils/rate-limit"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "../../utils/supabase"
 
@@ -25,15 +26,8 @@ export default defineEventHandler(async (event) => {
     windowMs: 60 * 1000,
   })
 
-  if (!isSupabaseEnabled(event)) {
-    return {
-      backupRuns: [],
-      fileUploads: [],
-      mode: "mock",
-      notificationDeliveries: [],
-      operationalEvents: [],
-    }
-  }
+  if (!isSupabaseEnabled(event))
+    return readLocalOperationsRows()
 
   const adminClient = createSupabaseAdminClient(event)
   if (!adminClient)

@@ -2,6 +2,7 @@ import type { H3Event } from "h3"
 import type { z } from "zod"
 import type { operationsBackupRunSchema, operationsEventSchema } from "~/shared/utils/validation"
 import { randomUUID } from "node:crypto"
+import { recordLocalBackupRun, recordLocalOperationalEvent } from "./local-operations-store"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
 
 type OperationsBackupRunPayload = z.infer<typeof operationsBackupRunSchema>
@@ -9,7 +10,7 @@ type OperationsEventPayload = z.infer<typeof operationsEventSchema>
 
 export async function recordBackupRun(event: H3Event, payload: OperationsBackupRunPayload) {
   if (!isSupabaseEnabled(event))
-    return null
+    return recordLocalBackupRun(payload)
 
   const adminClient = createSupabaseAdminClient(event)
   if (!adminClient)
@@ -40,7 +41,7 @@ export async function recordBackupRun(event: H3Event, payload: OperationsBackupR
 
 export async function recordOperationalEvent(event: H3Event, payload: OperationsEventPayload) {
   if (!isSupabaseEnabled(event))
-    return null
+    return recordLocalOperationalEvent(payload)
 
   const adminClient = createSupabaseAdminClient(event)
   if (!adminClient)

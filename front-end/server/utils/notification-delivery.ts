@@ -2,9 +2,10 @@ import type { H3Event } from "h3"
 import type { SessionUser, WorkspaceSeed } from "~/shared/types/domain"
 import { randomUUID } from "node:crypto"
 import { isContactMailConfigured, sendPlainTextEmail } from "./contact"
+import { recordLocalNotificationDelivery } from "./local-operations-store"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
 
-interface NotificationDeliveryResult {
+export interface NotificationDeliveryResult {
   configured: boolean
   delivered: boolean
   error: string | null
@@ -12,7 +13,7 @@ interface NotificationDeliveryResult {
   unreadCount: number
 }
 
-function buildDigestSubject(unreadCount: number) {
+export function buildDigestSubject(unreadCount: number) {
   return unreadCount === 1
     ? "CoFoundry: 1 workspace item needs attention"
     : `CoFoundry: ${unreadCount} workspace items need attention`
@@ -48,9 +49,9 @@ function buildDigestBody(seed: WorkspaceSeed, session: SessionUser) {
   }
 }
 
-async function recordDelivery(event: H3Event, session: SessionUser, result: NotificationDeliveryResult) {
+export async function recordNotificationDelivery(event: H3Event, session: SessionUser, result: NotificationDeliveryResult) {
   if (!isSupabaseEnabled(event))
-    return
+    return recordLocalNotificationDelivery(session, result)
 
   const adminClient = createSupabaseAdminClient(event)
   if (!adminClient)
@@ -86,7 +87,7 @@ export async function sendUnreadNotificationDigest(event: H3Event, seed: Workspa
       subject,
       unreadCount: unreadNotifications.length,
     }
-    await recordDelivery(event, session, result)
+    await recordNotificationDelivery(event, session, result)
     return result
   }
 
@@ -104,7 +105,7 @@ export async function sendUnreadNotificationDigest(event: H3Event, seed: Workspa
       subject,
       unreadCount: unreadNotifications.length,
     }
-    await recordDelivery(event, session, result)
+    await recordNotificationDelivery(event, session, result)
     return result
   }
   catch (error) {
@@ -115,7 +116,7 @@ export async function sendUnreadNotificationDigest(event: H3Event, seed: Workspa
       subject,
       unreadCount: unreadNotifications.length,
     }
-    await recordDelivery(event, session, result)
+    await recordNotificationDelivery(event, session, result)
     return result
   }
 }
