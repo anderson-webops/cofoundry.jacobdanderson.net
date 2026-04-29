@@ -140,6 +140,21 @@ export const billingCheckoutSchema = z.object({
   interval: z.enum(["monthly", "annual"]).default("monthly"),
 })
 
+export const fileUploadPolicySchema = z.object({
+  filename: z.string().trim().min(1, "Filename is required.").max(180, "Filename is too long."),
+  mimeType: z.string().trim().min(3, "File type is required.").max(120, "File type is too long."),
+  purpose: z.enum(["message_attachment", "proposal_attachment", "contract_attachment", "trust_evidence"]),
+  relatedType: z.enum(["message", "proposal", "contract", "profile", "opportunity"]).nullable().optional(),
+  relatedId: z.string().trim().min(1).max(120).nullable().optional(),
+  sizeBytes: z.number().int().positive("File size must be positive.").max(10 * 1024 * 1024, "Files must be 10MB or smaller."),
+})
+
+export const fileScanResultSchema = z.object({
+  notes: z.string().trim().max(500, "Scan notes are too long.").nullable().optional(),
+  scanStatus: z.enum(["clean", "flagged", "failed", "skipped"]),
+  status: z.enum(["uploaded", "blocked", "deleted"]).optional(),
+})
+
 export const reportSchema = z.object({
   reason: z.enum(["spam", "misrepresentation", "harassment", "off_platform_solicitation", "scam_fraud", "impersonation", "data_harvesting", "privacy_violation"]),
   details: z.string().min(12, "Add enough detail for moderation to understand the issue."),

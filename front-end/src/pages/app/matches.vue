@@ -98,6 +98,9 @@ async function acknowledgeTrial(match: ReturnType<typeof getMatchesForUser>[numb
             >
               Show agenda
             </BaseButton>
+            <BaseButton variant="secondary" :to="`/app/relationships/${match.id}`">
+              Open workspace
+            </BaseButton>
           </div>
         </div>
         <TrustSignalStrip v-if="matchPartner(match)" :profile="matchPartner(match)!" />

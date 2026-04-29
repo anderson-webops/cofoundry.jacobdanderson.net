@@ -106,6 +106,13 @@ function buildRawMessage({
   ].join("\r\n")
 }
 
+export interface PlainTextEmailPayload {
+  body: string
+  replyTo?: string
+  subject: string
+  toEmail?: string
+}
+
 class SmtpLineReader {
   private buffer = ""
   private error: Error | null = null
@@ -428,6 +435,33 @@ export function isContactMailConfigured() {
   }
 }
 
+export async function sendPlainTextEmail(payload: PlainTextEmailPayload) {
+  const mailConfig = getContactMailConfig()
+  if (!mailConfig) {
+    throw new Error("Contact mail is not configured")
+  }
+
+  const targetConfig = {
+    ...mailConfig,
+    toEmail: payload.toEmail || mailConfig.toEmail,
+  }
+  const message = buildRawMessage({
+    body: payload.body,
+    fromEmail: targetConfig.fromEmail,
+    fromName: targetConfig.fromName,
+    replyTo: payload.replyTo || targetConfig.fromEmail,
+    subject: payload.subject,
+    toEmail: targetConfig.toEmail,
+  })
+
+  if (targetConfig.kind === "smtp") {
+    await sendViaSmtp(targetConfig, message)
+    return
+  }
+
+  await sendRawSendmail(targetConfig, message)
+}
+
 function formatHeaderLine(label: string, value?: string) {
   return value ? `${label}: ${value}` : undefined
 }
@@ -458,19 +492,11 @@ export async function sendContactMessage(payload: ContactPayload, event: H3Event
     .join("\n")
 
   const subject = `[cofoundry.jacobdanderson.net] Contact form from ${payload.name}: ${payload.subject}`
-  const message = buildRawMessage({
+
+  await sendPlainTextEmail({
     body: `${metadata}\n\nMessage:\n${payload.message}`,
-    fromEmail: mailConfig.fromEmail,
-    fromName: mailConfig.fromName,
     replyTo: payload.email,
     subject,
     toEmail: mailConfig.toEmail,
   })
-
-  if (mailConfig.kind === "smtp") {
-    await sendViaSmtp(mailConfig, message)
-    return
-  }
-
-  await sendRawSendmail(mailConfig, message)
 }

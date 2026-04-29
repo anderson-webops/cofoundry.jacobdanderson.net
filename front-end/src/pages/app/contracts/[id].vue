@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ContractRedlineChange } from "~/shared/utils/contract-documents"
 import { getSubscriptionEntitlements } from "~/shared/utils/billing"
 import { formatDate } from "~/shared/utils/format"
 import { buildProposalTermsSummary } from "~/shared/utils/proposals"
@@ -25,6 +26,9 @@ const signatures = computed(() => workspaceStore.data.signatures.filter(signatur
 const entitlements = computed(() => getSubscriptionEntitlements(subscription.value || undefined))
 const previewOnly = computed(() => !entitlements.value.canSignContracts)
 const editDialogOpen = ref(false)
+const redlineOpen = ref(false)
+const redlinePending = ref(false)
+const redlineChanges = ref<ContractRedlineChange[]>([])
 const signatureName = ref("")
 const signatureError = ref("")
 
@@ -40,6 +44,39 @@ function printContract() {
 
   if (import.meta.client)
     window.print()
+}
+
+function downloadContract() {
+  if (!contract.value)
+    return
+
+  if (previewOnly.value) {
+    toastStore.push({
+      title: "Export requires Pro",
+      message: "Agreement export is available on paid plans.",
+      tone: "warning",
+    })
+    return
+  }
+
+  if (import.meta.client)
+    window.location.assign(`/api/contracts/${contract.value.id}/export`)
+}
+
+async function loadRedline() {
+  if (!contract.value)
+    return
+
+  redlinePending.value = true
+
+  try {
+    const response = await $fetch<{ changes: ContractRedlineChange[] }>(`/api/contracts/${contract.value.id}/redline`)
+    redlineChanges.value = response.changes
+    redlineOpen.value = true
+  }
+  finally {
+    redlinePending.value = false
+  }
 }
 
 function saveContractVersion(payload: any) {
@@ -155,6 +192,12 @@ async function signContract() {
             <BaseButton variant="ghost" :disabled="previewOnly" @click="printContract">
               {{ previewOnly ? "Print requires Pro" : "Print / Save PDF" }}
             </BaseButton>
+            <BaseButton variant="ghost" :disabled="previewOnly" @click="downloadContract">
+              {{ previewOnly ? "Export requires Pro" : "Download text" }}
+            </BaseButton>
+            <BaseButton variant="secondary" :disabled="redlinePending" @click="loadRedline">
+              {{ redlinePending ? "Checking..." : "View redline" }}
+            </BaseButton>
             <BaseButton v-if="previewOnly" variant="secondary" to="/app/billing">
               Upgrade plan
             </BaseButton>
@@ -171,6 +214,45 @@ async function signContract() {
         <BaseBadge :tone="previewOnly ? 'warning' : 'neutral'">
           {{ previewOnly ? "Preview only" : "Signature-ready" }}
         </BaseBadge>
+      </div>
+      <div v-if="redlineOpen" class="panel-inset mt-5 p-4">
+        <div class="flex flex-wrap gap-3 items-start justify-between">
+          <div>
+            <h2 class="font-semibold">
+              Version redline
+            </h2>
+            <p class="muted text-sm leading-6 mt-2">
+              Field-level changes from the immediately prior version.
+            </p>
+          </div>
+          <BaseButton variant="ghost" size="sm" @click="redlineOpen = false">
+            Close
+          </BaseButton>
+        </div>
+
+        <div v-if="redlineChanges.length" class="surface-row-list mt-4">
+          <div v-for="change in redlineChanges" :key="change.field" class="surface-row">
+            <p class="text-sm font-semibold">
+              {{ change.label }}
+            </p>
+            <p class="muted text-xs tracking-[0.12em] mt-3 uppercase">
+              Previous
+            </p>
+            <p class="muted text-sm leading-6 mt-1">
+              {{ change.before }}
+            </p>
+            <p class="muted text-xs tracking-[0.12em] mt-4 uppercase">
+              Current
+            </p>
+            <p class="text-sm leading-6 mt-1">
+              {{ change.after }}
+            </p>
+          </div>
+        </div>
+
+        <p v-else class="muted text-sm leading-6 mt-4">
+          No prior version changes were found.
+        </p>
       </div>
       <div class="text-sm leading-7 mt-6 gap-5 grid">
         <div>

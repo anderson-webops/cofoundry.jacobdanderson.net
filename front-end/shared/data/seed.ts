@@ -1650,6 +1650,7 @@ export const workspaceSeed: WorkspaceSeed = {
       createdAt: ts(10, "15:10"),
     },
   ],
+  fileUploads: [],
   savedSearches: [
     {
       id: "saved_search_1",

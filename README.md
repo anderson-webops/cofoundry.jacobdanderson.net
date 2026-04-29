@@ -18,7 +18,7 @@ Production-minded MVP for a founder and collaborator matching platform, organize
 - VueUse
 - Nitro server routes inside the frontend workspace
 - Supabase-ready schema and seed path
-- Stripe-ready checkout route with mock billing mode
+- Stripe-ready checkout, webhook sync, and customer portal routes with mock billing mode
 - npm workspaces at the repo root
 
 ## Product focus
@@ -106,6 +106,8 @@ Server-only secrets:
 If a non-mock mode is enabled without the required public values and server secrets, startup fails with a clear error. In mock mode, the current production-safe mock behavior remains unchanged.
 
 The public contact form now delivers through the server instead of only validating the payload. For production, prefer SMTP so the envelope sender is explicitly controlled by `CONTACT_FROM_EMAIL`. The current delivery target should remain `contacts@jacobdanderson.net`. To move later to an alias-based outbound pattern, set `CONTACT_FROM_EMAIL` to the sending alias, `CONTACT_TO_EMAIL` to the primary destination, and `CONTACT_BCC_EMAIL` to `contacts@jacobdanderson.net`. `CONTACT_USE_SENDMAIL=true` remains available as a local or fallback transport.
+
+The same server mail transport now powers on-demand unread workspace digests from `/app/inbox`. Scheduled digests still require an external cron or queue worker to call the digest endpoint or a future internal scheduler.
 
 ## Local review accounts
 
@@ -227,6 +229,9 @@ Provisioning after merge:
 - Admin moderation actions persist user suspension, report status changes, and audit actions in Supabase mode.
 - Account settings include a JSON data export and a privacy-request submission path.
 - Admins can review Supabase-backed privacy requests at `/admin/privacy`.
+- Supabase migrations include RLS policies for user-owned, participant-owned, admin-only, notification, privacy, file-upload, backup, and operational tables.
+- File uploads are represented by server-owned metadata and signed Supabase upload policies against the private `cofoundry-private-files` bucket. A malware/content scanner still needs to run outside the app and report results through the admin scan endpoint.
+- Relationship workspaces now have a server read endpoint and `/app/relationships/:id` page that aggregates conversation, trial, proposal, agreement, unread, and next-action state.
 
 ## Billing notes
 
@@ -234,6 +239,8 @@ The frontend checkout route lives at `front-end/server/api/billing/checkout.post
 
 - In mock mode it redirects back into `/app/billing?checkout=success&plan=...`
 - In Stripe mode it creates a Stripe Checkout Session using env-driven price IDs
+- `/api/billing/webhook` verifies Stripe signatures and syncs checkout/subscription updates into the Supabase subscription row
+- `/api/billing/portal` creates a Stripe Customer Portal session for self-service billing management
 - The MVP treats subscriptions as SaaS access. There is no mandatory platform equity in billing
 
 Stripe mode env requirements:
@@ -248,6 +255,13 @@ Stripe mode env requirements:
 
 If `NUXT_PUBLIC_BILLING_MODE="stripe"` is enabled without that configuration, startup fails with a clear error so production never drifts into a half-configured payment state.
 
+Stripe production setup after deploy:
+
+1. Create the Pro and Team monthly Prices and set the public price IDs.
+2. Register `https://<production-host>/api/billing/webhook` for `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, and `customer.subscription.deleted`.
+3. Configure the Stripe Customer Portal in the Stripe dashboard before exposing self-service plan management.
+4. Keep `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` in Vault-managed or host-managed server env.
+
 ## Production secret model
 
 Current deployments can stay in mock mode with no secret-backed services enabled.
@@ -258,6 +272,7 @@ Current deployments can stay in mock mode with no secret-backed services enabled
 - `NUXT_PUBLIC_APP_URL` falls back to `http://localhost:3000` only for local development. Production SSR avoids localhost-style defaults and derives request origin when needed.
 - If `NUXT_PUBLIC_BACKEND_MODE="mock"` in a production deployment, the product should stay in marketing-shell mode unless `NUXT_PUBLIC_ENABLE_DEMO_ACCESS="true"` is set deliberately for a staging/demo environment.
 - `SESSION_SIGNING_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`, and `STRIPE_WEBHOOK_SECRET` should stay externalized through Vault-managed or host-managed secret injection, not committed env files.
+- Backup and observability migrations create `backup_runs` and `operational_events` tables, but the actual backup schedule, restore drill, log drain, and alerting provider are still server/operator provisioning tasks.
 
 ## Route surfaces
 

@@ -14,11 +14,14 @@ const route = useRoute()
 const toastStore = useToastStore()
 const { getServiceLabels } = useProductAccess()
 const { authStore, subscription, workspaceStore } = useCurrentMember()
+const runtimeConfig = useRuntimeConfig()
 const serviceLabels = getServiceLabels()
 
 const pendingPlan = ref("")
+const pendingPortal = ref(false)
 const billingModeLabel = computed(() => serviceLabels.billing)
 const currentPriceLabel = computed(() => getPlanPriceLabel(subscription.value?.plan || "free", subscription.value?.billingCycle || "monthly"))
+const stripeBillingMode = computed(() => runtimeConfig.public.billingMode === "stripe")
 
 watchEffect(() => {
   const checkout = route.query.checkout
@@ -50,6 +53,29 @@ async function startCheckout(plan: "pro" | "team") {
   }
   finally {
     pendingPlan.value = ""
+  }
+}
+
+async function openBillingPortal() {
+  pendingPortal.value = true
+
+  try {
+    const response = await $fetch<{ mode: string, portalUrl: string }>("/api/billing/portal", {
+      method: "POST",
+    })
+
+    if (response.mode === "mock") {
+      toastStore.push({
+        title: "Billing portal preview",
+        message: "Self-serve Stripe management is not live in this environment.",
+        tone: "info",
+      })
+    }
+
+    await navigateTo(response.portalUrl, { external: true })
+  }
+  finally {
+    pendingPortal.value = false
   }
 }
 
@@ -147,6 +173,14 @@ function toggleCancellation() {
       <div class="mt-5 flex flex-wrap gap-3">
         <BaseButton
           v-if="subscription?.plan !== 'free'"
+          :disabled="pendingPortal"
+          variant="primary"
+          @click="openBillingPortal"
+        >
+          {{ pendingPortal ? "Opening..." : "Manage billing" }}
+        </BaseButton>
+        <BaseButton
+          v-if="subscription?.plan !== 'free' && !stripeBillingMode"
           :variant="subscription?.cancelAtPeriodEnd ? 'secondary' : 'danger'"
           @click="toggleCancellation"
         >

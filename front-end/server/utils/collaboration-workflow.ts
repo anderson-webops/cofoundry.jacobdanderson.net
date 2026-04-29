@@ -8,6 +8,7 @@ import type {
   ProposalSectionKey,
   ProposalStatus,
   SessionUser,
+  Signature,
 } from "~/shared/types/domain"
 import {
   acknowledgeTrialCollaborationTransition,
@@ -30,6 +31,7 @@ import {
   updateProposalStatusTransition,
 } from "~/shared/utils/collaboration"
 import { getContractById, getCurrentProposalVersion, getProposalById } from "~/shared/utils/workspace"
+import { recordContractSignatureEvent } from "./contract-signatures"
 import { persistServerCollaborationState } from "./member-collaboration"
 import { loadMemberWorkspaceState } from "./member-workspace"
 
@@ -71,6 +73,7 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
   let nextSeed = workspace.seed
   let result: Record<string, string | null> = {}
   let affectedUsers = [session.id]
+  let signatureEvent: { signature: Signature, typedName: string } | null = null
 
   switch (payload.action) {
     case "send_connect_request": {
@@ -204,7 +207,11 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
       if (!isContractParticipant(nextSeed, contract, session.id))
         throw createError({ statusCode: 403, statusMessage: "You are not part of this contract." })
 
+      const existingSignatureIds = new Set(nextSeed.signatures.map(signature => signature.id))
       nextSeed = signContractTransition(nextSeed, payload.contractId, session.id, payload.typedName, actedAt)
+      const newSignature = nextSeed.signatures.find(signature => !existingSignatureIds.has(signature.id))
+      if (newSignature)
+        signatureEvent = { signature: newSignature, typedName: payload.typedName }
       const proposal = getProposalById(nextSeed, contract.proposalId)
       affectedUsers = proposal ? [proposal.createdByUserId, proposal.recipientUserId] : [session.id]
       result = { contractId: contract.id }
@@ -242,6 +249,8 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
   }
 
   await persistForUsers(event, affectedUsers, nextSeed)
+  if (signatureEvent)
+    await recordContractSignatureEvent(event, signatureEvent.signature, signatureEvent.typedName)
 
   return {
     data: nextSeed,

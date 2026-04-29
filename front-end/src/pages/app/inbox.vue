@@ -9,13 +9,38 @@ definePageMeta({
 
 usePageSeo("Inbox")
 
+const toastStore = useToastStore()
 const { authStore, workspaceStore } = useCurrentMember()
 const currentUserId = computed(() => authStore.currentUser?.id || "")
+const digestPending = ref(false)
 
 const inboxSnapshot = computed(() => currentUserId.value ? buildInboxSnapshot(workspaceStore.data, currentUserId.value) : null)
 
 async function markNotificationRead(notificationId: string) {
   await workspaceStore.markNotificationRead(notificationId)
+}
+
+async function sendDigest() {
+  digestPending.value = true
+
+  try {
+    const response = await $fetch<{ configured: boolean, delivered: boolean, unreadCount: number }>("/api/notifications/digest", {
+      method: "POST",
+    })
+
+    toastStore.push({
+      title: response.delivered ? "Digest sent" : response.configured ? "Digest could not be sent" : "Email not configured",
+      message: response.delivered
+        ? `${response.unreadCount} unread workspace item${response.unreadCount === 1 ? "" : "s"} sent to your account email.`
+        : response.configured
+          ? "The server accepted the request, but the mail provider rejected delivery."
+          : "The server will record digest attempts once SMTP or sendmail is configured.",
+      tone: response.delivered ? "success" : "info",
+    })
+  }
+  finally {
+    digestPending.value = false
+  }
 }
 </script>
 
@@ -43,9 +68,14 @@ async function markNotificationRead(notificationId: string) {
             Work these from top to bottom before opening more surface area. The order favors direct replies, explicit terms, and signatures over passive browsing.
           </p>
         </div>
-        <BaseButton variant="secondary" to="/app/discover">
-          Find new fits
-        </BaseButton>
+        <div class="flex flex-wrap gap-3">
+          <BaseButton variant="secondary" :disabled="digestPending" @click="sendDigest">
+            {{ digestPending ? "Sending..." : "Email digest" }}
+          </BaseButton>
+          <BaseButton variant="secondary" to="/app/discover">
+            Find new fits
+          </BaseButton>
+        </div>
       </div>
 
       <div v-if="inboxSnapshot?.actions.length" class="surface-row-list mt-5">
