@@ -10,13 +10,16 @@ usePageSeo("Operations")
 
 type OpsRow = Record<string, unknown>
 
-const { data, pending, refresh } = await useAsyncData("admin-operations", () => $fetch<{
+interface OperationsPayload {
   backupRuns: OpsRow[]
   fileUploads: OpsRow[]
   mode: string
   notificationDeliveries: OpsRow[]
   operationalEvents: OpsRow[]
-}>("/api/admin/operations"))
+}
+
+const requestFetch = useRequestFetch()
+const { data, pending, refresh } = await useAsyncData("admin-operations", () => requestFetch<OperationsPayload>("/api/admin/operations"))
 
 const cards = computed(() => [
   {
