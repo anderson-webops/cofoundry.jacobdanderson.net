@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { signUpSchema } from "~/shared/utils/validation"
+import type { AccessRequest } from "~/shared/types/domain"
+import { accessRequestSchema, signUpSchema } from "~/shared/utils/validation"
 
 definePageMeta({
   layout: "auth",
@@ -8,18 +9,82 @@ definePageMeta({
 
 usePageSeo("Create account")
 
+interface InviteValidation {
+  request: AccessRequest | null
+  valid: boolean
+}
+
 const authStore = useAuthStore()
 const toastStore = useToastStore()
+const route = useRoute()
 const { buildAccessRequestPath, policy } = useProductAccess()
-const accessRequestPath = buildAccessRequestPath("auth-sign-up", "access")
 const pricingPath = buildAccessRequestPath("auth-sign-up", "pricing")
+const inviteToken = typeof route.query.invite === "string" ? route.query.invite.trim() : ""
+const inviteEmail = typeof route.query.email === "string" ? route.query.email.trim() : ""
+const requestSource = typeof route.query.source === "string" ? route.query.source.trim() : "auth-sign-up"
+const inviteValidation = ref<InviteValidation>({ request: null, valid: false })
+
+if (inviteToken) {
+  try {
+    inviteValidation.value = await $fetch<InviteValidation>("/api/access-requests/invite", {
+      query: {
+        email: inviteEmail,
+        token: inviteToken,
+      },
+    })
+  }
+  catch {
+    inviteValidation.value = { request: null, valid: false }
+  }
+}
 
 const form = reactive({
-  name: "",
-  email: "",
+  email: inviteValidation.value.request?.email || inviteEmail,
+  inviteToken: inviteToken || undefined,
+  name: inviteValidation.value.request?.name || "",
   password: "",
 })
 const errors = ref<Record<string, string>>({})
+const accessForm = reactive({
+  company: "",
+  companyStage: "not_sure",
+  email: inviteEmail,
+  name: "",
+  role: "founder",
+  source: requestSource,
+  timeline: "exploring",
+  useCase: "",
+  website: "",
+})
+const accessErrors = ref<Record<string, string>>({})
+const accessPending = ref(false)
+const accessSubmitted = ref(false)
+
+const shouldShowAccountForm = computed(() => !policy.value.marketingShellOnly || inviteValidation.value.valid)
+
+const roleOptions = [
+  { label: "Founder", value: "founder" },
+  { label: "Collaborator", value: "collaborator" },
+  { label: "Venture studio", value: "studio" },
+  { label: "Investor", value: "investor" },
+  { label: "Other", value: "other" },
+]
+
+const stageOptions = [
+  { label: "Idea", value: "idea" },
+  { label: "Prototype", value: "prototype" },
+  { label: "MVP", value: "mvp" },
+  { label: "Revenue", value: "revenue" },
+  { label: "Growth", value: "growth" },
+  { label: "Not sure", value: "not_sure" },
+]
+
+const timelineOptions = [
+  { label: "Ready now", value: "now" },
+  { label: "Within 30 days", value: "30_days" },
+  { label: "Within 90 days", value: "90_days" },
+  { label: "Still exploring", value: "exploring" },
+]
 
 async function submitForm() {
   errors.value = {}
@@ -40,6 +105,37 @@ async function submitForm() {
   }
   catch {}
 }
+
+async function submitAccessRequest() {
+  accessErrors.value = {}
+  const result = accessRequestSchema.safeParse(accessForm)
+  if (!result.success) {
+    accessErrors.value = Object.fromEntries(result.error.issues.map(issue => [issue.path[0] as string, issue.message]))
+    return
+  }
+
+  accessPending.value = true
+  try {
+    await $fetch("/api/access-requests", {
+      body: result.data,
+      method: "POST",
+    })
+    accessSubmitted.value = true
+    toastStore.push({
+      title: "Request received",
+      message: "The team can review this request from the admin workspace.",
+      tone: "success",
+    })
+  }
+  catch (caughtError) {
+    accessErrors.value = {
+      form: caughtError instanceof Error ? caughtError.message : "The request could not be submitted.",
+    }
+  }
+  finally {
+    accessPending.value = false
+  }
+}
 </script>
 
 <template>
@@ -47,29 +143,67 @@ async function submitForm() {
     <p class="section-kicker">
       Create account
     </p>
-    <template v-if="policy.marketingShellOnly">
+    <template v-if="!shouldShowAccountForm">
       <h2 class="text-3xl tracking-tight font-semibold mt-3">
         Request workspace access.
       </h2>
       <p class="muted text-sm leading-6 mt-3">
-        Workspace access is approved directly so members and teams start with the right setup.
+        Workspace access is reviewed directly so new members start with the right setup before discovery, messaging, proposals, and agreements open.
       </p>
 
-      <div class="panel-inset mt-8 p-5">
-        <p class="text-sm font-semibold">
-          Include these details in your request
+      <div v-if="inviteToken" class="panel-inset mt-8 p-5 border border-[var(--warning)]">
+        <p class="text-sm text-[var(--warning)] font-semibold">
+          This invite link is no longer valid.
         </p>
-        <div class="muted text-sm leading-6 mt-3 gap-3 grid">
-          <div>Your role in the search: founder, collaborator, or venture studio lead.</div>
-          <div>The company or problem space you are actively working on.</div>
-          <div>Whether you need individual access, team setup, or pricing.</div>
+        <p class="muted text-sm leading-6 mt-2">
+          Request access again or contact the team if you expected this invite to work.
+        </p>
+      </div>
+
+      <div v-if="accessSubmitted" class="panel-inset mt-8 p-5">
+        <p class="text-sm font-semibold">
+          Request received.
+        </p>
+        <p class="muted text-sm leading-6 mt-2">
+          An operator can review this from the admin access-request queue and issue an invite if the workspace is a fit.
+        </p>
+        <div class="mt-5 flex flex-wrap gap-3">
+          <BaseButton variant="secondary" to="/auth/sign-in">
+            Sign in
+          </BaseButton>
+          <BaseButton variant="secondary" to="/find-cofounder">
+            Browse public directory
+          </BaseButton>
         </div>
       </div>
 
-      <div class="mt-8 flex flex-wrap gap-3">
-        <BaseButton :to="accessRequestPath">
-          Request access
+      <form v-else class="mt-8 gap-4 grid" @submit.prevent="submitAccessRequest">
+        <TextInput v-model="accessForm.name" label="Full name" :error="accessErrors.name" required />
+        <TextInput v-model="accessForm.email" label="Email" type="email" :error="accessErrors.email" required />
+        <TextInput v-model="accessForm.company" label="Company or project" helper="Use the company name, project name, or problem space if there is no company yet." :error="accessErrors.company" />
+        <div class="gap-4 grid sm:grid-cols-3">
+          <SelectInput v-model="accessForm.role" label="Role" :options="roleOptions" :error="accessErrors.role" />
+          <SelectInput v-model="accessForm.companyStage" label="Stage" :options="stageOptions" :error="accessErrors.companyStage" />
+          <SelectInput v-model="accessForm.timeline" label="Timeline" :options="timelineOptions" :error="accessErrors.timeline" />
+        </div>
+        <TextareaInput
+          v-model="accessForm.useCase"
+          label="What do you need CoFoundry for?"
+          placeholder="Share enough context for an operator to understand the founder/collaborator search, team setup, proposal workflow, or agreement workflow you want to use."
+          helper="Minimum 40 characters."
+          :rows="6"
+          :error="accessErrors.useCase"
+        />
+        <input v-model="accessForm.website" class="hidden" autocomplete="off" tabindex="-1" aria-hidden="true">
+        <p v-if="accessErrors.form" class="field-error">
+          {{ accessErrors.form }}
+        </p>
+        <BaseButton type="submit" block :disabled="accessPending">
+          {{ accessPending ? "Submitting request..." : "Request access" }}
         </BaseButton>
+      </form>
+
+      <div class="mt-8 flex flex-wrap gap-3">
         <BaseButton variant="secondary" :to="pricingPath">
           View pricing
         </BaseButton>
@@ -83,10 +217,12 @@ async function submitForm() {
     </template>
     <template v-else>
       <h2 class="text-3xl tracking-tight font-semibold mt-3">
-        Create your account.
+        {{ inviteValidation.valid ? "Create your invited account." : "Create your account." }}
       </h2>
       <p class="muted text-sm leading-6 mt-3">
-        Start with the basics now. You can finish the rest of your profile during onboarding.
+        {{ inviteValidation.valid
+          ? "This invite is tied to the approved email below. Finish account setup, then complete onboarding."
+          : "Start with the basics now. You can finish the rest of your profile during onboarding." }}
       </p>
 
       <form class="mt-8 gap-4 grid" @submit.prevent="submitForm">

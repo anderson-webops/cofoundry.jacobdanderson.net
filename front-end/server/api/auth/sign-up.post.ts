@@ -2,8 +2,8 @@ import { assertAccountAccessEnabled, createMockAccount, validateSignUpPayload } 
 import { assertRateLimit, buildRateLimitKey } from "../../utils/rate-limit"
 
 export default defineEventHandler(async (event) => {
-  assertAccountAccessEnabled()
   const payload = validateSignUpPayload(await readBody(event))
+  await assertAccountAccessEnabled(event, payload.inviteToken, payload.email)
   assertRateLimit(event, {
     key: buildRateLimitKey(event, payload.email),
     limit: 5,

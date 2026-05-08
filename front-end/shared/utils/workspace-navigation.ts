@@ -10,6 +10,12 @@ interface WorkspaceRouteMatcher extends WorkspaceRouteContext {
 
 const workspaceRouteMatchers: WorkspaceRouteMatcher[] = [
   {
+    prefix: "/admin/access-requests",
+    areaLabel: "Admin workspace",
+    title: "Access requests",
+    description: "Review workspace-access requests, approve or deny them, and issue invite links from the admin queue.",
+  },
+  {
     prefix: "/admin/analytics",
     areaLabel: "Admin workspace",
     title: "Analytics",

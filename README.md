@@ -93,6 +93,7 @@ Server-only secrets:
 - `COFOUNDRY_OPERATIONS_TOKEN`
 - `COFOUNDRY_LOCAL_DATA_DIR`
 - `COFOUNDRY_OPERATIONS_RETENTION_LIMIT`
+- `COFOUNDRY_ACCESS_REQUEST_RETENTION_LIMIT`
 - `CONTACT_FROM_EMAIL`
 - `CONTACT_FROM_NAME`
 - `CONTACT_TO_EMAIL`
@@ -111,6 +112,8 @@ If a non-mock mode is enabled without the required public values and server secr
 The public contact form now delivers through the server instead of only validating the payload. For production, prefer SMTP so the envelope sender is explicitly controlled by `CONTACT_FROM_EMAIL`. The current delivery target should remain `contacts@jacobdanderson.net`. To move later to an alias-based outbound pattern, set `CONTACT_FROM_EMAIL` to the sending alias, `CONTACT_TO_EMAIL` to the primary destination, and `CONTACT_BCC_EMAIL` to `contacts@jacobdanderson.net`. `CONTACT_USE_SENDMAIL=true` remains available as a local or fallback transport.
 
 The same server mail transport now powers on-demand unread workspace digests from `/app/inbox`. Scheduled digests are exposed through the worker-authenticated `/api/operations/notification-digests/run` endpoint and should be called by a server cron/timer with `COFOUNDRY_OPERATIONS_TOKEN`. In mock/access-request mode, operations telemetry is persisted to `.data/operations-telemetry.json` by default, or to `COFOUNDRY_LOCAL_DATA_DIR` when set.
+
+Public workspace access requests are durable in mock/access-request mode. `/auth/sign-up` submits access requests into `.data/access-requests.json` by default, admins can review them at `/admin/access-requests`, and issued invites create 30-day invite links that allow account creation without enabling public self-serve signup. Invited local accounts are stored in `.data/local-auth-accounts.json` so sign-in survives server restarts while the site remains in mock backend mode.
 
 ## Local review accounts
 
@@ -222,6 +225,7 @@ Optional for server-side workers:
 - `COFOUNDRY_OPERATIONS_TOKEN`
 - `COFOUNDRY_LOCAL_DATA_DIR`
 - `COFOUNDRY_OPERATIONS_RETENTION_LIMIT`
+- `COFOUNDRY_ACCESS_REQUEST_RETENTION_LIMIT`
 
 Provisioning after merge:
 
@@ -232,12 +236,13 @@ Provisioning after merge:
 5. Assign the first real admin user server-side before using `/admin`.
 6. Turn on Stripe env only when checkout and webhook infrastructure are ready.
 7. Configure `COFOUNDRY_OPERATIONS_TOKEN` before enabling scheduled digests, backup-run reporting, operational event ingestion, or file-scan callbacks.
-8. In mock/access-request mode, ensure the app process can write to `.data/operations-telemetry.json` or set `COFOUNDRY_LOCAL_DATA_DIR` to a durable writable host path.
+8. In mock/access-request mode, ensure the app process can write to `.data/operations-telemetry.json`, `.data/access-requests.json`, and `.data/local-auth-accounts.json`, or set `COFOUNDRY_LOCAL_DATA_DIR` to a durable writable host path.
 
 ## Production control surfaces
 
 - Sensitive endpoints now have server-side rate limits for auth, contact, billing checkout, collaboration writes, member workspace writes, admin actions, inbox read transitions, data exports, and privacy requests.
 - Admin moderation actions persist user suspension, report status changes, and audit actions in Supabase mode.
+- Access-request review now has a mock-mode admin queue at `/admin/access-requests`. Operators can approve, deny, reopen, and issue invite links while Supabase and Stripe remain disabled.
 - Account settings include a JSON data export and a privacy-request submission path.
 - Admins can review Supabase-backed privacy requests at `/admin/privacy`.
 - Supabase migrations include RLS policies for user-owned, participant-owned, admin-only, notification, privacy, file-upload, backup, and operational tables.
@@ -255,6 +260,8 @@ Worker-authenticated operations endpoints:
 Each endpoint requires `Authorization: Bearer <COFOUNDRY_OPERATIONS_TOKEN>` or `x-cofoundry-operations-token`. The token is intentionally optional at startup so mock production remains unchanged, but the endpoints fail closed if called before the token is configured.
 
 When Supabase is disabled, these endpoints write durable local telemetry rows to `operations-telemetry.json` with a default retention limit of 200 rows per collection. Set `COFOUNDRY_OPERATIONS_RETENTION_LIMIT` to tune that per-collection limit.
+
+Access-request rows are separately retained in `access-requests.json` with a default limit of 500. Set `COFOUNDRY_ACCESS_REQUEST_RETENTION_LIMIT` to tune that queue, and keep `COFOUNDRY_LOCAL_DATA_DIR` on durable host storage if invite-only mock-mode accounts need to survive deployment restarts.
 
 The server-side handoff prompt for wiring these jobs lives at `docs/server-ai-operations-prompt.md`.
 

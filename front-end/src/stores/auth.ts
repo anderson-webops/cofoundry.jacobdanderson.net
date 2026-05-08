@@ -44,7 +44,7 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
-  async function signUp(payload: { name: string, email: string, password: string }) {
+  async function signUp(payload: { email: string, inviteToken?: string, name: string, password: string }) {
     pending.value = true
     clearError()
 
