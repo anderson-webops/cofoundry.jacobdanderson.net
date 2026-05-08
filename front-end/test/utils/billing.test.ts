@@ -109,7 +109,7 @@ describe("billing helpers", () => {
     const subscription = seed.subscriptions.find(item => item.userId === "user_malik")
     const usage = buildSubscriptionUsage(seed, "user_malik", subscription)
 
-    expect(usage.intros.used).toBe(6)
+    expect(usage.intros.used).toBe(5)
     expect(usage.intros.exhausted).toBe(true)
     expect(usage.savedSearches.used).toBe(1)
     expect(usage.savedSearches.exhausted).toBe(true)

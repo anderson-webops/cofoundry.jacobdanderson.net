@@ -10,6 +10,8 @@ import { decodeSessionUser, encodeSessionUser, sessionCookieName, sessionSignatu
 import { signInSchema, signUpSchema } from "~/shared/utils/validation"
 import { buildSessionUser } from "~/shared/utils/workspace"
 import { buildDraftMemberWorkspaceState, buildMemberWorkspaceState, resolveSessionUserFromWorkspace } from "~/shared/utils/workspace-persistence"
+import { markLocalAccessInviteAccepted, validateLocalAccessInvite } from "./local-access-requests"
+import { createLocalAuthAccount, findLocalAuthSessionByEmail, findLocalAuthSessionById, updateLocalAuthOnboarding, verifyLocalAuthCredentials } from "./local-auth-store"
 import { loadMemberWorkspaceState, persistWholeMemberWorkspaceState } from "./member-workspace"
 import { createSupabaseAdminClient, createSupabaseServerClient, isSupabaseEnabled } from "./supabase"
 
@@ -72,8 +74,11 @@ function areAccountsEnabledForCurrentEnvironment() {
 
 export function assertSignInAccessEnabled() {}
 
-export function assertAccountAccessEnabled() {
+export async function assertAccountAccessEnabled(event: H3Event, inviteToken?: string, email?: string) {
   if (areAccountsEnabledForCurrentEnvironment())
+    return
+
+  if (inviteToken && await validateLocalAccessInvite(inviteToken, email))
     return
 
   throw createError({
@@ -98,7 +103,7 @@ export async function readAuthoritativeSession(event: H3Event) {
     return null
 
   if (!isSupabaseEnabled(event)) {
-    const authoritativeSession = getMockSessionBySeedUserId(decodedSession.id)
+    const authoritativeSession = getMockSessionBySeedUserId(decodedSession.id) || await findLocalAuthSessionById(decodedSession.id)
     if (!authoritativeSession || authoritativeSession.email !== decodedSession.email)
       return null
 
@@ -215,16 +220,23 @@ export async function verifyCredentials(event: H3Event, email: string, password:
       return session
   }
 
+  const localSession = await verifyLocalAuthCredentials(normalizedEmail, password)
+  if (localSession)
+    return localSession
+
   throw createError({
     statusCode: 401,
     statusMessage: "Incorrect email or password.",
   })
 }
 
-export async function createMockAccount(event: H3Event, payload: { name: string, email: string, password: string }) {
+export async function createMockAccount(event: H3Event, payload: { email: string, inviteToken?: string, name: string, password: string }) {
   const normalizedEmail = payload.email.trim().toLowerCase()
   const existing = getSessionForEmail(normalizedEmail)
   if (existing)
+    throw createError({ statusCode: 409, statusMessage: "An account with that email already exists." })
+
+  if (await findLocalAuthSessionByEmail(normalizedEmail))
     throw createError({ statusCode: 409, statusMessage: "An account with that email already exists." })
 
   if (isSupabaseEnabled(event)) {
@@ -259,24 +271,22 @@ export async function createMockAccount(event: H3Event, payload: { name: string,
     return session
   }
 
-  const userId = `user_${crypto.randomUUID().replaceAll("-", "")}`
-  const session: SessionUser = {
-    id: userId,
-    email: normalizedEmail,
-    name: payload.name,
-    role: "founder",
-    onboardingCompleted: false,
-    subscriptionPlan: "free",
-  }
+  const session = await createLocalAuthAccount(payload)
+  if (!session)
+    throw createError({ statusCode: 409, statusMessage: "An account with that email already exists." })
 
   registeredAccounts.set(normalizedEmail, {
     email: normalizedEmail,
     password: payload.password,
     providers: ["email"],
-    userId,
+    userId: session.id,
     name: payload.name,
   })
-  registeredSessions.set(userId, session)
+  registeredSessions.set(session.id, session)
+
+  if (payload.inviteToken)
+    await markLocalAccessInviteAccepted(payload.inviteToken)
+
   writeSession(event, session)
 
   return session
@@ -303,6 +313,7 @@ export async function completeOnboarding(event: H3Event, nextSession: SessionUse
   }
 
   registeredSessions.set(updatedSession.id, updatedSession)
+  await updateLocalAuthOnboarding(updatedSession)
   writeSession(event, updatedSession)
   return updatedSession
 }

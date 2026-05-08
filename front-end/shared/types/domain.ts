@@ -30,6 +30,10 @@ export type BookmarkTargetType = "profile" | "opportunity"
 export type SavedSearchScope = "profiles" | "opportunities"
 export type PrivacyRequestStatus = "open" | "reviewed" | "resolved"
 export type PrivacyRequestType = "data_export" | "account_deletion" | "correction" | "visibility" | "safety_privacy"
+export type AccessRequestRole = "founder" | "collaborator" | "studio" | "investor" | "other"
+export type AccessRequestStage = "idea" | "prototype" | "mvp" | "revenue" | "growth" | "not_sure"
+export type AccessRequestTimeline = "now" | "30_days" | "90_days" | "exploring"
+export type AccessRequestStatus = "open" | "approved" | "denied" | "invited"
 export type StartTimeline = "immediately" | "30_days" | "90_days" | "exploring"
 export type TrialStatus = "draft" | "active" | "completed"
 export type ContactRevealStage = "matches" | "proposal_accepted" | "contract_generated"
@@ -62,6 +66,27 @@ export interface AuthAccount {
   password: string
   providers: AuthProvider[]
   userId: string
+}
+
+export interface AccessRequest {
+  id: string
+  name: string
+  email: string
+  company: string
+  role: AccessRequestRole
+  companyStage: AccessRequestStage
+  timeline: AccessRequestTimeline
+  useCase: string
+  source: string
+  status: AccessRequestStatus
+  adminNotes: string | null
+  reviewedAt: string | null
+  reviewedByUserId: string | null
+  inviteTokenIssuedAt: string | null
+  inviteExpiresAt: string | null
+  inviteAcceptedAt: string | null
+  createdAt: string
+  updatedAt: string
 }
 
 export interface User {

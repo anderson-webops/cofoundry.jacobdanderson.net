@@ -45,6 +45,9 @@ export function resolveProductAccessPolicy(environment: ProductAccessEnvironment
 }
 
 export function buildAccessRequestPath(source = "site", topic = "access") {
+  if (topic === "access")
+    return buildQueryPath("/auth/sign-up", { source })
+
   return buildQueryPath("/contact", { source, topic })
 }
 

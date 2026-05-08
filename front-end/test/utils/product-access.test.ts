@@ -58,7 +58,7 @@ describe("product access policy", () => {
 
     expect(getPricingTierCta(policy, "free", "pricing-free")).toEqual({
       label: "Request access",
-      to: "/contact?source=pricing-free&topic=access",
+      to: "/auth/sign-up?source=pricing-free",
     })
     expect(getPricingTierCta(policy, "pro", "pricing-pro")).toEqual({
       label: "Talk to the team",

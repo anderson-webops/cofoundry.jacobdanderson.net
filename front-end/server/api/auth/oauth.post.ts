@@ -3,7 +3,7 @@ import { assertRateLimit } from "../../utils/rate-limit"
 import { isSupabaseEnabled } from "../../utils/supabase"
 
 export default defineEventHandler(async (event) => {
-  assertAccountAccessEnabled()
+  await assertAccountAccessEnabled(event)
   assertRateLimit(event, {
     limit: 20,
     scope: "auth:oauth",

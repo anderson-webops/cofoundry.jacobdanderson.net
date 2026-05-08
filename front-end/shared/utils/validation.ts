@@ -8,7 +8,29 @@ export const signInSchema = z.object({
 export const signUpSchema = z.object({
   name: z.string().min(2, "Enter your full name."),
   email: z.string().email("Enter a valid email address."),
+  inviteToken: z.string().trim().min(20, "Invite token is incomplete.").max(200).optional(),
   password: z.string().min(8, "Password must be at least 8 characters."),
+})
+
+export const accessRequestSchema = z.object({
+  company: z.string().trim().max(120, "Keep the company or project name concise.").optional().or(z.literal("")),
+  companyStage: z.enum(["idea", "prototype", "mvp", "revenue", "growth", "not_sure"]),
+  email: z.string().email("Enter a valid email."),
+  name: z.string().trim().min(2, "Enter your name."),
+  role: z.enum(["founder", "collaborator", "studio", "investor", "other"]),
+  source: z.string().trim().max(120).optional().or(z.literal("")),
+  timeline: z.enum(["now", "30_days", "90_days", "exploring"]),
+  useCase: z.string().trim().min(40, "Add enough detail for an admin to evaluate the request.").max(1600, "Keep the request focused."),
+  website: z.string().trim().max(0).optional().or(z.literal("")),
+})
+
+export const adminAccessRequestStatusSchema = z.object({
+  notes: z.string().trim().min(8, "Add a short admin note.").max(1000, "Keep the admin note concise."),
+  status: z.enum(["open", "approved", "denied"]),
+})
+
+export const adminAccessInviteSchema = z.object({
+  notes: z.string().trim().min(8, "Add a short invite note.").max(1000, "Keep the invite note concise."),
 })
 
 export const contactSchema = z.object({

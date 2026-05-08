@@ -1,15 +1,41 @@
 import { describe, expect, it } from "vitest"
-import { adminReportStatusSchema, adminUserModerationSchema, billingCheckoutSchema, contactSchema, minimumOnboardingSchema, onboardingSchema, operationsBackupRunSchema, operationsDigestRunSchema, operationsEventSchema, opportunitySchema, privacyRequestSchema, proposalSchema, reportSchema, signUpSchema } from "../../shared/utils/validation"
+import { accessRequestSchema, adminAccessInviteSchema, adminAccessRequestStatusSchema, adminReportStatusSchema, adminUserModerationSchema, billingCheckoutSchema, contactSchema, minimumOnboardingSchema, onboardingSchema, operationsBackupRunSchema, operationsDigestRunSchema, operationsEventSchema, opportunitySchema, privacyRequestSchema, proposalSchema, reportSchema, signUpSchema } from "../../shared/utils/validation"
 
 describe("validation schemas", () => {
   it("accepts a valid sign-up payload", () => {
     const result = signUpSchema.safeParse({
       name: "Olivia Chen",
       email: "olivia@cofoundry.dev",
+      inviteToken: "invite_token_12345678901234567890",
       password: "founder123",
     })
 
     expect(result.success).toBe(true)
+  })
+
+  it("accepts access-request and admin invite payloads", () => {
+    const request = accessRequestSchema.safeParse({
+      company: "LedgerLoop",
+      companyStage: "prototype",
+      email: "olivia@cofoundry.dev",
+      name: "Olivia Chen",
+      role: "founder",
+      source: "auth-sign-up",
+      timeline: "30_days",
+      useCase: "I need a structured workspace to evaluate cofounder fit, document proposal terms, and move to agreement.",
+      website: "",
+    })
+    const status = adminAccessRequestStatusSchema.safeParse({
+      notes: "Approved after workspace fit review.",
+      status: "approved",
+    })
+    const invite = adminAccessInviteSchema.safeParse({
+      notes: "Issued invite after access review.",
+    })
+
+    expect(request.success).toBe(true)
+    expect(status.success).toBe(true)
+    expect(invite.success).toBe(true)
   })
 
   it("rejects contact submissions without enough detail", () => {
