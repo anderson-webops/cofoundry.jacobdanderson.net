@@ -1,5 +1,5 @@
 import type { H3Event } from "h3"
-import type { AdminAction, ReportStatus } from "~/shared/types/domain"
+import type { AdminAction, AppRole, ReportStatus } from "~/shared/types/domain"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
 
 export async function persistAdminAction(event: H3Event, action: AdminAction) {
@@ -37,6 +37,27 @@ export async function persistUserSuspension(event: H3Event, targetUserId: string
   const { data, error } = await adminClient
     .from("users")
     .update({ suspended_at: suspendedAt })
+    .eq("id", targetUserId)
+    .select("id")
+
+  if (error)
+    throw error
+
+  if (!data?.length)
+    throw createError({ statusCode: 404, statusMessage: "Target user was not found." })
+}
+
+export async function persistUserRole(event: H3Event, targetUserId: string, role: AppRole) {
+  if (!isSupabaseEnabled(event))
+    return
+
+  const adminClient = createSupabaseAdminClient(event)
+  if (!adminClient)
+    throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
+
+  const { data, error } = await adminClient
+    .from("users")
+    .update({ role })
     .eq("id", targetUserId)
     .select("id")
 

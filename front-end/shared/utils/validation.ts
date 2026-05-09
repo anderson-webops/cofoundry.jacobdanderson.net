@@ -215,6 +215,11 @@ export const adminUserModerationSchema = z.object({
   notes: z.string().trim().min(8, "Add a short moderation note.").max(300, "Keep the moderation note concise."),
 })
 
+export const adminUserRoleSchema = z.object({
+  notes: z.string().trim().min(8, "Add a short role-change note.").max(500, "Keep the role-change note concise."),
+  role: z.enum(["founder", "collaborator", "admin", "investor_admin"]),
+})
+
 export const adminReportStatusSchema = z.object({
   status: z.enum(["reviewed", "resolved"]),
   notes: z.string().trim().min(8, "Add a short moderation note.").max(500, "Keep the moderation note concise."),

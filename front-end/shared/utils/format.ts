@@ -297,6 +297,7 @@ export function formatAdminActionType(type: AdminActionType) {
   return {
     suspend_user: "Suspended user",
     reinstate_user: "Reinstated user",
+    change_user_role: "Changed user role",
     warn_user: "Warned user",
     remove_content: "Removed content",
     review_report: "Reviewed report",

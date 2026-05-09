@@ -1,7 +1,7 @@
 import { setResponseStatus } from "h3"
 import { accessRequestSchema } from "~/shared/utils/validation"
+import { createAccessRequest } from "../utils/access-requests"
 import { isContactMailConfigured, sendContactMessage } from "../utils/contact"
-import { createLocalAccessRequest } from "../utils/local-access-requests"
 import { assertRateLimit, buildRateLimitKey } from "../utils/rate-limit"
 
 export default defineEventHandler(async (event) => {
@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
     windowMs: 60 * 60 * 1000,
   })
 
-  const request = await createLocalAccessRequest(payload)
+  const request = await createAccessRequest(event, payload)
   let notified = false
   let notificationError: string | null = null
 

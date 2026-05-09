@@ -38,6 +38,33 @@ describe("admin utilities", () => {
     expect(resolvedEntries[0]?.targetLabel.toLowerCase()).toContain("arjun")
   })
 
+  it("filters role-change audit entries", () => {
+    const entries = buildAdminAuditEntries({
+      ...workspaceSeed,
+      adminActions: [
+        {
+          adminUserId: "user_ava",
+          createdAt: "2026-05-09T12:00:00.000Z",
+          id: "action_role_change",
+          notes: "Changed Arjun role after admin review.",
+          targetId: "user_arjun",
+          targetType: "user",
+          type: "change_user_role",
+        },
+        ...workspaceSeed.adminActions,
+      ],
+    })
+    const filtered = filterAdminAuditEntries(entries, {
+      actionType: "change_user_role",
+      actorId: "all",
+      query: "arjun",
+      targetType: "user",
+    })
+
+    expect(filtered).toHaveLength(1)
+    expect(filtered[0]?.action.type).toBe("change_user_role")
+  })
+
   it("summarizes current moderation queue counts", () => {
     const summary = buildAdminQueueSummary(workspaceSeed)
 

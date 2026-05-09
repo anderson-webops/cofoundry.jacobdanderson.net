@@ -113,7 +113,7 @@ The public contact form now delivers through the server instead of only validati
 
 The same server mail transport now powers on-demand unread workspace digests from `/app/inbox`. Scheduled digests are exposed through the worker-authenticated `/api/operations/notification-digests/run` endpoint and should be called by a server cron/timer with `COFOUNDRY_OPERATIONS_TOKEN`. In mock/access-request mode, operations telemetry is persisted to `.data/operations-telemetry.json` by default, or to `COFOUNDRY_LOCAL_DATA_DIR` when set.
 
-Public workspace access requests are durable in mock/access-request mode. `/auth/sign-up` submits access requests into `.data/access-requests.json` by default, admins can review them at `/admin/access-requests`, and issued invites create 30-day invite links that allow account creation without enabling public self-serve signup. Invited local accounts are stored in `.data/local-auth-accounts.json` so sign-in survives server restarts while the site remains in mock backend mode.
+Public workspace access requests are durable in mock/access-request mode. `/auth/sign-up` submits access requests into `.data/access-requests.json` by default, admins can review them at `/admin/access-requests`, and issued invites create 30-day invite links that allow account creation without enabling public self-serve signup. Invited local accounts are stored in `.data/local-auth-accounts.json` so sign-in survives server restarts while the site remains in mock backend mode. When Supabase mode is intentionally enabled later, the same route surface writes to the `access_requests` table after the latest migrations are applied.
 
 ## Local review accounts
 
@@ -241,8 +241,8 @@ Provisioning after merge:
 ## Production control surfaces
 
 - Sensitive endpoints now have server-side rate limits for auth, contact, billing checkout, collaboration writes, member workspace writes, admin actions, inbox read transitions, data exports, and privacy requests.
-- Admin moderation actions persist user suspension, report status changes, and audit actions in Supabase mode.
-- Access-request review now has a mock-mode admin queue at `/admin/access-requests`. Operators can approve, deny, reopen, and issue invite links while Supabase and Stripe remain disabled.
+- Admin moderation actions persist user suspension, role changes, report status changes, and audit actions in Supabase mode.
+- Access-request review has a mock-mode admin queue at `/admin/access-requests` and a Supabase-backed table path for later. Operators can approve, deny, reopen, and issue invite links while Supabase and Stripe remain disabled.
 - Account settings include a JSON data export and a privacy-request submission path.
 - Admins can review Supabase-backed privacy requests at `/admin/privacy`.
 - Supabase migrations include RLS policies for user-owned, participant-owned, admin-only, notification, privacy, file-upload, backup, and operational tables.

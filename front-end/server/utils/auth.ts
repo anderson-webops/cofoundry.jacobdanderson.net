@@ -10,7 +10,7 @@ import { decodeSessionUser, encodeSessionUser, sessionCookieName, sessionSignatu
 import { signInSchema, signUpSchema } from "~/shared/utils/validation"
 import { buildSessionUser } from "~/shared/utils/workspace"
 import { buildDraftMemberWorkspaceState, buildMemberWorkspaceState, resolveSessionUserFromWorkspace } from "~/shared/utils/workspace-persistence"
-import { markLocalAccessInviteAccepted, validateLocalAccessInvite } from "./local-access-requests"
+import { markAccessInviteAccepted, validateAccessInvite } from "./access-requests"
 import { createLocalAuthAccount, findLocalAuthSessionByEmail, findLocalAuthSessionById, updateLocalAuthOnboarding, verifyLocalAuthCredentials } from "./local-auth-store"
 import { loadMemberWorkspaceState, persistWholeMemberWorkspaceState } from "./member-workspace"
 import { createSupabaseAdminClient, createSupabaseServerClient, isSupabaseEnabled } from "./supabase"
@@ -78,7 +78,7 @@ export async function assertAccountAccessEnabled(event: H3Event, inviteToken?: s
   if (areAccountsEnabledForCurrentEnvironment())
     return
 
-  if (inviteToken && await validateLocalAccessInvite(inviteToken, email))
+  if (inviteToken && await validateAccessInvite(event, inviteToken, email))
     return
 
   throw createError({
@@ -267,6 +267,9 @@ export async function createMockAccount(event: H3Event, payload: { email: string
     await persistWholeMemberWorkspaceState(event, bootstrapState)
 
     const { session } = await loadMemberWorkspaceState(event, buildIdentityInput(fallbackSession))
+    if (payload.inviteToken)
+      await markAccessInviteAccepted(event, payload.inviteToken)
+
     writeSession(event, session)
     return session
   }
@@ -285,7 +288,7 @@ export async function createMockAccount(event: H3Event, payload: { email: string
   registeredSessions.set(session.id, session)
 
   if (payload.inviteToken)
-    await markLocalAccessInviteAccepted(payload.inviteToken)
+    await markAccessInviteAccepted(event, payload.inviteToken)
 
   writeSession(event, session)
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { accessRequestSchema, adminAccessInviteSchema, adminAccessRequestStatusSchema, adminReportStatusSchema, adminUserModerationSchema, billingCheckoutSchema, contactSchema, minimumOnboardingSchema, onboardingSchema, operationsBackupRunSchema, operationsDigestRunSchema, operationsEventSchema, opportunitySchema, privacyRequestSchema, proposalSchema, reportSchema, signUpSchema } from "../../shared/utils/validation"
+import { accessRequestSchema, adminAccessInviteSchema, adminAccessRequestStatusSchema, adminReportStatusSchema, adminUserModerationSchema, adminUserRoleSchema, billingCheckoutSchema, contactSchema, minimumOnboardingSchema, onboardingSchema, operationsBackupRunSchema, operationsDigestRunSchema, operationsEventSchema, opportunitySchema, privacyRequestSchema, proposalSchema, reportSchema, signUpSchema } from "../../shared/utils/validation"
 
 describe("validation schemas", () => {
   it("accepts a valid sign-up payload", () => {
@@ -200,6 +200,15 @@ describe("validation schemas", () => {
 
     expect(userAction.success).toBe(true)
     expect(reportAction.success).toBe(true)
+  })
+
+  it("accepts audited admin role changes", () => {
+    const roleAction = adminUserRoleSchema.safeParse({
+      notes: "Promoted after operator review.",
+      role: "admin",
+    })
+
+    expect(roleAction.success).toBe(true)
   })
 
   it("requires useful detail for privacy requests", () => {

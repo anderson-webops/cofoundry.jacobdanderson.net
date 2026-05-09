@@ -1,7 +1,7 @@
 import { adminAccessInviteSchema } from "~/shared/utils/validation"
+import { createAccessInvite } from "../../../../utils/access-requests"
 import { requireAdminSession } from "../../../../utils/admin"
 import { resolveServerAppUrl } from "../../../../utils/app-url"
-import { createLocalAccessInvite } from "../../../../utils/local-access-requests"
 import { assertRateLimit, buildRateLimitKey } from "../../../../utils/rate-limit"
 
 export default defineEventHandler(async (event) => {
@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: "An access request id is required." })
 
   const payload = adminAccessInviteSchema.parse(await readBody(event))
-  const invite = await createLocalAccessInvite(requestId, {
+  const invite = await createAccessInvite(event, requestId, {
     adminNotes: payload.notes,
     appUrl: resolveServerAppUrl(event),
     reviewedByUserId: session.id,

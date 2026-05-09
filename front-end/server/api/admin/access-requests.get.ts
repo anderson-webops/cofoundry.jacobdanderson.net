@@ -1,6 +1,6 @@
 import type { AccessRequest } from "~/shared/types/domain"
+import { listAccessRequests } from "../../utils/access-requests"
 import { requireAdminSession } from "../../utils/admin"
-import { listLocalAccessRequests } from "../../utils/local-access-requests"
 import { assertRateLimit, buildRateLimitKey } from "../../utils/rate-limit"
 import { isSupabaseEnabled } from "../../utils/supabase"
 
@@ -13,17 +13,9 @@ export default defineEventHandler(async (event) => {
     windowMs: 60 * 1000,
   })
 
-  if (isSupabaseEnabled(event)) {
-    return {
-      mode: "supabase",
-      requests: [] as AccessRequest[],
-      warning: "Access-request persistence is currently local-only. Add the Supabase table before enabling this queue in Supabase mode.",
-    }
-  }
-
   return {
-    mode: "mock",
-    requests: await listLocalAccessRequests(),
+    mode: isSupabaseEnabled(event) ? "supabase" : "mock",
+    requests: await listAccessRequests(event) as AccessRequest[],
     warning: null,
   }
 })

@@ -25,6 +25,7 @@ const actionTypeOptions = [
   { label: "Resolved report", value: "resolve_report" },
   { label: "Suspended user", value: "suspend_user" },
   { label: "Reinstated user", value: "reinstate_user" },
+  { label: "Changed user role", value: "change_user_role" },
   { label: "Warned user", value: "warn_user" },
   { label: "Removed content", value: "remove_content" },
 ]
