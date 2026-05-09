@@ -10,6 +10,7 @@ Current app behavior:
 - Admins review requests at `/admin/access-requests`.
 - Admin invite generation creates 30-day invite links for `/auth/sign-up?invite=...&email=...`.
 - Invited accounts are stored locally so sign-in persists across Node process restarts.
+- The same access-request server utility is Supabase-ready, but production should stay in mock mode until the operator intentionally applies migrations and flips the backend mode.
 
 Please configure the host/runtime:
 1. Keep `NUXT_PUBLIC_BACKEND_MODE=mock` and `NUXT_PUBLIC_BILLING_MODE=mock`.
@@ -32,4 +33,4 @@ Please configure the host/runtime:
    - Restart the app and verify the invited account can still sign in.
 ```
 
-Do not enable Supabase or Stripe until the server-side Supabase schema, auth bootstrap, billing webhooks, and Vault-injected secrets are intentionally provisioned.
+For later Supabase mode only, apply all migrations including `back-end/supabase/migrations/20260509120000_access_requests.sql` before setting `NUXT_PUBLIC_BACKEND_MODE=supabase`. Do not enable Supabase or Stripe until the server-side Supabase schema, auth bootstrap, billing webhooks, and Vault-injected secrets are intentionally provisioned.

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { AppRole } from "~/shared/types/domain"
 import type { AdminUserFilters, AdminUserRow } from "~/shared/utils/admin"
 import { buildAdminUserRows, filterAdminUserRows } from "~/shared/utils/admin"
 import { formatDate, formatPlanName, formatRelativeDate } from "~/shared/utils/format"
@@ -23,6 +24,8 @@ const filters = reactive<AdminUserFilters>({
 
 const moderationNotes = reactive<Record<string, string>>({})
 const pendingByUserId = reactive<Record<string, boolean>>({})
+const pendingRoleByUserId = reactive<Record<string, boolean>>({})
+const roleSelections = reactive<Record<string, AppRole | "">>({})
 
 const roleOptions = [
   { label: "All roles", value: "all" },
@@ -31,6 +34,8 @@ const roleOptions = [
   { label: "Admin", value: "admin" },
   { label: "Investor admin", value: "investor_admin" },
 ]
+
+const roleAssignmentOptions = roleOptions.filter(option => option.value !== "all")
 
 const statusOptions = [
   { label: "All users", value: "all" },
@@ -46,11 +51,33 @@ const onboardingOptions = [
 
 const rows = computed(() => filterAdminUserRows(buildAdminUserRows(workspaceStore.data), filters))
 
+function syncRoleSelections(currentRows: AdminUserRow[]) {
+  currentRows.forEach((row) => {
+    if (!roleSelections[row.user.id])
+      roleSelections[row.user.id] = row.user.role
+  })
+}
+
+syncRoleSelections(rows.value)
+
+watchEffect(() => {
+  syncRoleSelections(rows.value)
+})
+
+function formatRole(role: AppRole) {
+  return role.replaceAll("_", " ")
+}
+
 function buildDefaultNote(row: AdminUserRow) {
   const label = row.profile?.displayName || row.user.email
   return row.user.suspendedAt
     ? `Reinstated ${label} after admin review.`
     : `Suspended ${label} pending moderation review.`
+}
+
+function buildDefaultRoleNote(row: AdminUserRow, nextRole: AppRole) {
+  const label = row.profile?.displayName || row.user.email
+  return `Changed ${label} role from ${formatRole(row.user.role)} to ${formatRole(nextRole)} after admin review.`
 }
 
 async function toggleSuspension(row: AdminUserRow) {
@@ -90,6 +117,45 @@ async function toggleSuspension(row: AdminUserRow) {
   }
   finally {
     pendingByUserId[row.user.id] = false
+  }
+}
+
+async function changeRole(row: AdminUserRow) {
+  if (!authStore.currentUser)
+    return
+
+  const nextRole = (roleSelections[row.user.id] || row.user.role) as AppRole
+  if (nextRole === row.user.role) {
+    toastStore.push({
+      title: "Role unchanged",
+      message: "Choose a different role before recording an admin role change.",
+      tone: "info",
+    })
+    return
+  }
+
+  pendingRoleByUserId[row.user.id] = true
+
+  try {
+    const note = moderationNotes[row.user.id]?.trim() || buildDefaultRoleNote(row, nextRole)
+    await workspaceStore.changeUserRole(row.user.id, authStore.currentUser.id, nextRole, note)
+    toastStore.push({
+      title: "Role updated",
+      message: "The role change was approved by the server and added to the audit log.",
+      tone: "success",
+    })
+    moderationNotes[row.user.id] = ""
+    roleSelections[row.user.id] = nextRole
+  }
+  catch (caughtError) {
+    toastStore.push({
+      title: "Role change failed",
+      message: caughtError instanceof Error ? caughtError.message : "The role change could not be completed.",
+      tone: "danger",
+    })
+  }
+  finally {
+    pendingRoleByUserId[row.user.id] = false
   }
 }
 </script>
@@ -144,7 +210,7 @@ async function toggleSuspension(row: AdminUserRow) {
                   Role
                 </p>
                 <p class="font-semibold mt-1 capitalize">
-                  {{ row.user.role.replaceAll("_", " ") }}
+                  {{ formatRole(row.user.role) }}
                 </p>
               </div>
               <div>
@@ -198,6 +264,22 @@ async function toggleSuspension(row: AdminUserRow) {
               >
                 {{ pendingByUserId[row.user.id] ? "Saving..." : row.user.suspendedAt ? "Reinstate" : "Suspend" }}
               </BaseButton>
+              <div class="mt-4 pt-4 border-t border-[var(--line)]">
+                <SelectInput
+                  v-model="roleSelections[row.user.id]"
+                  label="Role assignment"
+                  :options="roleAssignmentOptions"
+                  helper="Changes are server-approved and written to the audit log."
+                />
+                <BaseButton
+                  class="mt-3 w-full"
+                  :disabled="pendingRoleByUserId[row.user.id] || roleSelections[row.user.id] === row.user.role"
+                  variant="secondary"
+                  @click="changeRole(row)"
+                >
+                  {{ pendingRoleByUserId[row.user.id] ? "Saving..." : "Update role" }}
+                </BaseButton>
+              </div>
             </div>
           </article>
         </div>
@@ -240,7 +322,7 @@ async function toggleSuspension(row: AdminUserRow) {
               <td class="px-4 py-4">
                 <div class="flex flex-wrap gap-2 items-center">
                   <p class="text-sm font-semibold capitalize">
-                    {{ row.user.role.replaceAll("_", " ") }}
+                    {{ formatRole(row.user.role) }}
                   </p>
                   <BaseBadge :tone="row.subscription?.plan === 'free' ? 'neutral' : 'accent'">
                     {{ formatPlanName(row.subscription?.plan || "free") }}
@@ -275,7 +357,7 @@ async function toggleSuspension(row: AdminUserRow) {
                   Last action: {{ row.lastAdminAction.notes }}
                 </p>
               </td>
-              <td class="px-4 py-4 min-w-[270px]">
+              <td class="px-4 py-4 min-w-[320px]">
                 <label class="block">
                   <span class="sr-only">Moderation note</span>
                   <input
@@ -293,6 +375,22 @@ async function toggleSuspension(row: AdminUserRow) {
                 >
                   {{ pendingByUserId[row.user.id] ? "Saving..." : row.user.suspendedAt ? "Reinstate" : "Suspend" }}
                 </BaseButton>
+                <div class="mt-4 pt-4 border-t border-[var(--line)]">
+                  <SelectInput
+                    v-model="roleSelections[row.user.id]"
+                    label="Role assignment"
+                    :options="roleAssignmentOptions"
+                    helper="Server-approved role updates are audited."
+                  />
+                  <BaseButton
+                    class="mt-3"
+                    :disabled="pendingRoleByUserId[row.user.id] || roleSelections[row.user.id] === row.user.role"
+                    variant="secondary"
+                    @click="changeRole(row)"
+                  >
+                    {{ pendingRoleByUserId[row.user.id] ? "Saving..." : "Update role" }}
+                  </BaseButton>
+                </div>
               </td>
             </tr>
           </tbody>

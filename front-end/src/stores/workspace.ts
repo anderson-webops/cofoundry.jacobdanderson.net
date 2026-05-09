@@ -1,4 +1,6 @@
 import type {
+  AdminAction,
+  AppRole,
   BookmarkTargetType,
   ConnectDeclineReason,
   ConnectRequestPayload,
@@ -1001,9 +1003,9 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   function recordAdminAction(payload: {
     id?: string
     adminUserId: string
-    type: "suspend_user" | "reinstate_user" | "review_report" | "resolve_report"
+    type: AdminAction["type"]
     targetId: string
-    targetType: "user" | "report"
+    targetType: AdminAction["targetType"]
     notes: string
     createdAt?: string
   }) {
@@ -1045,6 +1047,23 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       id: actionId,
       adminUserId,
       type: "reinstate_user",
+      targetId: targetUserId,
+      targetType: "user",
+      notes,
+      createdAt,
+    })
+  }
+
+  function applyUserRoleChange(targetUserId: string, adminUserId: string, role: AppRole, notes: string, createdAt = now(), actionId?: string) {
+    const user = data.value.users.find(item => item.id === targetUserId)
+    if (!user)
+      return
+
+    user.role = role
+    recordAdminAction({
+      id: actionId,
+      adminUserId,
+      type: "change_user_role",
       targetId: targetUserId,
       targetType: "user",
       notes,
@@ -1137,6 +1156,27 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     applyUserReinstatement(response.user.id, response.action.adminUserId || adminUserId, response.action.notes, response.action.createdAt, response.action.id)
   }
 
+  async function changeUserRole(targetUserId: string, adminUserId: string, role: AppRole, notes: string) {
+    const response = await $fetch<{
+      action: {
+        id: string
+        adminUserId: string
+        createdAt: string
+        notes: string
+        targetId: string
+      }
+      user: {
+        id: string
+        role: AppRole
+      }
+    }>(`/api/admin/users/${targetUserId}/role`, {
+      method: "POST",
+      body: { notes, role },
+    })
+
+    applyUserRoleChange(response.user.id, response.action.adminUserId || adminUserId, response.user.role, response.action.notes, response.action.createdAt, response.action.id)
+  }
+
   async function reviewReport(reportId: string, adminUserId: string, notes: string) {
     const response = await $fetch<{
       action: {
@@ -1226,6 +1266,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     syncing,
     completeMinimumOnboarding,
     cancelSubscriptionAtPeriodEnd,
+    changeUserRole,
     createContractFromProposal,
     createDraftUserFromSignUp,
     createInvestmentApplication,

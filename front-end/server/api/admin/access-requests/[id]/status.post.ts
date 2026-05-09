@@ -1,6 +1,6 @@
 import { adminAccessRequestStatusSchema } from "~/shared/utils/validation"
+import { updateAccessRequestStatus } from "../../../../utils/access-requests"
 import { requireAdminSession } from "../../../../utils/admin"
-import { updateLocalAccessRequestStatus } from "../../../../utils/local-access-requests"
 import { assertRateLimit, buildRateLimitKey } from "../../../../utils/rate-limit"
 
 export default defineEventHandler(async (event) => {
@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: "An access request id is required." })
 
   const payload = adminAccessRequestStatusSchema.parse(await readBody(event))
-  const request = await updateLocalAccessRequestStatus(requestId, {
+  const request = await updateAccessRequestStatus(event, requestId, {
     adminNotes: payload.notes,
     reviewedByUserId: session.id,
     status: payload.status,

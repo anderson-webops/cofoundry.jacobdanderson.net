@@ -1,4 +1,4 @@
-import { validateLocalAccessInvite } from "../../utils/local-access-requests"
+import { validateAccessInvite } from "../../utils/access-requests"
 import { assertRateLimit, buildRateLimitKey } from "../../utils/rate-limit"
 
 export default defineEventHandler(async (event) => {
@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
   if (!token)
     return { request: null, valid: false }
 
-  const request = await validateLocalAccessInvite(token, email)
+  const request = await validateAccessInvite(event, token, email)
 
   return {
     request,
