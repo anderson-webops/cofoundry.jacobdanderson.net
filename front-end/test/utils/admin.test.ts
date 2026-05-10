@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { workspaceSeed } from "../../shared/data/seed"
-import { buildAdminAuditEntries, buildAdminQueueSummary, buildAdminReportRows, buildAdminUserRows, filterAdminAuditEntries, filterAdminReportRows, filterAdminUserRows } from "../../shared/utils/admin"
+import { buildAdminAuditEntries, buildAdminBillingRows, buildAdminQueueSummary, buildAdminReportRows, buildAdminUserRows, filterAdminAuditEntries, filterAdminBillingRows, filterAdminReportRows, filterAdminUserRows } from "../../shared/utils/admin"
 
 describe("admin utilities", () => {
   it("builds user rows with moderation context", () => {
@@ -65,12 +65,51 @@ describe("admin utilities", () => {
     expect(filtered[0]?.action.type).toBe("change_user_role")
   })
 
+  it("filters privacy-request audit entries", () => {
+    const entries = buildAdminAuditEntries({
+      ...workspaceSeed,
+      adminActions: [
+        {
+          adminUserId: "user_ava",
+          createdAt: "2026-05-09T12:00:00.000Z",
+          id: "action_privacy_review",
+          notes: "Reviewed account deletion request and captured operator handling notes.",
+          targetId: "privacy_request_1",
+          targetType: "privacy_request",
+          type: "review_privacy_request",
+        },
+        ...workspaceSeed.adminActions,
+      ],
+    })
+    const filtered = filterAdminAuditEntries(entries, {
+      actionType: "review_privacy_request",
+      actorId: "all",
+      query: "operator handling",
+      targetType: "privacy_request",
+    })
+
+    expect(filtered).toHaveLength(1)
+    expect(filtered[0]?.targetLabel).toBe("Privacy request")
+  })
+
   it("summarizes current moderation queue counts", () => {
     const summary = buildAdminQueueSummary(workspaceSeed)
 
     expect(summary.openReports).toBe(2)
     expect(summary.highPriorityReports).toBe(1)
     expect(summary.reviewedReports).toBe(0)
+  })
+
+  it("filters billing rows by paid plan and query", () => {
+    const rows = buildAdminBillingRows(workspaceSeed)
+    const filtered = filterAdminBillingRows(rows, {
+      query: "olivia",
+      plan: "pro",
+      status: "all",
+    })
+
+    expect(filtered).toHaveLength(1)
+    expect(filtered[0]?.subscription?.plan).toBe("pro")
   })
 
   it("filters users by suspension status", () => {

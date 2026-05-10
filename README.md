@@ -133,6 +133,7 @@ npm run serve
 npm run preview
 npm run generate
 npm run build
+npm run -w back-end bootstrap-admin
 npm run seed
 npm run lint
 npm run lint-fix
@@ -233,7 +234,7 @@ Provisioning after merge:
 2. Run `npm run seed` against the target Supabase project.
 3. Configure `SESSION_SIGNING_SECRET` in the server environment or Vault injection.
 4. Enable the desired auth providers in Supabase.
-5. Assign the first real admin user server-side before using `/admin`.
+5. Assign the first real admin user server-side before using `/admin`: `BOOTSTRAP_ADMIN_EMAIL=operator@example.com npm run -w back-end bootstrap-admin`. The script requires Supabase mode and the Vault-injected `SUPABASE_SERVICE_ROLE_KEY`; it updates an existing user row and records an admin action.
 6. Turn on Stripe env only when checkout and webhook infrastructure are ready.
 7. Configure `COFOUNDRY_OPERATIONS_TOKEN` before enabling scheduled digests, backup-run reporting, operational event ingestion, or file-scan callbacks.
 8. In mock/access-request mode, ensure the app process can write to `.data/operations-telemetry.json`, `.data/access-requests.json`, and `.data/local-auth-accounts.json`, or set `COFOUNDRY_LOCAL_DATA_DIR` to a durable writable host path.
@@ -244,7 +245,7 @@ Provisioning after merge:
 - Admin moderation actions persist user suspension, role changes, report status changes, and audit actions in Supabase mode.
 - Access-request review has a mock-mode admin queue at `/admin/access-requests` and a Supabase-backed table path for later. Operators can approve, deny, reopen, and issue invite links while Supabase and Stripe remain disabled.
 - Account settings include a JSON data export and a privacy-request submission path.
-- Admins can review Supabase-backed privacy requests at `/admin/privacy`.
+- Admins can review Supabase-backed privacy requests at `/admin/privacy`; reviewed/resolved requests create audit actions and user notifications.
 - Supabase migrations include RLS policies for user-owned, participant-owned, admin-only, notification, privacy, file-upload, backup, and operational tables.
 - File uploads are represented by server-owned metadata and signed Supabase upload policies against the private `cofoundry-private-files` bucket. A malware/content scanner still needs to run outside the app and report results through `/api/operations/file-scans/:id`.
 - Relationship workspaces now have a server read endpoint and `/app/relationships/:id` page that aggregates conversation, trial, proposal, agreement, unread, and next-action state.
@@ -263,7 +264,7 @@ When Supabase is disabled, these endpoints write durable local telemetry rows to
 
 Access-request rows are separately retained in `access-requests.json` with a default limit of 500. Set `COFOUNDRY_ACCESS_REQUEST_RETENTION_LIMIT` to tune that queue, and keep `COFOUNDRY_LOCAL_DATA_DIR` on durable host storage if invite-only mock-mode accounts need to survive deployment restarts.
 
-The server-side handoff prompt for wiring these jobs lives at `docs/server-ai-operations-prompt.md`.
+The server-side handoff prompt for wiring these jobs lives at `docs/server-ai-operations-prompt.md`; first-admin provisioning is covered in `docs/server-ai-admin-bootstrap-prompt.md`; the recurring operator checklist lives at `docs/operations-runbook.md`.
 
 ## Billing notes
 
