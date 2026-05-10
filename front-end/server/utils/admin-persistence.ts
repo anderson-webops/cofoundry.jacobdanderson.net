@@ -1,5 +1,5 @@
 import type { H3Event } from "h3"
-import type { AdminAction, AppRole, ReportStatus } from "~/shared/types/domain"
+import type { AdminAction, AppRole, Notification, PrivacyRequestStatus, ReportStatus } from "~/shared/types/domain"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
 
 export async function persistAdminAction(event: H3Event, action: AdminAction) {
@@ -20,6 +20,31 @@ export async function persistAdminAction(event: H3Event, action: AdminAction) {
       target_type: action.targetType,
       notes: action.notes,
       created_at: action.createdAt,
+    })
+
+  if (error)
+    throw error
+}
+
+export async function persistUserNotification(event: H3Event, notification: Notification) {
+  if (!isSupabaseEnabled(event))
+    return
+
+  const adminClient = createSupabaseAdminClient(event)
+  if (!adminClient)
+    throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
+
+  const { error } = await adminClient
+    .from("notifications")
+    .insert({
+      id: notification.id,
+      user_id: notification.userId,
+      type: notification.type,
+      title: notification.title,
+      body: notification.body,
+      href: notification.href,
+      read_at: notification.readAt,
+      created_at: notification.createdAt,
     })
 
   if (error)
@@ -107,4 +132,52 @@ export async function persistReportStatus(event: H3Event, input: {
 
   if (!data?.length)
     throw createError({ statusCode: 404, statusMessage: "Target report was not found." })
+}
+
+export async function persistPrivacyRequestStatus(event: H3Event, input: {
+  adminUserId: string
+  notes: string
+  requestId: string
+  status: Exclude<PrivacyRequestStatus, "open">
+  timestamp: string
+}) {
+  if (!isSupabaseEnabled(event))
+    return null
+
+  const adminClient = createSupabaseAdminClient(event)
+  if (!adminClient)
+    throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
+
+  const patch = input.status === "reviewed"
+    ? {
+        status: "reviewed",
+        review_notes: input.notes,
+        reviewed_at: input.timestamp,
+        reviewed_by_user_id: input.adminUserId,
+      }
+    : {
+        status: "resolved",
+        resolution_notes: input.notes,
+        resolved_at: input.timestamp,
+        resolved_by_user_id: input.adminUserId,
+      }
+
+  const { data, error } = await adminClient
+    .from("privacy_requests")
+    .update(patch)
+    .eq("id", input.requestId)
+    .select("id,user_id,status")
+    .maybeSingle()
+
+  if (error)
+    throw error
+
+  if (!data)
+    throw createError({ statusCode: 404, statusMessage: "Privacy request was not found." })
+
+  return {
+    id: data.id as string,
+    status: data.status as PrivacyRequestStatus,
+    userId: data.user_id as string,
+  }
 }

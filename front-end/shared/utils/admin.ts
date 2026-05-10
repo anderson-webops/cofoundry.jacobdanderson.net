@@ -7,6 +7,8 @@ import type {
   ReportPriority,
   ReportStatus,
   Subscription,
+  SubscriptionPlan,
+  SubscriptionStatus,
   User,
   WorkspaceSeed,
 } from "../types/domain"
@@ -58,6 +60,18 @@ export interface AdminAuditFilters {
   actionType: AdminActionType | "all"
   actorId: string | "all"
   targetType: AdminAction["targetType"] | "all"
+}
+
+export interface AdminBillingRow {
+  user: User
+  profile?: Profile
+  subscription?: Subscription
+}
+
+export interface AdminBillingFilters {
+  query: string
+  plan: SubscriptionPlan | "all"
+  status: SubscriptionStatus | "all"
 }
 
 function includesQuery(values: Array<string | undefined | null>, query: string) {
@@ -119,6 +133,13 @@ function resolveAdminTarget(seed: WorkspaceSeed, action: AdminAction) {
     }
 
     return resolveReportTarget(seed, report)
+  }
+
+  if (action.targetType === "privacy_request") {
+    return {
+      targetLabel: "Privacy request",
+      targetContext: action.targetId,
+    }
   }
 
   return {
@@ -262,6 +283,47 @@ export function filterAdminAuditEntries(entries: AdminAuditEntry[], filters: Adm
       entry.targetLabel,
       entry.targetContext,
       entry.action.notes,
+    ], filters.query)
+  })
+}
+
+export function buildAdminBillingRows(seed: WorkspaceSeed): AdminBillingRow[] {
+  return seed.users
+    .map((user) => {
+      return {
+        user,
+        profile: getProfileByUserId(seed, user.id),
+        subscription: getSubscriptionByUserId(seed, user.id),
+      }
+    })
+    .sort((left, right) => {
+      const leftPaid = left.subscription?.plan === "free" ? 0 : 1
+      const rightPaid = right.subscription?.plan === "free" ? 0 : 1
+
+      if (rightPaid !== leftPaid)
+        return rightPaid - leftPaid
+
+      return new Date(right.user.createdAt).getTime() - new Date(left.user.createdAt).getTime()
+    })
+}
+
+export function filterAdminBillingRows(rows: AdminBillingRow[], filters: AdminBillingFilters) {
+  return rows.filter((row) => {
+    const subscription = row.subscription
+
+    if (filters.plan !== "all" && subscription?.plan !== filters.plan)
+      return false
+
+    if (filters.status !== "all" && subscription?.status !== filters.status)
+      return false
+
+    return includesQuery([
+      row.profile?.displayName,
+      row.user.email,
+      subscription?.plan,
+      subscription?.status,
+      subscription?.stripeCustomerId,
+      subscription?.stripeSubscriptionId,
     ], filters.query)
   })
 }

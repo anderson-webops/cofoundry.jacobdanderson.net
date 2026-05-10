@@ -1,6 +1,7 @@
 import type { AddressInfo } from "node:net"
 import assert from "node:assert/strict"
 import test from "node:test"
+import { resolveBootstrapAdminEnvironment, resolveBootstrapAdminInput } from "../src/bootstrap-admin"
 import { createBackendServer } from "../src/server"
 
 function restoreEnvValue(key: string, value: string | undefined) {
@@ -122,4 +123,41 @@ test("server creation fails fast when non-mock modes are misconfigured", () => {
     restoreEnvValue("NUXT_PUBLIC_SUPABASE_ANON_KEY", previousSupabaseAnonKey)
     restoreEnvValue("SUPABASE_SERVICE_ROLE_KEY", previousSupabaseServiceRoleKey)
   }
+})
+
+test("bootstrap admin input normalizes email and defaults to admin", () => {
+  const input = resolveBootstrapAdminInput({
+    BOOTSTRAP_ADMIN_EMAIL: " Ava@CoFoundry.dev ",
+  })
+
+  assert.deepEqual(input, {
+    email: "ava@cofoundry.dev",
+    notes: "Initial production admin bootstrap.",
+    role: "admin",
+    userId: "",
+  })
+})
+
+test("bootstrap admin input rejects missing targets and unsupported roles", () => {
+  assert.throws(
+    () => resolveBootstrapAdminInput({}),
+    /Set BOOTSTRAP_ADMIN_EMAIL or BOOTSTRAP_ADMIN_USER_ID/,
+  )
+
+  assert.throws(
+    () => resolveBootstrapAdminInput({
+      BOOTSTRAP_ADMIN_EMAIL: "operator@cofoundry.dev",
+      BOOTSTRAP_ADMIN_ROLE: "founder",
+    }),
+    /BOOTSTRAP_ADMIN_ROLE must be one of: admin, investor_admin\./,
+  )
+})
+
+test("bootstrap admin environment requires Supabase mode", () => {
+  assert.throws(
+    () => resolveBootstrapAdminEnvironment({
+      NUXT_PUBLIC_BACKEND_MODE: "mock",
+    }),
+    /NUXT_PUBLIC_BACKEND_MODE must be "supabase"/,
+  )
 })

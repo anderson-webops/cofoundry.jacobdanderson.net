@@ -30,6 +30,7 @@ export const adminNavigation = [
   { label: "Reports", to: "/admin/reports", icon: "i-carbon-flag-filled" },
   { label: "Privacy", to: "/admin/privacy", icon: "i-carbon-data-vis-4" },
   { label: "Operations", to: "/admin/operations", icon: "i-carbon-cloud-monitoring" },
+  { label: "Billing", to: "/admin/billing", icon: "i-carbon-wallet" },
   { label: "Analytics", to: "/admin/analytics", icon: "i-carbon-chart-line" },
   { label: "Audit", to: "/admin/audit", icon: "i-carbon-document-tasks" },
 ]

@@ -3,6 +3,36 @@
   Add or edit palette families there so tokens, picker metadata, and swatches stay aligned.
 */
 
+@font-face {
+  font-family: "DM Sans";
+  src:
+    url("/assets/fonts/dmsans-7c37c8a6.woff2") format("woff2"),
+    url("/assets/fonts/dmsans-56778fc7.woff2") format("woff2");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400 700;
+}
+
+@font-face {
+  font-family: "DM Serif Display";
+  src:
+    url("/assets/fonts/dmserifdisplay-b6206db2.woff2") format("woff2"),
+    url("/assets/fonts/dmserifdisplay-1f997542.woff2") format("woff2");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: "DM Mono";
+  src:
+    url("/assets/fonts/dmmono-cd6ed524.woff2") format("woff2"),
+    url("/assets/fonts/dmmono-53a90e28.woff2") format("woff2");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400 700;
+}
+
 * {
   box-sizing: border-box;
 }

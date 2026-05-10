@@ -302,5 +302,7 @@ export function formatAdminActionType(type: AdminActionType) {
     remove_content: "Removed content",
     review_report: "Reviewed report",
     resolve_report: "Resolved report",
+    review_privacy_request: "Reviewed privacy request",
+    resolve_privacy_request: "Resolved privacy request",
   }[type]
 }

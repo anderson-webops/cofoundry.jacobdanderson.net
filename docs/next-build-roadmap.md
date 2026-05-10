@@ -67,7 +67,7 @@ Still local/mock or partially server-backed for now:
 
 - collaboration writes are server-routed and Supabase-persisted when Supabase mode is active, but the relationship workspace still needs more granular read endpoints and realtime refresh
 - notifications persist with collaboration state, but outbound email/digest delivery is not implemented
-- moderation enforcement now persists user/report/admin-action updates in Supabase mode, but privacy-request resolution still needs richer operator workflow and user notification
+- moderation enforcement now persists user/report/privacy/admin-action updates in Supabase mode, and privacy-request review/resolution now notifies the requesting user
 
 Backend-owned entities:
 
@@ -102,16 +102,16 @@ Backend requirements:
 
 - user role claims: started
 - admin role enforcement: started
-- audit log persistence: started for admin user/report actions in Supabase mode
+- audit log persistence: started for admin user/report/privacy actions in Supabase mode
 - suspend / reinstate: started with Supabase persistence
 - report review / resolve: started with Supabase persistence
-- bootstrap admin creation path
+- first-admin bootstrap script wired to the Supabase service-role path
 
 Additional production controls now started:
 
 - server-side rate limits on auth, contact, billing, collaboration, member writes, inbox reads, admin actions, exports, and privacy requests
 - JSON account data export from settings
-- privacy request submission from settings and `/admin/privacy` review queue
+- privacy request submission from settings and `/admin/privacy` review queue with user notification on review/resolution
 
 ### 4. Production billing path
 
@@ -120,6 +120,7 @@ Keep Stripe guarded until ready, but finish the real path cleanly:
 - checkout session creation
 - webhook handling
 - subscription sync
+- admin billing visibility through a read-only billing console
 - entitlement enforcement on the server
 
 ## Next
@@ -352,13 +353,13 @@ These items still need to be provisioned outside the repo:
 - error monitoring
 - structured logging destination
 - backup / restore plan
-- bootstrap admin user creation path
+- documented first-admin bootstrap script
 - deployment secret store / Vault wiring
 
 ### Required decisions
 
 - canonical production auth mode
 - whether self-serve sign-up is open at launch
-- admin bootstrap method
+- whether the first production admin is bootstrapped by email or by user id
 - support ownership and SLA
 - Stripe go-live timing

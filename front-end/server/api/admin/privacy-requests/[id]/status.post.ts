@@ -1,7 +1,7 @@
 import { adminReportStatusSchema } from "~/shared/utils/validation"
 import { requireAdminSession } from "../../../../utils/admin"
+import { persistAdminAction, persistPrivacyRequestStatus, persistUserNotification } from "../../../../utils/admin-persistence"
 import { assertRateLimit, buildRateLimitKey } from "../../../../utils/rate-limit"
-import { createSupabaseAdminClient, isSupabaseEnabled } from "../../../../utils/supabase"
 
 export default defineEventHandler(async (event) => {
   const session = await requireAdminSession(event)
@@ -19,39 +19,43 @@ export default defineEventHandler(async (event) => {
   const payload = adminReportStatusSchema.parse(await readBody(event))
   const updatedAt = new Date().toISOString()
 
-  if (isSupabaseEnabled(event)) {
-    const adminClient = createSupabaseAdminClient(event)
-    if (!adminClient)
-      throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
+  const persistedRequest = await persistPrivacyRequestStatus(event, {
+    adminUserId: session.id,
+    notes: payload.notes,
+    requestId,
+    status: payload.status,
+    timestamp: updatedAt,
+  })
 
-    const patch = payload.status === "reviewed"
-      ? {
-          status: "reviewed",
-          review_notes: payload.notes,
-          reviewed_at: updatedAt,
-          reviewed_by_user_id: session.id,
-        }
-      : {
-          status: "resolved",
-          resolution_notes: payload.notes,
-          resolved_at: updatedAt,
-          resolved_by_user_id: session.id,
-        }
+  const action = {
+    id: crypto.randomUUID(),
+    adminUserId: session.id,
+    createdAt: updatedAt,
+    notes: payload.notes,
+    targetId: requestId,
+    targetType: "privacy_request" as const,
+    type: payload.status === "reviewed" ? "review_privacy_request" as const : "resolve_privacy_request" as const,
+  }
 
-    const { data, error } = await adminClient
-      .from("privacy_requests")
-      .update(patch)
-      .eq("id", requestId)
-      .select("id")
+  await persistAdminAction(event, action)
 
-    if (error)
-      throw error
-
-    if (!data?.length)
-      throw createError({ statusCode: 404, statusMessage: "Privacy request was not found." })
+  if (persistedRequest) {
+    await persistUserNotification(event, {
+      id: crypto.randomUUID(),
+      userId: persistedRequest.userId,
+      type: "admin",
+      title: payload.status === "reviewed" ? "Privacy request reviewed" : "Privacy request resolved",
+      body: payload.status === "reviewed"
+        ? "An operator reviewed your privacy request and recorded the next handling note."
+        : "An operator marked your privacy request resolved. Review your account settings if you need another follow-up.",
+      href: "/app/settings",
+      readAt: null,
+      createdAt: updatedAt,
+    })
   }
 
   return {
+    action,
     request: {
       id: requestId,
       resolvedAt: payload.status === "resolved" ? updatedAt : null,
