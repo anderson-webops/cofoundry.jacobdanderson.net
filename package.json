@@ -33,7 +33,8 @@
     "test:run": "npm run test:unit",
     "verify:analytics": "npm run -w front-end verify:analytics",
     "clean": "rm -rf node_modules package-lock.json front-end/node_modules front-end/.nuxt front-end/.output front-end/3000 front-end/dist back-end/node_modules back-end/dist .nuxt .output .data",
-    "postinstall": "npm run -w front-end prepare"
+    "postinstall": "npm run -w front-end prepare",
+    "a11y": "node scripts/a11y-smoke.mjs"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^8.2.0",
@@ -41,6 +42,8 @@
     "eslint": "10.2.1",
     "eslint-plugin-format": "2.0.1",
     "globals": "^17.5.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "axe-core": "^4.11.4",
+    "puppeteer": "^24.43.1"
   }
 }

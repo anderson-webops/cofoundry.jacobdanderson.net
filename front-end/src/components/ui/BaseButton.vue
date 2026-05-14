@@ -26,7 +26,7 @@ const componentTag = computed(() => {
 })
 
 const variantClasses = computed(() => ({
-  primary: "bg-[var(--accent)] text-white hover:bg-[var(--accent-strong)] border-transparent",
+  primary: "bg-[var(--accent)] text-[var(--cta-accent-text)] hover:bg-[var(--accent-strong)] border-transparent",
   secondary: "bg-[var(--panel-strong)] text-[var(--text)] border-[var(--line)] hover:border-[var(--line-strong)]",
   ghost: "bg-transparent text-[var(--text)] border-transparent hover:bg-[var(--accent-soft)]",
   danger: "bg-[var(--danger)] text-white border-transparent hover:opacity-90",
