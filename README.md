@@ -112,7 +112,7 @@ If a non-mock mode is enabled without the required public values and server secr
 
 The public contact form now delivers through the server instead of only validating the payload. For production, prefer SMTP so the envelope sender is explicitly controlled by `CONTACT_FROM_EMAIL`. The current delivery target should remain `contacts@jacobdanderson.net`. To move later to an alias-based outbound pattern, set `CONTACT_FROM_EMAIL` to the sending alias, `CONTACT_TO_EMAIL` to the primary destination, and `CONTACT_BCC_EMAIL` to `contacts@jacobdanderson.net`. `CONTACT_USE_SENDMAIL=true` remains available as a local or fallback transport.
 
-The same server mail transport now powers on-demand unread workspace digests from `/app/inbox`. Scheduled digests are exposed through the worker-authenticated `/api/operations/notification-digests/run` endpoint and should be called by a server cron/timer with `COFOUNDRY_OPERATIONS_TOKEN`. In mock/access-request mode, operations telemetry is persisted to `.data/operations-telemetry.json` by default, or to `COFOUNDRY_LOCAL_DATA_DIR` when set.
+The same server mail transport now powers on-demand unread workspace digests from `/app/inbox`. Scheduled digests are exposed through the worker-authenticated `/api/operations/notification-digests/run` endpoint and should be called by a server cron/timer with `COFOUNDRY_OPERATIONS_TOKEN`. In mock/access-request mode, operations telemetry is persisted to `.data/operations-telemetry.json` by default, or to `COFOUNDRY_LOCAL_DATA_DIR` when set. Local mock-mode file uploads are stored under `.data/local-file-uploads/` by default and are exposed to scanner workers through worker-authenticated download URLs.
 
 Public workspace access requests are durable in mock/access-request mode. `/auth/sign-up` submits access requests into `.data/access-requests.json` by default, admins can review them at `/admin/access-requests`, and issued invites create 30-day invite links that allow account creation without enabling public self-serve signup. Privacy and trust-review requests submitted from account settings are stored in `.data/privacy-requests.json` and reviewed at `/admin/privacy`. Invited local accounts are stored in `.data/local-auth-accounts.json` so sign-in survives server restarts while the site remains in mock backend mode. When Supabase mode is intentionally enabled later, the same route surface writes to the relevant Supabase tables after the latest migrations are applied.
 
@@ -239,7 +239,7 @@ Provisioning after merge:
 5. Assign the first real admin user server-side before using `/admin`: `BOOTSTRAP_ADMIN_EMAIL=operator@example.com npm run -w back-end bootstrap-admin`. The script requires Supabase mode and the Vault-injected `SUPABASE_SERVICE_ROLE_KEY`; it updates an existing user row and records an admin action.
 6. Turn on Stripe env only when checkout and webhook infrastructure are ready.
 7. Configure `COFOUNDRY_OPERATIONS_TOKEN` before enabling scheduled digests, backup-run reporting, operational event ingestion, or file-scan callbacks.
-8. In mock/access-request mode, ensure the app process can write to `.data/operations-telemetry.json`, `.data/access-requests.json`, `.data/privacy-requests.json`, and `.data/local-auth-accounts.json`, or set `COFOUNDRY_LOCAL_DATA_DIR` to a durable writable host path.
+8. In mock/access-request mode, ensure the app process can write to `.data/operations-telemetry.json`, `.data/access-requests.json`, `.data/privacy-requests.json`, `.data/local-auth-accounts.json`, and `.data/local-file-uploads/`, or set `COFOUNDRY_LOCAL_DATA_DIR` to a durable writable host path.
 
 ## Production control surfaces
 
@@ -254,7 +254,7 @@ Provisioning after merge:
 - Admins can review privacy and trust-review requests at `/admin/privacy` from Supabase mode or the local mock-mode queue. Reviewed/resolved requests create audit actions and user notifications when Supabase persistence is enabled.
 - Admins can review `/admin/readiness` for a server-derived launch-readiness view covering environment, session secrets, mail, local persistence, access/privacy queues, backups, scanner status, digest worker evidence, and operational events.
 - Supabase migrations include RLS policies for user-owned, participant-owned, admin-only, notification, privacy, file-upload, backup, and operational tables.
-- File uploads are represented by server-owned metadata and signed Supabase upload policies against the private `cofoundry-private-files` bucket. A malware/content scanner still needs to run outside the app and report results through `/api/operations/file-scans/:id`.
+- File uploads are represented by server-owned metadata. Supabase mode uses signed Supabase upload/download URLs against the private `cofoundry-private-files` bucket. Mock/access-request mode uses tokenized local upload URLs and stores content under the durable local data directory so a scanner worker can download files through worker-authenticated app URLs.
 - Relationship workspaces now have a server read endpoint and `/app/relationships/:id` page that aggregates conversation, trial, proposal, agreement, unread, and next-action state.
 
 Worker-authenticated operations endpoints:
@@ -262,12 +262,12 @@ Worker-authenticated operations endpoints:
 - `POST /api/operations/notification-digests/run` sends unread workspace digests across Supabase users who have enabled scheduled digest email. It accepts `{ "dryRun": true, "maxUsers": 100, "onlyWithUnread": true }` for safe verification.
 - `POST /api/operations/backup-runs` records backup job lifecycle events in `backup_runs`.
 - `POST /api/operations/events` records deploy, worker, scanner, backup, and monitoring events in `operational_events`.
-- `GET /api/operations/file-scans/pending?limit=25` returns pending upload metadata with short-lived signed download URLs for a scanner worker.
+- `GET /api/operations/file-scans/pending?limit=25` returns pending upload metadata with scanner download URLs. Supabase mode returns short-lived signed storage URLs; mock/access-request mode returns worker-authenticated app URLs when local content has been uploaded.
 - `POST /api/operations/file-scans/:id` records malware/content scan results for uploaded files.
 
 Each endpoint requires `Authorization: Bearer <COFOUNDRY_OPERATIONS_TOKEN>` or `x-cofoundry-operations-token`. The token is intentionally optional at startup so mock production remains unchanged, but the endpoints fail closed if called before the token is configured.
 
-When Supabase is disabled, these endpoints write durable local telemetry rows to `operations-telemetry.json` with a default retention limit of 200 rows per collection. Set `COFOUNDRY_OPERATIONS_RETENTION_LIMIT` to tune that per-collection limit.
+When Supabase is disabled, these endpoints write durable local telemetry rows to `operations-telemetry.json` with a default retention limit of 200 rows per collection. Local upload content is stored under `local-file-uploads/` in the same data directory and is not committed to source. Set `COFOUNDRY_OPERATIONS_RETENTION_LIMIT` to tune telemetry retention.
 
 Access-request rows are separately retained in `access-requests.json` with a default limit of 500. Privacy and trust-review requests are retained in `privacy-requests.json` with a default limit of 500. Set `COFOUNDRY_ACCESS_REQUEST_RETENTION_LIMIT` and `COFOUNDRY_PRIVACY_REQUEST_RETENTION_LIMIT` to tune those queues, and keep `COFOUNDRY_LOCAL_DATA_DIR` on durable host storage if invite-only mock-mode accounts need to survive deployment restarts.
 

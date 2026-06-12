@@ -1,7 +1,8 @@
+import type { Buffer } from "node:buffer"
 import type { z } from "zod"
 import type { SessionUser } from "../../shared/types/domain"
 import type { fileScanResultSchema, fileUploadPolicySchema, operationsBackupRunSchema, operationsEventSchema } from "../../shared/utils/validation"
-import { randomUUID } from "node:crypto"
+import { createHash, randomUUID } from "node:crypto"
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { dirname, resolve } from "node:path"
 import process from "node:process"
@@ -37,6 +38,8 @@ interface LocalFileUploadRow {
   created_at: string
   deleted_at?: string | null
   id: string
+  local_file_path?: string | null
+  local_upload_token_hash?: string | null
   mime_type: string
   object_path: string
   original_filename: string
@@ -85,7 +88,9 @@ interface LocalOperationsStore {
 }
 
 const defaultRetentionLimit = 200
+const localFileUploadDirectoryName = "local-file-uploads"
 const localOperationsStoreFilename = "operations-telemetry.json"
+const maxLocalUploadBytes = 10 * 1024 * 1024
 
 let writeQueue = Promise.resolve()
 
@@ -100,6 +105,24 @@ function rootDataDirectory() {
 
 function storePath() {
   return resolve(rootDataDirectory(), localOperationsStoreFilename)
+}
+
+function localFileUploadRoot() {
+  return resolve(rootDataDirectory(), localFileUploadDirectoryName)
+}
+
+function localFilePathForObjectPath(objectPath: string) {
+  const root = localFileUploadRoot()
+  const target = resolve(root, objectPath)
+
+  if (!target.startsWith(`${root}/`))
+    throw new Error("Local upload object path is outside the upload directory.")
+
+  return target
+}
+
+export function hashLocalUploadToken(token: string) {
+  return createHash("sha256").update(token).digest("hex")
 }
 
 function retentionLimit() {
@@ -221,7 +244,7 @@ export async function recordLocalBackupRun(payload: OperationsBackupRunPayload) 
   })
 }
 
-export async function recordLocalFileUploadPolicy(session: SessionUser, policy: { bucket: string, id: string, objectPath: string }, payload: FileUploadPolicyPayload) {
+export async function recordLocalFileUploadPolicy(session: SessionUser, policy: { bucket: string, id: string, objectPath: string, uploadTokenHash?: string | null }, payload: FileUploadPolicyPayload) {
   return updateStore((store) => {
     const now = new Date().toISOString()
     const row: LocalFileUploadRow = {
@@ -229,6 +252,8 @@ export async function recordLocalFileUploadPolicy(session: SessionUser, policy: 
       created_at: now,
       deleted_at: null,
       id: policy.id,
+      local_file_path: null,
+      local_upload_token_hash: policy.uploadTokenHash || null,
       mime_type: payload.mimeType,
       object_path: policy.objectPath,
       original_filename: payload.filename,
@@ -244,6 +269,42 @@ export async function recordLocalFileUploadPolicy(session: SessionUser, policy: 
     }
 
     store.fileUploads = [row, ...store.fileUploads.filter(item => item.id !== row.id)]
+    return row
+  })
+}
+
+export async function writeLocalFileUploadContent(uploadId: string, token: string, bytes: Buffer) {
+  if (!bytes.length)
+    throw new Error("Uploaded file content is empty.")
+
+  if (bytes.byteLength > maxLocalUploadBytes)
+    throw new Error("Uploaded file exceeds the local file size limit.")
+
+  return updateStore(async (store) => {
+    const now = new Date().toISOString()
+    const existing = store.fileUploads.find(row => row.id === uploadId)
+    if (!existing)
+      throw new Error("Local upload policy was not found.")
+
+    if (!existing.local_upload_token_hash || existing.local_upload_token_hash !== hashLocalUploadToken(token))
+      throw new Error("Local upload token is invalid.")
+
+    if (bytes.byteLength > existing.size_bytes)
+      throw new Error("Uploaded file is larger than the requested upload policy.")
+
+    const localFilePath = localFilePathForObjectPath(existing.object_path)
+    await mkdir(dirname(localFilePath), { recursive: true })
+    await writeFile(localFilePath, bytes)
+
+    const row: LocalFileUploadRow = {
+      ...existing,
+      local_file_path: localFilePath,
+      scan_status: "pending",
+      status: "pending",
+      updated_at: now,
+    }
+
+    store.fileUploads = [row, ...store.fileUploads.filter(item => item.id !== uploadId)]
     return row
   })
 }
@@ -276,28 +337,50 @@ export async function recordLocalFileScanResult(uploadId: string, payload: FileS
   })
 }
 
-export async function listLocalPendingFileScans(limit: number) {
+export async function listLocalPendingFileScans(limit: number, options: { appUrl?: string } = {}) {
   const store = await readStore()
   const rows = store.fileUploads
     .filter(row => row.scan_status === "pending" && row.status === "pending")
     .sort((left, right) => getRowTime(left) - getRowTime(right))
     .slice(0, limit)
 
-  return rows.map(row => ({
-    bucket: row.bucket,
-    createdAt: row.created_at,
-    id: row.id,
+  return rows.map((row) => {
+    const downloadPath = `/api/operations/file-scans/${encodeURIComponent(row.id)}/download`
+    const hasContent = Boolean(row.local_file_path)
+
+    return {
+      bucket: row.bucket,
+      createdAt: row.created_at,
+      id: row.id,
+      mimeType: row.mime_type,
+      objectPath: row.object_path,
+      originalFilename: row.original_filename,
+      ownerUserId: row.owner_user_id,
+      purpose: row.purpose,
+      relatedId: row.related_id,
+      relatedType: row.related_type,
+      signedDownloadError: hasContent ? null : "Local upload content has not been received.",
+      signedDownloadUrl: hasContent ? `${options.appUrl || ""}${downloadPath}` : null,
+      sizeBytes: row.size_bytes,
+    }
+  })
+}
+
+export async function readLocalFileUploadContent(uploadId: string) {
+  const store = await readStore()
+  const row = store.fileUploads.find(item => item.id === uploadId)
+
+  if (!row?.local_file_path)
+    return null
+
+  const localFilePath = localFilePathForObjectPath(row.object_path)
+
+  return {
+    bytes: await readFile(localFilePath),
+    filename: row.original_filename,
     mimeType: row.mime_type,
-    objectPath: row.object_path,
-    originalFilename: row.original_filename,
-    ownerUserId: row.owner_user_id,
-    purpose: row.purpose,
-    relatedId: row.related_id,
-    relatedType: row.related_type,
-    signedDownloadError: "Mock mode does not create signed download URLs.",
-    signedDownloadUrl: null,
-    sizeBytes: row.size_bytes,
-  }))
+    row,
+  }
 }
 
 export async function recordLocalNotificationDelivery(session: SessionUser, result: NotificationDeliveryResult) {
@@ -341,4 +424,5 @@ export async function recordLocalOperationalEvent(payload: OperationsEventPayloa
 
 export async function clearLocalOperationsStoreForTests() {
   await rm(storePath(), { force: true })
+  await rm(localFileUploadRoot(), { force: true, recursive: true })
 }

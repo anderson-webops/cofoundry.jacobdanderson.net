@@ -3,7 +3,8 @@ import type { z } from "zod"
 import type { SessionUser } from "~/shared/types/domain"
 import type { fileScanResultSchema, fileUploadPolicySchema } from "~/shared/utils/validation"
 import { randomUUID } from "node:crypto"
-import { listLocalPendingFileScans, recordLocalFileScanResult, recordLocalFileUploadPolicy } from "./local-operations-store"
+import { resolveServerAppUrl } from "./app-url"
+import { hashLocalUploadToken, listLocalPendingFileScans, recordLocalFileScanResult, recordLocalFileUploadPolicy } from "./local-operations-store"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
 
 type FileUploadPolicyPayload = z.infer<typeof fileUploadPolicySchema>
@@ -37,7 +38,7 @@ const leadingDotsPattern = /^\.+/
 function sanitizeFilename(filename: string) {
   return filename
     .replaceAll(unsafeFilenamePattern, "-")
-    .replaceAll(leadingDotsPattern, "")
+    .replace(leadingDotsPattern, "")
     .slice(0, 120) || "upload"
 }
 
@@ -95,7 +96,9 @@ export async function createFileUploadPolicy(event: H3Event, session: SessionUse
     uploadToken = signed.data.token
   }
   else {
-    await recordLocalFileUploadPolicy(session, { bucket: privateFileBucket, id: uploadId, objectPath }, payload)
+    uploadToken = randomUUID()
+    signedUploadUrl = `${resolveServerAppUrl(event)}/api/files/local-upload/${encodeURIComponent(uploadId)}?token=${encodeURIComponent(uploadToken)}`
+    await recordLocalFileUploadPolicy(session, { bucket: privateFileBucket, id: uploadId, objectPath, uploadTokenHash: hashLocalUploadToken(uploadToken) }, payload)
   }
 
   return {
@@ -138,7 +141,7 @@ export async function recordFileScanResult(event: H3Event, uploadId: string, pay
 
 export async function listPendingFileScans(event: H3Event, limit: number) {
   if (!isSupabaseEnabled(event))
-    return listLocalPendingFileScans(limit)
+    return listLocalPendingFileScans(limit, { appUrl: resolveServerAppUrl(event) })
 
   const adminClient = createSupabaseAdminClient(event)
   if (!adminClient)
