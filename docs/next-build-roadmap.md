@@ -131,7 +131,7 @@ Keep Stripe guarded until ready, but finish the real path cleanly:
 
 The current product still spreads one live relationship across matches, messages, proposals, and contracts.
 
-Status: implemented as a consolidated route with server-owned reads and cross-links from the related conversation, proposal, and contract detail surfaces.
+Status: implemented as a consolidated route with server-owned reads, cross-links from the related conversation/proposal/contract detail surfaces, a filtered relationship timeline, file/artifact visibility, and a decision log derived from proposal, trial, and agreement records.
 
 The user-facing consolidation is:
 
@@ -150,8 +150,8 @@ That route should unify:
 Remaining depth:
 
 - realtime refresh
-- richer timeline filtering
-- relationship-level file and decision-log views
+- writable relationship-level decision log entries
+- richer in-context file upload actions and scanner status recovery
 
 ### 6. Production-grade onboarding
 
