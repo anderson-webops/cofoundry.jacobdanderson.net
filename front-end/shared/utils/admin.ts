@@ -79,6 +79,7 @@ export interface AdminBillingFilters {
 export type AdminCommandQueueKind = "moderation" | "access" | "privacy" | "readiness"
 export type AdminCommandQueuePriority = "critical" | "high" | "standard"
 export type AdminCommandReadinessStatus = "pass" | "warn" | "fail" | "info"
+export type AdminCommandQueueSlaStatus = "overdue" | "due_soon" | "on_track"
 
 export interface AdminCommandReadinessCheck {
   action: string
@@ -100,23 +101,40 @@ export interface AdminCommandQueueInput {
 
 export interface AdminCommandQueueItem {
   actionLabel: string
+  assignedAt: string | null
   createdAt: string | null
   detail: string
+  dueAt: string | null
+  escalatedAt: string | null
+  evidenceReviewedAt: string | null
   href: string
   id: string
   kind: AdminCommandQueueKind
+  ownerLabel: string
+  ownerUserId: string | null
   priority: AdminCommandQueuePriority
+  slaLabel: string
+  slaStatus: AdminCommandQueueSlaStatus
   sourceLabel: string
   statusLabel: string
   summary: string
+  targetId: string
+  targetType: AdminAction["targetType"]
   title: string
 }
+
+type AdminCommandQueueBaseItem = Omit<AdminCommandQueueItem, "assignedAt" | "dueAt" | "escalatedAt" | "evidenceReviewedAt" | "ownerLabel" | "ownerUserId" | "slaLabel" | "slaStatus">
 
 const dayMs = 24 * 60 * 60 * 1000
 const priorityRank: Record<AdminCommandQueuePriority, number> = {
   critical: 0,
   high: 1,
   standard: 2,
+}
+const slaStatusRank: Record<AdminCommandQueueSlaStatus, number> = {
+  overdue: 0,
+  due_soon: 1,
+  on_track: 2,
 }
 
 function includesQuery(values: Array<string | undefined | null>, query: string) {
@@ -130,6 +148,15 @@ function includesQuery(values: Array<string | undefined | null>, query: string) 
 function getLatestAdminAction(seed: WorkspaceSeed, targetType: AdminAction["targetType"], targetId: string) {
   return seed.adminActions
     .filter(action => action.targetType === targetType && action.targetId === targetId)
+    .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+    .at(0)
+}
+
+function getLatestAdminActionByType(seed: WorkspaceSeed, targetType: AdminAction["targetType"], targetId: string, types: AdminAction["type"][]) {
+  const allowedTypes = new Set(types)
+
+  return seed.adminActions
+    .filter(action => action.targetType === targetType && action.targetId === targetId && allowedTypes.has(action.type))
     .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
     .at(0)
 }
@@ -149,6 +176,23 @@ function daysBetween(start: string | null, end: string | null) {
     return null
 
   return Math.max(0, Math.floor((endTime - startTime) / dayMs))
+}
+
+function addHours(value: string | null, hours: number) {
+  const time = toTime(value)
+  if (time === null)
+    return null
+
+  return new Date(time + hours * 60 * 60 * 1000).toISOString()
+}
+
+function hoursUntil(value: string | null, nowValue: string) {
+  const valueTime = toTime(value)
+  const nowTime = toTime(nowValue)
+  if (valueTime === null || nowTime === null)
+    return null
+
+  return Math.ceil((valueTime - nowTime) / (60 * 60 * 1000))
 }
 
 function formatMachineLabel(value: string) {
@@ -183,6 +227,75 @@ function readinessHref(checkId: string) {
     return "/admin/operations"
 
   return "/admin/readiness"
+}
+
+function resolveAdminUserLabel(seed: WorkspaceSeed, userId: string) {
+  const profile = getProfileByUserId(seed, userId)
+  const user = getUserById(seed, userId)
+
+  return profile?.displayName || user?.email || userId
+}
+
+function dueHoursForPriority(priority: AdminCommandQueuePriority) {
+  return {
+    critical: 4,
+    high: 24,
+    standard: 72,
+  }[priority]
+}
+
+function buildSlaState(createdAt: string | null, priority: AdminCommandQueuePriority, generatedAt: string) {
+  const dueAt = addHours(createdAt, dueHoursForPriority(priority))
+  const hoursRemaining = hoursUntil(dueAt, generatedAt)
+
+  if (hoursRemaining === null) {
+    return {
+      dueAt,
+      slaLabel: "No SLA",
+      slaStatus: "on_track" as const,
+    }
+  }
+
+  if (hoursRemaining < 0) {
+    return {
+      dueAt,
+      slaLabel: `${Math.abs(hoursRemaining)}h overdue`,
+      slaStatus: "overdue" as const,
+    }
+  }
+
+  if (hoursRemaining <= 6) {
+    return {
+      dueAt,
+      slaLabel: `Due in ${hoursRemaining}h`,
+      slaStatus: "due_soon" as const,
+    }
+  }
+
+  return {
+    dueAt,
+    slaLabel: `Due in ${hoursRemaining}h`,
+    slaStatus: "on_track" as const,
+  }
+}
+
+function enrichAdminCommandQueueItem(seed: WorkspaceSeed, generatedAt: string, item: AdminCommandQueueBaseItem): AdminCommandQueueItem {
+  const assignment = getLatestAdminActionByType(seed, item.targetType, item.targetId, ["assign_case"])
+  const escalation = getLatestAdminActionByType(seed, item.targetType, item.targetId, ["escalate_case"])
+  const evidenceReview = getLatestAdminActionByType(seed, item.targetType, item.targetId, ["review_evidence"])
+  const slaState = buildSlaState(item.createdAt, item.priority, generatedAt)
+
+  return {
+    ...item,
+    assignedAt: assignment?.createdAt || null,
+    dueAt: slaState.dueAt,
+    escalatedAt: escalation?.createdAt || null,
+    evidenceReviewedAt: evidenceReview?.createdAt || null,
+    ownerLabel: assignment ? resolveAdminUserLabel(seed, assignment.adminUserId) : "Unassigned",
+    ownerUserId: assignment?.adminUserId || null,
+    slaLabel: slaState.slaLabel,
+    slaStatus: slaState.slaStatus,
+  }
 }
 
 function resolveReportTarget(seed: WorkspaceSeed, report: Report) {
@@ -234,6 +347,20 @@ function resolveAdminTarget(seed: WorkspaceSeed, action: AdminAction) {
   if (action.targetType === "privacy_request") {
     return {
       targetLabel: "Privacy request",
+      targetContext: action.targetId,
+    }
+  }
+
+  if (action.targetType === "access_request") {
+    return {
+      targetLabel: "Access request",
+      targetContext: action.targetId,
+    }
+  }
+
+  if (action.targetType === "readiness_check") {
+    return {
+      targetLabel: "Readiness check",
       targetContext: action.targetId,
     }
   }
@@ -447,6 +574,13 @@ export function sortAdminCommandQueueItems(items: AdminCommandQueueItem[]) {
     if (priorityDiff !== 0)
       return priorityDiff
 
+    const slaDiff = slaStatusRank[left.slaStatus] - slaStatusRank[right.slaStatus]
+    if (slaDiff !== 0)
+      return slaDiff
+
+    if (Number(Boolean(right.escalatedAt)) !== Number(Boolean(left.escalatedAt)))
+      return Number(Boolean(right.escalatedAt)) - Number(Boolean(left.escalatedAt))
+
     const rightTime = toTime(right.createdAt) || 0
     const leftTime = toTime(left.createdAt) || 0
     if (rightTime !== leftTime)
@@ -458,7 +592,7 @@ export function sortAdminCommandQueueItems(items: AdminCommandQueueItem[]) {
 
 export function buildAdminCommandQueue(input: AdminCommandQueueInput) {
   const generatedAt = input.generatedAt || new Date().toISOString()
-  const reportItems: AdminCommandQueueItem[] = buildAdminReportRows(input.seed)
+  const reportItems: AdminCommandQueueBaseItem[] = buildAdminReportRows(input.seed)
     .filter(row => row.report.status !== "resolved")
     .map((row) => {
       const isOpen = row.report.status === "open"
@@ -479,11 +613,13 @@ export function buildAdminCommandQueue(input: AdminCommandQueueInput) {
         sourceLabel: row.reporterProfile?.displayName || row.reporter?.email || row.report.reporterUserId,
         statusLabel: `${row.report.priority} priority · ${row.report.status}`,
         summary: `${formatMachineLabel(row.report.reason)} on ${row.targetLabel}`,
+        targetId: row.report.id,
+        targetType: "report",
         title: "Moderation report",
       }
     })
 
-  const accessItems: AdminCommandQueueItem[] = (input.accessRequests || [])
+  const accessItems: AdminCommandQueueBaseItem[] = (input.accessRequests || [])
     .filter((request) => {
       if (request.status === "open" || request.status === "approved")
         return true
@@ -507,11 +643,13 @@ export function buildAdminCommandQueue(input: AdminCommandQueueInput) {
         sourceLabel: request.company || request.email,
         statusLabel: inviteExpired ? "Invite expired" : formatAccessStatus(request.status),
         summary: `${request.name} · ${formatMachineLabel(request.role)} · ${formatMachineLabel(request.timeline)}`,
+        targetId: request.id,
+        targetType: "access_request",
         title: request.status === "approved" ? "Approved access request needs invite" : "Access request",
       }
     })
 
-  const privacyItems: AdminCommandQueueItem[] = (input.privacyRequests || [])
+  const privacyItems: AdminCommandQueueBaseItem[] = (input.privacyRequests || [])
     .filter(request => request.status !== "resolved")
     .map((request) => {
       const ageDays = daysBetween(request.createdAt, generatedAt)
@@ -528,11 +666,13 @@ export function buildAdminCommandQueue(input: AdminCommandQueueInput) {
         sourceLabel: request.userId,
         statusLabel: formatPrivacyStatus(request.status),
         summary: formatMachineLabel(request.type),
+        targetId: request.id,
+        targetType: "privacy_request",
         title: "Privacy or trust review request",
       }
     })
 
-  const readinessItems: AdminCommandQueueItem[] = (input.readinessChecks || [])
+  const readinessItems: AdminCommandQueueBaseItem[] = (input.readinessChecks || [])
     .filter(check => check.status === "fail" || check.status === "warn")
     .map((check) => {
       return {
@@ -546,9 +686,12 @@ export function buildAdminCommandQueue(input: AdminCommandQueueInput) {
         sourceLabel: check.groupTitle || "Readiness",
         statusLabel: check.status === "fail" ? "Failing check" : "Warning check",
         summary: check.summary,
+        targetId: check.id,
+        targetType: "readiness_check",
         title: check.title,
       }
     })
 
-  return sortAdminCommandQueueItems([...reportItems, ...accessItems, ...privacyItems, ...readinessItems])
+  return sortAdminCommandQueueItems([...reportItems, ...accessItems, ...privacyItems, ...readinessItems]
+    .map(item => enrichAdminCommandQueueItem(input.seed, generatedAt, item)))
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { accessRequestSchema, adminAccessInviteSchema, adminAccessRequestStatusSchema, adminReportStatusSchema, adminUserModerationSchema, adminUserRoleSchema, billingCheckoutSchema, contactSchema, minimumOnboardingSchema, onboardingSchema, operationsBackupRunSchema, operationsDigestRunSchema, operationsEventSchema, opportunitySchema, privacyRequestSchema, proposalSchema, reportSchema, signUpSchema } from "../../shared/utils/validation"
+import { accessRequestSchema, adminAccessInviteSchema, adminAccessRequestStatusSchema, adminCommandQueueActionSchema, adminReportStatusSchema, adminUserModerationSchema, adminUserRoleSchema, billingCheckoutSchema, contactSchema, minimumOnboardingSchema, onboardingSchema, operationsBackupRunSchema, operationsDigestRunSchema, operationsEventSchema, opportunitySchema, privacyRequestSchema, proposalSchema, reportSchema, signUpSchema } from "../../shared/utils/validation"
 
 describe("validation schemas", () => {
   it("accepts a valid sign-up payload", () => {
@@ -36,6 +36,24 @@ describe("validation schemas", () => {
     expect(request.success).toBe(true)
     expect(status.success).toBe(true)
     expect(invite.success).toBe(true)
+  })
+
+  it("accepts admin command queue action payloads", () => {
+    const valid = adminCommandQueueActionSchema.safeParse({
+      action: "assign",
+      notes: "Claimed this command queue case for review.",
+      targetId: "report_3",
+      targetType: "report",
+    })
+    const invalid = adminCommandQueueActionSchema.safeParse({
+      action: "assign",
+      notes: "short",
+      targetId: "",
+      targetType: "user",
+    })
+
+    expect(valid.success).toBe(true)
+    expect(invalid.success).toBe(false)
   })
 
   it("rejects contact submissions without enough detail", () => {
