@@ -1,6 +1,6 @@
 import type { Buffer } from "node:buffer"
 import type { z } from "zod"
-import type { SessionUser } from "../../shared/types/domain"
+import type { FileUpload, FileUploadRelatedType, SessionUser } from "../../shared/types/domain"
 import type { fileScanResultSchema, fileUploadPolicySchema, operationsBackupRunSchema, operationsEventSchema } from "../../shared/utils/validation"
 import { createHash, randomUUID } from "node:crypto"
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
@@ -170,6 +170,31 @@ function pruneStore(store: LocalOperationsStore): LocalOperationsStore {
   }
 }
 
+function localFileUploadToDomain(row: LocalFileUploadRow): FileUpload {
+  return {
+    id: row.id,
+    ownerUserId: row.owner_user_id,
+    bucket: row.bucket,
+    objectPath: row.object_path,
+    originalFilename: row.original_filename,
+    mimeType: row.mime_type,
+    sizeBytes: row.size_bytes,
+    purpose: row.purpose,
+    relatedType: row.related_type,
+    relatedId: row.related_id,
+    status: row.status,
+    scanStatus: row.scan_status,
+    scanNotes: row.scan_notes,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    deletedAt: row.deleted_at || null,
+  }
+}
+
+function relatedKey(relatedType: FileUploadRelatedType, relatedId: string) {
+  return `${relatedType}:${relatedId}`
+}
+
 async function readStoreFile() {
   try {
     return await readFile(storePath(), "utf-8")
@@ -220,6 +245,21 @@ export async function readLocalOperationsRows() {
     notificationDeliveries: store.notificationDeliveries,
     operationalEvents: store.operationalEvents,
   }
+}
+
+export async function listLocalFileUploadsByRelated(relatedItems: Array<{ relatedId: string, relatedType: FileUploadRelatedType }>) {
+  const relatedKeys = new Set(relatedItems.map(item => relatedKey(item.relatedType, item.relatedId)))
+
+  if (!relatedKeys.size)
+    return []
+
+  const store = await readStore()
+
+  return newestFirst(store.fileUploads)
+    .filter(row => row.related_type && row.related_id)
+    .filter(row => row.status !== "deleted" && !row.deleted_at)
+    .filter(row => relatedKeys.has(relatedKey(row.related_type!, row.related_id!)))
+    .map(localFileUploadToDomain)
 }
 
 export async function recordLocalBackupRun(payload: OperationsBackupRunPayload) {

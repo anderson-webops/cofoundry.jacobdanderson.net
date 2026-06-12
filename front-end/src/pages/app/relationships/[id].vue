@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { FileUploadPurpose, FileUploadRelatedType } from "~/shared/types/domain"
 import type { RelationshipDecisionStatus, RelationshipSnapshot, RelationshipTimelineKind } from "~/shared/utils/relationships"
 import { formatDate, formatRelativeDate } from "~/shared/utils/format"
 import { getProfileByUserId } from "~/shared/utils/workspace"
@@ -15,15 +16,63 @@ const { authStore, workspaceStore } = useCurrentMember()
 const matchId = computed(() => String(route.params.id || ""))
 const requestHeaders = import.meta.server ? useRequestHeaders(["cookie"]) : undefined
 const timelineFilter = ref<RelationshipTimelineKind | "all">("all")
+const fileInput = ref<HTMLInputElement | null>(null)
+const uploadPending = ref(false)
+const uploadError = ref("")
+const uploadNotice = ref("")
 
 const { data, error, pending, refresh } = await useAsyncData(
   `relationship:${matchId.value}`,
   () => $fetch<{ relationship: RelationshipSnapshot }>(`/api/relationships/${matchId.value}`, { headers: requestHeaders }),
 )
 
+const maxUploadBytes = 10 * 1024 * 1024
+const allowedUploadMimeTypes = new Set([
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "text/plain",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+])
 const relationship = computed(() => data.value?.relationship || null)
 const latestMessages = computed(() => [...(relationship.value?.latestMessages || [])].reverse())
 const currentProfile = computed(() => authStore.currentUser ? getProfileByUserId(workspaceStore.data, authStore.currentUser.id) : null)
+const relationshipUploadTarget = computed<{ label: string, purpose: FileUploadPurpose, relatedId: string, relatedType: FileUploadRelatedType } | null>(() => {
+  if (!relationship.value)
+    return null
+
+  const contract = relationship.value.activeContracts[0]
+  if (contract) {
+    return {
+      label: contract.title,
+      purpose: "contract_attachment",
+      relatedId: contract.id,
+      relatedType: "contract",
+    }
+  }
+
+  const proposal = relationship.value.activeProposals[0]
+  if (proposal) {
+    return {
+      label: proposal.title,
+      purpose: "proposal_attachment",
+      relatedId: proposal.id,
+      relatedType: "proposal",
+    }
+  }
+
+  const latestMessage = relationship.value.latestMessages[0]
+  if (latestMessage) {
+    return {
+      label: "the latest conversation",
+      purpose: "message_attachment",
+      relatedId: latestMessage.id,
+      relatedType: "message",
+    }
+  }
+
+  return null
+})
 const timelineFilters = [
   { id: "all", label: "All" },
   { id: "message", label: "Messages" },
@@ -95,6 +144,104 @@ function scanTone(scanStatus: RelationshipSnapshot["files"][number]["scanStatus"
     pending: "warning",
     skipped: "neutral",
   } as const)[scanStatus]
+}
+
+function inferMimeType(file: File) {
+  if (file.type)
+    return file.type
+
+  const filename = file.name.toLowerCase()
+  if (filename.endsWith(".pdf"))
+    return "application/pdf"
+  if (filename.endsWith(".png"))
+    return "image/png"
+  if (filename.endsWith(".jpg") || filename.endsWith(".jpeg"))
+    return "image/jpeg"
+  if (filename.endsWith(".txt") || filename.endsWith(".md"))
+    return "text/plain"
+  if (filename.endsWith(".docx"))
+    return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+  return "application/octet-stream"
+}
+
+function openRelationshipFilePicker() {
+  uploadError.value = ""
+  uploadNotice.value = ""
+  fileInput.value?.click()
+}
+
+async function uploadRelationshipFile(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ""
+
+  if (!file)
+    return
+
+  const target = relationshipUploadTarget.value
+  if (!target) {
+    uploadError.value = "There is not a relationship artifact to attach this file to yet."
+    return
+  }
+
+  const mimeType = inferMimeType(file)
+  if (!allowedUploadMimeTypes.has(mimeType)) {
+    uploadError.value = "Upload a PDF, DOCX, TXT, PNG, or JPEG file."
+    return
+  }
+
+  if (file.size > maxUploadBytes) {
+    uploadError.value = "Files must be 10MB or smaller."
+    return
+  }
+
+  uploadPending.value = true
+  uploadError.value = ""
+  uploadNotice.value = ""
+
+  try {
+    const { policy } = await $fetch<{
+      policy: {
+        id: string
+        method: "PUT"
+        signedUploadUrl: string | null
+      }
+    }>("/api/files/upload-policy", {
+      method: "POST",
+      body: {
+        filename: file.name,
+        mimeType,
+        purpose: target.purpose,
+        relatedId: target.relatedId,
+        relatedType: target.relatedType,
+        sizeBytes: file.size,
+      },
+    })
+
+    if (!policy.signedUploadUrl)
+      throw new Error("Upload URL was not created.")
+
+    const response = await fetch(policy.signedUploadUrl, {
+      body: file,
+      headers: {
+        "content-type": mimeType,
+      },
+      method: policy.method,
+    })
+
+    if (!response.ok)
+      throw new Error("The upload could not be completed.")
+
+    await refresh()
+    uploadNotice.value = `Uploaded ${file.name}. It will remain marked pending until the file scanner records a result.`
+  }
+  catch (error) {
+    uploadError.value = error instanceof Error ? error.message : "The file could not be uploaded."
+  }
+  finally {
+    uploadPending.value = false
+  }
 }
 </script>
 
@@ -330,13 +477,41 @@ function scanTone(scanStatus: RelationshipSnapshot["files"][number]["scanStatus"
 
           <article class="panel p-6">
             <div class="flex flex-wrap gap-2 items-center justify-between">
-              <h2 class="text-lg font-semibold">
-                Files and artifacts
-              </h2>
-              <BaseBadge tone="neutral">
-                {{ relationship.files.length }}
-              </BaseBadge>
+              <div>
+                <h2 class="text-lg font-semibold">
+                  Files and artifacts
+                </h2>
+                <p v-if="relationshipUploadTarget" class="muted text-sm leading-6 mt-2">
+                  Attach PDFs, docs, images, or notes to {{ relationshipUploadTarget.label }}.
+                </p>
+              </div>
+              <div class="flex flex-wrap gap-2 items-center">
+                <BaseBadge tone="neutral">
+                  {{ relationship.files.length }}
+                </BaseBadge>
+                <BaseButton
+                  size="sm"
+                  variant="secondary"
+                  :disabled="uploadPending || !relationshipUploadTarget"
+                  @click="openRelationshipFilePicker"
+                >
+                  {{ uploadPending ? "Uploading..." : "Upload file" }}
+                </BaseButton>
+              </div>
             </div>
+            <input
+              ref="fileInput"
+              accept=".docx,.jpeg,.jpg,.pdf,.png,.txt,application/pdf,image/jpeg,image/png,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              class="hidden"
+              type="file"
+              @change="uploadRelationshipFile"
+            >
+            <p v-if="uploadError" class="text-sm text-[var(--danger)] leading-6 mt-4">
+              {{ uploadError }}
+            </p>
+            <p v-else-if="uploadNotice" class="text-sm text-[var(--success)] leading-6 mt-4">
+              {{ uploadNotice }}
+            </p>
             <div class="surface-row-list mt-4">
               <NuxtLink
                 v-for="file in relationship.files"
