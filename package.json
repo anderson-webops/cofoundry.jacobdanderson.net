@@ -11,6 +11,11 @@
     "front-end",
     "back-end"
   ],
+  "overrides": {
+    "vite": {
+      "esbuild": "0.28.1"
+    }
+  },
   "scripts": {
     "audit": "npm audit --workspaces",
     "audit-fix": "npm audit fix --workspaces",

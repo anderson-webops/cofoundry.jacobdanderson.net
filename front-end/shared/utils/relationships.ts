@@ -1,6 +1,6 @@
 import type { Contract, Match, Message, Profile, Proposal, TrialCollaboration, WorkspaceSeed } from "../types/domain"
 import { collaborationContractNeedsUserSignature, collaborationProposalNeedsUserResponse } from "./collaboration"
-import { getConversationByMatch, getCurrentContractVersion, getCurrentProposalVersion, getProfileByUserId, getTrialForMatch } from "./workspace"
+import { getConversationByMatch, getCurrentContractVersion, getCurrentProposalVersion, getMatchByConversation, getProfileByUserId, getProposalById, getTrialForMatch } from "./workspace"
 
 export interface RelationshipNextAction {
   href: string
@@ -19,6 +19,13 @@ export interface RelationshipSnapshot {
   nextActions: RelationshipNextAction[]
   trial: TrialCollaboration | null
   unreadCount: number
+}
+
+function visibleRelationshipMatch(match: Match | undefined, userId: string) {
+  if (!match || !match.participantIds.includes(userId))
+    return null
+
+  return match
 }
 
 function sortByDateDesc<T extends { createdAt: string }>(items: T[]) {
@@ -107,4 +114,39 @@ export function buildRelationshipSnapshot(seed: WorkspaceSeed, userId: string, m
     trial,
     unreadCount: conversation.unreadCountByUser[userId] || 0,
   }
+}
+
+export function getRelationshipMatchByConversation(seed: WorkspaceSeed, userId: string, conversationId: string) {
+  return visibleRelationshipMatch(getMatchByConversation(seed, conversationId), userId)
+}
+
+export function getRelationshipMatchByProposal(seed: WorkspaceSeed, userId: string, proposalId: string) {
+  const proposal = getProposalById(seed, proposalId)
+  if (!proposal)
+    return null
+
+  return getRelationshipMatchByConversation(seed, userId, proposal.conversationId)
+}
+
+export function getRelationshipMatchByContract(seed: WorkspaceSeed, userId: string, contractId: string) {
+  const contract = seed.contracts.find(item => item.id === contractId)
+  if (!contract)
+    return null
+
+  return getRelationshipMatchByProposal(seed, userId, contract.proposalId)
+}
+
+export function getRelationshipHrefForConversation(seed: WorkspaceSeed, userId: string, conversationId: string) {
+  const match = getRelationshipMatchByConversation(seed, userId, conversationId)
+  return match ? `/app/relationships/${match.id}` : null
+}
+
+export function getRelationshipHrefForProposal(seed: WorkspaceSeed, userId: string, proposalId: string) {
+  const match = getRelationshipMatchByProposal(seed, userId, proposalId)
+  return match ? `/app/relationships/${match.id}` : null
+}
+
+export function getRelationshipHrefForContract(seed: WorkspaceSeed, userId: string, contractId: string) {
+  const match = getRelationshipMatchByContract(seed, userId, contractId)
+  return match ? `/app/relationships/${match.id}` : null
 }

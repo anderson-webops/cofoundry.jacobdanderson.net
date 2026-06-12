@@ -3,6 +3,7 @@ import type { ProposalSectionKey, ProposalSectionState } from "~/shared/types/do
 import { buildSubscriptionUsage, formatUsageQuota, getSubscriptionEntitlements } from "~/shared/utils/billing"
 import { formatDate, formatProposalRelationshipType, formatProposalSectionKey, formatProposalSectionState, formatProposalStatus } from "~/shared/utils/format"
 import { buildProposalSectionSummaries, buildProposalTermsSummary, buildProposalTimeline, buildProposalUnresolvedItems, getProposalStatusTone } from "~/shared/utils/proposals"
+import { getRelationshipHrefForProposal } from "~/shared/utils/relationships"
 import { getCurrentProposalVersion, getProfileByUserId, getProposalById, getProposalComments, getProposalVersions } from "~/shared/utils/workspace"
 
 definePageMeta({
@@ -42,6 +43,7 @@ const termsSummary = computed(() => version.value ? buildProposalTermsSummary(ve
 const authorProfile = computed(() => proposal.value ? getProfileByUserId(workspaceStore.data, proposal.value.createdByUserId) : null)
 const recipientProfile = computed(() => proposal.value ? getProfileByUserId(workspaceStore.data, proposal.value.recipientUserId) : null)
 const contractId = computed(() => workspaceStore.data.contracts.find(contract => contract.proposalId === route.params.id)?.id)
+const relationshipHref = computed(() => proposal.value && authStore.currentUser ? getRelationshipHrefForProposal(workspaceStore.data, authStore.currentUser.id, proposal.value.id) : null)
 const entitlements = computed(() => getSubscriptionEntitlements(subscription.value || undefined))
 const usage = computed(() => authStore.currentUser ? buildSubscriptionUsage(workspaceStore.data, authStore.currentUser.id, subscription.value || undefined) : null)
 
@@ -131,6 +133,9 @@ function contractQuotaText() {
         :description="`Between ${authorProfile?.displayName} and ${recipientProfile?.displayName}`"
       >
         <template #actions>
+          <BaseButton v-if="relationshipHref" variant="secondary" :to="relationshipHref">
+            Relationship workspace
+          </BaseButton>
           <BaseBadge :tone="getProposalStatusTone(proposal.status)">
             {{ formatProposalStatus(proposal.status) }}
           </BaseBadge>
@@ -160,6 +165,9 @@ function contractQuotaText() {
           </p>
         </div>
         <div class="mt-5 flex flex-wrap gap-3">
+          <BaseButton v-if="relationshipHref" :to="relationshipHref">
+            Open relationship
+          </BaseButton>
           <BaseButton variant="secondary" @click="updateStatus('viewed')">
             Mark viewed
           </BaseButton>

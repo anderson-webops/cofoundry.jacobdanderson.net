@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { RelationshipSnapshot } from "~/shared/utils/relationships"
 import { formatDate, formatRelativeDate } from "~/shared/utils/format"
+import { getProfileByUserId } from "~/shared/utils/workspace"
 
 definePageMeta({
   layout: "app",
@@ -10,16 +11,18 @@ definePageMeta({
 usePageSeo("Relationship workspace")
 
 const route = useRoute()
-const { authStore } = useCurrentMember()
+const { authStore, workspaceStore } = useCurrentMember()
 const matchId = computed(() => String(route.params.id || ""))
+const requestHeaders = import.meta.server ? useRequestHeaders(["cookie"]) : undefined
 
 const { data, error, pending, refresh } = await useAsyncData(
   `relationship:${matchId.value}`,
-  () => $fetch<{ relationship: RelationshipSnapshot }>(`/api/relationships/${matchId.value}`),
+  () => $fetch<{ relationship: RelationshipSnapshot }>(`/api/relationships/${matchId.value}`, { headers: requestHeaders }),
 )
 
 const relationship = computed(() => data.value?.relationship || null)
 const latestMessages = computed(() => [...(relationship.value?.latestMessages || [])].reverse())
+const currentProfile = computed(() => authStore.currentUser ? getProfileByUserId(workspaceStore.data, authStore.currentUser.id) : null)
 
 function senderLabel(senderUserId: string | null) {
   if (!senderUserId)
@@ -47,7 +50,14 @@ function senderLabel(senderUserId: string | null) {
     </PageIntro>
 
     <EmptyState
-      v-if="error"
+      v-if="pending && !relationship"
+      icon="i-carbon-ibm-cloud-direct-link-1"
+      title="Loading relationship"
+      description="Pulling the latest conversation, trial sprint, proposal, agreement, and next-action state."
+    />
+
+    <EmptyState
+      v-else-if="error"
       icon="i-carbon-warning"
       title="Relationship unavailable"
       description="This relationship may have been removed, or your account may not be a participant."
@@ -145,6 +155,18 @@ function senderLabel(senderUserId: string | null) {
         <aside class="gap-5 grid content-start">
           <article class="panel p-6">
             <h2 class="text-lg font-semibold">
+              Counterpart fit
+            </h2>
+            <p class="muted text-sm leading-6 mt-3">
+              {{ relationship.counterpartProfile.headline }}
+            </p>
+            <div class="mt-5">
+              <TrustSignalStrip :profile="relationship.counterpartProfile" />
+            </div>
+          </article>
+
+          <article class="panel p-6">
+            <h2 class="text-lg font-semibold">
               Next action
             </h2>
             <div class="surface-row-list mt-4">
@@ -158,6 +180,18 @@ function senderLabel(senderUserId: string | null) {
               </NuxtLink>
             </div>
           </article>
+
+          <details v-if="currentProfile" class="panel p-6">
+            <summary class="text-lg font-semibold cursor-pointer">
+              Alignment check
+            </summary>
+            <div class="mt-5">
+              <AlignmentCheckPanel
+                :current-profile="currentProfile"
+                :counterpart-profile="relationship.counterpartProfile"
+              />
+            </div>
+          </details>
 
           <TrialCollaborationCard
             v-if="relationship.trial"
