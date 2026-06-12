@@ -45,6 +45,12 @@ describe("validation schemas", () => {
       targetId: "report_3",
       targetType: "report",
     })
+    const fileUploadReview = adminCommandQueueActionSchema.safeParse({
+      action: "review_evidence",
+      notes: "Reviewed the trust evidence package and recorded the operator decision.",
+      targetId: "file_trust_olivia_linkedin",
+      targetType: "file_upload",
+    })
     const invalid = adminCommandQueueActionSchema.safeParse({
       action: "assign",
       notes: "short",
@@ -53,6 +59,7 @@ describe("validation schemas", () => {
     })
 
     expect(valid.success).toBe(true)
+    expect(fileUploadReview.success).toBe(true)
     expect(invalid.success).toBe(false)
   })
 

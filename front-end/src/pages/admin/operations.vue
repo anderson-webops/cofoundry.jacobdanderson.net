@@ -76,6 +76,9 @@ function rowDate(row: OpsRow) {
         <BaseButton variant="secondary" to="/admin/readiness">
           Launch readiness
         </BaseButton>
+        <BaseButton variant="secondary" to="/admin/evidence">
+          Evidence review
+        </BaseButton>
         <BaseButton variant="secondary" :disabled="pending" @click="refresh">
           {{ pending ? "Refreshing..." : "Refresh" }}
         </BaseButton>

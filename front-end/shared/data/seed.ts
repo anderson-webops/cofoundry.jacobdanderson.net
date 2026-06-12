@@ -1658,7 +1658,26 @@ export const workspaceSeed: WorkspaceSeed = {
       createdAt: ts(10, "15:10"),
     },
   ],
-  fileUploads: [],
+  fileUploads: [
+    {
+      id: "file_trust_olivia_linkedin",
+      ownerUserId: "user_olivia",
+      bucket: "cofoundry-private-files",
+      objectPath: "user_olivia/trust/linkedin-verification-summary.pdf",
+      originalFilename: "linkedin-verification-summary.pdf",
+      mimeType: "application/pdf",
+      sizeBytes: 482000,
+      purpose: "trust_evidence",
+      relatedType: "profile",
+      relatedId: "profile_olivia",
+      status: "uploaded",
+      scanStatus: "clean",
+      scanNotes: "Clean scan result available for operator trust review.",
+      createdAt: ts(10, "09:15"),
+      updatedAt: ts(10, "09:20"),
+      deletedAt: null,
+    },
+  ],
   savedSearches: [
     {
       id: "saved_search_1",

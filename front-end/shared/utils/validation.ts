@@ -233,7 +233,7 @@ export const adminCommandQueueActionSchema = z.object({
   action: z.enum(["assign", "escalate", "review_evidence"]),
   notes: z.string().trim().min(8, "Add a short queue action note.").max(500, "Keep the queue action note concise."),
   targetId: z.string().trim().min(1, "A queue target id is required.").max(160, "Queue target id is too long."),
-  targetType: z.enum(["access_request", "readiness_check", "report", "privacy_request"]),
+  targetType: z.enum(["access_request", "readiness_check", "file_upload", "report", "privacy_request"]),
 })
 
 export const privacyRequestSchema = z.object({

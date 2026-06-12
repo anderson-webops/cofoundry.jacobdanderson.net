@@ -1,8 +1,30 @@
 import type { H3Event } from "h3"
 import type { AdminAction, AppRole, Notification, PrivacyRequestStatus, ReportStatus } from "~/shared/types/domain"
-import { persistLocalReportStatus, persistLocalUserRole, persistLocalUserSuspension, recordLocalAdminAction, recordLocalUserNotification } from "./local-admin-audit"
+import { persistLocalReportStatus, persistLocalUserRole, persistLocalUserSuspension, readLocalAdminAuditStore, recordLocalAdminAction, recordLocalUserNotification } from "./local-admin-audit"
 import { updateLocalPrivacyRequestStatus } from "./local-privacy-requests"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
+
+interface PersistedAdminActionRow {
+  admin_user_id: string
+  created_at: string
+  id: string
+  notes: string
+  target_id: string
+  target_type: AdminAction["targetType"]
+  type: AdminAction["type"]
+}
+
+function fromAdminActionRow(row: PersistedAdminActionRow): AdminAction {
+  return {
+    id: row.id,
+    adminUserId: row.admin_user_id,
+    type: row.type,
+    targetId: row.target_id,
+    targetType: row.target_type,
+    notes: row.notes,
+    createdAt: row.created_at,
+  }
+}
 
 export async function persistAdminAction(event: H3Event, action: AdminAction) {
   if (!isSupabaseEnabled(event))
@@ -26,6 +48,28 @@ export async function persistAdminAction(event: H3Event, action: AdminAction) {
 
   if (error)
     throw error
+}
+
+export async function listPersistedAdminActions(event: H3Event) {
+  if (!isSupabaseEnabled(event)) {
+    const store = await readLocalAdminAuditStore()
+    return store.actions
+  }
+
+  const adminClient = createSupabaseAdminClient(event)
+  if (!adminClient)
+    throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
+
+  const { data, error } = await adminClient
+    .from("admin_actions")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(500)
+
+  if (error)
+    throw error
+
+  return ((data || []) as PersistedAdminActionRow[]).map(fromAdminActionRow)
 }
 
 export async function persistUserNotification(event: H3Event, notification: Notification) {

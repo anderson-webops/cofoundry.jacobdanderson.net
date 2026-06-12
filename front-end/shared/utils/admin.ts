@@ -161,6 +161,15 @@ function getLatestAdminActionByType(seed: WorkspaceSeed, targetType: AdminAction
     .at(0)
 }
 
+export function mergeAdminActions(primary: AdminAction[], fallback: AdminAction[]) {
+  const primaryIds = new Set(primary.map(action => action.id))
+
+  return [
+    ...primary,
+    ...fallback.filter(action => !primaryIds.has(action.id)),
+  ]
+}
+
 function toTime(value?: string | null) {
   if (!value)
     return null
@@ -348,6 +357,17 @@ function resolveAdminTarget(seed: WorkspaceSeed, action: AdminAction) {
     return {
       targetLabel: "Privacy request",
       targetContext: action.targetId,
+    }
+  }
+
+  if (action.targetType === "file_upload") {
+    const upload = seed.fileUploads.find(item => item.id === action.targetId)
+
+    return {
+      targetLabel: upload?.originalFilename || "File upload",
+      targetContext: upload
+        ? `${upload.purpose.replaceAll("_", " ")} · ${upload.scanStatus}`
+        : action.targetId,
     }
   }
 

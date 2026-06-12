@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import type { AdminAction } from "~/shared/types/domain"
 import type { AdminAuditFilters } from "~/shared/utils/admin"
-import { buildAdminAuditEntries, filterAdminAuditEntries } from "~/shared/utils/admin"
+import { buildAdminAuditEntries, filterAdminAuditEntries, mergeAdminActions } from "~/shared/utils/admin"
 import { formatAdminActionType, formatDate } from "~/shared/utils/format"
 
 definePageMeta({
@@ -11,6 +12,8 @@ definePageMeta({
 usePageSeo("Admin audit log")
 
 const workspaceStore = useWorkspaceStore()
+const requestFetch = useRequestFetch()
+const { data: auditData, pending, refresh } = await useAsyncData("admin-audit", () => requestFetch<{ actions: AdminAction[] }>("/api/admin/audit"))
 
 const filters = reactive<AdminAuditFilters>({
   query: "",
@@ -25,6 +28,9 @@ const actionTypeOptions = [
   { label: "Resolved report", value: "resolve_report" },
   { label: "Reviewed privacy request", value: "review_privacy_request" },
   { label: "Resolved privacy request", value: "resolve_privacy_request" },
+  { label: "Reviewed evidence", value: "review_evidence" },
+  { label: "Assigned case", value: "assign_case" },
+  { label: "Escalated case", value: "escalate_case" },
   { label: "Suspended user", value: "suspend_user" },
   { label: "Reinstated user", value: "reinstate_user" },
   { label: "Changed user role", value: "change_user_role" },
@@ -50,12 +56,17 @@ const targetTypeOptions = [
   { label: "Users", value: "user" },
   { label: "Reports", value: "report" },
   { label: "Privacy requests", value: "privacy_request" },
+  { label: "File uploads", value: "file_upload" },
   { label: "Profiles", value: "profile" },
   { label: "Messages", value: "message" },
   { label: "Opportunities", value: "opportunity" },
 ]
 
-const entries = computed(() => filterAdminAuditEntries(buildAdminAuditEntries(workspaceStore.data), filters))
+const auditSeed = computed(() => ({
+  ...workspaceStore.data,
+  adminActions: mergeAdminActions(auditData.value?.actions || [], workspaceStore.data.adminActions),
+}))
+const entries = computed(() => filterAdminAuditEntries(buildAdminAuditEntries(auditSeed.value), filters))
 </script>
 
 <template>
@@ -64,7 +75,13 @@ const entries = computed(() => filterAdminAuditEntries(buildAdminAuditEntries(wo
       eyebrow="Admin"
       title="Audit log"
       description="Search every recorded moderation and enforcement action by actor, target, or action type."
-    />
+    >
+      <template #actions>
+        <BaseButton variant="secondary" :disabled="pending" @click="refresh">
+          {{ pending ? "Refreshing..." : "Refresh" }}
+        </BaseButton>
+      </template>
+    </PageIntro>
 
     <section class="panel p-6">
       <div class="gap-4 grid md:grid-cols-2 xl:grid-cols-4">
