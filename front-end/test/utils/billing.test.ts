@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { workspaceSeed } from "../../shared/data/seed"
-import { buildSubscriptionUsage, getPlanPriceLabel, getSubscriptionEntitlements } from "../../shared/utils/billing"
+import { buildSubscriptionUsage, checkSavedSearchCount, checkSubscriptionGate, getPlanPriceLabel, getSubscriptionEntitlements } from "../../shared/utils/billing"
 
 describe("billing helpers", () => {
   it("keeps matched messaging free while metering higher-intent actions", () => {
@@ -113,6 +113,38 @@ describe("billing helpers", () => {
     expect(usage.intros.exhausted).toBe(true)
     expect(usage.savedSearches.used).toBe(1)
     expect(usage.savedSearches.exhausted).toBe(true)
+  })
+
+  it("blocks server-side actions when plan limits are exhausted", () => {
+    const seed = structuredClone(workspaceSeed)
+    const now = new Date().toISOString()
+
+    seed.connectRequests = seed.connectRequests.filter(request => request.fromUserId !== "user_malik")
+    for (let index = 0; index < 5; index += 1) {
+      seed.connectRequests.unshift({
+        id: `connect_gate_${index}`,
+        fromUserId: "user_malik",
+        toUserId: "user_olivia",
+        note: "Intro gate check",
+        status: "pending",
+        declineReason: null,
+        createdAt: now,
+        respondedAt: null,
+      })
+    }
+
+    const subscription = seed.subscriptions.find(item => item.userId === "user_malik")
+    const gate = checkSubscriptionGate(seed, "user_malik", subscription, "send_intro")
+
+    expect(gate.allowed).toBe(false)
+    expect(gate.reason).toContain("no structured intros left")
+  })
+
+  it("allows replacing an existing saved search but blocks adding over the limit", () => {
+    const subscription = workspaceSeed.subscriptions.find(item => item.userId === "user_malik")
+
+    expect(checkSavedSearchCount(subscription, 1).allowed).toBe(true)
+    expect(checkSavedSearchCount(subscription, 2).allowed).toBe(false)
   })
 
   it("formats plan pricing for monthly and annual billing", () => {

@@ -94,6 +94,7 @@ Server-only secrets:
 - `COFOUNDRY_LOCAL_DATA_DIR`
 - `COFOUNDRY_OPERATIONS_RETENTION_LIMIT`
 - `COFOUNDRY_ACCESS_REQUEST_RETENTION_LIMIT`
+- `COFOUNDRY_PRIVACY_REQUEST_RETENTION_LIMIT`
 - `CONTACT_FROM_EMAIL`
 - `CONTACT_FROM_NAME`
 - `CONTACT_TO_EMAIL`
@@ -113,7 +114,7 @@ The public contact form now delivers through the server instead of only validati
 
 The same server mail transport now powers on-demand unread workspace digests from `/app/inbox`. Scheduled digests are exposed through the worker-authenticated `/api/operations/notification-digests/run` endpoint and should be called by a server cron/timer with `COFOUNDRY_OPERATIONS_TOKEN`. In mock/access-request mode, operations telemetry is persisted to `.data/operations-telemetry.json` by default, or to `COFOUNDRY_LOCAL_DATA_DIR` when set.
 
-Public workspace access requests are durable in mock/access-request mode. `/auth/sign-up` submits access requests into `.data/access-requests.json` by default, admins can review them at `/admin/access-requests`, and issued invites create 30-day invite links that allow account creation without enabling public self-serve signup. Invited local accounts are stored in `.data/local-auth-accounts.json` so sign-in survives server restarts while the site remains in mock backend mode. When Supabase mode is intentionally enabled later, the same route surface writes to the `access_requests` table after the latest migrations are applied.
+Public workspace access requests are durable in mock/access-request mode. `/auth/sign-up` submits access requests into `.data/access-requests.json` by default, admins can review them at `/admin/access-requests`, and issued invites create 30-day invite links that allow account creation without enabling public self-serve signup. Privacy and trust-review requests submitted from account settings are stored in `.data/privacy-requests.json` and reviewed at `/admin/privacy`. Invited local accounts are stored in `.data/local-auth-accounts.json` so sign-in survives server restarts while the site remains in mock backend mode. When Supabase mode is intentionally enabled later, the same route surface writes to the relevant Supabase tables after the latest migrations are applied.
 
 ## Local review accounts
 
@@ -227,6 +228,7 @@ Optional for server-side workers:
 - `COFOUNDRY_LOCAL_DATA_DIR`
 - `COFOUNDRY_OPERATIONS_RETENTION_LIMIT`
 - `COFOUNDRY_ACCESS_REQUEST_RETENTION_LIMIT`
+- `COFOUNDRY_PRIVACY_REQUEST_RETENTION_LIMIT`
 
 Provisioning after merge:
 
@@ -237,15 +239,15 @@ Provisioning after merge:
 5. Assign the first real admin user server-side before using `/admin`: `BOOTSTRAP_ADMIN_EMAIL=operator@example.com npm run -w back-end bootstrap-admin`. The script requires Supabase mode and the Vault-injected `SUPABASE_SERVICE_ROLE_KEY`; it updates an existing user row and records an admin action.
 6. Turn on Stripe env only when checkout and webhook infrastructure are ready.
 7. Configure `COFOUNDRY_OPERATIONS_TOKEN` before enabling scheduled digests, backup-run reporting, operational event ingestion, or file-scan callbacks.
-8. In mock/access-request mode, ensure the app process can write to `.data/operations-telemetry.json`, `.data/access-requests.json`, and `.data/local-auth-accounts.json`, or set `COFOUNDRY_LOCAL_DATA_DIR` to a durable writable host path.
+8. In mock/access-request mode, ensure the app process can write to `.data/operations-telemetry.json`, `.data/access-requests.json`, `.data/privacy-requests.json`, and `.data/local-auth-accounts.json`, or set `COFOUNDRY_LOCAL_DATA_DIR` to a durable writable host path.
 
 ## Production control surfaces
 
 - Sensitive endpoints now have server-side rate limits for auth, contact, billing checkout, collaboration writes, member workspace writes, admin actions, inbox read transitions, data exports, and privacy requests.
 - Admin moderation actions persist user suspension, role changes, report status changes, and audit actions in Supabase mode.
 - Access-request review has a mock-mode admin queue at `/admin/access-requests` and a Supabase-backed table path for later. Operators can approve, deny, reopen, and issue invite links while Supabase and Stripe remain disabled.
-- Account settings include a JSON data export and a privacy-request submission path.
-- Admins can review Supabase-backed privacy requests at `/admin/privacy`; reviewed/resolved requests create audit actions and user notifications.
+- Account settings include a JSON data export, privacy-request submission, and trust-verification review requests. The settings UI no longer self-awards trust badges.
+- Admins can review privacy and trust-review requests at `/admin/privacy` from Supabase mode or the local mock-mode queue. Reviewed/resolved requests create audit actions and user notifications when Supabase persistence is enabled.
 - Supabase migrations include RLS policies for user-owned, participant-owned, admin-only, notification, privacy, file-upload, backup, and operational tables.
 - File uploads are represented by server-owned metadata and signed Supabase upload policies against the private `cofoundry-private-files` bucket. A malware/content scanner still needs to run outside the app and report results through `/api/operations/file-scans/:id`.
 - Relationship workspaces now have a server read endpoint and `/app/relationships/:id` page that aggregates conversation, trial, proposal, agreement, unread, and next-action state.
@@ -262,7 +264,7 @@ Each endpoint requires `Authorization: Bearer <COFOUNDRY_OPERATIONS_TOKEN>` or `
 
 When Supabase is disabled, these endpoints write durable local telemetry rows to `operations-telemetry.json` with a default retention limit of 200 rows per collection. Set `COFOUNDRY_OPERATIONS_RETENTION_LIMIT` to tune that per-collection limit.
 
-Access-request rows are separately retained in `access-requests.json` with a default limit of 500. Set `COFOUNDRY_ACCESS_REQUEST_RETENTION_LIMIT` to tune that queue, and keep `COFOUNDRY_LOCAL_DATA_DIR` on durable host storage if invite-only mock-mode accounts need to survive deployment restarts.
+Access-request rows are separately retained in `access-requests.json` with a default limit of 500. Privacy and trust-review requests are retained in `privacy-requests.json` with a default limit of 500. Set `COFOUNDRY_ACCESS_REQUEST_RETENTION_LIMIT` and `COFOUNDRY_PRIVACY_REQUEST_RETENTION_LIMIT` to tune those queues, and keep `COFOUNDRY_LOCAL_DATA_DIR` on durable host storage if invite-only mock-mode accounts need to survive deployment restarts.
 
 The server-side handoff prompt for wiring these jobs lives at `docs/server-ai-operations-prompt.md`; first-admin provisioning is covered in `docs/server-ai-admin-bootstrap-prompt.md`; the recurring operator checklist lives at `docs/operations-runbook.md`.
 

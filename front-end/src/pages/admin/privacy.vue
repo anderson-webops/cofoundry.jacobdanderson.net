@@ -60,7 +60,7 @@ async function updateRequestStatus(request: PrivacyRequest, status: "reviewed" |
             Request queue
           </h2>
           <p class="muted text-sm leading-6 mt-2">
-            Supabase-backed production requests appear here. Mock mode keeps this queue empty.
+            Requests submitted from account settings appear here from Supabase or the local server store.
           </p>
         </div>
         <BaseBadge tone="accent">
@@ -118,7 +118,7 @@ async function updateRequestStatus(request: PrivacyRequest, status: "reviewed" |
         class="mt-6"
         icon="i-carbon-data-vis-4"
         title="No privacy requests"
-        description="Requests submitted from account settings will appear here once the production persistence layer is active."
+        description="Account deletion, correction, visibility, safety, and trust-review requests will appear here when members submit them."
       />
     </section>
   </div>

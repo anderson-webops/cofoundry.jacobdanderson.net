@@ -29,6 +29,13 @@ export interface SubscriptionUsage {
   contractDrafts: UsageQuota
 }
 
+export type SubscriptionGateAction = "send_intro" | "save_search" | "create_proposal" | "create_contract" | "sign_contract"
+
+export interface SubscriptionGateResult {
+  allowed: boolean
+  reason: string | null
+}
+
 const PLAN_LIMITS: Record<SubscriptionPlan, Omit<SubscriptionEntitlements, "plan" | "hasVisibilityBoost">> = {
   free: {
     canMessageFreely: true,
@@ -125,6 +132,82 @@ export function buildSubscriptionUsage(seed: WorkspaceSeed, userId: string, subs
     savedSearches: buildQuota(savedSearchesUsed, entitlements.savedSearchLimit, "saved searches"),
     proposals: buildQuota(proposalsUsed, entitlements.proposalSendLimit, "proposal sends"),
     contractDrafts: buildQuota(contractDraftsUsed, entitlements.contractDraftLimit, "agreement drafts"),
+  }
+}
+
+export function checkSavedSearchCount(subscription: Subscription | undefined, savedSearchCount: number): SubscriptionGateResult {
+  const entitlements = getSubscriptionEntitlements(subscription)
+  const limit = entitlements.savedSearchLimit
+
+  if (limit !== null && savedSearchCount > limit) {
+    return {
+      allowed: false,
+      reason: `Your plan allows ${limit} saved search${limit === 1 ? "" : "es"}. Upgrade before adding another saved search.`,
+    }
+  }
+
+  return {
+    allowed: true,
+    reason: null,
+  }
+}
+
+export function checkSubscriptionGate(seed: WorkspaceSeed, userId: string, subscription: Subscription | undefined, action: SubscriptionGateAction): SubscriptionGateResult {
+  const entitlements = getSubscriptionEntitlements(subscription)
+  const usage = buildSubscriptionUsage(seed, userId, subscription)
+
+  if (action === "send_intro" && usage.intros.exhausted) {
+    return {
+      allowed: false,
+      reason: "Your plan has no structured intros left this month. Upgrade before sending another intro.",
+    }
+  }
+
+  if (action === "save_search")
+    return checkSavedSearchCount(subscription, usage.savedSearches.used + 1)
+
+  if (action === "create_proposal") {
+    if (!entitlements.canUseProposals) {
+      return {
+        allowed: false,
+        reason: "Your plan does not include proposal workflows.",
+      }
+    }
+
+    if (usage.proposals.exhausted) {
+      return {
+        allowed: false,
+        reason: "Your plan has no proposal sends left this month. Upgrade before sending another proposal.",
+      }
+    }
+  }
+
+  if (action === "create_contract") {
+    if (!entitlements.canDraftContracts) {
+      return {
+        allowed: false,
+        reason: "Your plan does not include agreement drafting.",
+      }
+    }
+
+    if (usage.contractDrafts.exhausted) {
+      return {
+        allowed: false,
+        reason: "Your plan has no agreement drafts left this month. Upgrade before creating another agreement.",
+      }
+    }
+  }
+
+  if (action === "sign_contract" && !entitlements.canSignContracts) {
+    return {
+      allowed: false,
+      reason: "Agreement signing requires a Pro or Team plan.",
+    }
+  }
+
+  return {
+    allowed: true,
+    reason: null,
   }
 }
 

@@ -111,7 +111,7 @@ Additional production controls now started:
 
 - server-side rate limits on auth, contact, billing, collaboration, member writes, inbox reads, admin actions, exports, and privacy requests
 - JSON account data export from settings
-- privacy request submission from settings and `/admin/privacy` review queue with user notification on review/resolution
+- privacy and trust-review request submission from settings, with `/admin/privacy` reading Supabase or the local mock-mode queue
 
 ### 4. Production billing path
 
@@ -121,7 +121,7 @@ Keep Stripe guarded until ready, but finish the real path cleanly:
 - webhook handling
 - subscription sync
 - admin billing visibility through a read-only billing console
-- entitlement enforcement on the server
+- entitlement enforcement on the server for intros, saved searches, proposals, agreement drafts, and signatures
 
 ## Next
 

@@ -4,6 +4,8 @@ import { contactRevealStageOptions } from "~/shared/constants/options"
 import { formatContactRevealStage, formatTrustTier } from "~/shared/utils/format"
 import { buildProfileTrustTier } from "~/shared/utils/formation"
 
+type TrustVerificationType = "phone" | "linkedin" | "github" | "website" | "work_domain" | "government_id"
+
 definePageMeta({
   layout: "app",
   middleware: ["auth", "onboarding"],
@@ -19,6 +21,7 @@ const exportingData = ref(false)
 const privacyRequestDetails = ref("")
 const privacyRequestSubmitting = ref(false)
 const privacyRequestType = ref<PrivacyRequestType>("account_deletion")
+const trustVerificationPending = ref<TrustVerificationType | "">("")
 const trustTier = computed(() => profile.value ? buildProfileTrustTier(profile.value) : "level_a")
 const privacyRequestOptions = [
   { label: "Account deletion", value: "account_deletion" },
@@ -105,7 +108,7 @@ async function submitPrivacyRequest() {
   }
 }
 
-function verify(type: "phone" | "linkedin" | "github" | "website" | "work_domain" | "government_id", label: string) {
+async function requestTrustVerification(type: TrustVerificationType, label: string) {
   if (!authStore.currentUser || !profile.value)
     return
 
@@ -136,12 +139,25 @@ function verify(type: "phone" | "linkedin" | "github" | "website" | "work_domain
     return
   }
 
-  workspaceStore.completeTrustVerification(authStore.currentUser.id, type)
-  toastStore.push({
-    title: "Verification completed",
-    message: `${label} is now reflected on your trust surface in the current environment.`,
-    tone: "success",
-  })
+  trustVerificationPending.value = type
+
+  try {
+    await $fetch("/api/account/privacy-request", {
+      method: "POST",
+      body: {
+        details: `Trust verification review requested: ${label}. Please review the member profile evidence and update trust badges only after operator or provider confirmation.`,
+        type: "safety_privacy",
+      },
+    })
+    toastStore.push({
+      title: "Verification review requested",
+      message: `${label} will update after operator or provider confirmation.`,
+      tone: "success",
+    })
+  }
+  finally {
+    trustVerificationPending.value = ""
+  }
 }
 </script>
 
@@ -191,25 +207,26 @@ function verify(type: "phone" | "linkedin" | "github" | "website" | "work_domain
           <div>Level A: verified email and baseline profile.</div>
           <div>Level B: verified identity rails, proof, availability, and intent clarity.</div>
           <div>Level C: government ID assurance for higher-risk actions like contract signing.</div>
+          <div>Request a review when your evidence is ready. Trust badges update only after operator or provider confirmation.</div>
         </div>
         <div class="mt-5 flex flex-wrap gap-3">
-          <BaseButton variant="secondary" @click="verify('phone', 'Phone verification')">
-            Verify phone
+          <BaseButton variant="secondary" :disabled="trustVerificationPending === 'phone'" @click="requestTrustVerification('phone', 'Phone verification')">
+            {{ trustVerificationPending === "phone" ? "Requesting..." : "Request phone review" }}
           </BaseButton>
-          <BaseButton variant="secondary" @click="verify('linkedin', 'LinkedIn verification')">
-            Verify LinkedIn
+          <BaseButton variant="secondary" :disabled="trustVerificationPending === 'linkedin'" @click="requestTrustVerification('linkedin', 'LinkedIn verification')">
+            {{ trustVerificationPending === "linkedin" ? "Requesting..." : "Request LinkedIn review" }}
           </BaseButton>
-          <BaseButton variant="secondary" @click="verify('github', 'GitHub verification')">
-            Verify GitHub
+          <BaseButton variant="secondary" :disabled="trustVerificationPending === 'github'" @click="requestTrustVerification('github', 'GitHub verification')">
+            {{ trustVerificationPending === "github" ? "Requesting..." : "Request GitHub review" }}
           </BaseButton>
-          <BaseButton variant="secondary" @click="verify('website', 'Website verification')">
-            Verify website
+          <BaseButton variant="secondary" :disabled="trustVerificationPending === 'website'" @click="requestTrustVerification('website', 'Website verification')">
+            {{ trustVerificationPending === "website" ? "Requesting..." : "Request website review" }}
           </BaseButton>
-          <BaseButton variant="secondary" @click="verify('work_domain', 'Work-domain verification')">
-            Verify work domain
+          <BaseButton variant="secondary" :disabled="trustVerificationPending === 'work_domain'" @click="requestTrustVerification('work_domain', 'Work-domain verification')">
+            {{ trustVerificationPending === "work_domain" ? "Requesting..." : "Request work-domain review" }}
           </BaseButton>
-          <BaseButton variant="secondary" @click="verify('government_id', 'Government ID verification')">
-            Verify ID
+          <BaseButton variant="secondary" :disabled="trustVerificationPending === 'government_id'" @click="requestTrustVerification('government_id', 'Government ID verification')">
+            {{ trustVerificationPending === "government_id" ? "Requesting..." : "Request ID review" }}
           </BaseButton>
         </div>
       </div>

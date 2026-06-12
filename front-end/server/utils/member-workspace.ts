@@ -1,5 +1,6 @@
 import type { H3Event } from "h3"
 import type { MemberWorkspaceState, MemberWorkspaceWritePayload, Profile, SavedSearch, StartupOpportunity, Subscription, User } from "~/shared/types/domain"
+import { checkSavedSearchCount } from "~/shared/utils/billing"
 import { buildDraftMemberWorkspaceState, buildMemberWorkspaceState, createInitialWorkspaceDocument, mergeMemberWorkspaceState, resolveSessionUserFromWorkspace, sanitizeOwnedProfile, sanitizeUserOwnedBookmarks, sanitizeUserOwnedOpportunities, sanitizeUserOwnedSavedSearches } from "~/shared/utils/workspace-persistence"
 import { loadServerCollaborationState, mergeServerCollaborationState } from "./member-collaboration"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
@@ -567,6 +568,16 @@ export async function loadMemberWorkspaceState(event: H3Event, identity: Persist
 
 export async function persistMemberWorkspaceWritePayload(event: H3Event, identity: PersistedIdentityInput, payload: MemberWorkspaceWritePayload) {
   const current = await loadMemberWorkspaceState(event, identity)
+  const savedSearches = sanitizeUserOwnedSavedSearches(payload.savedSearches, current.state.user.id)
+  const savedSearchGate = checkSavedSearchCount(current.state.subscription, savedSearches.length)
+
+  if (!savedSearchGate.allowed) {
+    throw createError({
+      statusCode: 402,
+      statusMessage: savedSearchGate.reason || "Your plan does not allow this saved search change.",
+    })
+  }
+
   const nextState: MemberWorkspaceState = {
     ...current.state,
     user: {
@@ -576,7 +587,7 @@ export async function persistMemberWorkspaceWritePayload(event: H3Event, identit
     profile: sanitizeOwnedProfile(payload.profile, current.state.user.id),
     opportunities: sanitizeUserOwnedOpportunities(payload.opportunities, current.state.user.id),
     bookmarks: sanitizeUserOwnedBookmarks(payload.bookmarks, current.state.user.id),
-    savedSearches: sanitizeUserOwnedSavedSearches(payload.savedSearches, current.state.user.id),
+    savedSearches,
   }
 
   await persistWholeMemberWorkspaceState(event, nextState)
