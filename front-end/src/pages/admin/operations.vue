@@ -73,6 +73,9 @@ function rowDate(row: OpsRow) {
         <BaseBadge :tone="data?.mode === 'supabase' ? 'success' : 'neutral'">
           {{ data?.mode || "loading" }}
         </BaseBadge>
+        <BaseButton variant="secondary" to="/admin/readiness">
+          Launch readiness
+        </BaseButton>
         <BaseButton variant="secondary" :disabled="pending" @click="refresh">
           {{ pending ? "Refreshing..." : "Refresh" }}
         </BaseButton>
