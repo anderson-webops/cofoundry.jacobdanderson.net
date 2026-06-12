@@ -12,6 +12,7 @@ CoFoundry can run in production-facing mock/access-request mode today without Su
 ## Daily Checks
 
 - Visit `/admin/readiness` and resolve any fail or warning checks before treating the deployment as production-ready.
+- Confirm `/api/health` returns `status: "ok"` from the deployed Nuxt app.
 - Visit `/admin/operations` and confirm the newest backup, scanner, digest, and operational-event rows are current.
 - Visit `/admin/access-requests` and clear stale access requests or invite links.
 - Visit `/admin/privacy` and resolve open privacy or trust-review requests with an operator note.
