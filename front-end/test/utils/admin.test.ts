@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { workspaceSeed } from "../../shared/data/seed"
-import { buildAdminAuditEntries, buildAdminBillingRows, buildAdminQueueSummary, buildAdminReportRows, buildAdminUserRows, filterAdminAuditEntries, filterAdminBillingRows, filterAdminReportRows, filterAdminUserRows } from "../../shared/utils/admin"
+import { buildAdminAuditEntries, buildAdminBillingRows, buildAdminCommandQueue, buildAdminQueueSummary, buildAdminReportRows, buildAdminUserRows, filterAdminAuditEntries, filterAdminBillingRows, filterAdminReportRows, filterAdminUserRows } from "../../shared/utils/admin"
 
 describe("admin utilities", () => {
   it("builds user rows with moderation context", () => {
@@ -98,6 +98,62 @@ describe("admin utilities", () => {
     expect(summary.openReports).toBe(2)
     expect(summary.highPriorityReports).toBe(1)
     expect(summary.reviewedReports).toBe(0)
+  })
+
+  it("builds a priority-ordered command queue across admin surfaces", () => {
+    const queue = buildAdminCommandQueue({
+      accessRequests: [{
+        adminNotes: null,
+        company: "SignalDeck",
+        companyStage: "mvp",
+        createdAt: "2026-06-01T12:00:00.000Z",
+        email: "founder@signaldeck.test",
+        id: "access_stale",
+        inviteAcceptedAt: null,
+        inviteExpiresAt: null,
+        inviteTokenIssuedAt: null,
+        name: "Sam Founder",
+        reviewedAt: null,
+        reviewedByUserId: null,
+        role: "founder",
+        source: "site",
+        status: "open",
+        timeline: "now",
+        updatedAt: "2026-06-01T12:00:00.000Z",
+        useCase: "I need a serious cofounder search workflow with structured proposals.",
+      }],
+      generatedAt: "2026-06-12T12:00:00.000Z",
+      privacyRequests: [{
+        createdAt: "2026-06-10T12:00:00.000Z",
+        details: "Please export my trust evidence and profile visibility data.",
+        id: "privacy_export",
+        resolutionNotes: null,
+        resolvedAt: null,
+        resolvedByUserId: null,
+        reviewNotes: null,
+        reviewedAt: null,
+        reviewedByUserId: null,
+        status: "open",
+        type: "data_export",
+        userId: "user_arjun",
+      }],
+      readinessChecks: [{
+        action: "Run the scanner worker and resolve flagged files.",
+        detail: "A flagged file scan is blocking launch readiness.",
+        groupTitle: "Worker health",
+        id: "file-scanning",
+        status: "fail",
+        summary: "1 failed or flagged",
+        title: "File scanning",
+      }],
+      seed: workspaceSeed,
+    })
+
+    expect(queue[0]?.priority).toBe("critical")
+    expect(queue.some(item => item.href === "/admin/reports" && item.kind === "moderation" && item.priority === "critical")).toBe(true)
+    expect(queue.some(item => item.id === "readiness:file-scanning" && item.href === "/admin/operations" && item.priority === "critical")).toBe(true)
+    expect(queue.some(item => item.id === "access:access_stale" && item.href === "/admin/access-requests" && item.priority === "high")).toBe(true)
+    expect(queue.some(item => item.id === "privacy:privacy_export" && item.href === "/admin/privacy" && item.priority === "standard")).toBe(true)
   })
 
   it("filters billing rows by paid plan and query", () => {

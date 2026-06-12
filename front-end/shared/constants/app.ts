@@ -25,6 +25,7 @@ export const appNavigation = [
 
 export const adminNavigation = [
   { label: "Overview", to: "/admin", icon: "i-carbon-dashboard" },
+  { label: "Command queue", to: "/admin/queue", icon: "i-carbon-queue" },
   { label: "Readiness", to: "/admin/readiness", icon: "i-carbon-checkmark-outline" },
   { label: "Access requests", to: "/admin/access-requests", icon: "i-carbon-user-follow" },
   { label: "Users", to: "/admin/users", icon: "i-carbon-user-multiple" },
