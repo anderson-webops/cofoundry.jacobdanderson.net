@@ -26,7 +26,10 @@ const recentActions = computed(() => buildAdminAuditEntries(workspaceStore.data)
       description="Server-approved moderation actions, current queue health, and the latest audit history for the CoFoundry workspace."
     >
       <template #actions>
-        <BaseButton to="/admin/readiness">
+        <BaseButton to="/admin/queue">
+          Open command queue
+        </BaseButton>
+        <BaseButton variant="secondary" to="/admin/readiness">
           Launch readiness
         </BaseButton>
       </template>

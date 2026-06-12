@@ -1,7 +1,9 @@
 import type {
+  AccessRequest,
   AdminAction,
   AdminActionType,
   AppRole,
+  PrivacyRequest,
   Profile,
   Report,
   ReportPriority,
@@ -74,6 +76,49 @@ export interface AdminBillingFilters {
   status: SubscriptionStatus | "all"
 }
 
+export type AdminCommandQueueKind = "moderation" | "access" | "privacy" | "readiness"
+export type AdminCommandQueuePriority = "critical" | "high" | "standard"
+export type AdminCommandReadinessStatus = "pass" | "warn" | "fail" | "info"
+
+export interface AdminCommandReadinessCheck {
+  action: string
+  detail: string
+  groupTitle?: string
+  id: string
+  status: AdminCommandReadinessStatus
+  summary: string
+  title: string
+}
+
+export interface AdminCommandQueueInput {
+  accessRequests?: AccessRequest[]
+  generatedAt?: string
+  privacyRequests?: PrivacyRequest[]
+  readinessChecks?: AdminCommandReadinessCheck[]
+  seed: WorkspaceSeed
+}
+
+export interface AdminCommandQueueItem {
+  actionLabel: string
+  createdAt: string | null
+  detail: string
+  href: string
+  id: string
+  kind: AdminCommandQueueKind
+  priority: AdminCommandQueuePriority
+  sourceLabel: string
+  statusLabel: string
+  summary: string
+  title: string
+}
+
+const dayMs = 24 * 60 * 60 * 1000
+const priorityRank: Record<AdminCommandQueuePriority, number> = {
+  critical: 0,
+  high: 1,
+  standard: 2,
+}
+
 function includesQuery(values: Array<string | undefined | null>, query: string) {
   if (!query)
     return true
@@ -87,6 +132,57 @@ function getLatestAdminAction(seed: WorkspaceSeed, targetType: AdminAction["targ
     .filter(action => action.targetType === targetType && action.targetId === targetId)
     .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
     .at(0)
+}
+
+function toTime(value?: string | null) {
+  if (!value)
+    return null
+
+  const time = new Date(value).getTime()
+  return Number.isFinite(time) ? time : null
+}
+
+function daysBetween(start: string | null, end: string | null) {
+  const startTime = toTime(start)
+  const endTime = toTime(end)
+  if (startTime === null || endTime === null)
+    return null
+
+  return Math.max(0, Math.floor((endTime - startTime) / dayMs))
+}
+
+function formatMachineLabel(value: string) {
+  return value.replaceAll("_", " ")
+}
+
+function formatAccessStatus(status: AccessRequest["status"]) {
+  return {
+    approved: "Approved",
+    denied: "Denied",
+    invited: "Invited",
+    open: "Open",
+  }[status]
+}
+
+function formatPrivacyStatus(status: PrivacyRequest["status"]) {
+  return {
+    open: "Open",
+    reviewed: "Reviewed",
+    resolved: "Resolved",
+  }[status]
+}
+
+function readinessHref(checkId: string) {
+  if (checkId.includes("access-request"))
+    return "/admin/access-requests"
+
+  if (checkId.includes("privacy-request"))
+    return "/admin/privacy"
+
+  if (["backup", "file-scanning", "notification", "operational-events"].some(value => checkId.includes(value)))
+    return "/admin/operations"
+
+  return "/admin/readiness"
 }
 
 function resolveReportTarget(seed: WorkspaceSeed, report: Report) {
@@ -343,4 +439,116 @@ export function buildAdminQueueSummary(seed: WorkspaceSeed) {
     suspendedUsers: suspendedUsers.length,
     actionsLast7Days: recentActions.length,
   }
+}
+
+export function sortAdminCommandQueueItems(items: AdminCommandQueueItem[]) {
+  return [...items].sort((left, right) => {
+    const priorityDiff = priorityRank[left.priority] - priorityRank[right.priority]
+    if (priorityDiff !== 0)
+      return priorityDiff
+
+    const rightTime = toTime(right.createdAt) || 0
+    const leftTime = toTime(left.createdAt) || 0
+    if (rightTime !== leftTime)
+      return rightTime - leftTime
+
+    return left.title.localeCompare(right.title)
+  })
+}
+
+export function buildAdminCommandQueue(input: AdminCommandQueueInput) {
+  const generatedAt = input.generatedAt || new Date().toISOString()
+  const reportItems: AdminCommandQueueItem[] = buildAdminReportRows(input.seed)
+    .filter(row => row.report.status !== "resolved")
+    .map((row) => {
+      const isOpen = row.report.status === "open"
+      const priority: AdminCommandQueuePriority = row.report.priority === "high" && isOpen
+        ? "critical"
+        : row.report.priority === "high" || isOpen
+          ? "high"
+          : "standard"
+
+      return {
+        actionLabel: "Review report",
+        createdAt: row.report.createdAt,
+        detail: row.report.details,
+        href: "/admin/reports",
+        id: `report:${row.report.id}`,
+        kind: "moderation",
+        priority,
+        sourceLabel: row.reporterProfile?.displayName || row.reporter?.email || row.report.reporterUserId,
+        statusLabel: `${row.report.priority} priority · ${row.report.status}`,
+        summary: `${formatMachineLabel(row.report.reason)} on ${row.targetLabel}`,
+        title: "Moderation report",
+      }
+    })
+
+  const accessItems: AdminCommandQueueItem[] = (input.accessRequests || [])
+    .filter((request) => {
+      if (request.status === "open" || request.status === "approved")
+        return true
+
+      return request.status === "invited" && !request.inviteAcceptedAt && Boolean(toTime(request.inviteExpiresAt) && toTime(request.inviteExpiresAt)! < toTime(generatedAt)!)
+    })
+    .map((request) => {
+      const ageDays = daysBetween(request.createdAt, generatedAt)
+      const inviteExpired = request.status === "invited" && !request.inviteAcceptedAt && Boolean(toTime(request.inviteExpiresAt) && toTime(request.inviteExpiresAt)! < toTime(generatedAt)!)
+      const stale = request.status === "open" && ageDays !== null && ageDays > 7
+      const priority: AdminCommandQueuePriority = inviteExpired || stale || request.status === "approved" ? "high" : "standard"
+
+      return {
+        actionLabel: request.status === "approved" ? "Issue invite" : "Review access",
+        createdAt: request.createdAt,
+        detail: request.useCase,
+        href: "/admin/access-requests",
+        id: `access:${request.id}`,
+        kind: "access",
+        priority,
+        sourceLabel: request.company || request.email,
+        statusLabel: inviteExpired ? "Invite expired" : formatAccessStatus(request.status),
+        summary: `${request.name} · ${formatMachineLabel(request.role)} · ${formatMachineLabel(request.timeline)}`,
+        title: request.status === "approved" ? "Approved access request needs invite" : "Access request",
+      }
+    })
+
+  const privacyItems: AdminCommandQueueItem[] = (input.privacyRequests || [])
+    .filter(request => request.status !== "resolved")
+    .map((request) => {
+      const ageDays = daysBetween(request.createdAt, generatedAt)
+      const priority: AdminCommandQueuePriority = ageDays !== null && ageDays > 3 ? "high" : "standard"
+
+      return {
+        actionLabel: "Review privacy request",
+        createdAt: request.createdAt,
+        detail: request.details,
+        href: "/admin/privacy",
+        id: `privacy:${request.id}`,
+        kind: "privacy",
+        priority,
+        sourceLabel: request.userId,
+        statusLabel: formatPrivacyStatus(request.status),
+        summary: formatMachineLabel(request.type),
+        title: "Privacy or trust review request",
+      }
+    })
+
+  const readinessItems: AdminCommandQueueItem[] = (input.readinessChecks || [])
+    .filter(check => check.status === "fail" || check.status === "warn")
+    .map((check) => {
+      return {
+        actionLabel: "Open surface",
+        createdAt: generatedAt,
+        detail: check.action,
+        href: readinessHref(check.id),
+        id: `readiness:${check.id}`,
+        kind: "readiness",
+        priority: check.status === "fail" ? "critical" : "high",
+        sourceLabel: check.groupTitle || "Readiness",
+        statusLabel: check.status === "fail" ? "Failing check" : "Warning check",
+        summary: check.summary,
+        title: check.title,
+      }
+    })
+
+  return sortAdminCommandQueueItems([...reportItems, ...accessItems, ...privacyItems, ...readinessItems])
 }
