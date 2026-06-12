@@ -26,10 +26,11 @@ CoFoundry can run in production-facing mock/access-request mode today without Su
 
 ## Worker Schedule
 
-- Backup runner: record start, success, or failure through `POST /api/operations/backup-runs`.
-- Notification digest runner: call `POST /api/operations/notification-digests/run` with `dryRun=true` before enabling real sends. Scheduled digest runs skip members whose `/app/settings` email-notification preference is disabled; Supabase users default to disabled until they opt in.
-- File scanner: poll `GET /api/operations/file-scans/pending`, scan private files, then report results through `POST /api/operations/file-scans/:id`. Supabase mode returns short-lived storage URLs; mock/access-request mode returns worker-authenticated app download URLs, so pass the operations token when downloading from the app.
-- Monitor runner: report deploy, worker, scanner, backup, and monitoring events through `POST /api/operations/events`.
+- Backup runner: wrap the real host backup command with `npm run operations:backup -- --provider server-backup --artifact-uri <artifact-uri> -- <backup command>`. The worker records `running`, then `succeeded` or `failed`, through `POST /api/operations/backup-runs`.
+- Notification digest runner: call `npm run operations:digest -- --dry-run --max-users 100` before enabling real sends. Remove `--dry-run` only after SMTP and member notification preferences are verified. Scheduled digest runs skip members whose `/app/settings` email-notification preference is disabled; Supabase users default to disabled until they opt in.
+- File scanner: configure `COFOUNDRY_FILE_SCANNER_COMMAND` or pass `--scanner-command`. Run `npm run operations:scan -- --limit 25` to poll pending scans, download private files, run the scanner, and report `clean`, `flagged`, or `failed` through `POST /api/operations/file-scans/:id`. Supabase mode returns short-lived storage URLs; mock/access-request mode returns worker-authenticated app download URLs.
+- Monitor runner: report deploy, worker, scanner, backup, and monitoring events with `npm run operations:event -- --source systemd --event-type deploy.completed --metadata release=v1.x`.
+- Restore drill runner: wrap a staging restore verification command with `npm run operations:restore-drill -- --id restore-YYYYMMDD -- <restore verification command>`.
 
 Each worker call must send `Authorization: Bearer <COFOUNDRY_OPERATIONS_TOKEN>` or `x-cofoundry-operations-token`.
 
@@ -38,7 +39,7 @@ Each worker call must send `Authorization: Bearer <COFOUNDRY_OPERATIONS_TOKEN>` 
 1. Snapshot the durable local data directory or Supabase project before a deploy.
 2. Restore into a staging host or staging Supabase project.
 3. Confirm `/admin/operations`, `/admin/audit`, `/admin/access-requests`, `/admin/privacy`, `/app/inbox`, `/app/billing`, and `/app/settings` load from restored data.
-4. Record the restore drill as an operational event.
+4. Record the drill with `npm run operations:restore-drill -- --id restore-YYYYMMDD -- <restore verification command>` so the start and success/failure events appear in `/admin/operations`.
 
 ## Supabase Cutover
 

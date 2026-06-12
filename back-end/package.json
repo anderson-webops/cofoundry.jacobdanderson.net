@@ -14,6 +14,11 @@
     "lint": "eslint \"src/**/*.{js,ts}\" \"scripts/**/*.ts\" \"test/**/*.ts\"",
     "lint-fix": "eslint \"src/**/*.{js,ts}\" \"scripts/**/*.ts\" \"test/**/*.ts\" --fix",
     "bootstrap-admin": "node --import tsx scripts/bootstrap-admin.ts",
+    "operations:backup": "node --import tsx scripts/operations-worker.ts backup",
+    "operations:digest": "node --import tsx scripts/operations-worker.ts digest",
+    "operations:event": "node --import tsx scripts/operations-worker.ts event",
+    "operations:restore-drill": "node --import tsx scripts/operations-worker.ts restore-drill",
+    "operations:scan": "node --import tsx scripts/operations-worker.ts scan",
     "seed": "node --env-file-if-exists=../.env --import tsx scripts/seed.ts",
     "test": "node --test --import tsx test/**/*.test.ts",
     "test:run": "node --test --import tsx test/**/*.test.ts"

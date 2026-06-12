@@ -273,6 +273,14 @@ Worker-authenticated operations endpoints:
 
 Each endpoint requires `Authorization: Bearer <COFOUNDRY_OPERATIONS_TOKEN>` or `x-cofoundry-operations-token`. The token is intentionally optional at startup so mock production remains unchanged, but the endpoints fail closed if called before the token is configured.
 
+Checked-in worker commands wrap those endpoints for systemd timers or cron:
+
+- `npm run operations:backup -- --provider server-backup --artifact-uri <artifact-uri> -- <backup command>` records backup start and final success/failure around the real host backup command.
+- `npm run operations:digest -- --dry-run --max-users 100` verifies scheduled digest delivery before removing `--dry-run`.
+- `COFOUNDRY_FILE_SCANNER_COMMAND="clamscan --no-summary" npm run operations:scan -- --limit 25` polls pending file scans, downloads private uploads, runs the scanner, and reports `clean`, `flagged`, or `failed`.
+- `npm run operations:event -- --source systemd --event-type deploy.completed --metadata release=v1.x` records deploy, monitor, backup, and worker events.
+- `npm run operations:restore-drill -- --id restore-YYYYMMDD -- <restore verification command>` records restore-drill start and success/failure events.
+
 When Supabase is disabled, these endpoints write durable local telemetry rows to `operations-telemetry.json` with a default retention limit of 200 rows per collection. Local upload content is stored under `local-file-uploads/` in the same data directory and is not committed to source. Set `COFOUNDRY_OPERATIONS_RETENTION_LIMIT` to tune telemetry retention.
 
 Access-request rows are separately retained in `access-requests.json` with a default limit of 500. Collaboration workflow rows are retained in `collaboration-state.json` with a default per-collection limit of 1000. Admin audit rows and moderation overlays are retained in `admin-audit.json` with a default limit of 500. Privacy and trust-review requests are retained in `privacy-requests.json` with a default limit of 500. Set `COFOUNDRY_ACCESS_REQUEST_RETENTION_LIMIT`, `COFOUNDRY_COLLABORATION_RETENTION_LIMIT`, `COFOUNDRY_ADMIN_AUDIT_RETENTION_LIMIT`, and `COFOUNDRY_PRIVACY_REQUEST_RETENTION_LIMIT` to tune those queues, and keep `COFOUNDRY_LOCAL_DATA_DIR` on durable host storage if invite-only mock-mode accounts need to survive deployment restarts.
