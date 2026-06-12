@@ -4,7 +4,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import process from "node:process"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import { clearLocalOperationsStoreForTests, hashLocalUploadToken, listLocalPendingFileScans, readLocalFileUploadContent, readLocalOperationsRows, recordLocalBackupRun, recordLocalFileScanResult, recordLocalFileUploadPolicy, recordLocalNotificationDelivery, recordLocalOperationalEvent, writeLocalFileUploadContent } from "../../server/utils/local-operations-store"
+import { clearLocalOperationsStoreForTests, hashLocalUploadToken, listLocalFileUploadsByRelated, listLocalPendingFileScans, readLocalFileUploadContent, readLocalOperationsRows, recordLocalBackupRun, recordLocalFileScanResult, recordLocalFileUploadPolicy, recordLocalNotificationDelivery, recordLocalOperationalEvent, writeLocalFileUploadContent } from "../../server/utils/local-operations-store"
 
 let dataDirectory: string
 
@@ -127,6 +127,51 @@ describe("local operations telemetry store", () => {
       id: "upload_local",
       signedDownloadError: null,
       signedDownloadUrl: "https://cofoundry.example/api/operations/file-scans/upload_local/download",
+    })
+  })
+
+  it("returns local upload records in the shared file-upload domain shape", async () => {
+    await recordLocalFileUploadPolicy(session, {
+      bucket: "cofoundry-private-files",
+      id: "upload_relationship",
+      objectPath: "user_operations_test/2026-06-12/relationship.pdf",
+      uploadTokenHash: hashLocalUploadToken("relationship-token"),
+    }, {
+      filename: "relationship.pdf",
+      mimeType: "application/pdf",
+      purpose: "proposal_attachment",
+      relatedId: "proposal_test",
+      relatedType: "proposal",
+      sizeBytes: 2048,
+    })
+
+    await recordLocalFileUploadPolicy(session, {
+      bucket: "cofoundry-private-files",
+      id: "upload_other",
+      objectPath: "user_operations_test/2026-06-12/other.pdf",
+      uploadTokenHash: hashLocalUploadToken("other-token"),
+    }, {
+      filename: "other.pdf",
+      mimeType: "application/pdf",
+      purpose: "trust_evidence",
+      relatedId: "profile_test",
+      relatedType: "profile",
+      sizeBytes: 2048,
+    })
+
+    const uploads = await listLocalFileUploadsByRelated([{ relatedId: "proposal_test", relatedType: "proposal" }])
+
+    expect(uploads).toHaveLength(1)
+    expect(uploads[0]).toMatchObject({
+      bucket: "cofoundry-private-files",
+      id: "upload_relationship",
+      originalFilename: "relationship.pdf",
+      ownerUserId: "user_operations_test",
+      purpose: "proposal_attachment",
+      relatedId: "proposal_test",
+      relatedType: "proposal",
+      scanStatus: "pending",
+      status: "pending",
     })
   })
 })

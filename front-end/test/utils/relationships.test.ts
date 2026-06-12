@@ -1,3 +1,4 @@
+import type { WorkspaceSeed } from "../../shared/types/domain"
 import { describe, expect, it } from "vitest"
 import { workspaceSeed } from "../../shared/data/seed"
 import {
@@ -70,6 +71,51 @@ describe("relationship snapshots", () => {
         scanStatus: "not_applicable",
         sourceLabel: "Message attachment",
         status: "shared",
+      }),
+    ]))
+  })
+
+  it("surfaces durable file uploads attached to relationship artifacts", () => {
+    const seedWithUploads: WorkspaceSeed = {
+      ...workspaceSeed,
+      fileUploads: [{
+        bucket: "cofoundry-private-files",
+        createdAt: "2026-04-29T14:30:00.000Z",
+        deletedAt: null,
+        id: "upload_ledgerloop_terms",
+        mimeType: "application/pdf",
+        objectPath: "user_olivia/2026-04-29/upload-ledgerloop-terms.pdf",
+        originalFilename: "ledgerloop-terms-review.pdf",
+        ownerUserId: "user_olivia",
+        purpose: "proposal_attachment",
+        relatedId: "proposal_ledgerloop_cto",
+        relatedType: "proposal",
+        scanNotes: "Clean scanner result.",
+        scanStatus: "clean",
+        sizeBytes: 153600,
+        status: "uploaded",
+        updatedAt: "2026-04-29T14:31:00.000Z",
+      }],
+    }
+    const snapshot = buildRelationshipSnapshot(seedWithUploads, "user_olivia", "match_olivia_malik")
+
+    expect(snapshot?.files).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        href: "/app/proposals/proposal_ledgerloop_cto",
+        id: "upload_ledgerloop_terms",
+        name: "ledgerloop-terms-review.pdf",
+        scanStatus: "clean",
+        sizeLabel: "150 KB",
+        sourceLabel: "Proposal upload",
+        status: "uploaded",
+      }),
+    ]))
+    expect(snapshot?.timeline).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        href: "/app/proposals/proposal_ledgerloop_cto",
+        id: "file:upload_ledgerloop_terms",
+        kind: "file",
+        title: "Proposal upload",
       }),
     ]))
   })
