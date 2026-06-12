@@ -1,5 +1,6 @@
 import type { H3Event } from "h3"
 import type { AdminAction, AppRole, Notification, PrivacyRequestStatus, ReportStatus } from "~/shared/types/domain"
+import { updateLocalPrivacyRequestStatus } from "./local-privacy-requests"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
 
 export async function persistAdminAction(event: H3Event, action: AdminAction) {
@@ -141,8 +142,17 @@ export async function persistPrivacyRequestStatus(event: H3Event, input: {
   status: Exclude<PrivacyRequestStatus, "open">
   timestamp: string
 }) {
-  if (!isSupabaseEnabled(event))
-    return null
+  if (!isSupabaseEnabled(event)) {
+    const updatedRequest = await updateLocalPrivacyRequestStatus(input)
+    if (!updatedRequest)
+      throw createError({ statusCode: 404, statusMessage: "Privacy request was not found." })
+
+    return {
+      id: updatedRequest.id,
+      status: updatedRequest.status,
+      userId: updatedRequest.userId,
+    }
+  }
 
   const adminClient = createSupabaseAdminClient(event)
   if (!adminClient)

@@ -10,6 +10,8 @@ import type {
   SessionUser,
   Signature,
 } from "~/shared/types/domain"
+import type { SubscriptionGateAction } from "~/shared/utils/billing"
+import { checkSubscriptionGate } from "~/shared/utils/billing"
 import {
   acknowledgeTrialCollaborationTransition,
   addProposalCommentTransition,
@@ -30,7 +32,7 @@ import {
   startTrialCollaborationTransition,
   updateProposalStatusTransition,
 } from "~/shared/utils/collaboration"
-import { getContractById, getCurrentProposalVersion, getProposalById } from "~/shared/utils/workspace"
+import { getContractById, getCurrentProposalVersion, getProposalById, getSubscriptionByUserId } from "~/shared/utils/workspace"
 import { recordContractSignatureEvent } from "./contract-signatures"
 import { persistServerCollaborationState } from "./member-collaboration"
 import { loadMemberWorkspaceState } from "./member-workspace"
@@ -67,6 +69,17 @@ async function persistForUsers(event: H3Event, userIds: string[], seed: Awaited<
     await persistServerCollaborationState(event, userId, seed)
 }
 
+function assertSubscriptionGate(seed: Awaited<ReturnType<typeof loadMemberWorkspaceState>>["seed"], userId: string, action: SubscriptionGateAction) {
+  const gate = checkSubscriptionGate(seed, userId, getSubscriptionByUserId(seed, userId), action)
+
+  if (!gate.allowed) {
+    throw createError({
+      statusCode: 402,
+      statusMessage: gate.reason || "Your plan does not allow this action.",
+    })
+  }
+}
+
 export async function applyCollaborationMutation(event: H3Event, session: SessionUser, payload: CollaborationMutationPayload) {
   const workspace = await loadMemberWorkspaceState(event, buildIdentity(session))
   const actedAt = new Date().toISOString()
@@ -80,6 +93,7 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
       if (payload.toUserId === session.id)
         throw createError({ statusCode: 400, statusMessage: "You cannot send a connect request to yourself." })
 
+      assertSubscriptionGate(nextSeed, session.id, "send_intro")
       const transition = createConnectRequestTransition(nextSeed, session.id, payload.toUserId, payload.payload, actedAt)
       nextSeed = transition.seed
       affectedUsers = [session.id, payload.toUserId]
@@ -134,6 +148,7 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
       if (!isConversationParticipant(conversation, session.id) || !conversation.participantIds.includes(payload.recipientUserId))
         throw createError({ statusCode: 403, statusMessage: "Proposal participants must match the conversation." })
 
+      assertSubscriptionGate(nextSeed, session.id, "create_proposal")
       const transition = createProposalTransition(nextSeed, session.id, payload.recipientUserId, payload.conversationId, payload.opportunityId, payload.title, payload.payload, actedAt)
       nextSeed = transition.seed
       affectedUsers = [...conversation.participantIds]
@@ -161,6 +176,7 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
       if (!isProposalParticipant(proposal, session.id))
         throw createError({ statusCode: 403, statusMessage: "You are not part of this proposal." })
 
+      assertSubscriptionGate(nextSeed, session.id, "create_proposal")
       const transition = createProposalCounterVersionTransition(nextSeed, payload.proposalId, session.id, payload.payload, actedAt)
       nextSeed = transition.seed
       affectedUsers = [proposal.createdByUserId, proposal.recipientUserId]
@@ -193,6 +209,7 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
       if (!isProposalParticipant(proposal, session.id))
         throw createError({ statusCode: 403, statusMessage: "You are not part of this proposal." })
 
+      assertSubscriptionGate(nextSeed, session.id, "create_contract")
       const transition = createContractFromProposalTransition(nextSeed, payload.proposalId, actedAt)
       nextSeed = transition.seed
       affectedUsers = [proposal.createdByUserId, proposal.recipientUserId]
@@ -207,6 +224,7 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
       if (!isContractParticipant(nextSeed, contract, session.id))
         throw createError({ statusCode: 403, statusMessage: "You are not part of this contract." })
 
+      assertSubscriptionGate(nextSeed, session.id, "sign_contract")
       const existingSignatureIds = new Set(nextSeed.signatures.map(signature => signature.id))
       nextSeed = signContractTransition(nextSeed, payload.contractId, session.id, payload.typedName, actedAt)
       const newSignature = nextSeed.signatures.find(signature => !existingSignatureIds.has(signature.id))

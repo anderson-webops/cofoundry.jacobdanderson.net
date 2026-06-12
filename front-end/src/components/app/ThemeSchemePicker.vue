@@ -16,10 +16,12 @@ const colorMode = useColorMode()
 const { activeScheme, scheme, schemes } = useThemeScheme()
 
 const open = ref(false)
-const panelRef = ref<HTMLElement | null>(null)
-const triggerRef = ref<HTMLElement | null>(null)
+const panelRef = shallowRef<HTMLElement | null>(null)
+const triggerRef = shallowRef<HTMLElement | null>(null)
 const panelStyle = ref<Record<string, string>>({})
 const isDark = computed(() => isDarkThemeValue(colorMode.value))
+const mounted = ref(false)
+const displayedIsDark = computed(() => mounted.value ? isDark.value : false)
 const panelAlignment = computed(() => props.panelAlign ?? props.align)
 
 function toggleOpen() {
@@ -60,6 +62,10 @@ useEventListener("keydown", (event: KeyboardEvent) => {
 })
 
 useEventListener("resize", updatePanelPosition)
+
+onMounted(() => {
+  mounted.value = true
+})
 
 watch(open, async (nextOpen) => {
   if (!nextOpen) {
@@ -103,7 +109,7 @@ watch(panelAlignment, async () => {
             Choose the palette family
           </h2>
           <p class="muted text-sm leading-6 mt-2">
-            The palette applies to both light and dark mode. Current mode: {{ isDark ? "Dark" : "Light" }}.
+            The palette applies to both light and dark mode. Current mode: {{ displayedIsDark ? "Dark" : "Light" }}.
           </p>
         </div>
         <button
@@ -181,7 +187,7 @@ watch(panelAlignment, async () => {
         :class="props.compact ? 'min-w-[4.75rem] text-left' : ''"
       >{{ activeScheme.label }}</span>
       <span class="muted text-xs tracking-[0.14em] uppercase">
-        {{ isDark ? "Dark" : "Light" }}
+        {{ displayedIsDark ? "Dark" : "Light" }}
       </span>
     </button>
   </div>

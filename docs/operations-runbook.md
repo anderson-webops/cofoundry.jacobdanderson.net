@@ -6,14 +6,14 @@ CoFoundry can run in production-facing mock/access-request mode today without Su
 
 - `NUXT_PUBLIC_BACKEND_MODE=mock` and `NUXT_PUBLIC_BILLING_MODE=mock` remain the safe production defaults until Supabase and Stripe are deliberately enabled.
 - `SESSION_SIGNING_SECRET` should be injected from the host secret store even in mock mode so invited-account sessions survive deploys.
-- `COFOUNDRY_LOCAL_DATA_DIR` should point at a durable, backed-up directory for access requests, invited local accounts, and operations telemetry.
+- `COFOUNDRY_LOCAL_DATA_DIR` should point at a durable, backed-up directory for access requests, privacy/trust review requests, invited local accounts, and operations telemetry.
 - `COFOUNDRY_OPERATIONS_TOKEN` should be a long random secret before any `/api/operations/*` worker is scheduled.
 
 ## Daily Checks
 
 - Visit `/admin/operations` and confirm the newest backup, scanner, digest, and operational-event rows are current.
 - Visit `/admin/access-requests` and clear stale access requests or invite links.
-- Visit `/admin/privacy` and resolve open privacy requests with an operator note.
+- Visit `/admin/privacy` and resolve open privacy or trust-review requests with an operator note.
 - Confirm the contact/support inbox is receiving submissions.
 
 ## Worker Schedule

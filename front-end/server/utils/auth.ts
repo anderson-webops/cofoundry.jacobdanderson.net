@@ -21,13 +21,36 @@ interface RegisteredAccount extends AuthAccount {
 
 const registeredAccounts = new Map<string, RegisteredAccount>()
 const registeredSessions = new Map<string, SessionUser>()
+const localSessionSigningSecret = "cofoundry-local-session-signing-secret"
 
-function getSessionSignatureSecret() {
-  return process.env.NUXT_SESSION_SIGNING_SECRET || process.env.SESSION_SIGNING_SECRET || "cofoundry-mock-session-signing-secret"
+function readConfiguredSessionSignatureSecret() {
+  return process.env.NUXT_SESSION_SIGNING_SECRET || process.env.SESSION_SIGNING_SECRET || ""
 }
 
-function createSessionSignature(session: Pick<SessionUser, "id" | "email">) {
-  return createHmac("sha256", getSessionSignatureSecret())
+function getSessionSignatureSecretForWrite() {
+  const configuredSecret = readConfiguredSessionSignatureSecret()
+  if (configuredSecret)
+    return configuredSecret
+
+  if (isLocalDevelopmentEnvironment(process.env))
+    return localSessionSigningSecret
+
+  throw createError({
+    statusCode: 500,
+    statusMessage: "SESSION_SIGNING_SECRET is required before account sessions can be created in this environment.",
+  })
+}
+
+function getSessionSignatureSecretForVerify() {
+  const configuredSecret = readConfiguredSessionSignatureSecret()
+  if (configuredSecret)
+    return configuredSecret
+
+  return isLocalDevelopmentEnvironment(process.env) ? localSessionSigningSecret : ""
+}
+
+function createSessionSignature(session: Pick<SessionUser, "id" | "email">, secret = getSessionSignatureSecretForWrite()) {
+  return createHmac("sha256", secret)
     .update(`${session.id}:${session.email.toLowerCase()}`)
     .digest("base64url")
 }
@@ -36,7 +59,11 @@ function verifySessionSignature(session: Pick<SessionUser, "id" | "email">, sign
   if (!signature)
     return false
 
-  const expected = createSessionSignature(session)
+  const secret = getSessionSignatureSecretForVerify()
+  if (!secret)
+    return false
+
+  const expected = createSessionSignature(session, secret)
   const left = Buffer.from(signature)
   const right = Buffer.from(expected)
 
