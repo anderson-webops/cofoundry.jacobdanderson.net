@@ -39,4 +39,52 @@ describe("relationship snapshots", () => {
     expect(snapshot?.nextActions.map(action => action.id)).toContain("proposal:proposal_ledgerloop_cto")
     expect(snapshot?.nextActions.map(action => action.id)).toContain("contract:contract_ledgerloop")
   })
+
+  it("builds a unified timeline from messages, proposal activity, agreement activity, trial work, and files", () => {
+    const snapshot = buildRelationshipSnapshot(workspaceSeed, "user_olivia", "match_olivia_malik")
+    const timeline = snapshot?.timeline || []
+    const createdAtTimes = timeline.map(entry => new Date(entry.createdAt).getTime())
+    const sortedTimes = [...createdAtTimes].sort((left, right) => right - left)
+
+    expect(createdAtTimes).toEqual(sortedTimes)
+    expect(timeline.map(entry => entry.kind)).toEqual(expect.arrayContaining([
+      "comment",
+      "contract",
+      "file",
+      "message",
+      "proposal",
+      "signature",
+      "trial",
+    ]))
+    expect(timeline[0]?.id).toBe("message:message_5")
+  })
+
+  it("surfaces relationship files from shared message attachments", () => {
+    const snapshot = buildRelationshipSnapshot(workspaceSeed, "user_olivia", "match_olivia_malik")
+
+    expect(snapshot?.files).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        href: "/app/messages/conversation_olivia_malik",
+        id: "att_1",
+        name: "ledgerloop-customer-notes.pdf",
+        scanStatus: "not_applicable",
+        sourceLabel: "Message attachment",
+        status: "shared",
+      }),
+    ]))
+  })
+
+  it("derives a decision log from proposal terms, decision-rights comments, contract clauses, and trial requirements", () => {
+    const snapshot = buildRelationshipSnapshot(workspaceSeed, "user_olivia", "match_olivia_malik")
+    const decisionIds = snapshot?.decisionLog.map(entry => entry.id)
+
+    expect(decisionIds).toEqual(expect.arrayContaining([
+      "contract-decision:contract_version_ledgerloop_1",
+      "decision-comment:proposal_comment_1",
+      "proposal-decision:proposal_version_ledgerloop_2",
+      "trial-decision-log:trial_olivia_malik",
+    ]))
+    expect(snapshot?.decisionLog.find(entry => entry.id === "decision-comment:proposal_comment_1")?.status).toBe("open")
+    expect(snapshot?.decisionLog.find(entry => entry.id === "contract-decision:contract_version_ledgerloop_1")?.status).toBe("documented")
+  })
 })
