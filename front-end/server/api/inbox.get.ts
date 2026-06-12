@@ -1,19 +1,11 @@
 import { requireAuthenticatedSession } from "~/server/utils/auth"
-import { buildInboxSnapshot } from "~/shared/utils/inbox"
-import { loadMemberWorkspaceState } from "../utils/member-workspace"
+import { loadInboxReadModel } from "../utils/inbox-read-model"
 
 export default defineEventHandler(async (event) => {
   const session = await requireAuthenticatedSession(event)
-  const workspace = await loadMemberWorkspaceState(event, {
-    id: session.id,
-    email: session.email,
-    name: session.name,
-    onboardingCompleted: session.onboardingCompleted,
-    role: session.role,
-    subscriptionPlan: session.subscriptionPlan,
-  })
+  const readModel = await loadInboxReadModel(event, session)
 
   return {
-    inbox: buildInboxSnapshot(workspace.seed, workspace.session.id),
+    inbox: readModel.snapshot,
   }
 })

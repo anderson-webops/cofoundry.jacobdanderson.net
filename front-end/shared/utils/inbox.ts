@@ -51,6 +51,15 @@ export interface InboxSnapshot {
   actions: InboxActionItem[]
 }
 
+export interface InboxQueues {
+  contractsNeedingSignature: Contract[]
+  pendingIncomingRequests: ConnectRequest[]
+  pendingOutgoingRequests: ConnectRequest[]
+  proposalsNeedingResponse: Proposal[]
+  unreadConversations: Conversation[]
+  unreadNotifications: Notification[]
+}
+
 const priorityWeight: Record<InboxActionPriority, number> = {
   high: 0,
   medium: 1,
@@ -110,13 +119,19 @@ export function getUnreadNotificationsForUser(seed: WorkspaceSeed, userId: strin
     .sort(byNewest)
 }
 
-export function buildInboxSnapshot(seed: WorkspaceSeed, userId: string): InboxSnapshot {
-  const pendingIncomingRequests = getPendingIncomingConnectRequestsForUser(seed, userId)
-  const pendingOutgoingRequests = getPendingOutgoingConnectRequestsForUser(seed, userId)
-  const unreadConversations = getUnreadConversationsForUser(seed, userId)
-  const proposalsNeedingResponse = getProposalsNeedingResponse(seed, userId)
-  const contractsNeedingSignature = getContractsNeedingSignature(seed, userId)
-  const unreadNotifications = getUnreadNotificationsForUser(seed, userId)
+export function buildInboxQueues(seed: WorkspaceSeed, userId: string): InboxQueues {
+  return {
+    contractsNeedingSignature: getContractsNeedingSignature(seed, userId),
+    pendingIncomingRequests: getPendingIncomingConnectRequestsForUser(seed, userId),
+    pendingOutgoingRequests: getPendingOutgoingConnectRequestsForUser(seed, userId),
+    proposalsNeedingResponse: getProposalsNeedingResponse(seed, userId),
+    unreadConversations: getUnreadConversationsForUser(seed, userId),
+    unreadNotifications: getUnreadNotificationsForUser(seed, userId),
+  }
+}
+
+export function buildInboxSnapshot(seed: WorkspaceSeed, userId: string, queues = buildInboxQueues(seed, userId)): InboxSnapshot {
+  const { contractsNeedingSignature, pendingIncomingRequests, pendingOutgoingRequests, proposalsNeedingResponse, unreadConversations, unreadNotifications } = queues
 
   const introItems: InboxActionItem[] = pendingIncomingRequests.map((request: ConnectRequest) => {
     const counterpart = getProfileByUserId(seed, request.fromUserId)
