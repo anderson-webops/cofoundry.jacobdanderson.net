@@ -8,6 +8,7 @@ interface PersistedAdminActionRow {
   admin_user_id: string
   created_at: string
   id: string
+  metadata?: AdminAction["metadata"] | null
   notes: string
   target_id: string
   target_type: AdminAction["targetType"]
@@ -23,6 +24,7 @@ function fromAdminActionRow(row: PersistedAdminActionRow): AdminAction {
     targetType: row.target_type,
     notes: row.notes,
     createdAt: row.created_at,
+    metadata: row.metadata || {},
   }
 }
 
@@ -43,6 +45,7 @@ export async function persistAdminAction(event: H3Event, action: AdminAction) {
       target_id: action.targetId,
       target_type: action.targetType,
       notes: action.notes,
+      metadata: action.metadata || {},
       created_at: action.createdAt,
     })
 

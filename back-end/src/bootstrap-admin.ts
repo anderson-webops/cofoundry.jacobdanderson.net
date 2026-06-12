@@ -132,6 +132,7 @@ export async function bootstrapAdmin(client: SupabaseClient, input: BootstrapAdm
       target_id: updated.id,
       target_type: "user",
       notes: input.notes,
+      metadata: {},
       created_at: createdAt,
     })
 

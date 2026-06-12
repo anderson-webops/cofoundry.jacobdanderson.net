@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { ProductionReadinessPayload } from "../../../server/utils/production-readiness"
-import type { AccessRequest, PrivacyRequest } from "~/shared/types/domain"
+import type { AccessRequest, AdminAction, AdminEscalationQueue, PrivacyRequest } from "~/shared/types/domain"
 import type { AdminCommandQueueItem, AdminCommandQueueKind, AdminCommandQueuePriority, AdminCommandQueueSlaStatus } from "~/shared/utils/admin"
-import { buildAdminCommandQueue } from "~/shared/utils/admin"
+import { buildAdminCommandQueue, defaultAdminEscalationQueueForTarget, formatAdminEscalationQueue, mergeAdminActions } from "~/shared/utils/admin"
 import { formatDate, formatRelativeDate } from "~/shared/utils/format"
 
 definePageMeta({
@@ -20,11 +20,17 @@ interface PrivacyRequestResponse {
   requests: PrivacyRequest[]
 }
 
+interface AdminAuditPayload {
+  actions: AdminAction[]
+}
+
 const requestFetch = useRequestFetch()
 const authStore = useAuthStore()
 const toastStore = useToastStore()
 const workspaceStore = useWorkspaceStore()
 const pendingAction = ref("")
+const assignmentByItem = reactive<Record<string, string>>({})
+const escalationQueueByItem = reactive<Record<string, AdminEscalationQueue>>({})
 
 const filters = reactive({
   kind: "all",
@@ -33,14 +39,20 @@ const filters = reactive({
 })
 
 const { data, pending, refresh } = await useAsyncData("admin-command-queue", async () => {
-  const [readiness, access, privacy] = await Promise.all([
+  const [readiness, access, privacy, audit] = await Promise.all([
     requestFetch<ProductionReadinessPayload>("/api/admin/readiness"),
     requestFetch<AccessRequestResponse>("/api/admin/access-requests"),
     requestFetch<PrivacyRequestResponse>("/api/admin/privacy-requests"),
+    requestFetch<AdminAuditPayload>("/api/admin/audit"),
   ])
 
-  return { access, privacy, readiness }
+  return { access, audit, privacy, readiness }
 })
+
+const queueSeed = computed(() => ({
+  ...workspaceStore.data,
+  adminActions: mergeAdminActions(data.value?.audit.actions || [], workspaceStore.data.adminActions),
+}))
 
 const queueItems = computed(() => buildAdminCommandQueue({
   accessRequests: data.value?.access.requests || [],
@@ -50,8 +62,33 @@ const queueItems = computed(() => buildAdminCommandQueue({
     ...check,
     groupTitle: group.title,
   }))) || [],
-  seed: workspaceStore.data,
+  seed: queueSeed.value,
 }))
+
+const assignableAdmins = computed(() => {
+  const admins = workspaceStore.data.users
+    .filter(user => ["admin", "investor_admin"].includes(user.role))
+    .map((user) => {
+      const profile = workspaceStore.data.profiles.find(item => item.userId === user.id)
+      return {
+        id: user.id,
+        label: profile?.displayName || user.email,
+      }
+    })
+
+  if (
+    authStore.currentUser
+    && ["admin", "investor_admin"].includes(authStore.currentUser.role)
+    && !admins.some(admin => admin.id === authStore.currentUser?.id)
+  ) {
+    admins.unshift({
+      id: authStore.currentUser.id,
+      label: authStore.currentUser.name || authStore.currentUser.email,
+    })
+  }
+
+  return admins
+})
 
 const filteredItems = computed(() => {
   const query = filters.query.trim().toLowerCase()
@@ -137,6 +174,41 @@ function kindLabel(kind: AdminCommandQueueKind) {
   }[kind]
 }
 
+function selectedAssigneeId(item: AdminCommandQueueItem) {
+  return assignmentByItem[item.id]
+    || item.ownerUserId
+    || authStore.currentUser?.id
+    || assignableAdmins.value[0]?.id
+    || ""
+}
+
+function selectedAssigneeLabel(item: AdminCommandQueueItem) {
+  const selectedId = selectedAssigneeId(item)
+  return assignableAdmins.value.find(admin => admin.id === selectedId)?.label || selectedId || "an admin"
+}
+
+function updateAssignee(item: AdminCommandQueueItem, event: Event) {
+  const value = (event.target as HTMLSelectElement).value
+  assignmentByItem[item.id] = value
+}
+
+const escalationQueueOptions: Array<{ label: string, value: AdminEscalationQueue }> = [
+  { label: "Trust and safety", value: "trust_safety" },
+  { label: "Operations", value: "operations" },
+  { label: "Founder success", value: "founder_success" },
+  { label: "Billing operations", value: "billing" },
+]
+
+function selectedEscalationQueue(item: AdminCommandQueueItem) {
+  return escalationQueueByItem[item.id]
+    || item.escalationQueue
+    || defaultAdminEscalationQueueForTarget(item.targetType)
+}
+
+function updateEscalationQueue(item: AdminCommandQueueItem, event: Event) {
+  escalationQueueByItem[item.id] = (event.target as HTMLSelectElement).value as AdminEscalationQueue
+}
+
 function canReviewEvidence(item: AdminCommandQueueItem) {
   return item.kind === "moderation" || item.kind === "privacy"
 }
@@ -145,10 +217,10 @@ function defaultQueueActionNote(item: AdminCommandQueueItem, action: "assign" | 
   const actor = authStore.currentUser?.name || authStore.currentUser?.email || "Admin"
 
   if (action === "assign")
-    return `${actor} claimed ${item.title.toLowerCase()} for follow-up.`
+    return `${actor} assigned ${item.title.toLowerCase()} to ${selectedAssigneeLabel(item)}.`
 
   if (action === "escalate")
-    return `${actor} escalated ${item.title.toLowerCase()} because it needs priority operator review.`
+    return `${actor} escalated ${item.title.toLowerCase()} to ${formatAdminEscalationQueue(selectedEscalationQueue(item))}.`
 
   return `${actor} reviewed the available evidence for ${item.title.toLowerCase()}.`
 }
@@ -157,13 +229,28 @@ async function recordQueueAction(item: AdminCommandQueueItem, action: "assign" |
   pendingAction.value = `${item.id}:${action}`
 
   try {
+    const body: {
+      action: "assign" | "escalate" | "review_evidence"
+      assignedAdminUserId?: string
+      escalationQueue?: AdminEscalationQueue
+      notes: string
+      targetId: string
+      targetType: AdminCommandQueueItem["targetType"]
+    } = {
+      action,
+      notes: defaultQueueActionNote(item, action),
+      targetId: item.targetId,
+      targetType: item.targetType,
+    }
+
+    if (action === "assign")
+      body.assignedAdminUserId = selectedAssigneeId(item)
+
+    if (action === "escalate")
+      body.escalationQueue = selectedEscalationQueue(item)
+
     await requestFetch("/api/admin/queue/action", {
-      body: {
-        action,
-        notes: defaultQueueActionNote(item, action),
-        targetId: item.targetId,
-        targetType: item.targetType,
-      },
+      body,
       method: "POST",
     })
     await workspaceStore.loadWorkspace(true)
@@ -262,8 +349,11 @@ async function recordQueueAction(item: AdminCommandQueueItem, action: "assign" |
                 <BaseBadge :tone="item.ownerUserId ? 'success' : 'warning'">
                   {{ item.ownerLabel }}
                 </BaseBadge>
+                <BaseBadge v-if="item.assignedByLabel" tone="neutral">
+                  Assigned by {{ item.assignedByLabel }}
+                </BaseBadge>
                 <BaseBadge v-if="item.escalatedAt" tone="danger">
-                  Escalated
+                  Escalated<span v-if="item.escalationLabel"> · {{ item.escalationLabel }}</span>
                 </BaseBadge>
                 <BaseBadge v-if="item.evidenceReviewedAt" tone="success">
                   Evidence reviewed
@@ -288,14 +378,45 @@ async function recordQueueAction(item: AdminCommandQueueItem, action: "assign" |
             </div>
 
             <div class="flex flex-wrap gap-2 lg:justify-end">
+              <label
+                v-if="assignableAdmins.length"
+                class="text-xs text-[var(--muted)] font-semibold gap-1 grid min-w-[10rem]"
+              >
+                <span>Owner</span>
+                <select
+                  class="text-xs text-[var(--text)] px-3 py-2 border border-[var(--line)] rounded-xl bg-[var(--panel-strong)]"
+                  :value="selectedAssigneeId(item)"
+                  :disabled="Boolean(pendingAction)"
+                  @change="updateAssignee(item, $event)"
+                >
+                  <option v-for="admin in assignableAdmins" :key="admin.id" :value="admin.id">
+                    {{ admin.label }}
+                  </option>
+                </select>
+              </label>
               <BaseButton
-                v-if="item.ownerUserId !== authStore.currentUser?.id"
                 variant="secondary"
-                :disabled="Boolean(pendingAction)"
+                :disabled="Boolean(pendingAction) || !selectedAssigneeId(item) || selectedAssigneeId(item) === item.ownerUserId"
                 @click="recordQueueAction(item, 'assign')"
               >
-                {{ pendingAction === `${item.id}:assign` ? "Assigning..." : "Assign to me" }}
+                {{ pendingAction === `${item.id}:assign` ? "Assigning..." : "Assign" }}
               </BaseButton>
+              <label
+                v-if="!item.escalatedAt"
+                class="text-xs text-[var(--muted)] font-semibold gap-1 grid min-w-[11rem]"
+              >
+                <span>Escalation route</span>
+                <select
+                  class="text-xs text-[var(--text)] px-3 py-2 border border-[var(--line)] rounded-xl bg-[var(--panel-strong)]"
+                  :value="selectedEscalationQueue(item)"
+                  :disabled="Boolean(pendingAction)"
+                  @change="updateEscalationQueue(item, $event)"
+                >
+                  <option v-for="queue in escalationQueueOptions" :key="queue.value" :value="queue.value">
+                    {{ queue.label }}
+                  </option>
+                </select>
+              </label>
               <BaseButton
                 v-if="!item.escalatedAt"
                 variant="secondary"
