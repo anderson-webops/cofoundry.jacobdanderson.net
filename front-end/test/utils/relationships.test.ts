@@ -1,6 +1,7 @@
 import type { WorkspaceSeed } from "../../shared/types/domain"
 import { describe, expect, it } from "vitest"
 import { workspaceSeed } from "../../shared/data/seed"
+import { addProposalCommentTransition } from "../../shared/utils/collaboration"
 import {
   buildRelationshipSnapshot,
   getRelationshipHrefForContract,
@@ -132,5 +133,41 @@ describe("relationship snapshots", () => {
     ]))
     expect(snapshot?.decisionLog.find(entry => entry.id === "decision-comment:proposal_comment_1")?.status).toBe("open")
     expect(snapshot?.decisionLog.find(entry => entry.id === "contract-decision:contract_version_ledgerloop_1")?.status).toBe("documented")
+  })
+
+  it("adds newly written decision-rights comments to the relationship decision log", () => {
+    const transition = addProposalCommentTransition(
+      workspaceSeed,
+      "proposal_ledgerloop_cto",
+      "proposal_version_ledgerloop_2",
+      "user_olivia",
+      "decision_rights",
+      "Malik owns architecture decisions unless the choice changes financing, compliance, or company strategy.",
+      "2026-04-29T15:00:00.000Z",
+      {
+        proposalCommentId: "proposal_comment_decision_note",
+        proposalNotificationId: "notification_decision_note",
+      },
+    )
+
+    const snapshot = buildRelationshipSnapshot(transition.seed, "user_olivia", "match_olivia_malik")
+
+    expect(snapshot?.decisionLog).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        href: "/app/proposals/proposal_ledgerloop_cto",
+        id: "decision-comment:proposal_comment_decision_note",
+        ownerUserId: "user_olivia",
+        status: "open",
+        summary: "Malik owns architecture decisions unless the choice changes financing, compliance, or company strategy.",
+        title: "Decision-rights question",
+      }),
+    ]))
+    expect(snapshot?.timeline).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: "proposal-comment:proposal_comment_decision_note",
+        kind: "comment",
+        title: "Proposal comment",
+      }),
+    ]))
   })
 })
