@@ -1,6 +1,8 @@
 import type { H3Event } from "h3"
 import type Stripe from "stripe"
-import type { SessionUser, SubscriptionPlan, SubscriptionStatus } from "~/shared/types/domain"
+import type { BillingCycle, SessionUser, Subscription, SubscriptionPlan, SubscriptionStatus } from "../../shared/types/domain"
+import { randomUUID } from "node:crypto"
+import { loadMemberWorkspaceState, persistWholeMemberWorkspaceState } from "./member-workspace"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
 
 type AdminClient = NonNullable<ReturnType<typeof createSupabaseAdminClient>>
@@ -33,6 +35,16 @@ function planCapabilities(plan: SubscriptionPlan) {
   }
 }
 
+function subscriptionCapabilities(plan: SubscriptionPlan) {
+  const paid = plan !== "free"
+  return {
+    contractBuilder: paid,
+    proposalWorkflow: paid,
+    unlimitedMessaging: paid,
+    visibilityBoost: paid,
+  }
+}
+
 function getFirstSubscriptionItem(subscription: Stripe.Subscription) {
   return subscription.items.data[0]
 }
@@ -55,6 +67,83 @@ export function resolveStripePlanFromPriceId(event: H3Event, priceId?: string | 
     return "pro"
 
   return "free"
+}
+
+function buildIdentity(session: SessionUser) {
+  return {
+    id: session.id,
+    email: session.email,
+    name: session.name,
+    onboardingCompleted: session.onboardingCompleted,
+    role: session.role,
+    subscriptionPlan: session.subscriptionPlan,
+  }
+}
+
+function addBillingPeriod(startedAt: Date, billingCycle: BillingCycle) {
+  const nextDate = new Date(startedAt)
+  if (billingCycle === "annual")
+    nextDate.setUTCFullYear(nextDate.getUTCFullYear() + 1)
+  else
+    nextDate.setUTCMonth(nextDate.getUTCMonth() + 1)
+
+  return nextDate.toISOString()
+}
+
+function buildMockSubscription(current: Subscription | undefined, session: SessionUser, plan: SubscriptionPlan, billingCycle: BillingCycle, checkoutSessionId?: string | null): Subscription {
+  const paid = plan !== "free"
+  const now = new Date()
+
+  return {
+    id: current?.id || `subscription_${session.id}`,
+    userId: session.id,
+    plan,
+    status: paid ? "active" : "inactive",
+    billingCycle,
+    renewsAt: paid ? addBillingPeriod(now, billingCycle) : null,
+    cancelAtPeriodEnd: false,
+    ...subscriptionCapabilities(plan),
+    stripeCheckoutSessionId: checkoutSessionId || current?.stripeCheckoutSessionId || null,
+    stripeCurrentPeriodEnd: null,
+    stripeCustomerId: current?.stripeCustomerId || null,
+    stripePriceId: current?.stripePriceId || null,
+    stripeStatus: null,
+    stripeSubscriptionId: current?.stripeSubscriptionId || null,
+  }
+}
+
+export async function persistMockCheckoutSubscription(event: H3Event, session: SessionUser, plan: Exclude<SubscriptionPlan, "free">, billingCycle: BillingCycle = "monthly") {
+  const workspace = await loadMemberWorkspaceState(event, buildIdentity(session))
+  const checkoutSessionId = `mock_checkout_${randomUUID().replaceAll("-", "")}`
+  const subscription = buildMockSubscription(workspace.state.subscription, workspace.session, plan, billingCycle, checkoutSessionId)
+
+  await persistWholeMemberWorkspaceState(event, {
+    ...workspace.state,
+    subscription,
+  })
+
+  return loadMemberWorkspaceState(event, {
+    ...buildIdentity(workspace.session),
+    subscriptionPlan: subscription.plan,
+  })
+}
+
+export async function updateMockSubscriptionRenewal(event: H3Event, session: SessionUser, action: "cancel_at_period_end" | "resume") {
+  const workspace = await loadMemberWorkspaceState(event, buildIdentity(session))
+  const subscription = {
+    ...workspace.state.subscription,
+    cancelAtPeriodEnd: action === "cancel_at_period_end",
+  }
+
+  await persistWholeMemberWorkspaceState(event, {
+    ...workspace.state,
+    subscription,
+  })
+
+  return loadMemberWorkspaceState(event, {
+    ...buildIdentity(workspace.session),
+    subscriptionPlan: subscription.plan,
+  })
 }
 
 async function selectStripeCustomerId(adminClient: AdminClient, userId: string) {

@@ -1,8 +1,10 @@
 import type { H3Event } from "h3"
-import type { MemberWorkspaceState, MemberWorkspaceWritePayload, Profile, SavedSearch, StartupOpportunity, Subscription, User } from "~/shared/types/domain"
-import { checkSavedSearchCount } from "~/shared/utils/billing"
-import { buildDraftMemberWorkspaceState, buildMemberWorkspaceState, createInitialWorkspaceDocument, mergeMemberWorkspaceState, resolveSessionUserFromWorkspace, sanitizeOwnedProfile, sanitizeUserOwnedBookmarks, sanitizeUserOwnedOpportunities, sanitizeUserOwnedSavedSearches } from "~/shared/utils/workspace-persistence"
+import type { MemberWorkspaceState, MemberWorkspaceWritePayload, Profile, SavedSearch, StartupOpportunity, Subscription, User } from "../../shared/types/domain"
+import { checkSavedSearchCount } from "../../shared/utils/billing"
+import { buildDraftMemberWorkspaceState, buildMemberWorkspaceState, createInitialWorkspaceDocument, mergeMemberWorkspaceState, resolveSessionUserFromWorkspace, sanitizeOwnedProfile, sanitizeUserOwnedBookmarks, sanitizeUserOwnedOpportunities, sanitizeUserOwnedSavedSearches } from "../../shared/utils/workspace-persistence"
 import { mergeLocalAdminAuditState } from "./local-admin-audit"
+import { loadLocalCollaborationState } from "./local-collaboration-store"
+import { persistLocalMemberWorkspaceState, readLocalMemberWorkspaceState } from "./local-member-workspace"
 import { loadServerCollaborationState, mergeServerCollaborationState } from "./member-collaboration"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
 
@@ -108,6 +110,16 @@ function buildBootstrapState(identity: PersistedIdentityInput) {
 
 function buildMergedSeed(state: MemberWorkspaceState) {
   return mergeMemberWorkspaceState(createBaseSeed(), state)
+}
+
+async function buildLocalRuntimeSeed(state: MemberWorkspaceState) {
+  let seed = buildMergedSeed(state)
+  const collaborationState = await loadLocalCollaborationState(state.user.id)
+
+  if (collaborationState)
+    seed = mergeServerCollaborationState(seed, collaborationState)
+
+  return mergeLocalAdminAuditState(seed)
 }
 
 function toUserRow(user: User): PersistedUserRow {
@@ -465,6 +477,11 @@ async function replaceOpportunities(adminClient: NonNullable<ReturnType<typeof c
 }
 
 export async function persistWholeMemberWorkspaceState(event: H3Event, state: MemberWorkspaceState) {
+  if (!isSupabaseEnabled(event)) {
+    await persistLocalMemberWorkspaceState(state)
+    return
+  }
+
   const adminClient = createSupabaseAdminClient(event)
   if (!adminClient)
     throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
@@ -482,8 +499,10 @@ export async function loadMemberWorkspaceState(event: H3Event, identity: Persist
   const fallbackSession = resolveSessionUserFromWorkspace(baseSeed, identity)
 
   if (!isSupabaseEnabled(event)) {
-    const state = buildMemberWorkspaceState(baseSeed, fallbackSession.id) || buildDraftMemberWorkspaceState(fallbackSession)
-    const seed = await mergeLocalAdminAuditState(buildMergedSeed(state))
+    const state = await readLocalMemberWorkspaceState(fallbackSession.id)
+      || buildMemberWorkspaceState(baseSeed, fallbackSession.id)
+      || buildDraftMemberWorkspaceState(fallbackSession)
+    const seed = await buildLocalRuntimeSeed(state)
 
     return {
       seed,
@@ -601,7 +620,7 @@ export async function persistMemberWorkspaceWritePayload(event: H3Event, identit
 
   await persistWholeMemberWorkspaceState(event, nextState)
 
-  const seed = buildMergedSeed(nextState)
+  const seed = isSupabaseEnabled(event) ? buildMergedSeed(nextState) : await buildLocalRuntimeSeed(nextState)
   return {
     seed,
     session: resolveSessionUserFromWorkspace(seed, {

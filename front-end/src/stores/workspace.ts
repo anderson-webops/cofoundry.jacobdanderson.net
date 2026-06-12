@@ -135,7 +135,6 @@ function deriveUserRole(hasIdea: boolean, wantsToJoinIdea: boolean) {
 }
 
 export const useWorkspaceStore = defineStore("workspace", () => {
-  const runtimeConfig = useRuntimeConfig()
   const { session } = useSessionState()
   const data = useStorage<WorkspaceSeed>("cofoundry-workspace", cloneValue(workspaceSeed), undefined, {
     mergeDefaults: true,
@@ -147,7 +146,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   const persistError = ref("")
   const lastSyncedAt = ref<string | null>(null)
   const loadedUserId = ref("")
-  const supabaseBackedWorkspace = computed(() => runtimeConfig.public.backendMode === "supabase")
+  const serverBackedWorkspace = computed(() => Boolean(session.value))
 
   function normalizeLegacyConnectRequests() {
     data.value.connectRequests = data.value.connectRequests.map((request) => {
@@ -271,7 +270,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       return data.value
     }
 
-    if (!supabaseBackedWorkspace.value) {
+    if (!serverBackedWorkspace.value) {
       ensureSessionUser(session.value)
       loadedUserId.value = session.value.id
       ready.value = true
@@ -304,7 +303,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   }
 
   async function persistWorkspace(force = false) {
-    if (!supabaseBackedWorkspace.value || !session.value || hydrating.value)
+    if (!serverBackedWorkspace.value || !session.value || hydrating.value)
       return data.value
 
     const payload = buildMemberWorkspaceWritePayload(data.value, session.value.id)
@@ -590,7 +589,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     if (usage.intros.exhausted)
       return false
 
-    if (supabaseBackedWorkspace.value) {
+    if (serverBackedWorkspace.value) {
       await runCollaborationMutation({
         action: "send_connect_request",
         payload,
@@ -608,7 +607,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     if (!request)
       return null
 
-    if (supabaseBackedWorkspace.value) {
+    if (serverBackedWorkspace.value) {
       const result = await runCollaborationMutation<{ conversationId: string | null }>({
         action: "respond_connect_request",
         declineReason,
@@ -628,7 +627,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     if (!conversation)
       return
 
-    if (supabaseBackedWorkspace.value) {
+    if (serverBackedWorkspace.value) {
       await runCollaborationMutation({
         action: "send_message",
         attachments,
@@ -643,7 +642,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   }
 
   async function markConversationRead(conversationId: string, userId: string) {
-    if (supabaseBackedWorkspace.value) {
+    if (serverBackedWorkspace.value) {
       await runCollaborationMutation({
         action: "mark_conversation_read",
         conversationId,
@@ -681,7 +680,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     if (usage.proposals.exhausted)
       return null
 
-    if (supabaseBackedWorkspace.value) {
+    if (serverBackedWorkspace.value) {
       const result = await runCollaborationMutation<{ proposalId: string | null }>({
         action: "create_proposal",
         conversationId,
@@ -703,7 +702,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     if (!proposal)
       return
 
-    if (supabaseBackedWorkspace.value) {
+    if (serverBackedWorkspace.value) {
       await runCollaborationMutation({
         action: "update_proposal_status",
         proposalId,
@@ -725,7 +724,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     if (!proposal || !currentVersion)
       return
 
-    if (supabaseBackedWorkspace.value) {
+    if (serverBackedWorkspace.value) {
       await runCollaborationMutation({
         action: "create_proposal_counter_version",
         payload,
@@ -738,7 +737,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   }
 
   async function addProposalComment(proposalId: string, proposalVersionId: string, authorUserId: string, section: ProposalSectionKey, body: string) {
-    if (supabaseBackedWorkspace.value) {
+    if (serverBackedWorkspace.value) {
       await runCollaborationMutation({
         action: "add_proposal_comment",
         body,
@@ -768,7 +767,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
         return null
     }
 
-    if (supabaseBackedWorkspace.value) {
+    if (serverBackedWorkspace.value) {
       const result = await runCollaborationMutation<{ contractId: string | null }>({
         action: "create_contract_from_proposal",
         proposalId,
@@ -806,7 +805,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     if (!contract || !currentVersion)
       return
 
-    if (supabaseBackedWorkspace.value) {
+    if (serverBackedWorkspace.value) {
       await runCollaborationMutation({
         action: "sign_contract",
         contractId,
@@ -951,7 +950,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     if (!match)
       return null
 
-    if (supabaseBackedWorkspace.value) {
+    if (serverBackedWorkspace.value) {
       const result = await runCollaborationMutation<{ trialId: string | null }>({
         action: "start_trial",
         matchId,
@@ -969,7 +968,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     if (!trial)
       return
 
-    if (supabaseBackedWorkspace.value) {
+    if (serverBackedWorkspace.value) {
       await runCollaborationMutation({
         action: "acknowledge_trial",
         trialId,
@@ -981,7 +980,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   }
 
   async function markNotificationRead(notificationId: string) {
-    if (supabaseBackedWorkspace.value) {
+    if (serverBackedWorkspace.value) {
       await syncNotificationRead(notificationId)
       return
     }
@@ -1266,7 +1265,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
 
   if (import.meta.client) {
     watchDebounced(data, async () => {
-      if (!supabaseBackedWorkspace.value || !session.value || hydrating.value || loadedUserId.value !== session.value.id)
+      if (!serverBackedWorkspace.value || !session.value || hydrating.value || loadedUserId.value !== session.value.id)
         return
 
       await persistWorkspace()
@@ -1284,6 +1283,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     lastSyncedAt,
     loadedUserId,
     loadWorkspace,
+    applyAuthoritativeWorkspace,
     persistError,
     persistWorkspace,
     resetSessionState,
