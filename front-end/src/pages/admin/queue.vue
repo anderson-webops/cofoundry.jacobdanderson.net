@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ProductionReadinessPayload } from "../../../server/utils/production-readiness"
 import type { AccessRequest, PrivacyRequest } from "~/shared/types/domain"
-import type { AdminCommandQueueKind, AdminCommandQueuePriority } from "~/shared/utils/admin"
+import type { AdminCommandQueueItem, AdminCommandQueueKind, AdminCommandQueuePriority, AdminCommandQueueSlaStatus } from "~/shared/utils/admin"
 import { buildAdminCommandQueue } from "~/shared/utils/admin"
 import { formatDate, formatRelativeDate } from "~/shared/utils/format"
 
@@ -21,7 +21,10 @@ interface PrivacyRequestResponse {
 }
 
 const requestFetch = useRequestFetch()
+const authStore = useAuthStore()
+const toastStore = useToastStore()
 const workspaceStore = useWorkspaceStore()
+const pendingAction = ref("")
 
 const filters = reactive({
   kind: "all",
@@ -76,10 +79,13 @@ const filteredItems = computed(() => {
 const counts = computed(() => ({
   access: queueItems.value.filter(item => item.kind === "access").length,
   critical: queueItems.value.filter(item => item.priority === "critical").length,
+  escalated: queueItems.value.filter(item => item.escalatedAt).length,
   high: queueItems.value.filter(item => item.priority === "high").length,
   moderation: queueItems.value.filter(item => item.kind === "moderation").length,
+  overdue: queueItems.value.filter(item => item.slaStatus === "overdue").length,
   privacy: queueItems.value.filter(item => item.kind === "privacy").length,
   readiness: queueItems.value.filter(item => item.kind === "readiness").length,
+  unassigned: queueItems.value.filter(item => !item.ownerUserId).length,
 }))
 
 const kindOptions = [
@@ -105,6 +111,14 @@ function priorityTone(priority: AdminCommandQueuePriority) {
   }[priority]
 }
 
+function slaTone(status: AdminCommandQueueSlaStatus) {
+  return {
+    due_soon: "warning" as const,
+    on_track: "neutral" as const,
+    overdue: "danger" as const,
+  }[status]
+}
+
 function kindTone(kind: AdminCommandQueueKind) {
   return {
     access: "accent" as const,
@@ -121,6 +135,56 @@ function kindLabel(kind: AdminCommandQueueKind) {
     privacy: "Privacy",
     readiness: "Readiness",
   }[kind]
+}
+
+function canReviewEvidence(item: AdminCommandQueueItem) {
+  return item.kind === "moderation" || item.kind === "privacy"
+}
+
+function defaultQueueActionNote(item: AdminCommandQueueItem, action: "assign" | "escalate" | "review_evidence") {
+  const actor = authStore.currentUser?.name || authStore.currentUser?.email || "Admin"
+
+  if (action === "assign")
+    return `${actor} claimed ${item.title.toLowerCase()} for follow-up.`
+
+  if (action === "escalate")
+    return `${actor} escalated ${item.title.toLowerCase()} because it needs priority operator review.`
+
+  return `${actor} reviewed the available evidence for ${item.title.toLowerCase()}.`
+}
+
+async function recordQueueAction(item: AdminCommandQueueItem, action: "assign" | "escalate" | "review_evidence") {
+  pendingAction.value = `${item.id}:${action}`
+
+  try {
+    await requestFetch("/api/admin/queue/action", {
+      body: {
+        action,
+        notes: defaultQueueActionNote(item, action),
+        targetId: item.targetId,
+        targetType: item.targetType,
+      },
+      method: "POST",
+    })
+    await workspaceStore.loadWorkspace(true)
+    await refresh()
+
+    toastStore.push({
+      title: action === "assign" ? "Case assigned" : action === "escalate" ? "Case escalated" : "Evidence reviewed",
+      message: "The audit trail has been updated and the command queue was refreshed.",
+      tone: action === "escalate" ? "warning" : "success",
+    })
+  }
+  catch (caughtError) {
+    toastStore.push({
+      title: "Queue action failed",
+      message: caughtError instanceof Error ? caughtError.message : "The queue action could not be saved.",
+      tone: "danger",
+    })
+  }
+  finally {
+    pendingAction.value = ""
+  }
 }
 </script>
 
@@ -143,10 +207,10 @@ function kindLabel(kind: AdminCommandQueueKind) {
 
     <div class="gap-4 grid md:grid-cols-3 xl:grid-cols-6">
       <MetricTile label="Critical" :value="counts.critical" context="Blocking or high-risk work." />
-      <MetricTile label="High" :value="counts.high" context="Needs operator attention soon." />
+      <MetricTile label="Overdue" :value="counts.overdue" context="Past the queue SLA window." />
+      <MetricTile label="Unassigned" :value="counts.unassigned" context="Needs an accountable operator." />
+      <MetricTile label="Escalated" :value="counts.escalated" context="Already raised for priority review." />
       <MetricTile label="Moderation" :value="counts.moderation" context="Reports awaiting review." />
-      <MetricTile label="Access" :value="counts.access" context="Requests or invites needing action." />
-      <MetricTile label="Privacy" :value="counts.privacy" context="Privacy and trust-review requests." />
       <MetricTile label="Readiness" :value="counts.readiness" context="Deployment checks requiring follow-up." />
     </div>
 
@@ -192,6 +256,18 @@ function kindLabel(kind: AdminCommandQueueKind) {
                 <BaseBadge tone="neutral">
                   {{ item.statusLabel }}
                 </BaseBadge>
+                <BaseBadge :tone="slaTone(item.slaStatus)">
+                  {{ item.slaLabel }}
+                </BaseBadge>
+                <BaseBadge :tone="item.ownerUserId ? 'success' : 'warning'">
+                  {{ item.ownerLabel }}
+                </BaseBadge>
+                <BaseBadge v-if="item.escalatedAt" tone="danger">
+                  Escalated
+                </BaseBadge>
+                <BaseBadge v-if="item.evidenceReviewedAt" tone="success">
+                  Evidence reviewed
+                </BaseBadge>
               </div>
 
               <h3 class="text-base font-semibold mt-4">
@@ -211,9 +287,35 @@ function kindLabel(kind: AdminCommandQueueKind) {
               </p>
             </div>
 
-            <BaseButton variant="secondary" :to="item.href">
-              {{ item.actionLabel }}
-            </BaseButton>
+            <div class="flex flex-wrap gap-2 lg:justify-end">
+              <BaseButton
+                v-if="item.ownerUserId !== authStore.currentUser?.id"
+                variant="secondary"
+                :disabled="Boolean(pendingAction)"
+                @click="recordQueueAction(item, 'assign')"
+              >
+                {{ pendingAction === `${item.id}:assign` ? "Assigning..." : "Assign to me" }}
+              </BaseButton>
+              <BaseButton
+                v-if="!item.escalatedAt"
+                variant="secondary"
+                :disabled="Boolean(pendingAction)"
+                @click="recordQueueAction(item, 'escalate')"
+              >
+                {{ pendingAction === `${item.id}:escalate` ? "Escalating..." : "Escalate" }}
+              </BaseButton>
+              <BaseButton
+                v-if="canReviewEvidence(item) && !item.evidenceReviewedAt"
+                variant="secondary"
+                :disabled="Boolean(pendingAction)"
+                @click="recordQueueAction(item, 'review_evidence')"
+              >
+                {{ pendingAction === `${item.id}:review_evidence` ? "Saving..." : "Evidence reviewed" }}
+              </BaseButton>
+              <BaseButton variant="secondary" :to="item.href">
+                {{ item.actionLabel }}
+              </BaseButton>
+            </div>
           </div>
         </article>
       </div>

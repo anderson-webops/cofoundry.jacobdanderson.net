@@ -156,6 +156,53 @@ describe("admin utilities", () => {
     expect(queue.some(item => item.id === "privacy:privacy_export" && item.href === "/admin/privacy" && item.priority === "standard")).toBe(true)
   })
 
+  it("derives command queue ownership, escalation, evidence review, and SLA state from admin actions", () => {
+    const queue = buildAdminCommandQueue({
+      generatedAt: "2026-06-12T12:00:00.000Z",
+      seed: {
+        ...workspaceSeed,
+        adminActions: [
+          {
+            adminUserId: "user_ava",
+            createdAt: "2026-06-12T10:00:00.000Z",
+            id: "action_assign_report_3",
+            notes: "Ava claimed the impersonation report for follow-up.",
+            targetId: "report_3",
+            targetType: "report",
+            type: "assign_case",
+          },
+          {
+            adminUserId: "user_ava",
+            createdAt: "2026-06-12T10:15:00.000Z",
+            id: "action_escalate_report_3",
+            notes: "Escalated because the report describes potential investor impersonation.",
+            targetId: "report_3",
+            targetType: "report",
+            type: "escalate_case",
+          },
+          {
+            adminUserId: "user_ava",
+            createdAt: "2026-06-12T10:30:00.000Z",
+            id: "action_evidence_report_3",
+            notes: "Reviewed the available reporter evidence and message context.",
+            targetId: "report_3",
+            targetType: "report",
+            type: "review_evidence",
+          },
+          ...workspaceSeed.adminActions,
+        ],
+      },
+    })
+    const report = queue.find(item => item.id === "report:report_3")
+
+    expect(report).toBeDefined()
+    expect(report?.ownerUserId).toBe("user_ava")
+    expect(report?.ownerLabel).toBe("Ava Morgan")
+    expect(report?.escalatedAt).toBe("2026-06-12T10:15:00.000Z")
+    expect(report?.evidenceReviewedAt).toBe("2026-06-12T10:30:00.000Z")
+    expect(report?.slaStatus).toBe("overdue")
+  })
+
   it("filters billing rows by paid plan and query", () => {
     const rows = buildAdminBillingRows(workspaceSeed)
     const filtered = filterAdminBillingRows(rows, {

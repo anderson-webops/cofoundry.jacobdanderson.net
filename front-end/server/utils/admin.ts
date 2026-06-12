@@ -1,5 +1,5 @@
 import type { H3Event } from "h3"
-import { adminReportStatusSchema, adminUserModerationSchema, adminUserRoleSchema } from "~/shared/utils/validation"
+import { adminCommandQueueActionSchema, adminReportStatusSchema, adminUserModerationSchema, adminUserRoleSchema } from "~/shared/utils/validation"
 import { requireAuthenticatedSession } from "./auth"
 
 export async function requireAdminSession(event: H3Event) {
@@ -21,4 +21,8 @@ export function validateAdminUserRolePayload(payload: unknown) {
 
 export function validateAdminReportStatusPayload(payload: unknown) {
   return adminReportStatusSchema.parse(payload)
+}
+
+export function validateAdminCommandQueueActionPayload(payload: unknown) {
+  return adminCommandQueueActionSchema.parse(payload)
 }

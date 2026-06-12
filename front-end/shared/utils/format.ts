@@ -295,14 +295,17 @@ export function formatReportStatus(status: ReportStatus) {
 
 export function formatAdminActionType(type: AdminActionType) {
   return {
-    suspend_user: "Suspended user",
-    reinstate_user: "Reinstated user",
+    assign_case: "Assigned case",
     change_user_role: "Changed user role",
-    warn_user: "Warned user",
+    escalate_case: "Escalated case",
     remove_content: "Removed content",
+    reinstate_user: "Reinstated user",
+    review_evidence: "Reviewed evidence",
     review_report: "Reviewed report",
-    resolve_report: "Resolved report",
     review_privacy_request: "Reviewed privacy request",
+    resolve_report: "Resolved report",
     resolve_privacy_request: "Resolved privacy request",
+    suspend_user: "Suspended user",
+    warn_user: "Warned user",
   }[type]
 }
