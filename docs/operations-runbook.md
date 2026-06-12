@@ -16,6 +16,7 @@ CoFoundry can run in production-facing mock/access-request mode today without Su
 - Visit `/admin/access-requests` and clear stale access requests or invite links.
 - Visit `/admin/privacy` and resolve open privacy or trust-review requests with an operator note.
 - Confirm the contact/support inbox is receiving submissions.
+- Confirm a public page response includes `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, and, on HTTPS production origins, `Strict-Transport-Security`.
 
 ## Worker Schedule
 

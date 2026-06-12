@@ -1,4 +1,5 @@
 import process from "node:process"
+import { buildSecurityHeaders } from "./server/utils/security-headers"
 import { appDescription, appName } from "./shared/constants/app"
 import { workspaceSeed } from "./shared/data/seed"
 import { getPublicRoutePaths } from "./shared/utils/directory"
@@ -7,6 +8,14 @@ import { defaultThemeSchemeDefinition } from "./shared/utils/theme"
 
 const environment = readEnvironmentSnapshot(process.env)
 const publicRoutes = getPublicRoutePaths(workspaceSeed)
+const securityHeaders = buildSecurityHeaders({
+  appUrl: environment.public.appUrl,
+  isProduction: process.env.NODE_ENV === "production",
+})
+const privateRouteHeaders = {
+  ...securityHeaders,
+  "X-Robots-Tag": "noindex, nofollow",
+}
 
 assertEnvironmentIsValid(process.env, "Nuxt configuration")
 
@@ -103,15 +112,16 @@ export default defineNuxtConfig({
       routes: [...publicRoutes, "/sitemap.xml", "/robots.txt"],
     },
     routeRules: {
-      "/admin": { headers: { "X-Robots-Tag": "noindex, nofollow" } },
-      "/admin/**": { headers: { "X-Robots-Tag": "noindex, nofollow" } },
-      "/app": { headers: { "X-Robots-Tag": "noindex, nofollow" } },
-      "/app/**": { headers: { "X-Robots-Tag": "noindex, nofollow" } },
-      "/auth": { headers: { "X-Robots-Tag": "noindex, nofollow" } },
-      "/auth/**": { headers: { "X-Robots-Tag": "noindex, nofollow" } },
-      "/api/**": { headers: { "X-Robots-Tag": "noindex, nofollow" } },
-      "/onboarding": { headers: { "X-Robots-Tag": "noindex, nofollow" } },
-      "/onboarding/**": { headers: { "X-Robots-Tag": "noindex, nofollow" } },
+      "/**": { headers: securityHeaders },
+      "/admin": { headers: privateRouteHeaders },
+      "/admin/**": { headers: privateRouteHeaders },
+      "/app": { headers: privateRouteHeaders },
+      "/app/**": { headers: privateRouteHeaders },
+      "/auth": { headers: privateRouteHeaders },
+      "/auth/**": { headers: privateRouteHeaders },
+      "/api/**": { headers: privateRouteHeaders },
+      "/onboarding": { headers: privateRouteHeaders },
+      "/onboarding/**": { headers: privateRouteHeaders },
     },
   },
   vite: {
