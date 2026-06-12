@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { SessionUser, Subscription, WorkspaceSeed } from "~/shared/types/domain"
 import { pricingTiers } from "~/shared/data/marketing"
 import { getPlanPriceLabel } from "~/shared/utils/billing"
 import { formatBillingCycle, formatDate, formatPlanName } from "~/shared/utils/format"
@@ -23,23 +24,20 @@ const billingModeLabel = computed(() => serviceLabels.billing)
 const currentPriceLabel = computed(() => getPlanPriceLabel(subscription.value?.plan || "free", subscription.value?.billingCycle || "monthly"))
 const stripeBillingMode = computed(() => runtimeConfig.public.billingMode === "stripe")
 
-watchEffect(() => {
-  const checkout = route.query.checkout
-  const plan = route.query.plan
-
-  if (checkout === "success" && typeof plan === "string" && authStore.currentUser) {
-    workspaceStore.updateSubscriptionPlan(authStore.currentUser.id, plan as "free" | "pro" | "team")
-  }
-})
+if (route.query.checkout === "success" && authStore.currentUser)
+  await workspaceStore.loadWorkspace(true)
 
 async function startCheckout(plan: "pro" | "team") {
   pendingPlan.value = plan
 
   try {
-    const response = await $fetch<{ checkoutUrl: string, mode: string }>("/api/billing/checkout", {
+    const response = await $fetch<{ checkoutUrl: string, data?: WorkspaceSeed, mode: string, session?: SessionUser, subscription?: Subscription }>("/api/billing/checkout", {
       method: "POST",
       body: { plan, interval: "monthly" },
     })
+
+    if (response.data && response.session)
+      workspaceStore.applyAuthoritativeWorkspace({ data: response.data, session: response.session })
 
     if (response.mode === "mock") {
       toastStore.push({
@@ -79,12 +77,16 @@ async function openBillingPortal() {
   }
 }
 
-function toggleCancellation() {
+async function toggleCancellation() {
   if (!authStore.currentUser || !subscription.value || subscription.value.plan === "free")
     return
 
   if (subscription.value.cancelAtPeriodEnd) {
-    workspaceStore.resumeSubscription(authStore.currentUser.id)
+    const response = await $fetch<{ data: WorkspaceSeed, session: SessionUser }>("/api/billing/subscription", {
+      method: "POST",
+      body: { action: "resume" },
+    })
+    workspaceStore.applyAuthoritativeWorkspace(response)
     toastStore.push({
       title: "Cancellation removed",
       message: "The subscription will keep renewing on its normal schedule.",
@@ -93,7 +95,11 @@ function toggleCancellation() {
     return
   }
 
-  workspaceStore.cancelSubscriptionAtPeriodEnd(authStore.currentUser.id)
+  const response = await $fetch<{ data: WorkspaceSeed, session: SessionUser }>("/api/billing/subscription", {
+    method: "POST",
+    body: { action: "cancel_at_period_end" },
+  })
+  workspaceStore.applyAuthoritativeWorkspace(response)
   toastStore.push({
     title: "Cancellation scheduled",
     message: "The subscription will stay active until the current billing period ends.",

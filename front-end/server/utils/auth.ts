@@ -130,11 +130,12 @@ export async function readAuthoritativeSession(event: H3Event) {
     return null
 
   if (!isSupabaseEnabled(event)) {
-    const authoritativeSession = getMockSessionBySeedUserId(decodedSession.id) || await findLocalAuthSessionById(decodedSession.id)
-    if (!authoritativeSession || authoritativeSession.email !== decodedSession.email)
+    const baseSession = getMockSessionBySeedUserId(decodedSession.id) || await findLocalAuthSessionById(decodedSession.id)
+    if (!baseSession || baseSession.email !== decodedSession.email)
       return null
 
-    return authoritativeSession
+    const { session } = await loadMemberWorkspaceState(event, buildIdentityInput(baseSession))
+    return session.email === decodedSession.email ? session : null
   }
 
   const { session } = await loadMemberWorkspaceState(event, buildIdentityInput(decodedSession))
@@ -317,9 +318,12 @@ export async function createMockAccount(event: H3Event, payload: { email: string
   if (payload.inviteToken)
     await markAccessInviteAccepted(event, payload.inviteToken)
 
-  writeSession(event, session)
+  await persistWholeMemberWorkspaceState(event, buildDraftMemberWorkspaceState(session))
+  const { session: authoritativeSession } = await loadMemberWorkspaceState(event, buildIdentityInput(session))
 
-  return session
+  writeSession(event, authoritativeSession)
+
+  return authoritativeSession
 }
 
 export async function completeOnboarding(event: H3Event, nextSession: SessionUser) {
@@ -344,6 +348,15 @@ export async function completeOnboarding(event: H3Event, nextSession: SessionUse
 
   registeredSessions.set(updatedSession.id, updatedSession)
   await updateLocalAuthOnboarding(updatedSession)
-  writeSession(event, updatedSession)
-  return updatedSession
+  const current = await loadMemberWorkspaceState(event, buildIdentityInput(updatedSession))
+  await persistWholeMemberWorkspaceState(event, {
+    ...current.state,
+    user: {
+      ...current.state.user,
+      onboardingCompleted: true,
+    },
+  })
+  const { session } = await loadMemberWorkspaceState(event, buildIdentityInput(updatedSession))
+  writeSession(event, session)
+  return session
 }

@@ -9,9 +9,9 @@ import type {
   ProposalStatus,
   SessionUser,
   Signature,
-} from "~/shared/types/domain"
-import type { SubscriptionGateAction } from "~/shared/utils/billing"
-import { checkSubscriptionGate } from "~/shared/utils/billing"
+} from "../../shared/types/domain"
+import type { SubscriptionGateAction } from "../../shared/utils/billing"
+import { checkSubscriptionGate } from "../../shared/utils/billing"
 import {
   acknowledgeTrialCollaborationTransition,
   addProposalCommentTransition,
@@ -31,8 +31,8 @@ import {
   signContractTransition,
   startTrialCollaborationTransition,
   updateProposalStatusTransition,
-} from "~/shared/utils/collaboration"
-import { getContractById, getCurrentProposalVersion, getProposalById, getSubscriptionByUserId } from "~/shared/utils/workspace"
+} from "../../shared/utils/collaboration"
+import { getContractById, getCurrentProposalVersion, getProposalById, getSubscriptionByUserId } from "../../shared/utils/workspace"
 import { recordContractSignatureEvent } from "./contract-signatures"
 import { persistServerCollaborationState } from "./member-collaboration"
 import { loadMemberWorkspaceState } from "./member-workspace"

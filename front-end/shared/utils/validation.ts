@@ -162,6 +162,10 @@ export const billingCheckoutSchema = z.object({
   interval: z.enum(["monthly", "annual"]).default("monthly"),
 })
 
+export const billingSubscriptionMutationSchema = z.object({
+  action: z.enum(["cancel_at_period_end", "resume"]),
+})
+
 export const fileUploadPolicySchema = z.object({
   filename: z.string().trim().min(1, "Filename is required.").max(180, "Filename is too long."),
   mimeType: z.string().trim().min(3, "File type is required.").max(120, "File type is too long."),

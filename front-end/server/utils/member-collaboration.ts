@@ -1,6 +1,5 @@
 import type { H3Event } from "h3"
 import type {
-  AdminAction,
   ConnectRequest,
   Contract,
   ContractVersion,
@@ -11,12 +10,13 @@ import type {
   Proposal,
   ProposalComment,
   ProposalVersion,
-  Report,
   Signature,
   TrialCollaboration,
   WorkspaceSeed,
-} from "~/shared/types/domain"
-import { cloneValue } from "~/shared/utils/clone"
+} from "../../shared/types/domain"
+import type { PersistedCollaborationState } from "./local-collaboration-store"
+import { cloneValue } from "../../shared/utils/clone"
+import { loadLocalCollaborationState, persistLocalCollaborationState } from "./local-collaboration-store"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
 
 type AdminClient = NonNullable<ReturnType<typeof createSupabaseAdminClient>>
@@ -178,23 +178,6 @@ interface PersistedNotificationRow {
   title: string
   type: Notification["type"]
   user_id: string
-}
-
-interface PersistedCollaborationState {
-  adminActions: AdminAction[]
-  connectRequests: ConnectRequest[]
-  contractVersions: ContractVersion[]
-  contracts: Contract[]
-  conversations: Conversation[]
-  matches: Match[]
-  messages: Message[]
-  notifications: Notification[]
-  proposalComments: ProposalComment[]
-  proposalVersions: ProposalVersion[]
-  proposals: Proposal[]
-  reports: Report[]
-  signatures: Signature[]
-  trialCollaborations: TrialCollaboration[]
 }
 
 function fromConnectRequestRow(row: PersistedConnectRequestRow): ConnectRequest {
@@ -565,7 +548,6 @@ function toNotificationRow(notification: Notification): PersistedNotificationRow
 
 function buildEmptyState(): PersistedCollaborationState {
   return {
-    adminActions: [],
     connectRequests: [],
     contractVersions: [],
     contracts: [],
@@ -835,7 +817,7 @@ export function mergeServerCollaborationState(seed: WorkspaceSeed, state: Persis
 
 export async function loadServerCollaborationState(event: H3Event, userId: string) {
   if (!isSupabaseEnabled(event))
-    return buildEmptyState()
+    return await loadLocalCollaborationState(userId) || buildEmptyState()
 
   const adminClient = createSupabaseAdminClient(event)
   if (!adminClient)
@@ -872,14 +854,17 @@ export async function loadServerCollaborationState(event: H3Event, userId: strin
 }
 
 export async function persistServerCollaborationState(event: H3Event, userId: string, seed: WorkspaceSeed) {
-  if (!isSupabaseEnabled(event))
+  const state = extractUserCollaborationState(seed, userId)
+
+  if (!isSupabaseEnabled(event)) {
+    await persistLocalCollaborationState(userId, state)
     return
+  }
 
   const adminClient = createSupabaseAdminClient(event)
   if (!adminClient)
     throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
 
-  const state = extractUserCollaborationState(seed, userId)
   const conversationIds = state.conversations.map(conversation => conversation.id)
   const proposalIds = state.proposals.map(proposal => proposal.id)
   const contractIds = state.contracts.map(contract => contract.id)
