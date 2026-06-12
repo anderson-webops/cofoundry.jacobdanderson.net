@@ -47,6 +47,9 @@ async function updateRequestStatus(request: PrivacyRequest, status: "reviewed" |
       description="Operator queue for account deletion, correction, export, visibility, and safety-privacy follow-up."
     >
       <template #actions>
+        <BaseButton variant="secondary" to="/admin/evidence">
+          Evidence review
+        </BaseButton>
         <BaseButton variant="secondary" :disabled="pending" @click="refresh">
           Refresh
         </BaseButton>

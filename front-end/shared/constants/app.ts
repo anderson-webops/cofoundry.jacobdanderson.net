@@ -31,6 +31,7 @@ export const adminNavigation = [
   { label: "Users", to: "/admin/users", icon: "i-carbon-user-multiple" },
   { label: "Reports", to: "/admin/reports", icon: "i-carbon-flag-filled" },
   { label: "Privacy", to: "/admin/privacy", icon: "i-carbon-data-vis-4" },
+  { label: "Evidence", to: "/admin/evidence", icon: "i-carbon-document-attachment" },
   { label: "Operations", to: "/admin/operations", icon: "i-carbon-cloud-monitoring" },
   { label: "Billing", to: "/admin/billing", icon: "i-carbon-wallet" },
   { label: "Analytics", to: "/admin/analytics", icon: "i-carbon-chart-line" },

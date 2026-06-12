@@ -38,6 +38,33 @@ describe("admin utilities", () => {
     expect(resolvedEntries[0]?.targetLabel.toLowerCase()).toContain("arjun")
   })
 
+  it("resolves file-upload audit targets", () => {
+    const entries = buildAdminAuditEntries({
+      ...workspaceSeed,
+      adminActions: [
+        {
+          adminUserId: "user_ava",
+          createdAt: "2026-06-12T12:00:00.000Z",
+          id: "action_review_file_upload",
+          notes: "Reviewed Olivia's LinkedIn verification evidence package.",
+          targetId: "file_trust_olivia_linkedin",
+          targetType: "file_upload",
+          type: "review_evidence",
+        },
+        ...workspaceSeed.adminActions,
+      ],
+    })
+    const filtered = filterAdminAuditEntries(entries, {
+      actionType: "review_evidence",
+      actorId: "all",
+      query: "linkedin",
+      targetType: "file_upload",
+    })
+
+    expect(filtered).toHaveLength(1)
+    expect(filtered[0]?.targetLabel).toBe("linkedin-verification-summary.pdf")
+  })
+
   it("filters role-change audit entries", () => {
     const entries = buildAdminAuditEntries({
       ...workspaceSeed,
