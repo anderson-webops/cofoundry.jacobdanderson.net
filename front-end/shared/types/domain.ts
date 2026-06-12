@@ -24,6 +24,7 @@ export type ReportStatus = "open" | "reviewed" | "resolved"
 export type ReportPriority = "standard" | "high"
 export type AdminActionType = "assign_case" | "escalate_case" | "reinstate_user" | "change_user_role" | "review_evidence" | "warn_user" | "remove_content" | "review_report" | "resolve_report" | "review_privacy_request" | "resolve_privacy_request" | "suspend_user"
 export type AdminActionTargetType = "access_request" | "readiness_check" | "file_upload" | "user" | "report" | "privacy_request" | "profile" | "message" | "opportunity"
+export type AdminEscalationQueue = "trust_safety" | "operations" | "founder_success" | "billing"
 export type InvestmentApplicationStatus = "draft" | "submitted" | "under_review" | "accepted" | "declined"
 export type NotificationType = "match" | "message" | "proposal" | "contract" | "billing" | "admin"
 export type BookmarkTargetType = "profile" | "opportunity"
@@ -529,6 +530,10 @@ export interface AdminAction {
   targetType: AdminActionTargetType
   notes: string
   createdAt: string
+  metadata?: {
+    assignedAdminUserId?: string
+    escalationQueue?: AdminEscalationQueue
+  }
 }
 
 export interface PrivacyRequest {

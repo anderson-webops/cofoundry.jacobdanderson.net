@@ -231,6 +231,8 @@ export const adminReportStatusSchema = z.object({
 
 export const adminCommandQueueActionSchema = z.object({
   action: z.enum(["assign", "escalate", "review_evidence"]),
+  assignedAdminUserId: z.string().trim().min(1, "An assignee id is required.").max(120, "Assignee id is too long.").optional(),
+  escalationQueue: z.enum(["trust_safety", "operations", "founder_success", "billing"]).optional(),
   notes: z.string().trim().min(8, "Add a short queue action note.").max(500, "Keep the queue action note concise."),
   targetId: z.string().trim().min(1, "A queue target id is required.").max(160, "Queue target id is too long."),
   targetType: z.enum(["access_request", "readiness_check", "file_upload", "report", "privacy_request"]),

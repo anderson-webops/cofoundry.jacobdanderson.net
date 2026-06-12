@@ -230,6 +230,50 @@ describe("admin utilities", () => {
     expect(report?.slaStatus).toBe("overdue")
   })
 
+  it("derives cross-admin assignment ownership and escalation routing from action metadata", () => {
+    const queue = buildAdminCommandQueue({
+      generatedAt: "2026-06-12T12:00:00.000Z",
+      seed: {
+        ...workspaceSeed,
+        adminActions: [
+          {
+            adminUserId: "user_ava",
+            createdAt: "2026-06-12T10:00:00.000Z",
+            id: "action_assign_report_3_to_priya",
+            metadata: {
+              assignedAdminUserId: "user_priya",
+            },
+            notes: "Ava assigned the impersonation report to Priya for trust review.",
+            targetId: "report_3",
+            targetType: "report",
+            type: "assign_case",
+          },
+          {
+            adminUserId: "user_ava",
+            createdAt: "2026-06-12T10:15:00.000Z",
+            id: "action_escalate_report_3_to_trust",
+            metadata: {
+              escalationQueue: "trust_safety",
+            },
+            notes: "Escalated to trust and safety.",
+            targetId: "report_3",
+            targetType: "report",
+            type: "escalate_case",
+          },
+          ...workspaceSeed.adminActions,
+        ],
+      },
+    })
+    const report = queue.find(item => item.id === "report:report_3")
+
+    expect(report?.ownerUserId).toBe("user_priya")
+    expect(report?.ownerLabel).toBe("Priya Shah")
+    expect(report?.assignedByUserId).toBe("user_ava")
+    expect(report?.assignedByLabel).toBe("Ava Morgan")
+    expect(report?.escalationQueue).toBe("trust_safety")
+    expect(report?.escalationLabel).toBe("Trust and safety")
+  })
+
   it("filters billing rows by paid plan and query", () => {
     const rows = buildAdminBillingRows(workspaceSeed)
     const filtered = filterAdminBillingRows(rows, {

@@ -41,7 +41,15 @@ describe("validation schemas", () => {
   it("accepts admin command queue action payloads", () => {
     const valid = adminCommandQueueActionSchema.safeParse({
       action: "assign",
+      assignedAdminUserId: "user_priya",
       notes: "Claimed this command queue case for review.",
+      targetId: "report_3",
+      targetType: "report",
+    })
+    const escalation = adminCommandQueueActionSchema.safeParse({
+      action: "escalate",
+      escalationQueue: "trust_safety",
+      notes: "Escalated this case to trust and safety for priority operator review.",
       targetId: "report_3",
       targetType: "report",
     })
@@ -59,6 +67,7 @@ describe("validation schemas", () => {
     })
 
     expect(valid.success).toBe(true)
+    expect(escalation.success).toBe(true)
     expect(fileUploadReview.success).toBe(true)
     expect(invalid.success).toBe(false)
   })

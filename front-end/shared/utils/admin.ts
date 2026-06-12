@@ -2,6 +2,7 @@ import type {
   AccessRequest,
   AdminAction,
   AdminActionType,
+  AdminEscalationQueue,
   AppRole,
   PrivacyRequest,
   Profile,
@@ -102,10 +103,14 @@ export interface AdminCommandQueueInput {
 export interface AdminCommandQueueItem {
   actionLabel: string
   assignedAt: string | null
+  assignedByLabel: string | null
+  assignedByUserId: string | null
   createdAt: string | null
   detail: string
   dueAt: string | null
   escalatedAt: string | null
+  escalationLabel: string | null
+  escalationQueue: AdminEscalationQueue | null
   evidenceReviewedAt: string | null
   href: string
   id: string
@@ -123,7 +128,7 @@ export interface AdminCommandQueueItem {
   title: string
 }
 
-type AdminCommandQueueBaseItem = Omit<AdminCommandQueueItem, "assignedAt" | "dueAt" | "escalatedAt" | "evidenceReviewedAt" | "ownerLabel" | "ownerUserId" | "slaLabel" | "slaStatus">
+type AdminCommandQueueBaseItem = Omit<AdminCommandQueueItem, "assignedAt" | "assignedByLabel" | "assignedByUserId" | "dueAt" | "escalatedAt" | "escalationLabel" | "escalationQueue" | "evidenceReviewedAt" | "ownerLabel" | "ownerUserId" | "slaLabel" | "slaStatus">
 
 const dayMs = 24 * 60 * 60 * 1000
 const priorityRank: Record<AdminCommandQueuePriority, number> = {
@@ -225,6 +230,31 @@ function formatPrivacyStatus(status: PrivacyRequest["status"]) {
   }[status]
 }
 
+export function formatAdminEscalationQueue(queue: AdminEscalationQueue) {
+  return {
+    billing: "Billing operations",
+    founder_success: "Founder success",
+    operations: "Operations",
+    trust_safety: "Trust and safety",
+  }[queue]
+}
+
+export function defaultAdminEscalationQueueForTarget(targetType: AdminAction["targetType"]): AdminEscalationQueue {
+  const queueByTargetType: Record<AdminAction["targetType"], AdminEscalationQueue> = {
+    access_request: "founder_success",
+    file_upload: "trust_safety",
+    message: "trust_safety",
+    opportunity: "trust_safety",
+    privacy_request: "trust_safety",
+    profile: "trust_safety",
+    readiness_check: "operations",
+    report: "trust_safety",
+    user: "trust_safety",
+  }
+
+  return queueByTargetType[targetType]
+}
+
 function readinessHref(checkId: string) {
   if (checkId.includes("access-request"))
     return "/admin/access-requests"
@@ -293,15 +323,22 @@ function enrichAdminCommandQueueItem(seed: WorkspaceSeed, generatedAt: string, i
   const escalation = getLatestAdminActionByType(seed, item.targetType, item.targetId, ["escalate_case"])
   const evidenceReview = getLatestAdminActionByType(seed, item.targetType, item.targetId, ["review_evidence"])
   const slaState = buildSlaState(item.createdAt, item.priority, generatedAt)
+  const assignedOwnerUserId = assignment?.metadata?.assignedAdminUserId || assignment?.adminUserId || null
+  const assignedByUserId = assignment && assignedOwnerUserId !== assignment.adminUserId ? assignment.adminUserId : null
+  const escalationQueue = escalation?.metadata?.escalationQueue || null
 
   return {
     ...item,
     assignedAt: assignment?.createdAt || null,
+    assignedByLabel: assignedByUserId ? resolveAdminUserLabel(seed, assignedByUserId) : null,
+    assignedByUserId,
     dueAt: slaState.dueAt,
     escalatedAt: escalation?.createdAt || null,
+    escalationLabel: escalationQueue ? formatAdminEscalationQueue(escalationQueue) : null,
+    escalationQueue,
     evidenceReviewedAt: evidenceReview?.createdAt || null,
-    ownerLabel: assignment ? resolveAdminUserLabel(seed, assignment.adminUserId) : "Unassigned",
-    ownerUserId: assignment?.adminUserId || null,
+    ownerLabel: assignedOwnerUserId ? resolveAdminUserLabel(seed, assignedOwnerUserId) : "Unassigned",
+    ownerUserId: assignedOwnerUserId,
     slaLabel: slaState.slaLabel,
     slaStatus: slaState.slaStatus,
   }

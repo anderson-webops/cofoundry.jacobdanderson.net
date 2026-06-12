@@ -253,10 +253,11 @@ Provisioning after merge:
 - `/api/health` exposes a no-store, secret-free liveness response for uptime checks and load balancer probes.
 - Scheduled unread workspace digest emails respect each member's account-level email notification preference; seeded review users remain enabled, while newly persisted Supabase users default to disabled until they opt in.
 - Member workspace changes, collaboration workflow updates, and billing preview state persist in Supabase mode and in durable local mock-mode stores.
-- Admin moderation actions persist user suspension, role changes, report status changes, notifications, and audit actions in Supabase mode and in the durable local mock-mode admin audit store.
+- Admin moderation actions persist user suspension, role changes, report status changes, notifications, queue assignment/routing metadata, and audit actions in Supabase mode and in the durable local mock-mode admin audit store.
 - Access-request review has a mock-mode admin queue at `/admin/access-requests` and a Supabase-backed table path for later. Operators can approve, deny, reopen, and issue invite links while Supabase and Stripe remain disabled.
 - Account settings include a JSON data export, privacy-request submission, and trust-verification review requests. The settings UI no longer self-awards trust badges.
 - Admins can review privacy and trust-review requests at `/admin/privacy` from Supabase mode or the local mock-mode queue. Reviewed/resolved requests create audit actions and user notifications when Supabase persistence is enabled.
+- Admins can assign queue cases to another admin, route escalations to the right operator lane, and review trust-evidence packages from `/admin/queue` and `/admin/evidence`; these decisions are backed by `admin_actions.metadata` plus the audit log.
 - Admins can review `/admin/readiness` for a server-derived launch-readiness view covering environment, session secrets, mail, local persistence, access/privacy queues, backups, scanner status, digest worker evidence, and operational events.
 - Supabase migrations include RLS policies for user-owned, participant-owned, admin-only, notification, privacy, file-upload, backup, and operational tables.
 - File uploads are represented by server-owned metadata. Supabase mode uses signed Supabase upload/download URLs against the private `cofoundry-private-files` bucket. Mock/access-request mode uses tokenized local upload URLs and stores content under the durable local data directory so a scanner worker can download files through worker-authenticated app URLs.
