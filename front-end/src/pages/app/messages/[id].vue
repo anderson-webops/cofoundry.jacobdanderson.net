@@ -3,6 +3,7 @@ import type { MessageAttachment } from "~/shared/types/domain"
 import { buildSubscriptionUsage, getSubscriptionEntitlements } from "~/shared/utils/billing"
 import { formatContactRevealStage, formatDate, formatProposalRelationshipType, formatProposalStatus } from "~/shared/utils/format"
 import { buildConversationRiskFlags, buildMessageRiskFlags, canOpenProposalWorkflow } from "~/shared/utils/formation"
+import { getRelationshipHrefForConversation } from "~/shared/utils/relationships"
 import { buildParticipantProfiles, getCurrentProposalVersion, getMatchByConversation, getMessagesForConversation, getProfileByUserId, getProposalByConversation, getTrialForMatch } from "~/shared/utils/workspace"
 
 definePageMeta({
@@ -27,6 +28,7 @@ const match = computed(() => conversation.value ? getMatchByConversation(workspa
 const trial = computed(() => match.value ? getTrialForMatch(workspaceStore.data, match.value.id) : undefined)
 const proposal = computed(() => conversation.value ? getProposalByConversation(workspaceStore.data, conversation.value.id) : undefined)
 const proposalVersion = computed(() => proposal.value ? getCurrentProposalVersion(workspaceStore.data, proposal.value) : undefined)
+const relationshipHref = computed(() => conversation.value && authStore.currentUser ? getRelationshipHrefForConversation(workspaceStore.data, authStore.currentUser.id, conversation.value.id) : null)
 const incomingMessages = computed(() => messages.value.filter(message => message.senderUserId && message.senderUserId !== authStore.currentUser?.id))
 const latestIncomingMessage = computed(() => incomingMessages.value.at(-1))
 const conversationFlags = computed(() => buildConversationRiskFlags(incomingMessages.value))
@@ -192,7 +194,13 @@ function openProposalWorkflow() {
         eyebrow="Conversation"
         :title="otherParticipant.displayName"
         :description="otherParticipant.headline"
-      />
+      >
+        <template #actions>
+          <BaseButton v-if="relationshipHref" variant="secondary" :to="relationshipHref">
+            Relationship workspace
+          </BaseButton>
+        </template>
+      </PageIntro>
       <div class="panel p-5">
         <h2 class="text-lg font-semibold">
           Counterpart summary
@@ -262,13 +270,16 @@ function openProposalWorkflow() {
           </p>
         </div>
         <div class="mt-4 flex flex-wrap gap-3">
+          <BaseButton v-if="relationshipHref" :to="relationshipHref">
+            Open relationship
+          </BaseButton>
           <BaseButton v-if="!trial" variant="secondary" @click="startTrial">
             Start trial
           </BaseButton>
-          <BaseButton v-if="proposal" :to="`/app/proposals/${proposal.id}`">
+          <BaseButton v-if="proposal" variant="secondary" :to="`/app/proposals/${proposal.id}`">
             Open deal room
           </BaseButton>
-          <BaseButton v-else @click="openProposalWorkflow">
+          <BaseButton v-else variant="secondary" @click="openProposalWorkflow">
             {{ proposalGateOpen ? "Create proposal" : "Finish alignment check" }}
           </BaseButton>
           <BaseButton v-if="usage?.proposals.exhausted || !entitlements.canSignContracts" variant="secondary" to="/app/billing">
@@ -298,8 +309,8 @@ function openProposalWorkflow() {
             {{ conversation.typingByUserIds.includes(otherParticipant.userId) ? "Typing…" : "Matched conversation" }}
           </p>
         </div>
-        <BaseButton variant="ghost" :to="proposal ? `/app/proposals/${proposal.id}` : '/app/proposals'">
-          {{ proposal ? "Deal room" : "Proposals" }}
+        <BaseButton variant="ghost" :to="relationshipHref || (proposal ? `/app/proposals/${proposal.id}` : '/app/proposals')">
+          {{ relationshipHref ? "Relationship" : proposal ? "Deal room" : "Proposals" }}
         </BaseButton>
       </div>
 

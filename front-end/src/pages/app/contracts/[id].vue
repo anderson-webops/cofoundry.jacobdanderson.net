@@ -3,6 +3,7 @@ import type { ContractRedlineChange } from "~/shared/utils/contract-documents"
 import { getSubscriptionEntitlements } from "~/shared/utils/billing"
 import { formatDate } from "~/shared/utils/format"
 import { buildProposalTermsSummary } from "~/shared/utils/proposals"
+import { getRelationshipHrefForContract } from "~/shared/utils/relationships"
 import { contractSignatureSchema } from "~/shared/utils/validation"
 import { getContractById, getCurrentContractVersion, getCurrentProposalVersion, getProposalById } from "~/shared/utils/workspace"
 
@@ -23,6 +24,7 @@ const proposal = computed(() => contract.value ? getProposalById(workspaceStore.
 const proposalVersion = computed(() => proposal.value ? getCurrentProposalVersion(workspaceStore.data, proposal.value) : undefined)
 const proposalSummary = computed(() => proposalVersion.value ? buildProposalTermsSummary(proposalVersion.value) : [])
 const signatures = computed(() => workspaceStore.data.signatures.filter(signature => signature.contractId === route.params.id))
+const relationshipHref = computed(() => contract.value && authStore.currentUser ? getRelationshipHrefForContract(workspaceStore.data, authStore.currentUser.id, contract.value.id) : null)
 const entitlements = computed(() => getSubscriptionEntitlements(subscription.value || undefined))
 const previewOnly = computed(() => !entitlements.value.canSignContracts)
 const editDialogOpen = ref(false)
@@ -131,6 +133,9 @@ async function signContract() {
         description="Editable agreement template generated from proposal terms."
       >
         <template #actions>
+          <BaseButton v-if="relationshipHref" variant="secondary" :to="relationshipHref">
+            Relationship workspace
+          </BaseButton>
           <BaseBadge :tone="contract.status === 'signed' ? 'success' : 'accent'">
             {{ contract.status }}
           </BaseBadge>
@@ -183,6 +188,9 @@ async function signContract() {
         <div class="mt-5 gap-4 grid">
           <TextInput v-model="signatureName" label="Type your full name to sign" :error="signatureError" />
           <div class="flex flex-wrap gap-3">
+            <BaseButton v-if="relationshipHref" :to="relationshipHref">
+              Open relationship
+            </BaseButton>
             <BaseButton :disabled="previewOnly" @click="signContract">
               {{ previewOnly ? "Signatures require Pro" : "Sign contract" }}
             </BaseButton>

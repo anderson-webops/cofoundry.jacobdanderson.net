@@ -8,7 +8,7 @@ export async function useAuthoritativeSession() {
 
   setSession(response.session)
   if (response.session)
-    await workspaceStore.loadWorkspace()
+    await workspaceStore.loadWorkspace(false, headers)
   else
     workspaceStore.resetSessionState()
   return response.session

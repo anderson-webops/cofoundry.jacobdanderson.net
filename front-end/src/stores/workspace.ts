@@ -262,7 +262,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     syncProfileDerivedState(session.id)
   }
 
-  async function loadWorkspace(force = false) {
+  async function loadWorkspace(force = false, requestHeaders?: ReturnType<typeof useRequestHeaders>) {
     ensureReady()
 
     if (!session.value) {
@@ -284,7 +284,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     persistError.value = ""
 
     try {
-      const headers = import.meta.server ? useRequestHeaders(["cookie"]) : undefined
+      const headers = requestHeaders || (import.meta.server ? useRequestHeaders(["cookie"]) : undefined)
       const response = await $fetch<{ data: WorkspaceSeed, session: SessionUser }>("/api/workspace", { headers })
       data.value = cloneValue(response.data)
       loadedUserId.value = response.session.id

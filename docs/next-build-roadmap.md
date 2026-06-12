@@ -131,7 +131,9 @@ Keep Stripe guarded until ready, but finish the real path cleanly:
 
 The current product still spreads one live relationship across matches, messages, proposals, and contracts.
 
-The next user-facing consolidation should be:
+Status: implemented as a consolidated route with server-owned reads and cross-links from the related conversation, proposal, and contract detail surfaces.
+
+The user-facing consolidation is:
 
 - `/app/relationships/[id]`
 
@@ -144,6 +146,12 @@ That route should unify:
 - active proposal
 - active contract
 - next required action
+
+Remaining depth:
+
+- realtime refresh
+- richer timeline filtering
+- relationship-level file and decision-log views
 
 ### 6. Production-grade onboarding
 
