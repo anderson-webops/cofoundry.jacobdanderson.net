@@ -2,6 +2,7 @@ import type { H3Event } from "h3"
 import type { MemberWorkspaceState, MemberWorkspaceWritePayload, Profile, SavedSearch, StartupOpportunity, Subscription, User } from "~/shared/types/domain"
 import { checkSavedSearchCount } from "~/shared/utils/billing"
 import { buildDraftMemberWorkspaceState, buildMemberWorkspaceState, createInitialWorkspaceDocument, mergeMemberWorkspaceState, resolveSessionUserFromWorkspace, sanitizeOwnedProfile, sanitizeUserOwnedBookmarks, sanitizeUserOwnedOpportunities, sanitizeUserOwnedSavedSearches } from "~/shared/utils/workspace-persistence"
+import { mergeLocalAdminAuditState } from "./local-admin-audit"
 import { loadServerCollaborationState, mergeServerCollaborationState } from "./member-collaboration"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
 
@@ -482,7 +483,7 @@ export async function loadMemberWorkspaceState(event: H3Event, identity: Persist
 
   if (!isSupabaseEnabled(event)) {
     const state = buildMemberWorkspaceState(baseSeed, fallbackSession.id) || buildDraftMemberWorkspaceState(fallbackSession)
-    const seed = buildMergedSeed(state)
+    const seed = await mergeLocalAdminAuditState(buildMergedSeed(state))
 
     return {
       seed,

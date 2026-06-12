@@ -1,11 +1,12 @@
 import type { H3Event } from "h3"
 import type { AdminAction, AppRole, Notification, PrivacyRequestStatus, ReportStatus } from "~/shared/types/domain"
+import { persistLocalReportStatus, persistLocalUserRole, persistLocalUserSuspension, recordLocalAdminAction, recordLocalUserNotification } from "./local-admin-audit"
 import { updateLocalPrivacyRequestStatus } from "./local-privacy-requests"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
 
 export async function persistAdminAction(event: H3Event, action: AdminAction) {
   if (!isSupabaseEnabled(event))
-    return
+    return recordLocalAdminAction(action)
 
   const adminClient = createSupabaseAdminClient(event)
   if (!adminClient)
@@ -29,7 +30,7 @@ export async function persistAdminAction(event: H3Event, action: AdminAction) {
 
 export async function persistUserNotification(event: H3Event, notification: Notification) {
   if (!isSupabaseEnabled(event))
-    return
+    return recordLocalUserNotification(notification)
 
   const adminClient = createSupabaseAdminClient(event)
   if (!adminClient)
@@ -54,7 +55,7 @@ export async function persistUserNotification(event: H3Event, notification: Noti
 
 export async function persistUserSuspension(event: H3Event, targetUserId: string, suspendedAt: string | null) {
   if (!isSupabaseEnabled(event))
-    return
+    return persistLocalUserSuspension(targetUserId, suspendedAt)
 
   const adminClient = createSupabaseAdminClient(event)
   if (!adminClient)
@@ -75,7 +76,7 @@ export async function persistUserSuspension(event: H3Event, targetUserId: string
 
 export async function persistUserRole(event: H3Event, targetUserId: string, role: AppRole) {
   if (!isSupabaseEnabled(event))
-    return
+    return persistLocalUserRole(targetUserId, role)
 
   const adminClient = createSupabaseAdminClient(event)
   if (!adminClient)
@@ -102,7 +103,7 @@ export async function persistReportStatus(event: H3Event, input: {
   timestamp: string
 }) {
   if (!isSupabaseEnabled(event))
-    return
+    return persistLocalReportStatus(input)
 
   const adminClient = createSupabaseAdminClient(event)
   if (!adminClient)
