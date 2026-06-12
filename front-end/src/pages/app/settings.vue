@@ -16,13 +16,16 @@ usePageSeo("Settings")
 const toastStore = useToastStore()
 const { policy } = useProductAccess()
 const { authStore, profile, workspaceStore } = useCurrentMember()
+const currentUser = computed(() => authStore.currentUser ? workspaceStore.data.users.find(user => user.id === authStore.currentUser?.id) : null)
 const contactRevealStage = ref<ContactRevealStage>(profile.value?.privacy.contactRevealStage || "matches")
 const exportingData = ref(false)
+const notificationPreferencesSaving = ref(false)
 const privacyRequestDetails = ref("")
 const privacyRequestSubmitting = ref(false)
 const privacyRequestType = ref<PrivacyRequestType>("account_deletion")
 const trustVerificationPending = ref<TrustVerificationType | "">("")
 const trustTier = computed(() => profile.value ? buildProfileTrustTier(profile.value) : "level_a")
+const unreadDigestEmailEnabled = computed(() => currentUser.value?.notificationPreferences?.unreadDigestEmail === true)
 const privacyRequestOptions = [
   { label: "Account deletion", value: "account_deletion" },
   { label: "Data export help", value: "data_export" },
@@ -105,6 +108,30 @@ async function submitPrivacyRequest() {
   }
   finally {
     privacyRequestSubmitting.value = false
+  }
+}
+
+async function setUnreadDigestEmail(enabled: boolean) {
+  if (!currentUser.value)
+    return
+
+  notificationPreferencesSaving.value = true
+
+  try {
+    await workspaceStore.updateNotificationPreferences(currentUser.value.id, {
+      ...(currentUser.value.notificationPreferences || { unreadDigestEmail: false }),
+      unreadDigestEmail: enabled,
+    })
+    toastStore.push({
+      title: "Email preference updated",
+      message: enabled
+        ? "Scheduled unread workspace digests are enabled for your account."
+        : "Scheduled unread workspace digests are disabled for your account.",
+      tone: "success",
+    })
+  }
+  finally {
+    notificationPreferencesSaving.value = false
   }
 }
 
@@ -193,6 +220,45 @@ async function requestTrustVerification(type: TrustVerificationType, label: stri
             Edit profile
           </BaseButton>
         </div>
+      </div>
+
+      <div class="panel p-6">
+        <h2 class="text-lg font-semibold">
+          Email notifications
+        </h2>
+        <p class="muted text-sm leading-6 mt-4">
+          Control scheduled workspace digest emails. Service-critical account, security, billing, and support notices are handled separately.
+        </p>
+        <div class="surface-row mt-5 flex flex-wrap gap-4 items-center justify-between">
+          <div class="min-w-0">
+            <p class="text-sm font-semibold">
+              Scheduled unread digest
+            </p>
+            <p class="muted text-sm leading-6 mt-1">
+              Send a periodic email when intros, replies, proposals, signatures, or admin notices are waiting in your workspace.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            :aria-checked="unreadDigestEmailEnabled"
+            :disabled="notificationPreferencesSaving"
+            class="p-1 border border-[var(--border)] rounded-full bg-[var(--surface-strong)] shrink-0 h-8 w-14 transition relative disabled:opacity-60 disabled:cursor-wait"
+            :class="unreadDigestEmailEnabled ? 'bg-[var(--accent)]/25' : ''"
+            @click="setUnreadDigestEmail(!unreadDigestEmailEnabled)"
+          >
+            <span
+              class="rounded-full bg-[var(--text)] h-6 w-6 block transition"
+              :class="unreadDigestEmailEnabled ? 'translate-x-6 bg-[var(--accent)]' : 'translate-x-0'"
+            />
+            <span class="sr-only">
+              {{ unreadDigestEmailEnabled ? "Disable scheduled unread digest" : "Enable scheduled unread digest" }}
+            </span>
+          </button>
+        </div>
+        <p class="muted text-xs leading-5 mt-4">
+          The inbox “Email digest” action still sends a one-off digest when you explicitly request it.
+        </p>
       </div>
 
       <div class="panel p-6">

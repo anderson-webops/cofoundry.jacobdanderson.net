@@ -31,7 +31,7 @@ Tasks:
      -H "Content-Type: application/json" \
      --data '{"dryRun":true,"maxUsers":100,"onlyWithUnread":true}'
 
-   After dry-run verification and SMTP verification, switch `dryRun` to `false`.
+   After dry-run verification, SMTP verification, and confirmation that intended pilot users enabled scheduled digest email in `/app/settings`, switch `dryRun` to `false`.
 
 8. Wire the database backup job to report lifecycle state:
 

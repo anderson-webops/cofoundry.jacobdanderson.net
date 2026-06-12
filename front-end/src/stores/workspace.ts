@@ -8,6 +8,7 @@ import type {
   ContactRevealStage,
   ContractVersion,
   MessageAttachment,
+  NotificationPreferences,
   NotificationType,
   ProposalPayload,
   ProposalSectionKey,
@@ -166,13 +167,24 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     })
   }
 
+  function normalizeLegacyUsers() {
+    data.value.users = data.value.users.map(user => ({
+      ...user,
+      notificationPreferences: user.notificationPreferences || {
+        unreadDigestEmail: false,
+      },
+    }))
+  }
+
   function ensureReady() {
+    normalizeLegacyUsers()
     normalizeLegacyConnectRequests()
 
     if (!ready.value)
       ready.value = true
   }
 
+  normalizeLegacyUsers()
   normalizeLegacyConnectRequests()
 
   function resetToSeed() {
@@ -879,6 +891,18 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     profile.privacy.contactRevealStage = stage
   }
 
+  async function updateNotificationPreferences(userId: string, preferences: NotificationPreferences) {
+    const user = data.value.users.find(item => item.id === userId)
+    if (!user)
+      return
+
+    user.notificationPreferences = {
+      unreadDigestEmail: preferences.unreadDigestEmail,
+    }
+
+    await persistWorkspace(true)
+  }
+
   function createReport(
     reporterUserId: string,
     targetType: "profile" | "message" | "opportunity",
@@ -1297,6 +1321,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     suspendUser,
     toggleBookmark,
     updateContactRevealStage,
+    updateNotificationPreferences,
     updateContractVersion,
     updateCurrentProfile,
     updateProposalStatus,

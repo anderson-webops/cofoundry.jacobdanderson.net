@@ -23,7 +23,7 @@ CoFoundry can run in production-facing mock/access-request mode today without Su
 ## Worker Schedule
 
 - Backup runner: record start, success, or failure through `POST /api/operations/backup-runs`.
-- Notification digest runner: call `POST /api/operations/notification-digests/run` with `dryRun=true` before enabling real sends.
+- Notification digest runner: call `POST /api/operations/notification-digests/run` with `dryRun=true` before enabling real sends. Scheduled digest runs skip members whose `/app/settings` email-notification preference is disabled; Supabase users default to disabled until they opt in.
 - File scanner: poll `GET /api/operations/file-scans/pending`, scan private files, then report results through `POST /api/operations/file-scans/:id`.
 - Monitor runner: report deploy, worker, scanner, backup, and monitoring events through `POST /api/operations/events`.
 

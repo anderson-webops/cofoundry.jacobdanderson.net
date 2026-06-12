@@ -126,6 +126,7 @@ export const workspaceSeed: WorkspaceSeed = {
       linkedProviders: ["email", "github"],
       verifiedEmail: true,
       onboardingCompleted: true,
+      notificationPreferences: { unreadDigestEmail: true },
       suspendedAt: null,
     },
     {
@@ -136,6 +137,7 @@ export const workspaceSeed: WorkspaceSeed = {
       linkedProviders: ["email", "google"],
       verifiedEmail: true,
       onboardingCompleted: true,
+      notificationPreferences: { unreadDigestEmail: true },
       suspendedAt: null,
     },
     {
@@ -146,6 +148,7 @@ export const workspaceSeed: WorkspaceSeed = {
       linkedProviders: ["email"],
       verifiedEmail: true,
       onboardingCompleted: true,
+      notificationPreferences: { unreadDigestEmail: true },
       suspendedAt: null,
     },
     {
@@ -156,6 +159,7 @@ export const workspaceSeed: WorkspaceSeed = {
       linkedProviders: ["email"],
       verifiedEmail: true,
       onboardingCompleted: true,
+      notificationPreferences: { unreadDigestEmail: true },
       suspendedAt: null,
     },
     {
@@ -166,6 +170,7 @@ export const workspaceSeed: WorkspaceSeed = {
       linkedProviders: ["email"],
       verifiedEmail: true,
       onboardingCompleted: true,
+      notificationPreferences: { unreadDigestEmail: true },
       suspendedAt: null,
     },
     {
@@ -176,6 +181,7 @@ export const workspaceSeed: WorkspaceSeed = {
       linkedProviders: ["email", "github"],
       verifiedEmail: true,
       onboardingCompleted: true,
+      notificationPreferences: { unreadDigestEmail: true },
       suspendedAt: null,
     },
     {
@@ -186,6 +192,7 @@ export const workspaceSeed: WorkspaceSeed = {
       linkedProviders: ["email"],
       verifiedEmail: true,
       onboardingCompleted: true,
+      notificationPreferences: { unreadDigestEmail: true },
       suspendedAt: null,
     },
     {
@@ -196,6 +203,7 @@ export const workspaceSeed: WorkspaceSeed = {
       linkedProviders: ["email"],
       verifiedEmail: true,
       onboardingCompleted: true,
+      notificationPreferences: { unreadDigestEmail: true },
       suspendedAt: null,
     },
   ],

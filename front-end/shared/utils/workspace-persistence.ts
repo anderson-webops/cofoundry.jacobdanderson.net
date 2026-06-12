@@ -85,6 +85,9 @@ export function buildDraftMemberWorkspaceState(session: SessionUser, createdAt =
       linkedProviders: ["email"],
       verifiedEmail: true,
       onboardingCompleted: session.onboardingCompleted,
+      notificationPreferences: {
+        unreadDigestEmail: false,
+      },
       suspendedAt: null,
     },
     profile: {
@@ -254,6 +257,7 @@ export function buildMemberWorkspaceWritePayload(seed: WorkspaceSeed, userId: st
 
   return {
     onboardingCompleted: state.user.onboardingCompleted,
+    notificationPreferences: state.user.notificationPreferences,
     profile: state.profile,
     opportunities: state.opportunities,
     bookmarks: state.bookmarks,

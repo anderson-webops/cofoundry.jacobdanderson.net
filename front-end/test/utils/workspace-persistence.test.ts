@@ -43,6 +43,7 @@ describe("workspace persistence helpers", () => {
     })
 
     expect(state.user.id).toBe("auth_new_member")
+    expect(state.user.notificationPreferences.unreadDigestEmail).toBe(false)
     expect(state.profile.userId).toBe("auth_new_member")
     expect(state.subscription.userId).toBe("auth_new_member")
     expect(state.opportunities).toEqual([])
@@ -65,5 +66,6 @@ describe("workspace persistence helpers", () => {
     expect(merged.profiles.find(profile => profile.userId === "user_olivia")?.headline).toBe("Updated persisted headline")
     expect(merged.bookmarks.some(bookmark => bookmark.userId === "user_olivia")).toBe(false)
     expect(payload?.profile.headline).toBe("Updated persisted headline")
+    expect(payload?.notificationPreferences.unreadDigestEmail).toBe(true)
   })
 })
