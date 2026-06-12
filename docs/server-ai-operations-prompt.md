@@ -15,12 +15,12 @@ Source/runtime context:
 - Backend production start remains `node dist/server.js`; do not add dotenv/dotenvx loading to production startup.
 - Server-only secrets must come from Vault-managed or host-managed env files.
 - The app now supports a server-only `COFOUNDRY_OPERATIONS_TOKEN`.
-- In mock/access-request mode, operations telemetry persists to `.data/operations-telemetry.json` unless `COFOUNDRY_LOCAL_DATA_DIR` points at another durable writable directory.
+- In mock/access-request mode, operations telemetry persists to `.data/operations-telemetry.json` and local uploaded scan artifacts persist under `.data/local-file-uploads/` unless `COFOUNDRY_LOCAL_DATA_DIR` points at another durable writable directory.
 
 Tasks:
 1. Pull and deploy the latest `main` commit or the current `v1.x` release tag.
 2. Generate a long random `COFOUNDRY_OPERATIONS_TOKEN` and add it to the Vault/host env file consumed by the Nuxt server process only.
-3. Ensure the app process can write to `.data/operations-telemetry.json`, or set `COFOUNDRY_LOCAL_DATA_DIR` to a durable writable host path and optionally set `COFOUNDRY_OPERATIONS_RETENTION_LIMIT`.
+3. Ensure the app process can write to `.data/operations-telemetry.json` and `.data/local-file-uploads/`, or set `COFOUNDRY_LOCAL_DATA_DIR` to a durable writable host path and optionally set `COFOUNDRY_OPERATIONS_RETENTION_LIMIT`.
 4. Restart the app and verify production logs do not mention loading `../.env`.
 5. If Supabase mode is not intentionally enabled, leave `NUXT_PUBLIC_BACKEND_MODE="mock"` and verify the public site remains a marketing/access-request shell.
 6. If Supabase mode is intentionally enabled, verify all migrations in `back-end/supabase/migrations/` have been applied and that `SUPABASE_SERVICE_ROLE_KEY`, `NUXT_PUBLIC_SUPABASE_URL`, `NUXT_PUBLIC_SUPABASE_ANON_KEY`, and `SESSION_SIGNING_SECRET` are present.
@@ -47,7 +47,7 @@ Tasks:
    curl -fsS "$NUXT_PUBLIC_APP_URL/api/operations/file-scans/pending?limit=25" \
      -H "Authorization: Bearer $COFOUNDRY_OPERATIONS_TOKEN"
 
-   For each row, download `signedDownloadUrl`, scan it with the server's approved malware/content scanner, and report results:
+   For each row, download `signedDownloadUrl`, scan it with the server's approved malware/content scanner, and report results. In Supabase mode, `signedDownloadUrl` is a short-lived storage URL. In mock/access-request mode, it is an app URL under `/api/operations/file-scans/<upload-id>/download`, so include `Authorization: Bearer $COFOUNDRY_OPERATIONS_TOKEN` when downloading it.
 
    curl -fsS -X POST "$NUXT_PUBLIC_APP_URL/api/operations/file-scans/<upload-id>" \
      -H "Authorization: Bearer $COFOUNDRY_OPERATIONS_TOKEN" \

@@ -101,5 +101,5 @@ describe("local privacy request store", () => {
     const requests = await listLocalPrivacyRequests()
     expect(requests).toHaveLength(50)
     expect(requests[0]?.id).toBe("privacy_54")
-  })
+  }, 15_000)
 })

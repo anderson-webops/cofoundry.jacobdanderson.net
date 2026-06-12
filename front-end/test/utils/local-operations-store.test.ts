@@ -1,9 +1,10 @@
+import { Buffer } from "node:buffer"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import process from "node:process"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import { clearLocalOperationsStoreForTests, readLocalOperationsRows, recordLocalBackupRun, recordLocalFileScanResult, recordLocalNotificationDelivery, recordLocalOperationalEvent } from "../../server/utils/local-operations-store"
+import { clearLocalOperationsStoreForTests, hashLocalUploadToken, listLocalPendingFileScans, readLocalFileUploadContent, readLocalOperationsRows, recordLocalBackupRun, recordLocalFileScanResult, recordLocalFileUploadPolicy, recordLocalNotificationDelivery, recordLocalOperationalEvent, writeLocalFileUploadContent } from "../../server/utils/local-operations-store"
 
 let dataDirectory: string
 
@@ -88,5 +89,44 @@ describe("local operations telemetry store", () => {
     const payload = await readLocalOperationsRows()
 
     expect(payload.operationalEvents).toHaveLength(10)
+  })
+
+  it("stores local upload content for worker scanner downloads in mock mode", async () => {
+    const uploadToken = "local-upload-token"
+    await recordLocalFileUploadPolicy(session, {
+      bucket: "cofoundry-private-files",
+      id: "upload_local",
+      objectPath: "user_operations_test/2026-06-12/upload-local.txt",
+      uploadTokenHash: hashLocalUploadToken(uploadToken),
+    }, {
+      filename: "upload-local.txt",
+      mimeType: "text/plain",
+      purpose: "trust_evidence",
+      relatedId: "profile_user_operations_test",
+      relatedType: "profile",
+      sizeBytes: 100,
+    })
+
+    const pendingBeforeUpload = await listLocalPendingFileScans(10, { appUrl: "https://cofoundry.example" })
+    expect(pendingBeforeUpload[0]).toMatchObject({
+      id: "upload_local",
+      signedDownloadError: "Local upload content has not been received.",
+      signedDownloadUrl: null,
+    })
+
+    await expect(writeLocalFileUploadContent("upload_local", "wrong-token", Buffer.from("evidence"))).rejects.toThrow("Local upload token is invalid.")
+
+    await writeLocalFileUploadContent("upload_local", uploadToken, Buffer.from("evidence"))
+
+    const content = await readLocalFileUploadContent("upload_local")
+    expect(content?.bytes.toString("utf-8")).toBe("evidence")
+    expect(content?.filename).toBe("upload-local.txt")
+
+    const pendingAfterUpload = await listLocalPendingFileScans(10, { appUrl: "https://cofoundry.example" })
+    expect(pendingAfterUpload[0]).toMatchObject({
+      id: "upload_local",
+      signedDownloadError: null,
+      signedDownloadUrl: "https://cofoundry.example/api/operations/file-scans/upload_local/download",
+    })
   })
 })

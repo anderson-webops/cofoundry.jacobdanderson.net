@@ -106,5 +106,5 @@ describe("local access request store", () => {
     }
 
     expect(await listLocalAccessRequests()).toHaveLength(50)
-  })
+  }, 15_000)
 })

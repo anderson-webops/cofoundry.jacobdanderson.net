@@ -6,7 +6,7 @@ CoFoundry can run in production-facing mock/access-request mode today without Su
 
 - `NUXT_PUBLIC_BACKEND_MODE=mock` and `NUXT_PUBLIC_BILLING_MODE=mock` remain the safe production defaults until Supabase and Stripe are deliberately enabled.
 - `SESSION_SIGNING_SECRET` should be injected from the host secret store even in mock mode so invited-account sessions survive deploys.
-- `COFOUNDRY_LOCAL_DATA_DIR` should point at a durable, backed-up directory for access requests, privacy/trust review requests, invited local accounts, and operations telemetry.
+- `COFOUNDRY_LOCAL_DATA_DIR` should point at a durable, backed-up directory for access requests, privacy/trust review requests, invited local accounts, operations telemetry, and local mock-mode file scan artifacts.
 - `COFOUNDRY_OPERATIONS_TOKEN` should be a long random secret before any `/api/operations/*` worker is scheduled.
 
 ## Daily Checks
@@ -24,7 +24,7 @@ CoFoundry can run in production-facing mock/access-request mode today without Su
 
 - Backup runner: record start, success, or failure through `POST /api/operations/backup-runs`.
 - Notification digest runner: call `POST /api/operations/notification-digests/run` with `dryRun=true` before enabling real sends. Scheduled digest runs skip members whose `/app/settings` email-notification preference is disabled; Supabase users default to disabled until they opt in.
-- File scanner: poll `GET /api/operations/file-scans/pending`, scan private files, then report results through `POST /api/operations/file-scans/:id`.
+- File scanner: poll `GET /api/operations/file-scans/pending`, scan private files, then report results through `POST /api/operations/file-scans/:id`. Supabase mode returns short-lived storage URLs; mock/access-request mode returns worker-authenticated app download URLs, so pass the operations token when downloading from the app.
 - Monitor runner: report deploy, worker, scanner, backup, and monitoring events through `POST /api/operations/events`.
 
 Each worker call must send `Authorization: Bearer <COFOUNDRY_OPERATIONS_TOKEN>` or `x-cofoundry-operations-token`.
