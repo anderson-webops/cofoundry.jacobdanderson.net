@@ -366,7 +366,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
 
   async function syncNotificationRead(notificationId: string) {
     const headers = import.meta.server ? useRequestHeaders(["cookie"]) : undefined
-    const response = await $fetch<{ data: WorkspaceSeed, session: SessionUser }>(`/api/inbox/${notificationId}/read`, {
+    const response = await $fetch<{ data: WorkspaceSeed, session: SessionUser }>(`/api/inbox/notifications/${notificationId}/read`, {
       method: "POST",
       headers,
     })

@@ -18,7 +18,7 @@ The work should now optimize for production realism, continuity, and operational
 
 ### 1. Unified inbox and action queue
 
-Status: started in this pass.
+Status: implemented for the aggregate route and granular read endpoints.
 
 Front-end scope:
 
@@ -38,6 +38,7 @@ Front-end scope:
 Current front-end contract:
 
 - `front-end/shared/utils/inbox.ts`
+  - `buildInboxQueues()`
   - `buildInboxSnapshot()`
   - `getUnreadConversationsForUser()`
   - `getProposalsNeedingResponse()`
@@ -191,11 +192,11 @@ After persistence is stable:
 - time from proposal to signed agreement
 - paid conversion tied to actual workflow use
 
-## Backend Contract To Build Next
+## Backend Contract Status
 
-The backend should now continue from the persisted member foundation and move the collaborative workflow off local seed state.
+The backend now exposes the inbox read model from the persisted member foundation. Future server work should keep extending this path instead of creating another inbox contract.
 
-Recommended endpoints:
+Implemented endpoints:
 
 - `GET /api/inbox`
   - returns counts plus ordered action items for the signed-in user
@@ -252,8 +253,16 @@ Context:
   - Supabase-backed credential auth on the Nuxt server
   - persisted member state for user/profile/subscription/bookmarks/saved searches/opportunities
   - `/api/workspace` and `/api/workspace/member`
-- The remaining collaborative workflow is still derived from local seed state.
+- The collaborative workflow now persists through server routes in Supabase mode and durable local mock/access-request mode.
 - The app route `/app/inbox` is now the primary action surface for intros, unread messages, proposal responses, contract signatures, and unread operational notifications.
+- Inbox read endpoints already exist:
+  - GET /api/inbox
+  - GET /api/inbox/requests
+  - GET /api/inbox/conversations
+  - GET /api/inbox/proposals
+  - GET /api/inbox/contracts
+  - GET /api/inbox/notifications
+  - POST /api/inbox/notifications/:id/read
 
 Make the backend the source of truth for these remaining entities:
 - users
@@ -273,16 +282,9 @@ Make the backend the source of truth for these remaining entities:
 
 Required backend work:
 1. Persist the collaborative workflow entities above in Supabase-backed tables and server routes.
-2. Add inbox-focused read models and endpoints:
-   - GET /api/inbox
-   - GET /api/inbox/requests
-   - GET /api/inbox/conversations
-   - GET /api/inbox/proposals
-   - GET /api/inbox/contracts
-   - GET /api/inbox/notifications
-   - POST /api/inbox/notifications/:id/read
+2. Keep inbox-focused read models aligned with `front-end/shared/utils/inbox.ts`.
 3. Enforce auth server-side and return only the signed-in member's data.
-4. Compute:
+4. Continue computing:
    - pending inbound intros
    - pending outbound intros
    - unread conversation summaries
