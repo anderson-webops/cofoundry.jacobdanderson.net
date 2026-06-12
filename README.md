@@ -248,6 +248,7 @@ Provisioning after merge:
 - Access-request review has a mock-mode admin queue at `/admin/access-requests` and a Supabase-backed table path for later. Operators can approve, deny, reopen, and issue invite links while Supabase and Stripe remain disabled.
 - Account settings include a JSON data export, privacy-request submission, and trust-verification review requests. The settings UI no longer self-awards trust badges.
 - Admins can review privacy and trust-review requests at `/admin/privacy` from Supabase mode or the local mock-mode queue. Reviewed/resolved requests create audit actions and user notifications when Supabase persistence is enabled.
+- Admins can review `/admin/readiness` for a server-derived launch-readiness view covering environment, session secrets, mail, local persistence, access/privacy queues, backups, scanner status, digest worker evidence, and operational events.
 - Supabase migrations include RLS policies for user-owned, participant-owned, admin-only, notification, privacy, file-upload, backup, and operational tables.
 - File uploads are represented by server-owned metadata and signed Supabase upload policies against the private `cofoundry-private-files` bucket. A malware/content scanner still needs to run outside the app and report results through `/api/operations/file-scans/:id`.
 - Relationship workspaces now have a server read endpoint and `/app/relationships/:id` page that aggregates conversation, trial, proposal, agreement, unread, and next-action state.

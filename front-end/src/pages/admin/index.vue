@@ -24,7 +24,13 @@ const recentActions = computed(() => buildAdminAuditEntries(workspaceStore.data)
       eyebrow="Admin"
       title="Platform operations"
       description="Server-approved moderation actions, current queue health, and the latest audit history for the CoFoundry workspace."
-    />
+    >
+      <template #actions>
+        <BaseButton to="/admin/readiness">
+          Launch readiness
+        </BaseButton>
+      </template>
+    </PageIntro>
 
     <div class="gap-4 grid md:grid-cols-3 xl:grid-cols-6">
       <MetricTile label="Signups" :value="metrics.newSignups" context="Total workspace users." />

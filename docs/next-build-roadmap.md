@@ -66,7 +66,7 @@ Current persisted slice:
 Still local/mock or partially server-backed for now:
 
 - collaboration writes are server-routed and Supabase-persisted when Supabase mode is active, but the relationship workspace still needs more granular read endpoints and realtime refresh
-- notifications persist with collaboration state, but outbound email/digest delivery is not implemented
+- notifications persist with collaboration state, on-demand and scheduled digest delivery are wired, and event-specific lifecycle emails still need final provider-backed templates
 - moderation enforcement now persists user/report/privacy/admin-action updates in Supabase mode, and privacy-request review/resolution now notifies the requesting user
 
 Backend-owned entities:
@@ -112,6 +112,7 @@ Additional production controls now started:
 - server-side rate limits on auth, contact, billing, collaboration, member writes, inbox reads, admin actions, exports, and privacy requests
 - JSON account data export from settings
 - privacy and trust-review request submission from settings, with `/admin/privacy` reading Supabase or the local mock-mode queue
+- `/admin/readiness` launch-readiness scoring from server-side environment, queue, worker, and operations evidence
 
 ### 4. Production billing path
 
