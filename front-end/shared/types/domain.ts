@@ -52,6 +52,10 @@ export type FileUploadStatus = "pending" | "uploaded" | "blocked" | "deleted"
 export type FileScanStatus = "pending" | "clean" | "flagged" | "failed" | "skipped"
 export type FileUploadRelatedType = "message" | "proposal" | "contract" | "profile" | "opportunity"
 
+export interface NotificationPreferences {
+  unreadDigestEmail: boolean
+}
+
 export interface SessionUser {
   id: string
   email: string
@@ -97,6 +101,7 @@ export interface User {
   linkedProviders: AuthProvider[]
   verifiedEmail: boolean
   onboardingCompleted: boolean
+  notificationPreferences: NotificationPreferences
   suspendedAt: string | null
 }
 
@@ -620,6 +625,7 @@ export interface MemberWorkspaceState {
 
 export interface MemberWorkspaceWritePayload {
   onboardingCompleted: boolean
+  notificationPreferences: NotificationPreferences
   profile: Profile
   opportunities: StartupOpportunity[]
   bookmarks: Bookmark[]

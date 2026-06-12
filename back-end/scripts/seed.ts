@@ -31,6 +31,7 @@ function mapTables(): SeedTable[] {
         linked_providers: user.linkedProviders,
         verified_email: user.verifiedEmail,
         onboarding_completed: user.onboardingCompleted,
+        email_digest_enabled: user.notificationPreferences.unreadDigestEmail,
         suspended_at: user.suspendedAt,
       })),
     },

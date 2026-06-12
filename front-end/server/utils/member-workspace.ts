@@ -43,6 +43,7 @@ interface PersistedSubscriptionRow {
 interface PersistedUserRow {
   created_at: string
   email: string
+  email_digest_enabled?: boolean | null
   id: string
   linked_providers: User["linkedProviders"]
   onboarding_completed: boolean
@@ -117,6 +118,7 @@ function toUserRow(user: User): PersistedUserRow {
     linked_providers: user.linkedProviders,
     verified_email: user.verifiedEmail,
     onboarding_completed: user.onboardingCompleted,
+    email_digest_enabled: user.notificationPreferences.unreadDigestEmail,
     suspended_at: user.suspendedAt,
   }
 }
@@ -130,6 +132,9 @@ function fromUserRow(row: PersistedUserRow): User {
     linkedProviders: row.linked_providers,
     verifiedEmail: row.verified_email,
     onboardingCompleted: row.onboarding_completed,
+    notificationPreferences: {
+      unreadDigestEmail: row.email_digest_enabled ?? false,
+    },
     suspendedAt: row.suspended_at,
   }
 }
@@ -583,6 +588,9 @@ export async function persistMemberWorkspaceWritePayload(event: H3Event, identit
     user: {
       ...current.state.user,
       onboardingCompleted: payload.onboardingCompleted,
+      notificationPreferences: {
+        unreadDigestEmail: payload.notificationPreferences.unreadDigestEmail === true,
+      },
     },
     profile: sanitizeOwnedProfile(payload.profile, current.state.user.id),
     opportunities: sanitizeUserOwnedOpportunities(payload.opportunities, current.state.user.id),

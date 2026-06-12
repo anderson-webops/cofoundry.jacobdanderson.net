@@ -10,13 +10,22 @@ export interface NotificationDeliveryResult {
   delivered: boolean
   error: string | null
   subject: string
+  suppressed?: boolean
   unreadCount: number
+}
+
+export interface UnreadNotificationDigestOptions {
+  respectPreferences?: boolean
 }
 
 export function buildDigestSubject(unreadCount: number) {
   return unreadCount === 1
     ? "CoFoundry: 1 workspace item needs attention"
     : `CoFoundry: ${unreadCount} workspace items need attention`
+}
+
+export function isScheduledDigestEmailEnabled(seed: WorkspaceSeed, userId: string) {
+  return seed.users.find(user => user.id === userId)?.notificationPreferences?.unreadDigestEmail === true
 }
 
 function buildDigestBody(seed: WorkspaceSeed, session: SessionUser) {
@@ -75,9 +84,22 @@ export async function recordNotificationDelivery(event: H3Event, session: Sessio
     throw error
 }
 
-export async function sendUnreadNotificationDigest(event: H3Event, seed: WorkspaceSeed, session: SessionUser) {
+export async function sendUnreadNotificationDigest(event: H3Event, seed: WorkspaceSeed, session: SessionUser, options: UnreadNotificationDigestOptions = {}) {
   const { body, unreadNotifications } = buildDigestBody(seed, session)
   const subject = buildDigestSubject(unreadNotifications.length)
+
+  if (options.respectPreferences && !isScheduledDigestEmailEnabled(seed, session.id)) {
+    const result: NotificationDeliveryResult = {
+      configured: false,
+      delivered: false,
+      error: "Scheduled digest email is disabled for this member.",
+      subject,
+      suppressed: true,
+      unreadCount: unreadNotifications.length,
+    }
+    await recordNotificationDelivery(event, session, result)
+    return result
+  }
 
   if (!isContactMailConfigured()) {
     const result: NotificationDeliveryResult = {

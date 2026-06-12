@@ -247,6 +247,7 @@ Provisioning after merge:
 - Nuxt responses include centralized security headers for sniffing protection, frame denial, strict referrer behavior, locked-down browser permissions, and production HTTPS HSTS when `NUXT_PUBLIC_APP_URL` is an HTTPS origin.
 - `/.well-known/security.txt` exposes a standards-friendly security contact, canonical URL, expiration, and policy link using the configured support email and public app URL.
 - `/api/health` exposes a no-store, secret-free liveness response for uptime checks and load balancer probes.
+- Scheduled unread workspace digest emails respect each member's account-level email notification preference; seeded review users remain enabled, while newly persisted Supabase users default to disabled until they opt in.
 - Admin moderation actions persist user suspension, role changes, report status changes, and audit actions in Supabase mode.
 - Access-request review has a mock-mode admin queue at `/admin/access-requests` and a Supabase-backed table path for later. Operators can approve, deny, reopen, and issue invite links while Supabase and Stripe remain disabled.
 - Account settings include a JSON data export, privacy-request submission, and trust-verification review requests. The settings UI no longer self-awards trust badges.
@@ -258,7 +259,7 @@ Provisioning after merge:
 
 Worker-authenticated operations endpoints:
 
-- `POST /api/operations/notification-digests/run` sends unread workspace digests across Supabase users. It accepts `{ "dryRun": true, "maxUsers": 100, "onlyWithUnread": true }` for safe verification.
+- `POST /api/operations/notification-digests/run` sends unread workspace digests across Supabase users who have enabled scheduled digest email. It accepts `{ "dryRun": true, "maxUsers": 100, "onlyWithUnread": true }` for safe verification.
 - `POST /api/operations/backup-runs` records backup job lifecycle events in `backup_runs`.
 - `POST /api/operations/events` records deploy, worker, scanner, backup, and monitoring events in `operational_events`.
 - `GET /api/operations/file-scans/pending?limit=25` returns pending upload metadata with short-lived signed download URLs for a scanner worker.

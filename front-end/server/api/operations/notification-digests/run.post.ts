@@ -3,13 +3,14 @@ import { workspaceSeed } from "~/shared/data/seed"
 import { operationsDigestRunSchema } from "~/shared/utils/validation"
 import { buildSessionUser } from "~/shared/utils/workspace"
 import { loadMemberWorkspaceState } from "../../../utils/member-workspace"
-import { buildDigestSubject, recordNotificationDelivery, sendUnreadNotificationDigest } from "../../../utils/notification-delivery"
+import { buildDigestSubject, isScheduledDigestEmailEnabled, recordNotificationDelivery, sendUnreadNotificationDigest } from "../../../utils/notification-delivery"
 import { requireOperationsWorker } from "../../../utils/operations-auth"
 import { assertRateLimit, buildRateLimitKey } from "../../../utils/rate-limit"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "../../../utils/supabase"
 
 interface DigestUserRow {
   email: string
+  email_digest_enabled?: boolean | null
   id: string
   onboarding_completed: boolean
   role: User["role"]
@@ -61,7 +62,7 @@ async function selectDigestUsers(
 
   const query = adminClient
     .from("users")
-    .select("id,email,role,onboarding_completed")
+    .select("id,email,role,onboarding_completed,email_digest_enabled")
     .order("created_at", { ascending: true })
     .limit(options.maxUsers)
 
@@ -93,13 +94,17 @@ export default defineEventHandler(async (event) => {
 
     for (const session of sessions) {
       const unreadCount = unreadCountForUser(session.id)
-      const reason = payload.dryRun ? "dry_run" : "mock_mode"
+      const digestEnabled = isScheduledDigestEmailEnabled(workspaceSeed, session.id)
+      const reason = !digestEnabled ? "email_digest_disabled" : payload.dryRun ? "dry_run" : "mock_mode"
 
       await recordNotificationDelivery(event, session, {
         configured: false,
         delivered: false,
-        error: reason === "dry_run" ? "Dry run; no email sent." : "Mock mode records scheduled digest runs without sending email.",
+        error: reason === "email_digest_disabled"
+          ? "Scheduled digest email is disabled for this member."
+          : reason === "dry_run" ? "Dry run; no email sent." : "Mock mode records scheduled digest runs without sending email.",
         subject: buildDigestSubject(unreadCount),
+        suppressed: reason === "email_digest_disabled",
         unreadCount,
       })
 
@@ -169,6 +174,24 @@ export default defineEventHandler(async (event) => {
         continue
       }
 
+      if (!user.email_digest_enabled) {
+        await recordNotificationDelivery(event, workspace.session, {
+          configured: false,
+          delivered: false,
+          error: "Scheduled digest email is disabled for this member.",
+          subject: buildDigestSubject(unreadCount),
+          suppressed: true,
+          unreadCount,
+        })
+        results.push({
+          delivered: false,
+          reason: "email_digest_disabled",
+          unreadCount,
+          userId: user.id,
+        })
+        continue
+      }
+
       if (payload.dryRun) {
         results.push({
           delivered: false,
@@ -179,11 +202,11 @@ export default defineEventHandler(async (event) => {
         continue
       }
 
-      const delivery = await sendUnreadNotificationDigest(event, workspace.seed, workspace.session)
+      const delivery = await sendUnreadNotificationDigest(event, workspace.seed, workspace.session, { respectPreferences: true })
       results.push({
         configured: delivery.configured,
         delivered: delivery.delivered,
-        reason: delivery.delivered ? "sent" : delivery.configured ? "delivery_failed" : "mail_not_configured",
+        reason: delivery.suppressed ? "email_digest_disabled" : delivery.delivered ? "sent" : delivery.configured ? "delivery_failed" : "mail_not_configured",
         unreadCount: delivery.unreadCount,
         userId: user.id,
       })
