@@ -12,6 +12,7 @@ definePageMeta({
 usePageSeo("Relationship workspace")
 
 const route = useRoute()
+const toastStore = useToastStore()
 const { authStore, workspaceStore } = useCurrentMember()
 const matchId = computed(() => String(route.params.id || ""))
 const requestHeaders = import.meta.server ? useRequestHeaders(["cookie"]) : undefined
@@ -20,6 +21,12 @@ const fileInput = ref<HTMLInputElement | null>(null)
 const uploadPending = ref(false)
 const uploadError = ref("")
 const uploadNotice = ref("")
+const relationshipRefreshPending = ref(false)
+const lastRelationshipRefreshAt = ref("")
+const decisionLogBody = ref("")
+const decisionLogPending = ref(false)
+const decisionLogError = ref("")
+let relationshipRefreshTimer: number | null = null
 
 const { data, error, pending, refresh } = await useAsyncData(
   `relationship:${matchId.value}`,
@@ -37,6 +44,17 @@ const allowedUploadMimeTypes = new Set([
 const relationship = computed(() => data.value?.relationship || null)
 const latestMessages = computed(() => [...(relationship.value?.latestMessages || [])].reverse())
 const currentProfile = computed(() => authStore.currentUser ? getProfileByUserId(workspaceStore.data, authStore.currentUser.id) : null)
+const decisionLogTarget = computed(() => {
+  const proposal = relationship.value?.activeProposals[0]
+  if (!proposal)
+    return null
+
+  return {
+    proposalId: proposal.id,
+    proposalTitle: proposal.title,
+    proposalVersionId: proposal.currentVersionId,
+  }
+})
 const relationshipUploadTarget = computed<{ label: string, purpose: FileUploadPurpose, relatedId: string, relatedType: FileUploadRelatedType } | null>(() => {
   if (!relationship.value)
     return null
@@ -146,6 +164,50 @@ function scanTone(scanStatus: RelationshipSnapshot["files"][number]["scanStatus"
   } as const)[scanStatus]
 }
 
+async function refreshRelationship() {
+  if (relationshipRefreshPending.value)
+    return
+
+  relationshipRefreshPending.value = true
+
+  try {
+    await refresh()
+    lastRelationshipRefreshAt.value = new Date().toISOString()
+  }
+  finally {
+    relationshipRefreshPending.value = false
+  }
+}
+
+function shouldAutoRefreshRelationship() {
+  return Boolean(relationship.value)
+    && !relationshipRefreshPending.value
+    && !decisionLogPending.value
+    && !uploadPending.value
+    && document.visibilityState === "visible"
+}
+
+function handleRelationshipVisibilityChange() {
+  if (shouldAutoRefreshRelationship())
+    void refreshRelationship()
+}
+
+onMounted(() => {
+  lastRelationshipRefreshAt.value = new Date().toISOString()
+  relationshipRefreshTimer = window.setInterval(() => {
+    if (shouldAutoRefreshRelationship())
+      void refreshRelationship()
+  }, 30 * 1000)
+  document.addEventListener("visibilitychange", handleRelationshipVisibilityChange)
+})
+
+onBeforeUnmount(() => {
+  if (relationshipRefreshTimer)
+    window.clearInterval(relationshipRefreshTimer)
+
+  document.removeEventListener("visibilitychange", handleRelationshipVisibilityChange)
+})
+
 function inferMimeType(file: File) {
   if (file.type)
     return file.type
@@ -234,6 +296,7 @@ async function uploadRelationshipFile(event: Event) {
       throw new Error("The upload could not be completed.")
 
     await refresh()
+    lastRelationshipRefreshAt.value = new Date().toISOString()
     uploadNotice.value = `Uploaded ${file.name}. It will remain marked pending until the file scanner records a result.`
   }
   catch (error) {
@@ -241,6 +304,43 @@ async function uploadRelationshipFile(event: Event) {
   }
   finally {
     uploadPending.value = false
+  }
+}
+
+async function addDecisionLogEntry() {
+  if (!decisionLogTarget.value || !authStore.currentUser)
+    return
+
+  const body = decisionLogBody.value.trim()
+  if (body.length < 12) {
+    decisionLogError.value = "Add enough detail for the decision log to be useful later."
+    return
+  }
+
+  decisionLogPending.value = true
+  decisionLogError.value = ""
+
+  try {
+    await workspaceStore.addProposalComment(
+      decisionLogTarget.value.proposalId,
+      decisionLogTarget.value.proposalVersionId,
+      authStore.currentUser.id,
+      "decision_rights",
+      body,
+    )
+    decisionLogBody.value = ""
+    await refreshRelationship()
+    toastStore.push({
+      title: "Decision note added",
+      message: "The note is attached to the active proposal and now appears in the relationship log.",
+      tone: "success",
+    })
+  }
+  catch (error) {
+    decisionLogError.value = error instanceof Error ? error.message : "The decision note could not be saved."
+  }
+  finally {
+    decisionLogPending.value = false
   }
 }
 </script>
@@ -253,8 +353,11 @@ async function uploadRelationshipFile(event: Event) {
       description="One working surface for the conversation, trial sprint, proposals, agreement draft, and next action."
     >
       <template #actions>
-        <BaseButton variant="secondary" :disabled="pending" @click="refresh">
-          {{ pending ? "Refreshing..." : "Refresh" }}
+        <BaseBadge v-if="lastRelationshipRefreshAt" tone="neutral">
+          Updated {{ formatRelativeDate(lastRelationshipRefreshAt) }}
+        </BaseBadge>
+        <BaseButton variant="secondary" :disabled="pending || relationshipRefreshPending" @click="refreshRelationship">
+          {{ pending || relationshipRefreshPending ? "Refreshing..." : "Refresh" }}
         </BaseButton>
       </template>
     </PageIntro>
@@ -458,6 +561,40 @@ async function uploadRelationshipFile(event: Event) {
                   {{ actorLabel(entry.ownerUserId) }} · {{ formatDate(entry.createdAt) }}
                 </p>
               </NuxtLink>
+            </div>
+
+            <div class="surface-divider mt-5">
+              <div class="flex flex-wrap gap-3 items-start justify-between">
+                <div>
+                  <h3 class="text-base font-semibold">
+                    Add a decision note
+                  </h3>
+                  <p class="muted text-sm leading-6 mt-2">
+                    Notes are attached to {{ decisionLogTarget?.proposalTitle || "the active proposal" }} so the deal room and relationship log stay in sync.
+                  </p>
+                </div>
+                <BaseBadge :tone="decisionLogTarget ? 'accent' : 'warning'">
+                  {{ decisionLogTarget ? "Proposal-linked" : "Needs proposal" }}
+                </BaseBadge>
+              </div>
+              <div class="mt-4 gap-3 grid">
+                <TextareaInput
+                  v-model="decisionLogBody"
+                  label="Decision note"
+                  placeholder="Example: Malik owns architecture decisions unless the choice changes financing, compliance, or company strategy."
+                  helper="Use this for unresolved decision rights, governance boundaries, and terms counsel should see later."
+                  :error="decisionLogError"
+                  :rows="3"
+                />
+                <div class="flex justify-end">
+                  <BaseButton
+                    :disabled="decisionLogPending || !decisionLogTarget || decisionLogBody.trim().length < 12"
+                    @click="addDecisionLogEntry"
+                  >
+                    {{ decisionLogPending ? "Saving..." : "Add to log" }}
+                  </BaseButton>
+                </div>
+              </div>
             </div>
           </article>
         </section>
