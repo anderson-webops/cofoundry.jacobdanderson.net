@@ -6,7 +6,7 @@ CoFoundry can run in production-facing mock/access-request mode today without Su
 
 - `NUXT_PUBLIC_BACKEND_MODE=mock` and `NUXT_PUBLIC_BILLING_MODE=mock` remain the safe production defaults until Supabase and Stripe are deliberately enabled.
 - `SESSION_SIGNING_SECRET` should be injected from the host secret store even in mock mode so invited-account sessions survive deploys.
-- `COFOUNDRY_LOCAL_DATA_DIR` should point at a durable, backed-up directory for access requests, privacy/trust review requests, invited local accounts, operations telemetry, and local mock-mode file scan artifacts.
+- `COFOUNDRY_LOCAL_DATA_DIR` should point at a durable, backed-up directory for access requests, admin audit overlays, privacy/trust review requests, invited local accounts, operations telemetry, and local mock-mode file scan artifacts.
 - `COFOUNDRY_OPERATIONS_TOKEN` should be a long random secret before any `/api/operations/*` worker is scheduled.
 
 ## Daily Checks
@@ -14,6 +14,7 @@ CoFoundry can run in production-facing mock/access-request mode today without Su
 - Visit `/admin/readiness` and resolve any fail or warning checks before treating the deployment as production-ready.
 - Confirm `/api/health` returns `status: "ok"` from the deployed Nuxt app.
 - Visit `/admin/operations` and confirm the newest backup, scanner, digest, and operational-event rows are current.
+- Visit `/admin/audit` and confirm recent moderation, role, report, and privacy-request actions are present after reloads.
 - Visit `/admin/access-requests` and clear stale access requests or invite links.
 - Visit `/admin/privacy` and resolve open privacy or trust-review requests with an operator note.
 - Confirm the contact/support inbox is receiving submissions.
@@ -33,7 +34,7 @@ Each worker call must send `Authorization: Bearer <COFOUNDRY_OPERATIONS_TOKEN>` 
 
 1. Snapshot the durable local data directory or Supabase project before a deploy.
 2. Restore into a staging host or staging Supabase project.
-3. Confirm `/admin/operations`, `/admin/access-requests`, `/admin/privacy`, `/app/inbox`, and `/app/settings` load from restored data.
+3. Confirm `/admin/operations`, `/admin/audit`, `/admin/access-requests`, `/admin/privacy`, `/app/inbox`, and `/app/settings` load from restored data.
 4. Record the restore drill as an operational event.
 
 ## Supabase Cutover
@@ -42,7 +43,7 @@ Each worker call must send `Authorization: Bearer <COFOUNDRY_OPERATIONS_TOKEN>` 
 2. Seed baseline rows with `npm run seed` only against the intended target project.
 3. Create the first user through the normal account path.
 4. Run `BOOTSTRAP_ADMIN_EMAIL=operator@example.com npm run -w back-end bootstrap-admin` from the server environment with Vault-injected Supabase secrets.
-5. Verify the user can access `/admin`, `/admin/users`, `/admin/operations`, `/admin/access-requests`, and `/admin/privacy`.
+5. Verify the user can access `/admin`, `/admin/users`, `/admin/audit`, `/admin/operations`, `/admin/access-requests`, and `/admin/privacy`.
 6. Only then set `NUXT_PUBLIC_BACKEND_MODE=supabase`.
 
 ## Stripe Cutover
