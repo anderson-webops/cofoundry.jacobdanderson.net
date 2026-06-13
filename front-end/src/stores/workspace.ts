@@ -41,6 +41,7 @@ import {
   updateProposalStatusTransition,
 } from "~/shared/utils/collaboration"
 import { buildOpportunityRiskFlags, buildProfileReadiness, getReportPriority, resolveNewOpportunityVerificationStatus } from "~/shared/utils/formation"
+import { normalizeNotificationPreferences } from "~/shared/utils/notification-preferences"
 import {
   getContractById,
   getCurrentContractVersion,
@@ -181,9 +182,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   function normalizeLegacyUsers() {
     data.value.users = data.value.users.map(user => ({
       ...user,
-      notificationPreferences: user.notificationPreferences || {
-        unreadDigestEmail: false,
-      },
+      notificationPreferences: normalizeNotificationPreferences(user.notificationPreferences),
     }))
   }
 
@@ -928,7 +927,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       return
 
     user.notificationPreferences = {
-      unreadDigestEmail: preferences.unreadDigestEmail,
+      ...normalizeNotificationPreferences(preferences),
     }
 
     await persistWorkspace(true)

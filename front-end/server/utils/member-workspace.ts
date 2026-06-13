@@ -1,6 +1,7 @@
 import type { H3Event } from "h3"
 import type { MemberWorkspaceState, MemberWorkspaceWritePayload, Profile, SavedSearch, StartupOpportunity, Subscription, User } from "../../shared/types/domain"
 import { checkSavedSearchCount } from "../../shared/utils/billing"
+import { normalizeNotificationPreferences } from "../../shared/utils/notification-preferences"
 import { buildDraftMemberWorkspaceState, buildMemberWorkspaceState, createInitialWorkspaceDocument, mergeMemberWorkspaceState, resolveSessionUserFromWorkspace, sanitizeOwnedProfile, sanitizeUserOwnedBookmarks, sanitizeUserOwnedOpportunities, sanitizeUserOwnedSavedSearches } from "../../shared/utils/workspace-persistence"
 import { mergeLocalAdminAuditState } from "./local-admin-audit"
 import { loadLocalCollaborationState } from "./local-collaboration-store"
@@ -54,6 +55,7 @@ interface PersistedUserRow {
   role: User["role"]
   suspended_at: string | null
   verified_email: boolean
+  workflow_email_enabled?: boolean | null
 }
 
 interface PersistedBookmarkRow {
@@ -154,6 +156,7 @@ function toUserRow(user: User): PersistedUserRow {
     verified_email: user.verifiedEmail,
     onboarding_completed: user.onboardingCompleted,
     email_digest_enabled: user.notificationPreferences.unreadDigestEmail,
+    workflow_email_enabled: user.notificationPreferences.workflowEmail,
     suspended_at: user.suspendedAt,
   }
 }
@@ -167,9 +170,10 @@ function fromUserRow(row: PersistedUserRow): User {
     linkedProviders: row.linked_providers,
     verifiedEmail: row.verified_email,
     onboardingCompleted: row.onboarding_completed,
-    notificationPreferences: {
+    notificationPreferences: normalizeNotificationPreferences({
       unreadDigestEmail: row.email_digest_enabled ?? false,
-    },
+      workflowEmail: row.workflow_email_enabled ?? false,
+    }),
     suspendedAt: row.suspended_at,
   }
 }
@@ -739,9 +743,7 @@ export async function persistMemberWorkspaceWritePayload(event: H3Event, identit
     user: {
       ...current.state.user,
       onboardingCompleted: payload.onboardingCompleted,
-      notificationPreferences: {
-        unreadDigestEmail: payload.notificationPreferences.unreadDigestEmail === true,
-      },
+      notificationPreferences: normalizeNotificationPreferences(payload.notificationPreferences),
     },
     profile: sanitizeOwnedProfile(payload.profile, current.state.user.id),
     opportunities: sanitizeUserOwnedOpportunities(payload.opportunities, current.state.user.id),

@@ -32,6 +32,7 @@ function mapTables(): SeedTable[] {
         verified_email: user.verifiedEmail,
         onboarding_completed: user.onboardingCompleted,
         email_digest_enabled: user.notificationPreferences.unreadDigestEmail,
+        workflow_email_enabled: user.notificationPreferences.workflowEmail,
         suspended_at: user.suspendedAt,
       })),
     },

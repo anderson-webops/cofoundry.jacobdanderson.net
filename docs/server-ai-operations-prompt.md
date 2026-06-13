@@ -65,7 +65,7 @@ Tasks:
      -H "Content-Type: application/json" \
      --data '{"dryRun":true,"eventType":"proposal.received","targetType":"proposal","targetId":"<proposal-id>","userId":"<recipient-user-id>"}'
 
-   Mock/access-request mode records the attempt without sending mail. In Supabase mode, keep `dryRun` true until SMTP is verified and lifecycle triggers are connected to the app events that create or accept intros, send unread messages, create or update proposals, require signatures, review reports, and change billing state.
+   Mock/access-request mode records the attempt without sending mail. In Supabase mode, keep `dryRun` true until SMTP is verified, intended pilot users have enabled relationship workflow email in `/app/settings`, and lifecycle triggers are connected to the app events that create or accept intros, send unread messages, create or update proposals, require signatures, review reports, and change billing state.
 
 11. Wire the database backup job through the checked-in lifecycle wrapper:
 
