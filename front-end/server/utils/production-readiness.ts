@@ -36,6 +36,7 @@ export interface ProductionReadinessOperationsRows {
   mode: string
   notificationDeliveries: Array<Record<string, unknown>>
   operationalEvents: Array<Record<string, unknown>>
+  trustVerificationEvents: Array<Record<string, unknown>>
 }
 
 export interface ProductionReadinessAdminPosture {
@@ -56,6 +57,7 @@ export interface ProductionReadinessInput {
   hasDurableLocalDataDir: boolean
   hasOperationsWorkerToken: boolean
   hasSessionSigningSecret: boolean
+  hasTrustVerificationProviderConfigured: boolean
   isLocalDevelopment: boolean
   operations: ProductionReadinessOperationsRows
   privacyRequests: PrivacyRequest[]
@@ -309,6 +311,17 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
       "COFOUNDRY_FILE_SCANNER_COMMAND=\"clamscan --no-summary\" npm run operations:scan -- --limit 25",
     ),
     task(
+      "trust-verification-provisioning",
+      "Trust verification provider evidence",
+      checkById.get("trust-verification-evidence")?.status || "info",
+      checkById.get("trust-verification-evidence")?.summary || "No provider configured",
+      "Identity, phone, social/OAuth, work-domain, and opportunity-ownership providers should report evidence without automatically granting member-facing badges.",
+      input.hasTrustVerificationProviderConfigured
+        ? "Send a provider smoke or real provider result through the checked-in trust-verification endpoint and confirm it appears in admin operations."
+        : "Choose provider(s) only when the product policy is ready, then wire callbacks through the worker-authenticated endpoint.",
+      "COFOUNDRY_TRUST_VERIFICATION_PROVIDER=<provider-name>\nnpm run operations:trust-verification -- --target-type profile --target-id <profile-id> --verification-type government_id --status manual_review --provider <provider-name> --source-event-id <provider-event-id>",
+    ),
+    task(
       "digest-worker-provisioning",
       "Notification digest worker",
       checkById.get("notification-digests")?.status || "warn",
@@ -396,6 +409,18 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
   const hasNewerMailSmokeFailure = latestFailedMailSmokeTime !== null && (latestSuccessfulMailSmokeTime === null || latestFailedMailSmokeTime >= latestSuccessfulMailSmokeTime)
   const failedOrFlaggedScans = countRows(input.operations.fileUploads, "scan_status", ["failed", "flagged"])
   const pendingScans = countRows(input.operations.fileUploads, "scan_status", ["pending"])
+  const trustVerificationEvents = input.operations.trustVerificationEvents || []
+  const latestTrustVerification = latestRow(trustVerificationEvents, ["occurred_at", "created_at"])
+  const latestTrustVerificationTime = newestTime(latestTrustVerification ? [latestTrustVerification] : [], ["occurred_at", "created_at"])
+  const trustVerificationDaysOld = daysSince(latestTrustVerificationTime, nowTime)
+  const verifiedTrustVerificationEvents = countRows(trustVerificationEvents, "status", ["verified"])
+  const reviewTrustVerificationEvents = countRows(trustVerificationEvents, "status", ["manual_review"])
+  let trustVerificationStatus: ProductionReadinessStatus = "info"
+  if (input.hasTrustVerificationProviderConfigured) {
+    trustVerificationStatus = !trustVerificationEvents.length || (trustVerificationDaysOld !== null && trustVerificationDaysOld > 30)
+      ? "warn"
+      : "pass"
+  }
   const attentionEvents = input.operations.operationalEvents.filter(row => !isAlertSmokeEvent(row))
   const errorEvents = countRows(attentionEvents, "severity", ["error"])
   const warningEvents = countRows(attentionEvents, "severity", ["warning"])
@@ -543,7 +568,7 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
       input.hasOperationsWorkerToken ? "pass" : "warn",
       input.hasOperationsWorkerToken ? "Configured" : "Missing",
       input.hasOperationsWorkerToken
-        ? "Worker endpoints can authenticate backup, scanner, digest, and event reports."
+        ? "Worker endpoints can authenticate backup, scanner, digest, trust-verification, and event reports."
         : "Worker endpoints fail closed, but scheduled operations cannot report status until this is configured.",
       "Inject COFOUNDRY_OPERATIONS_TOKEN and configure the server-side workers to use it.",
     ),
@@ -638,6 +663,20 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
       "Schedule `/api/operations/notification-digests/run` and confirm recent rows appear in `/admin/operations`.",
     ),
     check(
+      "trust-verification-evidence",
+      "Trust verification provider evidence",
+      trustVerificationStatus,
+      trustVerificationEvents.length
+        ? `${verifiedTrustVerificationEvents} verified, ${reviewTrustVerificationEvents} manual review${trustVerificationDaysOld === null ? "" : `, latest ${trustVerificationDaysOld} day${trustVerificationDaysOld === 1 ? "" : "s"} old`}`
+        : input.hasTrustVerificationProviderConfigured ? "Provider configured, no rows" : "No provider configured",
+      input.hasTrustVerificationProviderConfigured
+        ? "Provider trust checks are reporting into the operations store as evidence for operator review and future badge policy."
+        : "Trust verification provider callbacks are optional until phone, identity, domain, social/OAuth, or ownership providers are selected.",
+      input.hasTrustVerificationProviderConfigured
+        ? "Run `npm run operations:trust-verification -- --target-type profile --target-id <profile-id> --verification-type government_id --status manual_review --provider <provider>` and confirm `/admin/operations` shows the row."
+        : "Do not enable trust-provider callbacks until provider choice, privacy posture, and badge policy are explicit.",
+    ),
+    check(
       "operational-events",
       "Operational events",
       errorEvents ? "fail" : warningEvents ? "warn" : "pass",
@@ -724,7 +763,7 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
     },
     {
       checks: workerChecks,
-      description: "Worker-reported evidence for backups, scanner status, digests, and operational alerts.",
+      description: "Worker-reported evidence for backups, scanner status, digests, trust-provider callbacks, and operational alerts.",
       id: "workers",
       title: "Worker health",
     },
@@ -739,7 +778,7 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
     counts: {
       accessRequestsOpen: accessQueue.open.length,
       failedChecks,
-      operationsRows: input.operations.backupRuns.length + input.operations.fileUploads.length + input.operations.notificationDeliveries.length + input.operations.operationalEvents.length,
+      operationsRows: input.operations.backupRuns.length + input.operations.fileUploads.length + input.operations.notificationDeliveries.length + input.operations.operationalEvents.length + trustVerificationEvents.length,
       privacyRequestsOpen: privacyQueue.open.length,
       warningChecks,
     },
