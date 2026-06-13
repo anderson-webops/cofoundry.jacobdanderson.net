@@ -161,6 +161,7 @@ Behavior:
 - `/auth/sign-in` and `/auth/sign-up` become intentional access-request pages instead of fake-live account creation
 - The private app stays available only in local development or when demo access is explicitly enabled
 - Local development still supports cookie-backed mock auth, seeded workspace data, and preview billing flows
+- Live accounts with `NUXT_PUBLIC_BILLING_MODE="mock"` use operator-managed billing instead of self-granting paid entitlements
 
 Required env:
 
@@ -293,7 +294,8 @@ The server-side handoff prompt for wiring these jobs lives at `docs/server-ai-op
 
 The frontend checkout route lives at `front-end/server/api/billing/checkout.post.ts`.
 
-- In mock mode it redirects back into `/app/billing?checkout=success&plan=...`
+- In local or deliberate staging demo mode, mock billing can update a workspace plan preview without contacting Stripe
+- In live account mode with `NUXT_PUBLIC_BILLING_MODE="mock"`, paid-plan changes route to the team and do not mutate entitlements
 - In Stripe mode it creates a Stripe Checkout Session using env-driven price IDs
 - `/api/billing/webhook` verifies Stripe signatures and syncs checkout/subscription updates into the Supabase subscription row
 - `/api/billing/portal` creates a Stripe Customer Portal session for self-service billing management
@@ -363,6 +365,7 @@ Environment-gated surfaces:
 
 - Review account helpers on `/auth/sign-in` appear only in local development or when `NUXT_PUBLIC_ENABLE_DEMO_ACCESS="true"`.
 - Development workspace reset controls on `/app/settings` appear only in local development or when `NUXT_PUBLIC_ENABLE_DEMO_ACCESS="true"`.
+- Mock billing mutations appear only in local development or deliberate staging demo access. Live accounts without Stripe use operator-managed billing.
 - `/app/investment` remains feature-flagged behind `NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE`.
 
 ## Feature-flagged investment module

@@ -1,5 +1,6 @@
 import { billingSubscriptionMutationSchema } from "~/shared/utils/validation"
 import { requireAuthenticatedSession } from "../../utils/auth"
+import { resolveServerBillingAccessPolicy } from "../../utils/billing-access"
 import { updateMockSubscriptionRenewal } from "../../utils/billing-persistence"
 import { assertRateLimit, buildRateLimitKey } from "../../utils/rate-limit"
 
@@ -20,6 +21,14 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 409,
       statusMessage: "Use the Stripe customer portal to manage live billing subscriptions.",
+    })
+  }
+
+  const billingPolicy = resolveServerBillingAccessPolicy(event)
+  if (!billingPolicy.mockBillingPreviewEnabled) {
+    throw createError({
+      statusCode: 409,
+      statusMessage: "Billing changes are operator-managed until Stripe billing is enabled.",
     })
   }
 

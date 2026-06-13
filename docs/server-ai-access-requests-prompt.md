@@ -17,27 +17,28 @@ Current app behavior:
 Please configure the host/runtime:
 1. Keep `NUXT_PUBLIC_BACKEND_MODE=mock` and `NUXT_PUBLIC_BILLING_MODE=mock`.
 2. Keep `NUXT_PUBLIC_ENABLE_DEMO_ACCESS=false` for the production-facing site.
-3. Set `SESSION_SIGNING_SECRET` to a long random server-only value from Vault/host env.
-4. Set `COFOUNDRY_LOCAL_DATA_DIR` to a durable writable host path owned by the app user.
-5. Optionally set `COFOUNDRY_ACCESS_REQUEST_RETENTION_LIMIT` for the request queue, `COFOUNDRY_COLLABORATION_RETENTION_LIMIT` for local workflow rows, and `COFOUNDRY_ADMIN_AUDIT_RETENTION_LIMIT` for local admin audit rows.
-6. Verify the app user can create and update:
+3. Verify paid-plan changes route to the CoFoundry team instead of granting paid entitlements when Stripe is not enabled.
+4. Set `SESSION_SIGNING_SECRET` to a long random server-only value from Vault/host env.
+5. Set `COFOUNDRY_LOCAL_DATA_DIR` to a durable writable host path owned by the app user.
+6. Optionally set `COFOUNDRY_ACCESS_REQUEST_RETENTION_LIMIT` for the request queue, `COFOUNDRY_COLLABORATION_RETENTION_LIMIT` for local workflow rows, and `COFOUNDRY_ADMIN_AUDIT_RETENTION_LIMIT` for local admin audit rows.
+7. Verify the app user can create and update:
    - `access-requests.json`
    - `member-workspace-state.json`
    - `collaboration-state.json`
    - `admin-audit.json`
    - `local-auth-accounts.json`
    - `operations-telemetry.json`
-7. Keep these files off public web roots and out of git backups that are not intended to carry operational data.
-8. Restart the Nuxt service using its configured production command and host-provided env only; do not add `../.env` loading to production startup.
-9. Smoke test:
+8. Keep these files off public web roots and out of git backups that are not intended to carry operational data.
+9. Restart the Nuxt service using its configured production command and host-provided env only; do not add `../.env` loading to production startup.
+10. Smoke test:
    - Submit a public access request.
    - Sign in as an admin.
    - Open `/admin/access-requests`.
    - Approve and issue an invite.
    - Open `/admin/audit` and confirm the access/admin action history is visible after a reload.
    - Open the invite link in a fresh browser session and create the invited account.
-   - Update the invited account profile or billing preview state.
-   - Restart the app and verify the invited account can still sign in, the profile/billing state remains, and the audit row still appears.
+   - Update the invited account profile and verify paid-plan changes route to the CoFoundry team while Stripe is disabled.
+   - Restart the app and verify the invited account can still sign in, the profile state remains, and the audit row still appears.
 ```
 
 For later Supabase mode only, apply all migrations including `back-end/supabase/migrations/20260509120000_access_requests.sql` before setting `NUXT_PUBLIC_BACKEND_MODE=supabase`. Do not enable Supabase or Stripe until the server-side Supabase schema, auth bootstrap, billing webhooks, and Vault-injected secrets are intentionally provisioned.

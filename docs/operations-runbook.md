@@ -57,4 +57,5 @@ Each worker call must send `Authorization: Bearer <COFOUNDRY_OPERATIONS_TOKEN>` 
 ## Stripe Cutover
 
 - Keep `NUXT_PUBLIC_BILLING_MODE=mock` until checkout, customer portal, webhook signature validation, and subscription reconciliation have been tested against a staging Stripe account.
+- With live accounts and mock billing, paid-plan changes are operator-managed and should not grant paid entitlements unless `NUXT_PUBLIC_ENABLE_DEMO_ACCESS=true` is deliberately set for staging.
 - Enable Stripe only after the webhook endpoint is registered and `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, public price IDs, and the publishable key are present in the host secret/public env model.

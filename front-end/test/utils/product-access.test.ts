@@ -11,6 +11,8 @@ describe("product access policy", () => {
 
     expect(policy.accountsEnabled).toBe(true)
     expect(policy.marketingShellOnly).toBe(false)
+    expect(policy.mockBillingPreviewEnabled).toBe(true)
+    expect(policy.operatorManagedBilling).toBe(false)
     expect(policy.showDemoConveniences).toBe(true)
   })
 
@@ -23,6 +25,8 @@ describe("product access policy", () => {
 
     expect(policy.accountsEnabled).toBe(false)
     expect(policy.marketingShellOnly).toBe(true)
+    expect(policy.mockBillingPreviewEnabled).toBe(false)
+    expect(policy.operatorManagedBilling).toBe(false)
     expect(policy.showDemoConveniences).toBe(false)
     expect(policy.signInEnabled).toBe(true)
   })
@@ -35,7 +39,34 @@ describe("product access policy", () => {
     }, false)
 
     expect(policy.accountsEnabled).toBe(true)
+    expect(policy.mockBillingPreviewEnabled).toBe(true)
+    expect(policy.operatorManagedBilling).toBe(false)
     expect(policy.showDemoConveniences).toBe(true)
+  })
+
+  it("treats live accounts without Stripe as operator-managed billing", () => {
+    const policy = resolveProductAccessPolicy({
+      backendMode: "supabase",
+      billingMode: "mock",
+      enableDemoAccess: false,
+    }, false)
+
+    expect(policy.accountsEnabled).toBe(true)
+    expect(policy.selfServeBillingEnabled).toBe(false)
+    expect(policy.mockBillingPreviewEnabled).toBe(false)
+    expect(policy.operatorManagedBilling).toBe(true)
+  })
+
+  it("keeps local Supabase development with mock billing in preview mode", () => {
+    const policy = resolveProductAccessPolicy({
+      backendMode: "supabase",
+      billingMode: "mock",
+      enableDemoAccess: false,
+    }, true)
+
+    expect(policy.accountsEnabled).toBe(true)
+    expect(policy.mockBillingPreviewEnabled).toBe(true)
+    expect(policy.operatorManagedBilling).toBe(false)
   })
 
   it("enables self-serve billing only when live accounts and stripe are both enabled", () => {
@@ -46,6 +77,7 @@ describe("product access policy", () => {
     }, false)
 
     expect(policy.accountsEnabled).toBe(true)
+    expect(policy.operatorManagedBilling).toBe(false)
     expect(policy.selfServeBillingEnabled).toBe(true)
   })
 
