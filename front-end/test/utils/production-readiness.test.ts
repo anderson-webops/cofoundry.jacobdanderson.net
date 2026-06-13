@@ -78,10 +78,18 @@ const healthyOperations = {
   ],
 }
 
+const healthyAdminPosture = {
+  activeAdminCount: 1,
+  activeInvestorAdminCount: 0,
+  hasBootstrapAuditEvidence: true,
+  latestBootstrapAuditAt: generatedAt,
+}
+
 describe("production readiness snapshot", () => {
   it("passes when deployment, secret, queue, and worker evidence is healthy", () => {
     const snapshot = buildProductionReadinessSnapshot({
       accessRequests: [],
+      adminPosture: healthyAdminPosture,
       contactMailConfigured: true,
       environment: environmentSnapshot(),
       environmentValidationErrors: [],
@@ -103,6 +111,12 @@ describe("production readiness snapshot", () => {
   it("fails hosted production readiness when required launch controls are missing", () => {
     const snapshot = buildProductionReadinessSnapshot({
       accessRequests: [],
+      adminPosture: {
+        activeAdminCount: 0,
+        activeInvestorAdminCount: 0,
+        hasBootstrapAuditEvidence: false,
+        latestBootstrapAuditAt: null,
+      },
       contactMailConfigured: false,
       environment: environmentSnapshot({ appUrl: "" }),
       environmentValidationErrors: ["NUXT_PUBLIC_APP_URL must be configured."],
@@ -125,7 +139,7 @@ describe("production readiness snapshot", () => {
     const warningCheckIds = snapshot.groups.flatMap(group => group.checks).filter(check => check.status === "warn").map(check => check.id)
 
     expect(snapshot.overallStatus).toBe("fail")
-    expect(failedCheckIds).toEqual(expect.arrayContaining(["environment-validation", "public-app-url", "session-signing-secret"]))
+    expect(failedCheckIds).toEqual(expect.arrayContaining(["environment-validation", "public-app-url", "session-signing-secret", "active-admin-access"]))
     expect(warningCheckIds).toEqual(expect.arrayContaining(["mail-transport", "operations-worker-token", "local-durable-store", "backup-recency", "notification-digests", "restore-drill", "monitoring-heartbeat"]))
   })
 
@@ -151,6 +165,7 @@ describe("production readiness snapshot", () => {
         updatedAt: "2026-05-01T00:00:00.000Z",
         useCase: "I need a founder matching workspace for a serious collaborator search.",
       }],
+      adminPosture: healthyAdminPosture,
       contactMailConfigured: true,
       environment: environmentSnapshot(),
       environmentValidationErrors: [],
@@ -196,6 +211,7 @@ describe("production readiness snapshot", () => {
   it("warns when restore drills and monitoring heartbeats are stale or missing", () => {
     const snapshot = buildProductionReadinessSnapshot({
       accessRequests: [],
+      adminPosture: healthyAdminPosture,
       contactMailConfigured: true,
       environment: environmentSnapshot(),
       environmentValidationErrors: [],
@@ -226,6 +242,7 @@ describe("production readiness snapshot", () => {
   it("fails when the latest restore drill failed", () => {
     const snapshot = buildProductionReadinessSnapshot({
       accessRequests: [],
+      adminPosture: healthyAdminPosture,
       contactMailConfigured: true,
       environment: environmentSnapshot(),
       environmentValidationErrors: [],
@@ -268,5 +285,39 @@ describe("production readiness snapshot", () => {
 
     expect(snapshot.overallStatus).toBe("fail")
     expect(checkById.get("restore-drill")?.status).toBe("fail")
+  })
+
+  it("warns in Supabase mode until first-admin bootstrap evidence exists", () => {
+    const snapshot = buildProductionReadinessSnapshot({
+      accessRequests: [],
+      adminPosture: {
+        activeAdminCount: 1,
+        activeInvestorAdminCount: 0,
+        hasBootstrapAuditEvidence: false,
+        latestBootstrapAuditAt: null,
+      },
+      contactMailConfigured: true,
+      environment: environmentSnapshot({
+        backendMode: "supabase",
+        supabaseAnonKey: "anon-key",
+        supabaseUrl: "https://supabase.example",
+      }),
+      environmentValidationErrors: [],
+      generatedAt,
+      hasDurableLocalDataDir: false,
+      hasOperationsWorkerToken: true,
+      hasSessionSigningSecret: true,
+      isLocalDevelopment: false,
+      operations: {
+        ...healthyOperations,
+        mode: "supabase",
+      },
+      privacyRequests: [],
+    })
+    const checkById = new Map(snapshot.groups.flatMap(group => group.checks).map(check => [check.id, check]))
+
+    expect(snapshot.overallStatus).toBe("warn")
+    expect(checkById.get("active-admin-access")?.status).toBe("pass")
+    expect(checkById.get("admin-bootstrap-audit")?.status).toBe("warn")
   })
 })
