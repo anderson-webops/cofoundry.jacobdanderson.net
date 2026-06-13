@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ProductionReadinessPayload } from "../../../server/utils/production-readiness"
-import type { AccessRequest, AdminAction, AdminEscalationQueue, OpportunityVerificationStatus, PrivacyRequest } from "~/shared/types/domain"
+import type { AccessRequest, AdminAction, AdminEscalationQueue, OpportunityVerificationStatus, PrivacyRequest, Profile, StartupOpportunity, User } from "~/shared/types/domain"
 import type { AdminCommandQueueItem, AdminCommandQueueKind, AdminCommandQueuePriority, AdminCommandQueueSlaStatus } from "~/shared/utils/admin"
 import { buildAdminCommandQueue, defaultAdminEscalationQueueForTarget, formatAdminEscalationQueue, mergeAdminActions } from "~/shared/utils/admin"
 import { formatDate, formatOpportunityVerificationStatus, formatRelativeDate } from "~/shared/utils/format"
@@ -24,6 +24,13 @@ interface AdminAuditPayload {
   actions: AdminAction[]
 }
 
+interface AdminOpportunitiesPayload {
+  mode: "mock" | "supabase"
+  opportunities: StartupOpportunity[]
+  profiles: Profile[]
+  users: User[]
+}
+
 const requestFetch = useRequestFetch()
 const authStore = useAuthStore()
 const toastStore = useToastStore()
@@ -39,19 +46,31 @@ const filters = reactive({
 })
 
 const { data, pending, refresh } = await useAsyncData("admin-command-queue", async () => {
-  const [readiness, access, privacy, audit] = await Promise.all([
+  const [readiness, access, privacy, audit, opportunities] = await Promise.all([
     requestFetch<ProductionReadinessPayload>("/api/admin/readiness"),
     requestFetch<AccessRequestResponse>("/api/admin/access-requests"),
     requestFetch<PrivacyRequestResponse>("/api/admin/privacy-requests"),
     requestFetch<AdminAuditPayload>("/api/admin/audit"),
+    requestFetch<AdminOpportunitiesPayload>("/api/admin/opportunities"),
   ])
 
-  return { access, audit, privacy, readiness }
+  return { access, audit, opportunities, privacy, readiness }
 })
+
+function mergeRowsById<T extends { id: string }>(primary: T[], fallback: T[]) {
+  const primaryIds = new Set(primary.map(row => row.id))
+  return [
+    ...primary,
+    ...fallback.filter(row => !primaryIds.has(row.id)),
+  ]
+}
 
 const queueSeed = computed(() => ({
   ...workspaceStore.data,
   adminActions: mergeAdminActions(data.value?.audit.actions || [], workspaceStore.data.adminActions),
+  opportunities: mergeRowsById(data.value?.opportunities.opportunities || [], workspaceStore.data.opportunities),
+  profiles: mergeRowsById(data.value?.opportunities.profiles || [], workspaceStore.data.profiles),
+  users: mergeRowsById(data.value?.opportunities.users || [], workspaceStore.data.users),
 }))
 
 const queueItems = computed(() => buildAdminCommandQueue({
