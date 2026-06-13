@@ -3,13 +3,46 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import process from "node:process"
 import { describe, expect, it, vi } from "vitest"
-import { buildDigestContent, isLifecycleWorkflowEmailEnabled, isScheduledDigestEmailEnabled, sendLifecycleNotification, sendUnreadNotificationDigest } from "../../server/utils/notification-delivery"
+import { appendNotificationPreferenceFooter, buildDigestContent, buildNotificationPreferenceHeaders, isLifecycleWorkflowEmailEnabled, isScheduledDigestEmailEnabled, sendLifecycleNotification, sendUnreadNotificationDigest } from "../../server/utils/notification-delivery"
 import { workspaceSeed } from "../../shared/data/seed"
 import { cloneValue } from "../../shared/utils/clone"
 import { buildLifecycleNotification } from "../../shared/utils/lifecycle-notifications"
 import { buildSessionUser } from "../../shared/utils/workspace"
 
 describe("notification delivery preferences", () => {
+  it("adds category-specific preference management details to optional notification emails", () => {
+    const digestBody = appendNotificationPreferenceFooter("Hi Malik,\n\nCoFoundry", "digest", {
+      settingsUrl: "https://cofoundry.example/app/settings",
+      supportEmail: "support@example.com",
+    })
+    const workflowBody = appendNotificationPreferenceFooter("Hi Malik,\n\nCoFoundry", "workflow", {
+      settingsUrl: "https://cofoundry.example/app/settings",
+      supportEmail: "support@example.com",
+    })
+
+    expect(digestBody).toContain("Turn off scheduled unread digests in CoFoundry settings:")
+    expect(workflowBody).toContain("Turn off relationship workflow emails in CoFoundry settings:")
+    expect(digestBody).toContain("https://cofoundry.example/app/settings")
+    expect(workflowBody).toContain("support@example.com")
+    expect(workflowBody).toContain("Service-critical account, security, billing, trust, and support notices may still be sent separately.")
+  })
+
+  it("builds opt-out headers for optional notification categories", () => {
+    const headers = buildNotificationPreferenceHeaders("workflow", {
+      settingsUrl: "https://cofoundry.example/app/settings",
+      supportEmail: "support@example.com",
+    })
+
+    expect(headers["List-Unsubscribe"]).toBe("<mailto:support@example.com?subject=CoFoundry%20relationship%20workflow%20email%20preference>, <https://cofoundry.example/app/settings>")
+
+    const localHeaders = buildNotificationPreferenceHeaders("digest", {
+      settingsUrl: "/app/settings",
+      supportEmail: "support@example.com",
+    })
+
+    expect(localHeaders["List-Unsubscribe"]).toBe("<mailto:support@example.com?subject=CoFoundry%20scheduled%20digest%20email%20preference>")
+  })
+
   it("allows scheduled digests only for explicitly enabled users", () => {
     const seed = cloneValue(workspaceSeed)
 
@@ -71,13 +104,18 @@ describe("notification delivery preferences", () => {
 
     seed.notifications = seed.notifications.filter(notification => notification.userId !== "user_malik")
 
-    const digest = buildDigestContent(seed, session!)
+    const digest = buildDigestContent(seed, session!, {
+      settingsUrl: "https://cofoundry.example/app/settings",
+      supportEmail: "support@example.com",
+    })
 
     expect(digest.snapshot.actions.length).toBeGreaterThan(0)
     expect(digest.snapshot.actions.some(item => item.kind === "proposal")).toBe(true)
     expect(digest.snapshot.actions.some(item => item.kind === "contract")).toBe(true)
     expect(digest.body).toContain("Review proposal")
     expect(digest.body).toContain("/app/contracts/")
+    expect(digest.body).toContain("Turn off scheduled unread digests in CoFoundry settings:")
+    expect(digest.body).toContain("https://cofoundry.example/app/settings")
   })
 
   it("skips manual digest delivery when the workspace queue is clear", async () => {

@@ -31,7 +31,7 @@ Stage 2: outbound email provider
 3. Configure contact/access-request/digest/lifecycle delivery env without exposing provider secrets to the client.
 4. Run `npm run operations:mail-smoke -- --to-email <monitored-inbox>` and confirm both inbox receipt and `mail.smoke` telemetry in `/admin/operations`.
 5. Send a contact-form test, an access-request notification, a dry-run notification digest, and a dry-run lifecycle notification.
-6. Only enable scheduled real digest sends after member digest preferences, workflow email preferences, unsubscribe/opt-out handling, and the support inbox have been verified.
+6. Only enable scheduled real digest sends after member digest preferences, workflow email preferences, in-message settings/footer links, `List-Unsubscribe` headers, provider-level suppression handling, and the support inbox have been verified.
 7. Confirm `/admin/readiness` no longer warns on mail delivery readiness.
 
 Stage 3: operations workers

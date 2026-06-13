@@ -81,15 +81,21 @@ function buildRawMessage({
   replyTo,
   subject,
   body,
+  headers,
 }: {
   body: string
   fromEmail: string
   fromName: string
+  headers?: Record<string, string | undefined>
   replyTo: string
   subject: string
   toEmail: string
 }) {
   const messageIdHost = trimToUndefined(env.CONTACT_MESSAGE_ID_HOST) || "jacobdanderson.net"
+  const extraHeaders = Object.entries(headers || {})
+    .filter(([name, value]) => /^[a-z0-9-]+$/i.test(name) && trimToUndefined(value))
+    .map(([name, value]) => `${name}: ${escapeHeader(value || "")}`)
+
   return [
     `From: "${escapeHeader(fromName)}" <${escapeHeader(fromEmail)}>`,
     `To: ${escapeHeader(toEmail)}`,
@@ -97,6 +103,7 @@ function buildRawMessage({
     `Subject: ${escapeHeader(subject)}`,
     `Date: ${new Date().toUTCString()}`,
     `Message-ID: <${randomUUID()}@${escapeHeader(messageIdHost)}>`,
+    ...extraHeaders,
     "MIME-Version: 1.0",
     "Content-Type: text/plain; charset=UTF-8",
     "Content-Transfer-Encoding: 8bit",
@@ -108,6 +115,7 @@ function buildRawMessage({
 
 export interface PlainTextEmailPayload {
   body: string
+  headers?: Record<string, string | undefined>
   replyTo?: string
   subject: string
   toEmail?: string
@@ -449,6 +457,7 @@ export async function sendPlainTextEmail(payload: PlainTextEmailPayload) {
     body: payload.body,
     fromEmail: targetConfig.fromEmail,
     fromName: targetConfig.fromName,
+    headers: payload.headers,
     replyTo: payload.replyTo || targetConfig.fromEmail,
     subject: payload.subject,
     toEmail: targetConfig.toEmail,

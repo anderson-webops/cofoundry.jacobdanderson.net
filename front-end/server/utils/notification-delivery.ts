@@ -9,6 +9,8 @@ import { isContactMailConfigured, sendPlainTextEmail } from "./contact"
 import { recordLocalNotificationDelivery } from "./local-operations-store"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
 
+type NotificationPreferenceCategory = "digest" | "workflow"
+
 export interface NotificationDeliveryResult {
   bodyPreview?: string | null
   configured: boolean
@@ -30,6 +32,84 @@ export interface UnreadNotificationDigestOptions {
   skipIfEmpty?: boolean
 }
 
+const defaultSupportEmail = "support@cofoundry.dev"
+const trailingSlashPattern = /\/+$/
+
+function stripTrailingSlash(value?: string) {
+  return value?.replace(trailingSlashPattern, "") || ""
+}
+
+function isAbsoluteUrl(value: string) {
+  try {
+    const url = new URL(value)
+    return Boolean(url.protocol && url.host)
+  }
+  catch {
+    return false
+  }
+}
+
+function resolvePreferenceFooterOptions(event?: H3Event) {
+  try {
+    const runtimeConfig = event ? useRuntimeConfig(event) : useRuntimeConfig()
+    const publicConfig = runtimeConfig.public as Partial<Record<"appUrl" | "supportEmail", string | undefined>>
+    const appUrl = stripTrailingSlash(publicConfig.appUrl)
+
+    return {
+      settingsUrl: appUrl ? `${appUrl}/app/settings` : "/app/settings",
+      supportEmail: publicConfig.supportEmail?.trim() || defaultSupportEmail,
+    }
+  }
+  catch {
+    return {
+      settingsUrl: "/app/settings",
+      supportEmail: defaultSupportEmail,
+    }
+  }
+}
+
+export function appendNotificationPreferenceFooter(
+  body: string,
+  category: NotificationPreferenceCategory,
+  options: { settingsUrl?: string, supportEmail?: string } = {},
+) {
+  const settingsUrl = options.settingsUrl || "/app/settings"
+  const supportEmail = options.supportEmail || defaultSupportEmail
+  const categoryLine = category === "digest"
+    ? "Turn off scheduled unread digests in CoFoundry settings:"
+    : "Turn off relationship workflow emails in CoFoundry settings:"
+
+  return [
+    body.trimEnd(),
+    "",
+    "---",
+    categoryLine,
+    settingsUrl,
+    "",
+    "Service-critical account, security, billing, trust, and support notices may still be sent separately.",
+    `For help, contact ${supportEmail}.`,
+  ].join("\n")
+}
+
+export function buildNotificationPreferenceHeaders(
+  category: NotificationPreferenceCategory,
+  options: { settingsUrl?: string, supportEmail?: string } = {},
+) {
+  const settingsUrl = options.settingsUrl || "/app/settings"
+  const supportEmail = options.supportEmail || defaultSupportEmail
+  const subject = category === "digest"
+    ? "CoFoundry scheduled digest email preference"
+    : "CoFoundry relationship workflow email preference"
+  const listUnsubscribeTargets = [
+    `<mailto:${supportEmail}?subject=${encodeURIComponent(subject)}>`,
+    ...(isAbsoluteUrl(settingsUrl) ? [`<${settingsUrl}>`] : []),
+  ]
+
+  return {
+    "List-Unsubscribe": listUnsubscribeTargets.join(", "),
+  }
+}
+
 export function buildDigestSubject(unreadCount: number) {
   return unreadCount === 1
     ? "CoFoundry: 1 workspace item needs attention"
@@ -44,7 +124,7 @@ export function isLifecycleWorkflowEmailEnabled(seed: WorkspaceSeed, userId: str
   return normalizeNotificationPreferences(seed.users.find(user => user.id === userId)?.notificationPreferences).workflowEmail
 }
 
-export function buildDigestContent(seed: WorkspaceSeed, session: SessionUser) {
+export function buildDigestContent(seed: WorkspaceSeed, session: SessionUser, footerOptions: { settingsUrl?: string, supportEmail?: string } = {}) {
   const snapshot = buildInboxSnapshot(seed, session.id)
 
   const lines = [
@@ -67,7 +147,7 @@ export function buildDigestContent(seed: WorkspaceSeed, session: SessionUser) {
   ]
 
   return {
-    body: lines.join("\n"),
+    body: appendNotificationPreferenceFooter(lines.join("\n"), "digest", footerOptions),
     snapshot,
   }
 }
@@ -130,8 +210,15 @@ export async function sendLifecycleNotification(
     role: seed.users.find(user => user.id === plan.userId)?.role || "founder",
     subscriptionPlan: "free",
   }
+  const footerOptions = resolvePreferenceFooterOptions(event)
+  const body = isWorkflowLifecycleEvent(plan.eventType)
+    ? appendNotificationPreferenceFooter(plan.body, "workflow", footerOptions)
+    : plan.body
+  const headers = isWorkflowLifecycleEvent(plan.eventType)
+    ? buildNotificationPreferenceHeaders("workflow", footerOptions)
+    : undefined
   const baseResult = {
-    bodyPreview: buildLifecycleBodyPreview(plan.body),
+    bodyPreview: buildLifecycleBodyPreview(body),
     eventType: plan.eventType,
     metadata: plan.metadata,
     subject: plan.subject,
@@ -182,7 +269,8 @@ export async function sendLifecycleNotification(
 
   try {
     await sendPlainTextEmail({
-      body: plan.body,
+      body,
+      headers,
       subject: plan.subject,
       toEmail: plan.recipientEmail,
     })
@@ -211,7 +299,9 @@ export async function sendLifecycleNotification(
 }
 
 export async function sendUnreadNotificationDigest(event: H3Event, seed: WorkspaceSeed, session: SessionUser, options: UnreadNotificationDigestOptions = {}) {
-  const { body, snapshot } = buildDigestContent(seed, session)
+  const footerOptions = resolvePreferenceFooterOptions(event)
+  const { body, snapshot } = buildDigestContent(seed, session, footerOptions)
+  const headers = buildNotificationPreferenceHeaders("digest", footerOptions)
   const subject = buildDigestSubject(snapshot.actions.length)
 
   if (options.skipIfEmpty && !snapshot.actions.length) {
@@ -228,6 +318,7 @@ export async function sendUnreadNotificationDigest(event: H3Event, seed: Workspa
 
   if (options.respectPreferences && !isScheduledDigestEmailEnabled(seed, session.id)) {
     const result: NotificationDeliveryResult = {
+      bodyPreview: buildLifecycleBodyPreview(body),
       configured: false,
       delivered: false,
       error: "Scheduled digest email is disabled for this member.",
@@ -242,6 +333,7 @@ export async function sendUnreadNotificationDigest(event: H3Event, seed: Workspa
 
   if (!isContactMailConfigured()) {
     const result: NotificationDeliveryResult = {
+      bodyPreview: buildLifecycleBodyPreview(body),
       configured: false,
       delivered: false,
       error: null,
@@ -256,11 +348,13 @@ export async function sendUnreadNotificationDigest(event: H3Event, seed: Workspa
   try {
     await sendPlainTextEmail({
       body,
+      headers,
       subject,
       toEmail: session.email,
     })
 
     const result: NotificationDeliveryResult = {
+      bodyPreview: buildLifecycleBodyPreview(body),
       configured: true,
       delivered: true,
       error: null,
@@ -273,6 +367,7 @@ export async function sendUnreadNotificationDigest(event: H3Event, seed: Workspa
   }
   catch (error) {
     const result: NotificationDeliveryResult = {
+      bodyPreview: buildLifecycleBodyPreview(body),
       configured: true,
       delivered: false,
       error: error instanceof Error ? error.message : "Email delivery failed",
