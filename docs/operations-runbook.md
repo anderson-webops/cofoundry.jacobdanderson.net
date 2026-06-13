@@ -14,6 +14,8 @@ CoFoundry can run in production-facing mock/access-request mode today without Su
 - Visit `/admin/readiness` and resolve any fail or warning checks before treating the deployment as production-ready.
 - Confirm `/api/health` returns `status: "ok"` from the deployed Nuxt app.
 - Visit `/admin/operations` and confirm the newest backup, scanner, digest, and operational-event rows are current.
+- Confirm `/admin/readiness` shows recent restore-drill evidence. A backup without a successful restore drill remains a warning.
+- Confirm `/admin/readiness` shows a recent monitoring or alerting heartbeat event. The expected event can be `monitoring.heartbeat`, `uptime.heartbeat`, or another monitor/alert event reported through `npm run operations:event`.
 - Visit `/admin/audit` and confirm recent moderation, role, report, and privacy-request actions are present after reloads.
 - Visit `/admin/users` and confirm pending emails can be marked verified only after invite, domain, or operator evidence review.
 - Sign in to an invited test account and confirm profile, inbox, and billing preview changes survive an app restart.
@@ -32,7 +34,7 @@ Checked-in systemd templates live in `deploy/systemd/`. Use them as the default 
 - Backup runner: wrap the real host backup command with `npm run operations:backup -- --provider server-backup --artifact-uri <artifact-uri> -- <backup command>`. The worker records `running`, then `succeeded` or `failed`, through `POST /api/operations/backup-runs`.
 - Notification digest runner: call `npm run operations:digest -- --dry-run --max-users 100` before enabling real sends. Remove `--dry-run` only after SMTP and member notification preferences are verified. Digest content follows the same inbox action queue used by `/app/inbox`, so intros, unread conversations, proposals, signatures, and operational notices are handled consistently. Scheduled digest runs skip members whose `/app/settings` email-notification preference is disabled; Supabase users default to disabled until they opt in.
 - File scanner: configure `COFOUNDRY_FILE_SCANNER_COMMAND` or pass `--scanner-command`. Run `npm run operations:scan -- --limit 25` to poll pending scans, download private files, run the scanner, and report `clean`, `flagged`, or `failed` through `POST /api/operations/file-scans/:id`. Supabase mode returns short-lived storage URLs; mock/access-request mode returns worker-authenticated app download URLs.
-- Monitor runner: report deploy, worker, scanner, backup, and monitoring events with `npm run operations:event -- --source systemd --event-type deploy.completed --metadata release=v1.x`.
+- Monitor runner: report deploy, worker, scanner, backup, and monitoring events with `npm run operations:event -- --source systemd --event-type deploy.completed --metadata release=v1.x`. Also schedule or hook a recent info heartbeat such as `npm run operations:event -- --source uptime-monitor --event-type monitoring.heartbeat --severity info` so `/admin/readiness` can verify monitoring.
 - Restore drill runner: wrap a staging restore verification command with `npm run operations:restore-drill -- --id restore-YYYYMMDD -- <restore verification command>`.
 
 Each worker call must send `Authorization: Bearer <COFOUNDRY_OPERATIONS_TOKEN>` or `x-cofoundry-operations-token`.

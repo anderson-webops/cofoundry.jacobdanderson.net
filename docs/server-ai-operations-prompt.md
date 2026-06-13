@@ -87,7 +87,14 @@ Tasks:
      -H "Content-Type: application/json" \
      --data '{"eventType":"backup.failed","severity":"error","source":"systemd-timer","metadata":{"runId":"backup-YYYYMMDD-HHMM"}}'
 
-12. Wire a restore drill timer or manual runbook command:
+   Also report a current monitoring heartbeat so `/admin/readiness` can prove the monitor path is active:
+
+   npm run operations:event -- \
+     --source uptime-monitor \
+     --event-type monitoring.heartbeat \
+     --severity info
+
+12. Wire a restore drill timer or manual runbook command. `/admin/readiness` should continue to warn until a successful `restore_drill_succeeded` event appears:
 
    npm run operations:restore-drill -- \
      --id restore-YYYYMMDD \
