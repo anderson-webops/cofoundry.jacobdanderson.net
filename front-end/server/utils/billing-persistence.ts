@@ -129,7 +129,7 @@ export async function persistMockCheckoutSubscription(event: H3Event, session: S
   })
 
   await emitLifecycleNotificationEvent(event, nextWorkspace.seed, {
-    eventType: "subscription.changed",
+    eventType: "billing.state_changed",
     metadata: {
       action: "mock_checkout",
       billingCycle,
@@ -164,7 +164,7 @@ export async function updateMockSubscriptionRenewal(event: H3Event, session: Ses
   })
 
   await emitLifecycleNotificationEvent(event, nextWorkspace.seed, {
-    eventType: "subscription.changed",
+    eventType: "billing.state_changed",
     metadata: {
       action,
       plan: subscription.plan,

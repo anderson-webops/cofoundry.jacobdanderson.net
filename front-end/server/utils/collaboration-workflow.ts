@@ -105,6 +105,16 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
       nextSeed = transition.seed
       affectedUsers = [session.id, payload.toUserId]
       result = { requestId: transition.request.id }
+      lifecycleNotifications.push({
+        eventType: "intro.received",
+        metadata: {
+          actorUserId: session.id,
+          action: payload.action,
+        },
+        targetId: transition.request.id,
+        targetType: "connect_request",
+        userId: payload.toUserId,
+      })
       break
     }
 
@@ -121,13 +131,13 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
       result = { conversationId: transition.conversationId }
       if (payload.status === "accepted" && transition.match) {
         lifecycleNotifications.push({
-          eventType: "match.created",
+          eventType: "intro.accepted",
           metadata: {
             actorUserId: session.id,
-            requestId: request.id,
+            matchId: transition.match.id,
           },
-          targetId: transition.match.id,
-          targetType: "match",
+          targetId: request.id,
+          targetType: "connect_request",
           userId: request.fromUserId,
         })
       }
@@ -189,7 +199,7 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
       affectedUsers = [...conversation.participantIds]
       result = { proposalId: transition.proposalId }
       lifecycleNotifications.push({
-        eventType: "proposal.updated",
+        eventType: "proposal.received",
         metadata: {
           actorUserId: session.id,
           action: payload.action,

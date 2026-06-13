@@ -148,13 +148,13 @@ test("operations mail smoke worker sends a controlled smoke payload", async () =
 })
 
 test("operations lifecycle notification worker sends event-specific payloads", async () => {
-  const { fetchImpl, requests } = createJsonFetch(() => ({ delivered: false, eventType: "proposal.updated", mode: "mock" }))
+  const { fetchImpl, requests } = createJsonFetch(() => ({ delivered: false, eventType: "proposal.received", mode: "mock" }))
 
   await runOperationsWorker([
     "lifecycle-notification",
     "--dry-run",
     "--event-type",
-    "proposal.updated",
+    "proposal.received",
     "--target-type",
     "proposal",
     "--target-id",
@@ -173,7 +173,7 @@ test("operations lifecycle notification worker sends event-specific payloads", a
   assert.equal(requests[0].url, "https://cofoundry.example.com/api/operations/notifications/lifecycle")
   assert.deepEqual(requests[0].body, {
     dryRun: true,
-    eventType: "proposal.updated",
+    eventType: "proposal.received",
     metadata: { source: "test" },
     targetId: "proposal_ledgerloop_cto",
     targetType: "proposal",

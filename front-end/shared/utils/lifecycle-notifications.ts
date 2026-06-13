@@ -1,18 +1,23 @@
 import type { NotificationType, WorkspaceSeed } from "../types/domain"
 import { collaborationContractNeedsUserSignature, isConversationParticipant, isProposalParticipant } from "./collaboration"
+import { formatConnectRequestNextStep } from "./format"
 import { getContractById, getCurrentContractVersion, getCurrentProposalVersion, getProfileByUserId, getProposalById } from "./workspace"
 
 export const lifecycleNotificationEventTypes = [
+  "intro.received",
+  "intro.accepted",
   "match.created",
   "message.unread",
+  "proposal.received",
   "proposal.updated",
   "contract.signature_required",
   "report.reviewed",
+  "billing.state_changed",
   "subscription.changed",
 ] as const
 
 export type LifecycleNotificationEventType = typeof lifecycleNotificationEventTypes[number]
-export type LifecycleNotificationTargetType = "match" | "message" | "conversation" | "proposal" | "contract" | "report" | "subscription"
+export type LifecycleNotificationTargetType = "connect_request" | "match" | "message" | "conversation" | "proposal" | "contract" | "report" | "subscription"
 
 export interface LifecycleNotificationRequest {
   eventType: LifecycleNotificationEventType
@@ -74,6 +79,60 @@ function recipient(seed: WorkspaceSeed, userId: string) {
   }
 }
 
+function findRelationshipForConnectRequest(seed: WorkspaceSeed, fromUserId: string, toUserId: string) {
+  return seed.matches.find(match =>
+    match.source === "connect_request"
+    && match.participantIds.includes(fromUserId)
+    && match.participantIds.includes(toUserId),
+  )
+}
+
+function buildIntroReceivedPlan(seed: WorkspaceSeed, request: LifecycleNotificationRequest, recipientUser: NonNullable<ReturnType<typeof recipient>>) {
+  const connectRequest = seed.connectRequests.find(item => item.id === request.targetId)
+  if (!connectRequest || connectRequest.toUserId !== request.userId || connectRequest.status !== "pending")
+    return null
+
+  const senderName = userName(seed, connectRequest.fromUserId)
+  const nextStep = formatConnectRequestNextStep(connectRequest.structuredIntro.proposedNextStep)
+
+  return finalizePlan({
+    eventType: "intro.received",
+    href: "/app/inbox",
+    metadata: request.metadata || {},
+    notificationType: "match",
+    recipientEmail: recipientUser.email,
+    recipientName: recipientUser.name,
+    subject: `CoFoundry: intro request from ${senderName}`,
+    summary: `${senderName} sent an intro request for ${connectRequest.structuredIntro.roleContext}. They proposed: ${nextStep}.`,
+    targetId: connectRequest.id,
+    targetType: "connect_request",
+    userId: request.userId,
+  })
+}
+
+function buildIntroAcceptedPlan(seed: WorkspaceSeed, request: LifecycleNotificationRequest, recipientUser: NonNullable<ReturnType<typeof recipient>>) {
+  const connectRequest = seed.connectRequests.find(item => item.id === request.targetId)
+  if (!connectRequest || connectRequest.fromUserId !== request.userId || connectRequest.status !== "accepted")
+    return null
+
+  const counterpartName = userName(seed, connectRequest.toUserId)
+  const relationship = findRelationshipForConnectRequest(seed, connectRequest.fromUserId, connectRequest.toUserId)
+
+  return finalizePlan({
+    eventType: "intro.accepted",
+    href: relationship ? `/app/relationships/${relationship.id}` : "/app/inbox",
+    metadata: request.metadata || {},
+    notificationType: "match",
+    recipientEmail: recipientUser.email,
+    recipientName: recipientUser.name,
+    subject: `CoFoundry: ${counterpartName} accepted your intro`,
+    summary: `${counterpartName} accepted your intro request. Use the relationship workspace to coordinate the first conversation, trial, proposal, and agreement.`,
+    targetId: connectRequest.id,
+    targetType: "connect_request",
+    userId: request.userId,
+  })
+}
+
 function buildMatchCreatedPlan(seed: WorkspaceSeed, request: LifecycleNotificationRequest, recipientUser: NonNullable<ReturnType<typeof recipient>>) {
   const match = seed.matches.find(item => item.id === request.targetId)
   if (!match?.participantIds.includes(request.userId))
@@ -119,6 +178,30 @@ function buildUnreadMessagePlan(seed: WorkspaceSeed, request: LifecycleNotificat
     summary: `${senderName} sent a message that is still waiting in your workspace.`,
     targetId: message?.id || conversation.id,
     targetType: message ? "message" : "conversation",
+    userId: request.userId,
+  })
+}
+
+function buildProposalReceivedPlan(seed: WorkspaceSeed, request: LifecycleNotificationRequest, recipientUser: NonNullable<ReturnType<typeof recipient>>) {
+  const proposal = getProposalById(seed, request.targetId)
+  if (!proposal || proposal.recipientUserId !== request.userId)
+    return null
+
+  const version = getCurrentProposalVersion(seed, proposal)
+  const actorName = version?.createdByUserId ? userName(seed, version.createdByUserId) : "Your counterpart"
+  const roleTitle = version?.roleTitle || proposal.title
+
+  return finalizePlan({
+    eventType: "proposal.received",
+    href: `/app/proposals/${proposal.id}`,
+    metadata: request.metadata || {},
+    notificationType: "proposal",
+    recipientEmail: recipientUser.email,
+    recipientName: recipientUser.name,
+    subject: `CoFoundry: new proposal for ${roleTitle}`,
+    summary: `${actorName} sent a structured proposal for ${roleTitle}. Review the scope, trial plan, economics, decision rights, and agreement terms before responding.`,
+    targetId: proposal.id,
+    targetType: "proposal",
     userId: request.userId,
   })
 }
@@ -201,7 +284,7 @@ function buildSubscriptionChangedPlan(seed: WorkspaceSeed, request: LifecycleNot
     return null
 
   return finalizePlan({
-    eventType: "subscription.changed",
+    eventType: request.eventType,
     href: "/app/billing",
     metadata: request.metadata || {},
     notificationType: "billing",
@@ -221,16 +304,23 @@ export function buildLifecycleNotification(seed: WorkspaceSeed, request: Lifecyc
     return null
 
   switch (request.eventType) {
+    case "intro.received":
+      return buildIntroReceivedPlan(seed, request, recipientUser)
+    case "intro.accepted":
+      return buildIntroAcceptedPlan(seed, request, recipientUser)
     case "match.created":
       return buildMatchCreatedPlan(seed, request, recipientUser)
     case "message.unread":
       return buildUnreadMessagePlan(seed, request, recipientUser)
+    case "proposal.received":
+      return buildProposalReceivedPlan(seed, request, recipientUser)
     case "proposal.updated":
       return buildProposalUpdatedPlan(seed, request, recipientUser)
     case "contract.signature_required":
       return buildSignatureRequiredPlan(seed, request, recipientUser)
     case "report.reviewed":
       return buildReportReviewedPlan(seed, request, recipientUser)
+    case "billing.state_changed":
     case "subscription.changed":
       return buildSubscriptionChangedPlan(seed, request, recipientUser)
     default:

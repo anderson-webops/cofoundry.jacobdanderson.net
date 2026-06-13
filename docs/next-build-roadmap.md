@@ -168,17 +168,21 @@ The dashboard now shows the member's current activation gate, and the full activ
 
 ### 7. Operational notifications
 
-Status: source-level lifecycle notification layer, primary app trigger wiring, optional worker-side alert webhook support, and alert-smoke readiness checks are implemented; live provider/host wiring remains.
+Status: source-level lifecycle notification layer, launch-facing event templates, primary app trigger wiring, optional worker-side alert webhook support, and alert-smoke readiness checks are implemented; live provider/host wiring remains.
 
-The source now has shared lifecycle notification templates, worker-authenticated event delivery, durable delivery telemetry in mock/access-request mode, Supabase migration support for lifecycle metadata, admin operations visibility for event/target rows, non-blocking lifecycle emits from collaboration, report-review, and mock billing mutations, plus optional JSON alert webhooks for warning/error worker events with `/admin/readiness` evidence checks.
+The source now has shared lifecycle notification templates, worker-authenticated event delivery, durable delivery telemetry in mock/access-request mode, Supabase migration support for lifecycle metadata, admin operations visibility for event/target rows, non-blocking lifecycle emits from collaboration, report-review, and mock billing mutations, plus optional JSON alert webhooks for warning/error worker events with `/admin/readiness` evidence checks. The launch-facing names are explicit so provider templates can be mapped without guessing which generic workflow event fired.
 
 Covered lifecycle events:
 
+- `intro.received`
+- `intro.accepted`
 - `match.created`
 - `message.unread`
+- `proposal.received`
 - `proposal.updated`
 - `contract.signature_required`
 - `report.reviewed`
+- `billing.state_changed`
 - `subscription.changed`
 
 Remaining work:
@@ -186,7 +190,7 @@ Remaining work:
 - Verify SMTP/sendmail provider behavior in Supabase mode before enabling real sends.
 - Install worker/timer or queue processing on the production host.
 - Choose and configure the host alert webhook destination if external alerting is wanted, then run the checked-in alert-smoke event from the server.
-- Wire any future provider-only events, such as Stripe webhook-only subscription changes, after live providers are configured.
+- Wire any future provider-only events, such as Stripe webhook-only subscription reconciliation, after live providers are configured.
 
 ### 8. Agreement artifacts
 
@@ -251,13 +255,7 @@ Status: worker-authenticated mail smoke telemetry and `/admin/readiness` evidenc
 
 Mail transport can now be proven with `npm run operations:mail-smoke -- --to-email <monitored-inbox>`, which records `mail.smoke` delivery rows for `/admin/operations` and `/admin/readiness`.
 
-Remaining provider-backed event templates:
-
-- intro received
-- intro accepted
-- proposal received
-- signature required
-- billing state change
+Provider-backed template names now exist in source for intro received, intro accepted, proposal received, signature required, and billing state change. Remaining work is SMTP/provider verification and host-side scheduling or queue processing.
 
 ## Backend Contract Status
 

@@ -54,6 +54,67 @@ describe("notification delivery preferences", () => {
     })
   })
 
+  it("builds lifecycle content for pending intro requests", () => {
+    const plan = buildLifecycleNotification(workspaceSeed, {
+      eventType: "intro.received",
+      targetId: "connect_arjun_noah",
+      targetType: "connect_request",
+      userId: "user_noah",
+    })
+
+    expect(plan).toMatchObject({
+      eventType: "intro.received",
+      href: "/app/inbox",
+      notificationType: "match",
+      subject: "CoFoundry: intro request from Arjun Patel",
+      targetId: "connect_arjun_noah",
+      targetType: "connect_request",
+      userId: "user_noah",
+    })
+    expect(plan?.body).toContain("Growth ownership for SignalDeck")
+    expect(plan?.body).toContain("15-minute intro call")
+  })
+
+  it("builds lifecycle content for accepted intros", () => {
+    const plan = buildLifecycleNotification(workspaceSeed, {
+      eventType: "intro.accepted",
+      targetId: "connect_olivia_malik",
+      targetType: "connect_request",
+      userId: "user_olivia",
+    })
+
+    expect(plan).toMatchObject({
+      eventType: "intro.accepted",
+      href: "/app/relationships/match_olivia_malik",
+      notificationType: "match",
+      subject: "CoFoundry: Malik Thompson accepted your intro",
+      targetId: "connect_olivia_malik",
+      targetType: "connect_request",
+      userId: "user_olivia",
+    })
+    expect(plan?.body).toContain("accepted your intro request")
+  })
+
+  it("builds lifecycle content for newly received proposals", () => {
+    const plan = buildLifecycleNotification(workspaceSeed, {
+      eventType: "proposal.received",
+      targetId: "proposal_ledgerloop_cto",
+      targetType: "proposal",
+      userId: "user_malik",
+    })
+
+    expect(plan).toMatchObject({
+      eventType: "proposal.received",
+      href: "/app/proposals/proposal_ledgerloop_cto",
+      notificationType: "proposal",
+      subject: "CoFoundry: new proposal for Technical Co-Founder",
+      targetId: "proposal_ledgerloop_cto",
+      targetType: "proposal",
+      userId: "user_malik",
+    })
+    expect(plan?.body).toContain("scope, trial plan, economics, decision rights")
+  })
+
   it("builds lifecycle notification content for signature-required events", () => {
     const plan = buildLifecycleNotification(workspaceSeed, {
       eventType: "contract.signature_required",
@@ -115,19 +176,28 @@ describe("notification delivery preferences", () => {
 
   it("builds lifecycle content for billing subscription changes", () => {
     const plan = buildLifecycleNotification(workspaceSeed, {
-      eventType: "subscription.changed",
+      eventType: "billing.state_changed",
       targetId: "subscription_olivia",
       targetType: "subscription",
       userId: "user_olivia",
     })
 
     expect(plan).toMatchObject({
-      eventType: "subscription.changed",
+      eventType: "billing.state_changed",
       href: "/app/billing",
       notificationType: "billing",
       subject: "CoFoundry: pro billing status is active",
       targetId: "subscription_olivia",
       targetType: "subscription",
     })
+
+    const legacyPlan = buildLifecycleNotification(workspaceSeed, {
+      eventType: "subscription.changed",
+      targetId: "subscription_olivia",
+      targetType: "subscription",
+      userId: "user_olivia",
+    })
+
+    expect(legacyPlan?.eventType).toBe("subscription.changed")
   })
 })
