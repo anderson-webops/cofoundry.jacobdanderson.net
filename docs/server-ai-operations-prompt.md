@@ -15,6 +15,7 @@ Source/runtime context:
 - Backend production start remains `node dist/server.js`; do not add dotenv/dotenvx loading to production startup.
 - Server-only secrets must come from Vault-managed or host-managed env files.
 - The app now supports a server-only `COFOUNDRY_OPERATIONS_TOKEN`.
+- The worker CLI also supports optional server-only alert webhook env: `COFOUNDRY_ALERT_WEBHOOK_URL`, `COFOUNDRY_ALERT_WEBHOOK_TOKEN`, `COFOUNDRY_ALERT_SEVERITIES`, and `COFOUNDRY_ALERT_TIMEOUT_MS`. Leave these unset until the operator chooses the destination.
 - The source includes schedulable worker commands: `npm run operations:backup`, `npm run operations:digest`, `npm run operations:scan`, `npm run operations:event`, `npm run operations:worker -- lifecycle-notification`, and `npm run operations:restore-drill`.
 - The source includes systemd templates in `deploy/systemd/`. Prefer installing and tuning those templates instead of hand-writing timer units from scratch.
 - In mock/access-request mode, operations telemetry persists to `.data/operations-telemetry.json` and local uploaded scan artifacts persist under `.data/local-file-uploads/` unless `COFOUNDRY_LOCAL_DATA_DIR` points at another durable writable directory.
@@ -26,7 +27,7 @@ Tasks:
 4. Restart the app and verify production logs do not mention loading `../.env`.
 5. If Supabase mode is not intentionally enabled, leave `NUXT_PUBLIC_BACKEND_MODE="mock"` and verify the public site remains a marketing/access-request shell.
 6. If Supabase mode is intentionally enabled, verify all migrations in `back-end/supabase/migrations/` have been applied and that `SUPABASE_SERVICE_ROLE_KEY`, `NUXT_PUBLIC_SUPABASE_URL`, `NUXT_PUBLIC_SUPABASE_ANON_KEY`, and `SESSION_SIGNING_SECRET` are present.
-7. Install the checked-in unit templates from `deploy/systemd/` or create equivalent cron entries. Copy `deploy/systemd/cofoundry-operations.env.example` to `/etc/cofoundry/operations.env`, fill in host values from Vault-managed env, and adjust `User=`, `Group=`, and `WorkingDirectory=` if needed.
+7. Install the checked-in unit templates from `deploy/systemd/` or create equivalent cron entries. Copy `deploy/systemd/cofoundry-operations.env.example` to `/etc/cofoundry/operations.env`, fill in host values from Vault-managed env, and adjust `User=`, `Group=`, and `WorkingDirectory=` if needed. If an alerting destination exists, add `COFOUNDRY_ALERT_WEBHOOK_URL`, optional `COFOUNDRY_ALERT_WEBHOOK_TOKEN`, optional `COFOUNDRY_ALERT_SEVERITIES=error,warning`, and optional `COFOUNDRY_ALERT_TIMEOUT_MS=10000` to the same server-only worker env file.
 8. Create a systemd timer or equivalent cron for unread digests. First run dry-run mode with the checked-in worker:
 
    npm run operations:digest -- --dry-run --max-users 100
@@ -111,6 +112,14 @@ Tasks:
      --source uptime-monitor \
      --event-type monitoring.heartbeat \
      --severity info
+
+   If `COFOUNDRY_ALERT_WEBHOOK_URL` is configured, verify a warning or error event reaches the destination without exposing the webhook URL or token in app logs:
+
+   npm run operations:event -- \
+     --source uptime-monitor \
+     --event-type monitoring.alert_test \
+     --severity warning \
+     --metadata purpose=alert-webhook-smoke
 
 13. Wire a restore drill timer or manual runbook command. `/admin/readiness` should continue to warn until a successful `restore_drill_succeeded` event appears:
 

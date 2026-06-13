@@ -168,9 +168,9 @@ The dashboard now shows the member's current activation gate, and the full activ
 
 ### 7. Operational notifications
 
-Status: source-level lifecycle notification layer and primary app trigger wiring implemented; live provider/host wiring remains.
+Status: source-level lifecycle notification layer, primary app trigger wiring, and optional worker-side alert webhook support are implemented; live provider/host wiring remains.
 
-The source now has shared lifecycle notification templates, worker-authenticated event delivery, durable delivery telemetry in mock/access-request mode, Supabase migration support for lifecycle metadata, admin operations visibility for event/target rows, and non-blocking lifecycle emits from collaboration, report-review, and mock billing mutations.
+The source now has shared lifecycle notification templates, worker-authenticated event delivery, durable delivery telemetry in mock/access-request mode, Supabase migration support for lifecycle metadata, admin operations visibility for event/target rows, non-blocking lifecycle emits from collaboration, report-review, and mock billing mutations, plus optional JSON alert webhooks for warning/error worker events.
 
 Covered lifecycle events:
 
@@ -185,6 +185,7 @@ Remaining work:
 
 - Verify SMTP/sendmail provider behavior in Supabase mode before enabling real sends.
 - Install worker/timer or queue processing on the production host.
+- Choose and configure the host alert webhook destination if external alerting is wanted.
 - Wire any future provider-only events, such as Stripe webhook-only subscription changes, after live providers are configured.
 
 ### 8. Agreement artifacts
@@ -416,6 +417,7 @@ These items still need to be provisioned outside the repo:
 
 - error monitoring
 - structured logging destination
+- alert webhook destination if worker-reported warning/error events should page or notify operators
 - backup / restore plan
 - documented first-admin bootstrap script
 - deployment secret store / Vault wiring
