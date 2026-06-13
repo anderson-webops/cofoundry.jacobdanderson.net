@@ -442,6 +442,7 @@ export const privacySections: LegalSection[] = [
     summary: "Some messages are required for the service, while marketing communication remains optional.",
     paragraphs: [
       "CoFoundry may send service-related emails or in-product notices for account verification, security events, password resets, connect requests, match status, proposal updates, billing events, moderation actions, and similar operational communications.",
+      "Members can manage optional relationship workflow emails and scheduled workspace digest emails from account settings. Those controls apply to product workflow reminders such as intros, unread messages, proposals, and signature requests, not to service-critical billing, safety, security, legal, or support notices.",
       "CoFoundry may also send product updates, launch announcements, or other marketing communications where permitted. You can opt out of non-essential marketing messages, but you may still receive service-critical communications tied to your account, subscription, or safety status.",
       "If members use direct links or contact details obtained through CoFoundry to continue a discussion off-platform, those later communications are governed by the tools and policies of the channels they choose to use.",
     ],

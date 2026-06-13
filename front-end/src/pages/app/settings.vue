@@ -26,6 +26,7 @@ const privacyRequestType = ref<PrivacyRequestType>("account_deletion")
 const trustVerificationPending = ref<TrustVerificationType | "">("")
 const trustTier = computed(() => profile.value ? buildProfileTrustTier(profile.value) : "level_a")
 const unreadDigestEmailEnabled = computed(() => currentUser.value?.notificationPreferences?.unreadDigestEmail === true)
+const workflowEmailEnabled = computed(() => currentUser.value?.notificationPreferences?.workflowEmail === true)
 const privacyRequestOptions = [
   { label: "Account deletion", value: "account_deletion" },
   { label: "Data export help", value: "data_export" },
@@ -119,7 +120,7 @@ async function setUnreadDigestEmail(enabled: boolean) {
 
   try {
     await workspaceStore.updateNotificationPreferences(currentUser.value.id, {
-      ...(currentUser.value.notificationPreferences || { unreadDigestEmail: false }),
+      ...(currentUser.value.notificationPreferences || { unreadDigestEmail: false, workflowEmail: false }),
       unreadDigestEmail: enabled,
     })
     toastStore.push({
@@ -127,6 +128,30 @@ async function setUnreadDigestEmail(enabled: boolean) {
       message: enabled
         ? "Scheduled unread workspace digests are enabled for your account."
         : "Scheduled unread workspace digests are disabled for your account.",
+      tone: "success",
+    })
+  }
+  finally {
+    notificationPreferencesSaving.value = false
+  }
+}
+
+async function setWorkflowEmail(enabled: boolean) {
+  if (!currentUser.value)
+    return
+
+  notificationPreferencesSaving.value = true
+
+  try {
+    await workspaceStore.updateNotificationPreferences(currentUser.value.id, {
+      ...(currentUser.value.notificationPreferences || { unreadDigestEmail: false, workflowEmail: false }),
+      workflowEmail: enabled,
+    })
+    toastStore.push({
+      title: "Email preference updated",
+      message: enabled
+        ? "Relationship workflow emails are enabled for your account."
+        : "Relationship workflow emails are disabled for your account.",
       tone: "success",
     })
   }
@@ -227,8 +252,35 @@ async function requestTrustVerification(type: TrustVerificationType, label: stri
           Email notifications
         </h2>
         <p class="muted text-sm leading-6 mt-4">
-          Control scheduled workspace digest emails. Service-critical account, security, billing, and support notices are handled separately.
+          Control optional product workflow emails. Service-critical account, security, billing, trust, and support notices are handled separately.
         </p>
+        <div class="surface-row mt-5 flex flex-wrap gap-4 items-center justify-between">
+          <div class="min-w-0">
+            <p class="text-sm font-semibold">
+              Relationship workflow email
+            </p>
+            <p class="muted text-sm leading-6 mt-1">
+              Email me when intros, accepted intros, unread messages, proposals, or signature requests need action.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            :aria-checked="workflowEmailEnabled"
+            :disabled="notificationPreferencesSaving"
+            class="p-1 border border-[var(--border)] rounded-full bg-[var(--surface-strong)] shrink-0 h-8 w-14 transition relative disabled:opacity-60 disabled:cursor-wait"
+            :class="workflowEmailEnabled ? 'bg-[var(--accent)]/25' : ''"
+            @click="setWorkflowEmail(!workflowEmailEnabled)"
+          >
+            <span
+              class="rounded-full bg-[var(--text)] h-6 w-6 block transition"
+              :class="workflowEmailEnabled ? 'translate-x-6 bg-[var(--accent)]' : 'translate-x-0'"
+            />
+            <span class="sr-only">
+              {{ workflowEmailEnabled ? "Disable relationship workflow email" : "Enable relationship workflow email" }}
+            </span>
+          </button>
+        </div>
         <div class="surface-row mt-5 flex flex-wrap gap-4 items-center justify-between">
           <div class="min-w-0">
             <p class="text-sm font-semibold">

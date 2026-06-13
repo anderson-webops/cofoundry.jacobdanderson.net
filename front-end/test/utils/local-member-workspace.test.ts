@@ -58,6 +58,7 @@ describe("local member workspace persistence", () => {
       bookmarks: [],
       notificationPreferences: {
         unreadDigestEmail: true,
+        workflowEmail: true,
       },
       onboardingCompleted: true,
       opportunities: [],
@@ -79,6 +80,7 @@ describe("local member workspace persistence", () => {
       headline: "Server-persisted local member profile",
     })
     expect(reloaded.state.user.notificationPreferences.unreadDigestEmail).toBe(true)
+    expect(reloaded.state.user.notificationPreferences.workflowEmail).toBe(true)
   })
 
   it("lists all local member opportunities for admin review", async () => {
@@ -109,6 +111,7 @@ describe("local member workspace persistence", () => {
       bookmarks: [],
       notificationPreferences: {
         unreadDigestEmail: true,
+        workflowEmail: true,
       },
       onboardingCompleted: true,
       opportunities: [opportunity],

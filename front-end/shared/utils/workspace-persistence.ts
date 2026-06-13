@@ -12,6 +12,7 @@ import type {
 } from "../types/domain"
 import { workspaceSeed } from "../data/seed"
 import { cloneValue } from "./clone"
+import { normalizeNotificationPreferences } from "./notification-preferences"
 import { buildSessionUser, getProfileByUserId, getSubscriptionByUserId, getUserById } from "./workspace"
 
 export interface SessionResolutionInput {
@@ -87,9 +88,7 @@ export function buildDraftMemberWorkspaceState(session: SessionUser, createdAt =
       linkedProviders: ["email"],
       verifiedEmail,
       onboardingCompleted: session.onboardingCompleted,
-      notificationPreferences: {
-        unreadDigestEmail: false,
-      },
+      notificationPreferences: normalizeNotificationPreferences(),
       suspendedAt: null,
     },
     profile: {
@@ -259,7 +258,7 @@ export function buildMemberWorkspaceWritePayload(seed: WorkspaceSeed, userId: st
 
   return {
     onboardingCompleted: state.user.onboardingCompleted,
-    notificationPreferences: state.user.notificationPreferences,
+    notificationPreferences: normalizeNotificationPreferences(state.user.notificationPreferences),
     profile: state.profile,
     opportunities: state.opportunities,
     bookmarks: state.bookmarks,

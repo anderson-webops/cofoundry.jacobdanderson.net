@@ -67,7 +67,7 @@ Current persisted slice:
 Still local/mock or partially server-backed for now:
 
 - collaboration writes are server-routed and Supabase-persisted when Supabase mode is active, but the relationship workspace still needs more granular read endpoints and realtime refresh
-- notifications persist with collaboration state, on-demand and scheduled digest delivery are wired, and event-specific lifecycle emails still need final provider-backed templates
+- notifications persist with collaboration state, on-demand and scheduled digest delivery are wired, and event-specific lifecycle emails have launch-facing templates plus member workflow-email preference gating
 - moderation enforcement now persists user/report/privacy/admin-action updates in Supabase mode, and privacy-request review/resolution now notifies the requesting user
 
 Backend-owned entities:
@@ -168,7 +168,7 @@ The dashboard now shows the member's current activation gate, and the full activ
 
 ### 7. Operational notifications
 
-Status: source-level lifecycle notification layer, launch-facing event templates, primary app trigger wiring, optional worker-side alert webhook support, and alert-smoke readiness checks are implemented; live provider/host wiring remains.
+Status: source-level lifecycle notification layer, launch-facing event templates, member workflow-email preference gating, primary app trigger wiring, optional worker-side alert webhook support, and alert-smoke readiness checks are implemented; live provider/host wiring remains.
 
 The source now has shared lifecycle notification templates, worker-authenticated event delivery, durable delivery telemetry in mock/access-request mode, Supabase migration support for lifecycle metadata, admin operations visibility for event/target rows, non-blocking lifecycle emits from collaboration, report-review, and mock billing mutations, plus optional JSON alert webhooks for warning/error worker events with `/admin/readiness` evidence checks. The launch-facing names are explicit so provider templates can be mapped without guessing which generic workflow event fired.
 
@@ -255,7 +255,7 @@ Status: worker-authenticated mail smoke telemetry and `/admin/readiness` evidenc
 
 Mail transport can now be proven with `npm run operations:mail-smoke -- --to-email <monitored-inbox>`, which records `mail.smoke` delivery rows for `/admin/operations` and `/admin/readiness`.
 
-Provider-backed template names now exist in source for intro received, intro accepted, proposal received, signature required, and billing state change. Remaining work is SMTP/provider verification and host-side scheduling or queue processing.
+Provider-backed template names now exist in source for intro received, intro accepted, proposal received, signature required, and billing state change. Optional relationship workflow emails are now gated by a member preference in `/app/settings`; scheduled digests keep their separate opt-in. Remaining work is SMTP/provider verification and host-side scheduling or queue processing.
 
 ## Backend Contract Status
 

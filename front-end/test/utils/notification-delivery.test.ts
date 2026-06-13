@@ -1,5 +1,9 @@
-import { describe, expect, it } from "vitest"
-import { buildDigestContent, isScheduledDigestEmailEnabled, sendUnreadNotificationDigest } from "../../server/utils/notification-delivery"
+import { mkdtemp, rm } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import process from "node:process"
+import { describe, expect, it, vi } from "vitest"
+import { buildDigestContent, isLifecycleWorkflowEmailEnabled, isScheduledDigestEmailEnabled, sendLifecycleNotification, sendUnreadNotificationDigest } from "../../server/utils/notification-delivery"
 import { workspaceSeed } from "../../shared/data/seed"
 import { cloneValue } from "../../shared/utils/clone"
 import { buildLifecycleNotification } from "../../shared/utils/lifecycle-notifications"
@@ -17,6 +21,46 @@ describe("notification delivery preferences", () => {
 
     expect(isScheduledDigestEmailEnabled(seed, "user_olivia")).toBe(false)
     expect(isScheduledDigestEmailEnabled(seed, "missing_user")).toBe(false)
+  })
+
+  it("allows workflow lifecycle email only for explicitly enabled users", async () => {
+    const seed = cloneValue(workspaceSeed)
+    const user = seed.users.find(item => item.id === "user_malik")
+    expect(user).toBeDefined()
+
+    expect(isLifecycleWorkflowEmailEnabled(seed, "user_malik")).toBe(true)
+
+    user!.notificationPreferences.workflowEmail = false
+    expect(isLifecycleWorkflowEmailEnabled(seed, "user_malik")).toBe(false)
+
+    const dataDirectory = await mkdtemp(join(tmpdir(), "cofoundry-notification-delivery-"))
+    process.env.COFOUNDRY_LOCAL_DATA_DIR = dataDirectory
+    vi.stubGlobal("useRuntimeConfig", () => ({
+      public: {
+        backendMode: "mock",
+      },
+    }))
+
+    try {
+      const result = await sendLifecycleNotification({} as never, seed, {
+        eventType: "proposal.received",
+        targetId: "proposal_ledgerloop_cto",
+        targetType: "proposal",
+        userId: "user_malik",
+      })
+
+      expect(result.delivery).toMatchObject({
+        delivered: false,
+        reason: "workflow_email_disabled",
+        skipped: true,
+        suppressed: true,
+      })
+    }
+    finally {
+      delete process.env.COFOUNDRY_LOCAL_DATA_DIR
+      vi.unstubAllGlobals()
+      await rm(dataDirectory, { force: true, recursive: true })
+    }
   })
 
   it("builds digest content from the canonical inbox action queue", () => {

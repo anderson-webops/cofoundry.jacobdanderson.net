@@ -4,6 +4,7 @@ import type { LifecycleNotificationRequest } from "~/shared/utils/lifecycle-noti
 import { randomUUID } from "node:crypto"
 import { buildInboxSnapshot } from "../../shared/utils/inbox"
 import { buildLifecycleNotification } from "../../shared/utils/lifecycle-notifications"
+import { isWorkflowLifecycleEvent, normalizeNotificationPreferences } from "../../shared/utils/notification-preferences"
 import { isContactMailConfigured, sendPlainTextEmail } from "./contact"
 import { recordLocalNotificationDelivery } from "./local-operations-store"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
@@ -15,7 +16,7 @@ export interface NotificationDeliveryResult {
   error: string | null
   eventType?: string
   metadata?: Record<string, unknown>
-  reason?: "dry_run" | "email_digest_disabled" | "mail_not_configured" | "mock_mode" | "no_workspace_items" | "sent" | "delivery_failed"
+  reason?: "dry_run" | "email_digest_disabled" | "mail_not_configured" | "mock_mode" | "no_workspace_items" | "sent" | "delivery_failed" | "workflow_email_disabled"
   skipped?: boolean
   subject: string
   suppressed?: boolean
@@ -36,7 +37,11 @@ export function buildDigestSubject(unreadCount: number) {
 }
 
 export function isScheduledDigestEmailEnabled(seed: WorkspaceSeed, userId: string) {
-  return seed.users.find(user => user.id === userId)?.notificationPreferences?.unreadDigestEmail === true
+  return normalizeNotificationPreferences(seed.users.find(user => user.id === userId)?.notificationPreferences).unreadDigestEmail
+}
+
+export function isLifecycleWorkflowEmailEnabled(seed: WorkspaceSeed, userId: string) {
+  return normalizeNotificationPreferences(seed.users.find(user => user.id === userId)?.notificationPreferences).workflowEmail
 }
 
 export function buildDigestContent(seed: WorkspaceSeed, session: SessionUser) {
@@ -133,6 +138,20 @@ export async function sendLifecycleNotification(
     targetId: plan.targetId,
     targetType: plan.targetType,
     unreadCount: 1,
+  }
+
+  if (!options.dryRun && isWorkflowLifecycleEvent(plan.eventType) && !isLifecycleWorkflowEmailEnabled(seed, plan.userId)) {
+    const result: NotificationDeliveryResult = {
+      ...baseResult,
+      configured: false,
+      delivered: false,
+      error: "Relationship workflow email is disabled for this member.",
+      reason: "workflow_email_disabled",
+      skipped: true,
+      suppressed: true,
+    }
+    await recordNotificationDelivery(event, session, result)
+    return { delivery: result, plan }
   }
 
   if (options.dryRun || options.forceRecordOnlyReason) {

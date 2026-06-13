@@ -56,6 +56,7 @@ export type FileUploadRelatedType = "message" | "proposal" | "contract" | "profi
 
 export interface NotificationPreferences {
   unreadDigestEmail: boolean
+  workflowEmail: boolean
 }
 
 export interface SessionUser {
