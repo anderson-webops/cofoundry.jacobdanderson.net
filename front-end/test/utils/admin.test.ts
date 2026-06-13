@@ -65,6 +65,36 @@ describe("admin utilities", () => {
     expect(filtered[0]?.targetLabel).toBe("linkedin-verification-summary.pdf")
   })
 
+  it("resolves opportunity audit targets", () => {
+    const entries = buildAdminAuditEntries({
+      ...workspaceSeed,
+      adminActions: [
+        {
+          adminUserId: "user_ava",
+          createdAt: "2026-06-12T12:00:00.000Z",
+          id: "action_review_opportunity",
+          metadata: {
+            verificationStatus: "domain_verified",
+          },
+          notes: "Verified LedgerLoop domain ownership evidence.",
+          targetId: "opp_ledgerloop",
+          targetType: "opportunity",
+          type: "review_evidence",
+        },
+        ...workspaceSeed.adminActions,
+      ],
+    })
+    const filtered = filterAdminAuditEntries(entries, {
+      actionType: "review_evidence",
+      actorId: "all",
+      query: "ledgerloop",
+      targetType: "opportunity",
+    })
+
+    expect(filtered).toHaveLength(1)
+    expect(filtered[0]?.targetLabel).toBe("LedgerLoop")
+  })
+
   it("filters role-change audit entries", () => {
     const entries = buildAdminAuditEntries({
       ...workspaceSeed,
@@ -181,6 +211,38 @@ describe("admin utilities", () => {
     expect(queue.some(item => item.id === "readiness:file-scanning" && item.href === "/admin/operations" && item.priority === "critical")).toBe(true)
     expect(queue.some(item => item.id === "access:access_stale" && item.href === "/admin/access-requests" && item.priority === "high")).toBe(true)
     expect(queue.some(item => item.id === "privacy:privacy_export" && item.href === "/admin/privacy" && item.priority === "standard")).toBe(true)
+  })
+
+  it("adds manual-review opportunity listings to the command queue", () => {
+    const opportunity = {
+      ...workspaceSeed.opportunities[0]!,
+      riskFlags: ["Ownership proof needs operator review."],
+      updatedAt: "2026-06-12T11:30:00.000Z",
+      verificationMethod: "domain" as const,
+      verificationStatus: "manual_review" as const,
+    }
+    const queue = buildAdminCommandQueue({
+      generatedAt: "2026-06-12T12:00:00.000Z",
+      seed: {
+        ...workspaceSeed,
+        opportunities: [
+          opportunity,
+          ...workspaceSeed.opportunities.slice(1),
+        ],
+      },
+    })
+    const item = queue.find(row => row.id === `opportunity:${opportunity.id}`)
+
+    expect(item).toBeDefined()
+    expect(item).toMatchObject({
+      href: "/admin/queue",
+      kind: "moderation",
+      priority: "high",
+      targetId: opportunity.id,
+      targetType: "opportunity",
+      title: "Opportunity verification review",
+    })
+    expect(item?.statusLabel).toContain("Manual review")
   })
 
   it("derives command queue ownership, escalation, evidence review, and SLA state from admin actions", () => {

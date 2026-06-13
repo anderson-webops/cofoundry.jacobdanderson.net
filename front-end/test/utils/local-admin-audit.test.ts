@@ -4,7 +4,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import process from "node:process"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { persistAdminAction, persistReportStatus, persistUserEmailVerification, persistUserNotification, persistUserRole, persistUserSuspension } from "../../server/utils/admin-persistence"
+import { persistAdminAction, persistOpportunityVerification, persistReportStatus, persistUserEmailVerification, persistUserNotification, persistUserRole, persistUserSuspension } from "../../server/utils/admin-persistence"
 import { clearLocalAdminAuditStoreForTests, mergeLocalAdminAuditState, readLocalAdminAuditStore } from "../../server/utils/local-admin-audit"
 import { workspaceSeed } from "../../shared/data/seed"
 
@@ -34,6 +34,7 @@ describe("local admin audit store", () => {
   it("persists mock-mode admin actions and overlays workspace state", async () => {
     const targetUserId = workspaceSeed.users.find(user => user.role === "collaborator")?.id || workspaceSeed.users[0]!.id
     const reportId = workspaceSeed.reports[0]!.id
+    const opportunityId = workspaceSeed.opportunities[0]!.id
     const createdAt = "2026-06-12T18:00:00.000Z"
 
     await persistUserSuspension({} as H3Event, targetUserId, createdAt)
@@ -44,6 +45,13 @@ describe("local admin audit store", () => {
       notes: "Reviewed report in local production mode.",
       reportId,
       status: "reviewed",
+      timestamp: createdAt,
+    })
+    await persistOpportunityVerification({} as H3Event, {
+      adminUserId: "user_ava",
+      notes: "Reviewed opportunity ownership proof in local production mode.",
+      opportunityId,
+      status: "domain_verified",
       timestamp: createdAt,
     })
     await persistAdminAction({} as H3Event, {
@@ -86,6 +94,10 @@ describe("local admin audit store", () => {
       reviewedAt: createdAt,
       reviewedByUserId: "user_ava",
       status: "reviewed",
+    })
+    expect(mergedSeed.opportunities.find(opportunity => opportunity.id === opportunityId)).toMatchObject({
+      updatedAt: createdAt,
+      verificationStatus: "domain_verified",
     })
     expect(mergedSeed.notifications[0]).toMatchObject({
       id: "notification_local",

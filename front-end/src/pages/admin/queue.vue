@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { ProductionReadinessPayload } from "../../../server/utils/production-readiness"
-import type { AccessRequest, AdminAction, AdminEscalationQueue, PrivacyRequest } from "~/shared/types/domain"
+import type { AccessRequest, AdminAction, AdminEscalationQueue, OpportunityVerificationStatus, PrivacyRequest } from "~/shared/types/domain"
 import type { AdminCommandQueueItem, AdminCommandQueueKind, AdminCommandQueuePriority, AdminCommandQueueSlaStatus } from "~/shared/utils/admin"
 import { buildAdminCommandQueue, defaultAdminEscalationQueueForTarget, formatAdminEscalationQueue, mergeAdminActions } from "~/shared/utils/admin"
-import { formatDate, formatRelativeDate } from "~/shared/utils/format"
+import { formatDate, formatOpportunityVerificationStatus, formatRelativeDate } from "~/shared/utils/format"
 
 definePageMeta({
   layout: "admin",
@@ -213,6 +213,10 @@ function canReviewEvidence(item: AdminCommandQueueItem) {
   return item.kind === "moderation" || item.kind === "privacy"
 }
 
+function canVerifyOpportunity(item: AdminCommandQueueItem) {
+  return item.targetType === "opportunity"
+}
+
 function defaultQueueActionNote(item: AdminCommandQueueItem, action: "assign" | "escalate" | "review_evidence") {
   const actor = authStore.currentUser?.name || authStore.currentUser?.email || "Admin"
 
@@ -223,6 +227,11 @@ function defaultQueueActionNote(item: AdminCommandQueueItem, action: "assign" | 
     return `${actor} escalated ${item.title.toLowerCase()} to ${formatAdminEscalationQueue(selectedEscalationQueue(item))}.`
 
   return `${actor} reviewed the available evidence for ${item.title.toLowerCase()}.`
+}
+
+function defaultOpportunityVerificationNote(item: AdminCommandQueueItem, status: Exclude<OpportunityVerificationStatus, "manual_review">) {
+  const actor = authStore.currentUser?.name || authStore.currentUser?.email || "Admin"
+  return `${actor} reviewed ${item.summary} and marked the listing ${formatOpportunityVerificationStatus(status).toLowerCase()}.`
 }
 
 async function recordQueueAction(item: AdminCommandQueueItem, action: "assign" | "escalate" | "review_evidence") {
@@ -266,6 +275,38 @@ async function recordQueueAction(item: AdminCommandQueueItem, action: "assign" |
     toastStore.push({
       title: "Queue action failed",
       message: caughtError instanceof Error ? caughtError.message : "The queue action could not be saved.",
+      tone: "danger",
+    })
+  }
+  finally {
+    pendingAction.value = ""
+  }
+}
+
+async function recordOpportunityVerification(item: AdminCommandQueueItem, status: Exclude<OpportunityVerificationStatus, "manual_review">) {
+  pendingAction.value = `${item.id}:verify:${status}`
+
+  try {
+    await requestFetch(`/api/admin/opportunities/${item.targetId}/verification`, {
+      body: {
+        notes: defaultOpportunityVerificationNote(item, status),
+        status,
+      },
+      method: "POST",
+    })
+    await workspaceStore.loadWorkspace(true)
+    await refresh()
+
+    toastStore.push({
+      title: "Opportunity verification updated",
+      message: "The listing status and audit trail were saved.",
+      tone: status === "unverified" ? "warning" : "success",
+    })
+  }
+  catch (caughtError) {
+    toastStore.push({
+      title: "Opportunity verification failed",
+      message: caughtError instanceof Error ? caughtError.message : "The listing verification status could not be saved.",
       tone: "danger",
     })
   }
@@ -432,6 +473,30 @@ async function recordQueueAction(item: AdminCommandQueueItem, action: "assign" |
                 @click="recordQueueAction(item, 'review_evidence')"
               >
                 {{ pendingAction === `${item.id}:review_evidence` ? "Saving..." : "Evidence reviewed" }}
+              </BaseButton>
+              <BaseButton
+                v-if="canVerifyOpportunity(item)"
+                variant="secondary"
+                :disabled="Boolean(pendingAction)"
+                @click="recordOpportunityVerification(item, 'domain_verified')"
+              >
+                {{ pendingAction === `${item.id}:verify:domain_verified` ? "Saving..." : "Domain verified" }}
+              </BaseButton>
+              <BaseButton
+                v-if="canVerifyOpportunity(item)"
+                variant="secondary"
+                :disabled="Boolean(pendingAction)"
+                @click="recordOpportunityVerification(item, 'owner_verified')"
+              >
+                {{ pendingAction === `${item.id}:verify:owner_verified` ? "Saving..." : "Owner verified" }}
+              </BaseButton>
+              <BaseButton
+                v-if="canVerifyOpportunity(item)"
+                variant="ghost"
+                :disabled="Boolean(pendingAction)"
+                @click="recordOpportunityVerification(item, 'unverified')"
+              >
+                {{ pendingAction === `${item.id}:verify:unverified` ? "Saving..." : "Keep unverified" }}
               </BaseButton>
               <BaseButton variant="secondary" :to="item.href">
                 {{ item.actionLabel }}

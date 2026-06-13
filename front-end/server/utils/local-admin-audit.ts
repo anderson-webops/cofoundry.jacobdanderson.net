@@ -1,4 +1,4 @@
-import type { AdminAction, AppRole, Notification, PrivacyRequestStatus, ReportStatus, WorkspaceSeed } from "../../shared/types/domain"
+import type { AdminAction, AppRole, Notification, OpportunityVerificationStatus, PrivacyRequestStatus, ReportStatus, WorkspaceSeed } from "../../shared/types/domain"
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { dirname, resolve } from "node:path"
 import process from "node:process"
@@ -23,9 +23,19 @@ interface LocalReportAdminPatch {
   updatedAt: string
 }
 
+interface LocalOpportunityAdminPatch {
+  id: string
+  reviewedAt: string
+  reviewedByUserId: string
+  reviewNotes: string
+  status: Exclude<OpportunityVerificationStatus, "manual_review">
+  updatedAt: string
+}
+
 interface LocalAdminAuditStore {
   actions: AdminAction[]
   notifications: Notification[]
+  opportunityPatches: LocalOpportunityAdminPatch[]
   reportPatches: LocalReportAdminPatch[]
   updatedAt: string
   userPatches: LocalUserAdminPatch[]
@@ -63,6 +73,7 @@ function emptyStore(): LocalAdminAuditStore {
   return {
     actions: [],
     notifications: [],
+    opportunityPatches: [],
     reportPatches: [],
     updatedAt: new Date().toISOString(),
     userPatches: [],
@@ -85,6 +96,7 @@ function pruneStore(store: LocalAdminAuditStore): LocalAdminAuditStore {
     ...store,
     actions: newestFirst(store.actions).slice(0, limit),
     notifications: newestFirst(store.notifications).slice(0, limit),
+    opportunityPatches: newestFirst(store.opportunityPatches).slice(0, limit),
     reportPatches: newestFirst(store.reportPatches).slice(0, limit),
     updatedAt: new Date().toISOString(),
     userPatches: newestFirst(store.userPatches).slice(0, limit),
@@ -230,12 +242,35 @@ export async function persistLocalReportStatus(input: {
   })
 }
 
+export async function persistLocalOpportunityVerification(input: {
+  adminUserId: string
+  notes: string
+  opportunityId: string
+  status: Exclude<OpportunityVerificationStatus, "manual_review">
+  timestamp: string
+}) {
+  return updateStore((store) => {
+    const row: LocalOpportunityAdminPatch = {
+      id: input.opportunityId,
+      reviewedAt: input.timestamp,
+      reviewedByUserId: input.adminUserId,
+      reviewNotes: input.notes,
+      status: input.status,
+      updatedAt: input.timestamp,
+    }
+
+    store.opportunityPatches = [row, ...store.opportunityPatches.filter(item => item.id !== input.opportunityId)]
+    return row
+  })
+}
+
 export async function readLocalAdminAuditStore() {
   return pruneStore(await readStore())
 }
 
 export async function mergeLocalAdminAuditState(seed: WorkspaceSeed) {
   const store = await readLocalAdminAuditStore()
+  const opportunityPatchById = new Map(store.opportunityPatches.map(row => [row.id, row]))
   const userPatchById = new Map(store.userPatches.map(row => [row.id, row]))
   const reportPatchById = new Map(store.reportPatches.map(row => [row.id, row]))
   const localActionIds = new Set(store.actions.map(action => action.id))
@@ -251,6 +286,16 @@ export async function mergeLocalAdminAuditState(seed: WorkspaceSeed) {
       ...store.notifications,
       ...seed.notifications.filter(notification => !localNotificationIds.has(notification.id)),
     ],
+    opportunities: seed.opportunities.map((opportunity) => {
+      const patch = opportunityPatchById.get(opportunity.id)
+      return patch
+        ? {
+            ...opportunity,
+            updatedAt: patch.updatedAt,
+            verificationStatus: patch.status,
+          }
+        : opportunity
+    }),
     reports: seed.reports.map((report) => {
       const patch = reportPatchById.get(report.id)
       return patch
