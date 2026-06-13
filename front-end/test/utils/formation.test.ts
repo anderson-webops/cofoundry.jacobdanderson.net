@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { workspaceSeed } from "../../shared/data/seed"
-import { buildAlignmentCheck, buildConnectRequestDueCopy, buildIntentChecklist, buildMessageRiskFlags, buildProfileReadiness, buildProfileTrustScore, buildProfileTrustTier, buildStructuredIntroNote, canOpenProposalWorkflow } from "../../shared/utils/formation"
+import { buildAlignmentCheck, buildConnectRequestDueCopy, buildIntentChecklist, buildMessageRiskFlags, buildProfileReadiness, buildProfileTrustScore, buildProfileTrustTier, buildStructuredIntroNote, canOpenProposalWorkflow, resolveNewOpportunityVerificationStatus } from "../../shared/utils/formation"
 import { getTrialForMatch } from "../../shared/utils/workspace"
 
 describe("formation utilities", () => {
@@ -112,6 +112,14 @@ describe("formation utilities", () => {
 
     expect(flags.length).toBeGreaterThan(0)
     expect(flags.join(" ")).toContain("off-platform")
+  })
+
+  it("does not let new opportunity posts self-award verified status", () => {
+    expect(resolveNewOpportunityVerificationStatus("none", [])).toBe("unverified")
+    expect(resolveNewOpportunityVerificationStatus("domain", [])).toBe("manual_review")
+    expect(resolveNewOpportunityVerificationStatus("work_email", [])).toBe("manual_review")
+    expect(resolveNewOpportunityVerificationStatus("github_org", [])).toBe("manual_review")
+    expect(resolveNewOpportunityVerificationStatus("none", ["risk detected"])).toBe("manual_review")
   })
 
   it("builds a structured intro note and response target copy", () => {

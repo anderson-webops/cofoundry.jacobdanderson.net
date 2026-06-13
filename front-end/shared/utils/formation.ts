@@ -588,6 +588,16 @@ export function buildOpportunityRiskFlags(opportunity: Pick<StartupOpportunity, 
   ])
 }
 
+export function resolveNewOpportunityVerificationStatus(
+  verificationMethod: StartupOpportunity["verificationMethod"],
+  riskFlags: string[],
+): OpportunityVerificationStatus {
+  if (riskFlags.length || verificationMethod !== "none")
+    return "manual_review"
+
+  return "unverified"
+}
+
 export function getOpportunityVerificationTone(status: OpportunityVerificationStatus) {
   return ({
     unverified: "warning",

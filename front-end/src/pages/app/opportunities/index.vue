@@ -14,6 +14,7 @@ const { authStore, workspaceStore } = useCurrentMember()
 
 const dialogOpen = ref(false)
 const errors = ref<Record<string, string>>({})
+const publishPending = ref(false)
 const form = reactive({
   startupName: "",
   oneLinePitch: "",
@@ -43,13 +44,43 @@ async function createOpportunityPost() {
   if (!authStore.currentUser)
     return
 
-  workspaceStore.createOpportunity(authStore.currentUser.id, parsed.data)
-  toastStore.push({
-    title: "Opportunity published",
-    message: "Your startup opportunity is now visible in discovery with its verification state attached.",
-    tone: "success",
-  })
-  dialogOpen.value = false
+  publishPending.value = true
+  let opportunityId = ""
+
+  try {
+    opportunityId = workspaceStore.createOpportunity(authStore.currentUser.id, parsed.data)
+    await workspaceStore.persistWorkspace(true)
+    toastStore.push({
+      title: "Opportunity published",
+      message: parsed.data.verificationMethod === "none"
+        ? "Your startup opportunity is now visible in discovery as unverified."
+        : "Your startup opportunity is visible in discovery and marked for verification review.",
+      tone: "success",
+    })
+    dialogOpen.value = false
+  }
+  catch (caughtError) {
+    if (opportunityId) {
+      workspaceStore.data.opportunities = workspaceStore.data.opportunities.filter(opportunity => opportunity.id !== opportunityId)
+    }
+
+    try {
+      await workspaceStore.loadWorkspace(true)
+    }
+    catch {}
+
+    errors.value = {
+      form: caughtError instanceof Error ? caughtError.message : "The opportunity could not be published.",
+    }
+    toastStore.push({
+      title: "Opportunity not saved",
+      message: "The server did not confirm the publish. Try again before relying on this listing.",
+      tone: "danger",
+    })
+  }
+  finally {
+    publishPending.value = false
+  }
 }
 </script>
 
@@ -97,8 +128,8 @@ async function createOpportunityPost() {
           <TextInput v-model="form.location" label="Location" :error="errors.location" />
         </div>
         <div class="gap-4 grid md:grid-cols-2">
-          <TextInput v-model="form.officialWebsite" label="Official website" helper="Optional, but used as a visible trust signal." :error="errors.officialWebsite" />
-          <SelectInput v-model="form.verificationMethod" label="Verification method" helper="How collaborators should interpret the legitimacy signal on this listing." :options="opportunityVerificationOptions" :error="errors.verificationMethod" />
+          <TextInput v-model="form.officialWebsite" label="Official website" helper="Optional, but useful evidence for operator review." :error="errors.officialWebsite" />
+          <SelectInput v-model="form.verificationMethod" label="Verification review requested" helper="Selecting proof does not grant a badge; it marks the listing for operator or provider review." :options="opportunityVerificationOptions" :error="errors.verificationMethod" />
         </div>
         <SelectInput v-model="form.remotePreference" label="Remote preference" :options="remoteOptions" :error="errors.remotePreference" />
         <div class="gap-2 grid">
@@ -121,12 +152,15 @@ async function createOpportunityPost() {
             Trust note
           </p>
           <p class="muted text-sm leading-6 mt-2">
-            Listings that claim company ownership should carry some proof. CoFoundry highlights whether a listing is unverified, owner-verified, or domain-verified so collaborators can calibrate risk before replying.
+            Listings that claim company ownership should carry proof. New claims stay under safety review until an operator or verification provider confirms the signal.
           </p>
         </div>
+        <p v-if="errors.form" class="field-error">
+          {{ errors.form }}
+        </p>
         <div class="flex justify-end">
-          <BaseButton type="submit">
-            Publish opportunity
+          <BaseButton type="submit" :disabled="publishPending">
+            {{ publishPending ? "Publishing..." : "Publish opportunity" }}
           </BaseButton>
         </div>
       </form>

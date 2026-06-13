@@ -38,7 +38,7 @@ import {
   startTrialCollaborationTransition,
   updateProposalStatusTransition,
 } from "~/shared/utils/collaboration"
-import { buildOpportunityRiskFlags, buildProfileReadiness, getReportPriority } from "~/shared/utils/formation"
+import { buildOpportunityRiskFlags, buildProfileReadiness, getReportPriority, resolveNewOpportunityVerificationStatus } from "~/shared/utils/formation"
 import {
   getContractById,
   getCurrentContractVersion,
@@ -507,13 +507,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   }) {
     const opportunityId = crypto.randomUUID()
     const riskFlags = buildOpportunityRiskFlags(payload)
-    const verificationStatus = riskFlags.length
-      ? "manual_review"
-      : payload.verificationMethod === "domain"
-        ? "domain_verified"
-        : payload.verificationMethod === "work_email" || payload.verificationMethod === "github_org"
-          ? "owner_verified"
-          : "unverified"
+    const verificationStatus = resolveNewOpportunityVerificationStatus(payload.verificationMethod, riskFlags)
 
     data.value.opportunities.unshift({
       id: opportunityId,
