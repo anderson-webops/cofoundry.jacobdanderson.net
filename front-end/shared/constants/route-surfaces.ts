@@ -24,6 +24,19 @@ export const privateWorkspaceRoutePrefixes = [
   "/admin",
 ] as const
 
+export const privateApiRoutePrefixes = [
+  "/api/account",
+  "/api/admin",
+  "/api/auth",
+  "/api/billing",
+  "/api/files",
+  "/api/inbox",
+  "/api/notifications",
+  "/api/operations",
+  "/api/relationships",
+  "/api/workspace",
+] as const
+
 export const environmentGatedSurfaces = [
   {
     label: "Review account helpers",
@@ -41,3 +54,29 @@ export const environmentGatedSurfaces = [
     condition: "Shown only when NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE=\"true\".",
   },
 ] as const
+
+export function normalizeRoutePath(pathname: string) {
+  if (!pathname || pathname === "/")
+    return "/"
+
+  return pathname.replace(/\/+$/, "") || "/"
+}
+
+export function matchesRoutePrefix(pathname: string, prefix: string) {
+  const normalizedPathname = normalizeRoutePath(pathname)
+  const normalizedPrefix = normalizeRoutePath(prefix)
+
+  return normalizedPathname === normalizedPrefix || normalizedPathname.startsWith(`${normalizedPrefix}/`)
+}
+
+export function isPrivateWorkspaceRoutePath(pathname: string) {
+  return privateWorkspaceRoutePrefixes.some(prefix => matchesRoutePrefix(pathname, prefix))
+}
+
+export function isPrivateApiRoutePath(pathname: string) {
+  return privateApiRoutePrefixes.some(prefix => matchesRoutePrefix(pathname, prefix))
+}
+
+export function isPrivateSurfacePath(pathname: string) {
+  return isPrivateWorkspaceRoutePath(pathname) || isPrivateApiRoutePath(pathname)
+}

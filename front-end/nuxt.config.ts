@@ -1,6 +1,7 @@
 import process from "node:process"
 import { buildSecurityHeaders } from "./server/utils/security-headers"
 import { appDescription, appName } from "./shared/constants/app"
+import { privateApiRoutePrefixes, privateWorkspaceRoutePrefixes } from "./shared/constants/route-surfaces"
 import { workspaceSeed } from "./shared/data/seed"
 import { getPublicRoutePaths } from "./shared/utils/directory"
 import { assertEnvironmentIsValid, readEnvironmentSnapshot } from "./shared/utils/environment"
@@ -16,6 +17,13 @@ const privateRouteHeaders = {
   ...securityHeaders,
   "X-Robots-Tag": "noindex, nofollow",
 }
+const privateRouteRules = Object.fromEntries(
+  [...privateWorkspaceRoutePrefixes, ...privateApiRoutePrefixes]
+    .flatMap(prefix => [
+      [prefix, { headers: privateRouteHeaders }] as const,
+      [`${prefix}/**`, { headers: privateRouteHeaders }] as const,
+    ]),
+)
 
 assertEnvironmentIsValid(process.env, "Nuxt configuration")
 
@@ -113,15 +121,7 @@ export default defineNuxtConfig({
     },
     routeRules: {
       "/**": { headers: securityHeaders },
-      "/admin": { headers: privateRouteHeaders },
-      "/admin/**": { headers: privateRouteHeaders },
-      "/app": { headers: privateRouteHeaders },
-      "/app/**": { headers: privateRouteHeaders },
-      "/auth": { headers: privateRouteHeaders },
-      "/auth/**": { headers: privateRouteHeaders },
-      "/api/**": { headers: privateRouteHeaders },
-      "/onboarding": { headers: privateRouteHeaders },
-      "/onboarding/**": { headers: privateRouteHeaders },
+      ...privateRouteRules,
     },
   },
   vite: {

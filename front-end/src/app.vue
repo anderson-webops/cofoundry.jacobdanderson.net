@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { appDescription, appName } from "~/shared/constants/app"
+import { isPrivateWorkspaceRoutePath } from "~/shared/constants/route-surfaces"
 import { themeSchemeStyleContent } from "~/shared/utils/theme"
 
 const trailingSlashPattern = /\/$/
@@ -9,8 +10,7 @@ workspaceStore.ensureReady()
 const runtimeConfig = useRuntimeConfig()
 const route = useRoute()
 const { scheme } = useThemeScheme()
-const privateRoutePattern = /^(?:\/admin|\/app|\/auth|\/api|\/onboarding)(?:\/|$)/
-const noindexRoute = computed(() => privateRoutePattern.test(route.path))
+const noindexRoute = computed(() => isPrivateWorkspaceRoutePath(route.path))
 const analyticsScripts = import.meta.env.PROD
   ? [
       {
