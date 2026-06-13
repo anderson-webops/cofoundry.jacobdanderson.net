@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { accessRequestSchema, adminAccessInviteSchema, adminAccessRequestStatusSchema, adminCommandQueueActionSchema, adminReportStatusSchema, adminUserModerationSchema, adminUserRoleSchema, billingCheckoutSchema, contactSchema, minimumOnboardingSchema, onboardingSchema, operationsBackupRunSchema, operationsDigestRunSchema, operationsEventSchema, opportunitySchema, privacyRequestSchema, proposalSchema, reportSchema, signUpSchema } from "../../shared/utils/validation"
+import { accessRequestSchema, adminAccessInviteSchema, adminAccessRequestStatusSchema, adminCommandQueueActionSchema, adminOpportunityVerificationSchema, adminReportStatusSchema, adminUserModerationSchema, adminUserRoleSchema, billingCheckoutSchema, contactSchema, minimumOnboardingSchema, onboardingSchema, operationsBackupRunSchema, operationsDigestRunSchema, operationsEventSchema, opportunitySchema, privacyRequestSchema, proposalSchema, reportSchema, signUpSchema } from "../../shared/utils/validation"
 
 describe("validation schemas", () => {
   it("accepts a valid sign-up payload", () => {
@@ -59,6 +59,12 @@ describe("validation schemas", () => {
       targetId: "file_trust_olivia_linkedin",
       targetType: "file_upload",
     })
+    const opportunityReview = adminCommandQueueActionSchema.safeParse({
+      action: "review_evidence",
+      notes: "Reviewed the opportunity ownership evidence and recorded the operator decision.",
+      targetId: "opp_ledgerloop",
+      targetType: "opportunity",
+    })
     const invalid = adminCommandQueueActionSchema.safeParse({
       action: "assign",
       notes: "short",
@@ -69,6 +75,21 @@ describe("validation schemas", () => {
     expect(valid.success).toBe(true)
     expect(escalation.success).toBe(true)
     expect(fileUploadReview.success).toBe(true)
+    expect(opportunityReview.success).toBe(true)
+    expect(invalid.success).toBe(false)
+  })
+
+  it("accepts operator opportunity-verification decisions but not pending review as a decision", () => {
+    const valid = adminOpportunityVerificationSchema.safeParse({
+      notes: "Verified the startup domain against submitted evidence.",
+      status: "domain_verified",
+    })
+    const invalid = adminOpportunityVerificationSchema.safeParse({
+      notes: "Leaving this in review should not be a resolution.",
+      status: "manual_review",
+    })
+
+    expect(valid.success).toBe(true)
     expect(invalid.success).toBe(false)
   })
 

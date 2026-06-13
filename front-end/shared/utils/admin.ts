@@ -9,6 +9,7 @@ import type {
   Report,
   ReportPriority,
   ReportStatus,
+  StartupOpportunity,
   Subscription,
   SubscriptionPlan,
   SubscriptionStatus,
@@ -230,6 +231,15 @@ function formatPrivacyStatus(status: PrivacyRequest["status"]) {
   }[status]
 }
 
+function formatOpportunityVerificationStatus(status: StartupOpportunity["verificationStatus"]) {
+  return {
+    domain_verified: "Domain verified",
+    manual_review: "Manual review",
+    owner_verified: "Verified owner",
+    unverified: "Unverified",
+  }[status]
+}
+
 export function formatAdminEscalationQueue(queue: AdminEscalationQueue) {
   return {
     billing: "Billing operations",
@@ -394,6 +404,15 @@ function resolveAdminTarget(seed: WorkspaceSeed, action: AdminAction) {
     return {
       targetLabel: "Privacy request",
       targetContext: action.targetId,
+    }
+  }
+
+  if (action.targetType === "opportunity") {
+    const opportunity = seed.opportunities.find(item => item.id === action.targetId)
+
+    return {
+      targetLabel: opportunity?.startupName || "Opportunity not found",
+      targetContext: opportunity?.oneLinePitch || action.targetId,
     }
   }
 
@@ -676,6 +695,34 @@ export function buildAdminCommandQueue(input: AdminCommandQueueInput) {
       }
     })
 
+  const opportunityItems: AdminCommandQueueBaseItem[] = input.seed.opportunities
+    .filter(opportunity => opportunity.verificationStatus === "manual_review")
+    .map((opportunity) => {
+      const hasRiskFlags = opportunity.riskFlags.length > 0
+      const methodLabel = formatMachineLabel(opportunity.verificationMethod)
+      const priority: AdminCommandQueuePriority = hasRiskFlags ? "high" : "standard"
+
+      return {
+        actionLabel: "Review listing",
+        createdAt: opportunity.updatedAt || opportunity.createdAt,
+        detail: [
+          opportunity.oneLinePitch,
+          opportunity.officialWebsite ? `Website: ${opportunity.officialWebsite}` : "",
+          hasRiskFlags ? `Risk flags: ${opportunity.riskFlags.join("; ")}` : "",
+        ].filter(Boolean).join(" "),
+        href: "/admin/queue",
+        id: `opportunity:${opportunity.id}`,
+        kind: "moderation",
+        priority,
+        sourceLabel: resolveAdminUserLabel(input.seed, opportunity.ownerUserId),
+        statusLabel: `${formatOpportunityVerificationStatus(opportunity.verificationStatus)} · ${methodLabel}`,
+        summary: `${opportunity.startupName} · ${opportunity.rolesNeeded.join(", ")}`,
+        targetId: opportunity.id,
+        targetType: "opportunity",
+        title: "Opportunity verification review",
+      }
+    })
+
   const accessItems: AdminCommandQueueBaseItem[] = (input.accessRequests || [])
     .filter((request) => {
       if (request.status === "open" || request.status === "approved")
@@ -749,6 +796,6 @@ export function buildAdminCommandQueue(input: AdminCommandQueueInput) {
       }
     })
 
-  return sortAdminCommandQueueItems([...reportItems, ...accessItems, ...privacyItems, ...readinessItems]
+  return sortAdminCommandQueueItems([...reportItems, ...opportunityItems, ...accessItems, ...privacyItems, ...readinessItems]
     .map(item => enrichAdminCommandQueueItem(input.seed, generatedAt, item)))
 }

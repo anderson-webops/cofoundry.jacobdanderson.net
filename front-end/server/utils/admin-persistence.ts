@@ -1,6 +1,6 @@
 import type { H3Event } from "h3"
-import type { AdminAction, AppRole, Notification, PrivacyRequestStatus, ReportStatus } from "~/shared/types/domain"
-import { persistLocalReportStatus, persistLocalUserEmailVerification, persistLocalUserRole, persistLocalUserSuspension, readLocalAdminAuditStore, recordLocalAdminAction, recordLocalUserNotification } from "./local-admin-audit"
+import type { AdminAction, AppRole, Notification, OpportunityVerificationStatus, PrivacyRequestStatus, ReportStatus } from "~/shared/types/domain"
+import { persistLocalOpportunityVerification, persistLocalReportStatus, persistLocalUserEmailVerification, persistLocalUserRole, persistLocalUserSuspension, readLocalAdminAuditStore, recordLocalAdminAction, recordLocalUserNotification } from "./local-admin-audit"
 import { updateLocalPrivacyRequestStatus } from "./local-privacy-requests"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
 
@@ -202,6 +202,48 @@ export async function persistReportStatus(event: H3Event, input: {
 
   if (!data?.length)
     throw createError({ statusCode: 404, statusMessage: "Target report was not found." })
+}
+
+export async function persistOpportunityVerification(event: H3Event, input: {
+  adminUserId: string
+  notes: string
+  opportunityId: string
+  status: Exclude<OpportunityVerificationStatus, "manual_review">
+  timestamp: string
+}) {
+  if (!isSupabaseEnabled(event)) {
+    const patch = await persistLocalOpportunityVerification(input)
+    return {
+      id: patch.id,
+      verificationStatus: patch.status,
+    }
+  }
+
+  const adminClient = createSupabaseAdminClient(event)
+  if (!adminClient)
+    throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
+
+  const { data, error } = await adminClient
+    .from("startup_opportunities")
+    .update({
+      updated_at: input.timestamp,
+      verification_status: input.status,
+    })
+    .eq("id", input.opportunityId)
+    .select("id,owner_user_id,verification_status")
+    .maybeSingle<{ id: string, owner_user_id: string, verification_status: OpportunityVerificationStatus }>()
+
+  if (error)
+    throw error
+
+  if (!data)
+    throw createError({ statusCode: 404, statusMessage: "Target opportunity was not found." })
+
+  return {
+    id: data.id,
+    ownerUserId: data.owner_user_id,
+    verificationStatus: data.verification_status,
+  }
 }
 
 export async function persistPrivacyRequestStatus(event: H3Event, input: {

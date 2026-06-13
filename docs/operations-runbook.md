@@ -21,7 +21,7 @@ CoFoundry can run in production-facing mock/access-request mode today without Su
 - Sign in to an invited test account and confirm profile, inbox, and billing preview changes survive an app restart.
 - Visit `/admin/access-requests` and clear stale access requests or invite links.
 - Visit `/admin/privacy` and resolve open privacy or trust-review requests with an operator note.
-- Visit `/admin/queue` and confirm critical cases have an owner and an escalation route when they need cross-admin follow-up.
+- Visit `/admin/queue` and confirm critical cases have an owner and an escalation route when they need cross-admin follow-up. Resolve startup opportunity ownership/domain verification reviews from this queue instead of granting listing badges from member-facing screens.
 - Visit `/admin/evidence` and confirm trust-evidence uploads are scanned, reviewed, and visible in `/admin/audit`.
 - Confirm the contact/support inbox is receiving submissions.
 - Confirm a public page response includes `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, and, on HTTPS production origins, `Strict-Transport-Security`.

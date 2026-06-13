@@ -533,6 +533,7 @@ export interface AdminAction {
   metadata?: {
     assignedAdminUserId?: string
     escalationQueue?: AdminEscalationQueue
+    verificationStatus?: OpportunityVerificationStatus
   }
 }
 
