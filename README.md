@@ -209,6 +209,7 @@ Use this path only when you intend CoFoundry to support real persisted accounts 
 
 Required baseline:
 
+- `NODE_ENV="production"`
 - `NUXT_PUBLIC_BACKEND_MODE="supabase"`
 - `NUXT_PUBLIC_ENABLE_DEMO_ACCESS="false"`
 - `NUXT_PUBLIC_SUPABASE_URL`
@@ -239,12 +240,13 @@ Provisioning after merge:
 
 1. Apply all SQL migrations in `back-end/supabase/migrations/` in timestamp order.
 2. Run `npm run seed` against the target Supabase project.
-3. Configure `SESSION_SIGNING_SECRET` in the server environment or Vault injection.
-4. Enable the desired auth providers in Supabase.
-5. Assign the first real admin user server-side before using `/admin`: `BOOTSTRAP_ADMIN_EMAIL=operator@example.com npm run -w back-end bootstrap-admin`. The script requires Supabase mode and the Vault-injected `SUPABASE_SERVICE_ROLE_KEY`; it updates an existing user row and records an admin action.
-6. Turn on Stripe env only when checkout and webhook infrastructure are ready.
-7. Configure `COFOUNDRY_OPERATIONS_TOKEN` before enabling scheduled digests, backup-run reporting, operational event ingestion, or file-scan callbacks.
-8. In mock/access-request mode, ensure the app process can write to `.data/operations-telemetry.json`, `.data/access-requests.json`, `.data/member-workspace-state.json`, `.data/collaboration-state.json`, `.data/admin-audit.json`, `.data/privacy-requests.json`, `.data/local-auth-accounts.json`, and `.data/local-file-uploads/`, or set `COFOUNDRY_LOCAL_DATA_DIR` to a durable writable host path.
+3. Set `NODE_ENV=production` on the app server process. The Docker production stage already does this; systemd or other host-managed app units should do the same.
+4. Configure `SESSION_SIGNING_SECRET` in the server environment or Vault injection.
+5. Enable the desired auth providers in Supabase.
+6. Assign the first real admin user server-side before using `/admin`: `BOOTSTRAP_ADMIN_EMAIL=operator@example.com npm run -w back-end bootstrap-admin`. The script requires Supabase mode and the Vault-injected `SUPABASE_SERVICE_ROLE_KEY`; it updates an existing user row and records an admin action.
+7. Turn on Stripe env only when checkout and webhook infrastructure are ready.
+8. Configure `COFOUNDRY_OPERATIONS_TOKEN` before enabling scheduled digests, backup-run reporting, operational event ingestion, or file-scan callbacks.
+9. In mock/access-request mode, ensure the app process can write to `.data/operations-telemetry.json`, `.data/access-requests.json`, `.data/member-workspace-state.json`, `.data/collaboration-state.json`, `.data/admin-audit.json`, `.data/privacy-requests.json`, `.data/local-auth-accounts.json`, and `.data/local-file-uploads/`, or set `COFOUNDRY_LOCAL_DATA_DIR` to a durable writable host path.
 
 ## Production control surfaces
 
@@ -256,6 +258,7 @@ Provisioning after merge:
 - Scheduled unread workspace digest emails respect each member's account-level email notification preference; seeded review users remain enabled, while newly persisted Supabase users default to disabled until they opt in.
 - Member workspace changes, collaboration workflow updates, and billing preview state persist in Supabase mode and in durable local mock-mode stores.
 - Signed sessions are revalidated against persisted user state on every protected request. Role changes take effect without requiring a new login, and suspended users are rejected in both durable mock/access-request mode and Supabase-backed mode.
+- Seeded review account credentials are accepted only in local development or deliberate staging demo access. Production-facing mock/access-request deployments can still sign in invited durable local accounts, but they do not accept seeded review credentials.
 - Admin moderation actions persist user suspension, role changes, report status changes, notifications, queue assignment/routing metadata, and audit actions in Supabase mode and in the durable local mock-mode admin audit store.
 - Admins can mark member emails verified from `/admin/users` after invite, domain, or operator evidence review; the decision is persisted and auditable in mock/access-request mode and Supabase mode.
 - Access-request review has a mock-mode admin queue at `/admin/access-requests` and a Supabase-backed table path for later. Operators can approve, deny, reopen, and issue invite links while Supabase and Stripe remain disabled.
@@ -328,6 +331,7 @@ Current deployments can stay in mock mode with no secret-backed services enabled
 - Public env can live in normal env files or deploy-time public environment settings.
 - Server-only secrets are expected to come from Vault-managed env files or equivalent host injection later.
 - The repo is already wired so that moving from mock mode to Supabase or Stripe is a config change, not another refactor.
+- Production app processes should set `NODE_ENV=production`. If `NODE_ENV` is omitted, a non-local `NUXT_PUBLIC_APP_URL` is still treated as hosted rather than local development.
 - `NUXT_PUBLIC_APP_URL` falls back to `http://localhost:3000` only for local development. Production SSR avoids localhost-style defaults and derives request origin when needed.
 - HSTS is intentionally tied to an HTTPS `NUXT_PUBLIC_APP_URL`, so local preview and non-HTTPS development hosts do not receive a misleading transport-security header.
 - If `NUXT_PUBLIC_BACKEND_MODE="mock"` in a production deployment, the product should stay in marketing-shell mode unless `NUXT_PUBLIC_ENABLE_DEMO_ACCESS="true"` is set deliberately for a staging/demo environment.

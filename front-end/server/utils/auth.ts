@@ -5,7 +5,7 @@ import { createHmac, timingSafeEqual } from "node:crypto"
 import process from "node:process"
 import { workspaceSeed } from "~/shared/data/seed"
 import { isLocalDevelopmentEnvironment, readPublicEnvironment } from "~/shared/utils/environment"
-import { resolveProductAccessPolicy } from "~/shared/utils/product-access"
+import { resolveProductAccessPolicy, areSeededReviewCredentialsEnabled as resolveSeededReviewCredentialsEnabled } from "~/shared/utils/product-access"
 import { decodeSessionUser, encodeSessionUser, sessionCookieName, sessionSignatureCookieName } from "~/shared/utils/session"
 import { resolveActiveSessionFromSeed } from "~/shared/utils/session-authority"
 import { signInSchema, signUpSchema } from "~/shared/utils/validation"
@@ -138,6 +138,15 @@ function areAccountsEnabledForCurrentEnvironment() {
   }, isLocalDevelopmentEnvironment(process.env))
 
   return policy.accountsEnabled
+}
+
+function areSeededReviewCredentialsEnabledForCurrentEnvironment(env: Record<string, string | undefined> = process.env) {
+  const publicEnvironment = readPublicEnvironment(env)
+  return resolveSeededReviewCredentialsEnabled({
+    backendMode: publicEnvironment.backendMode,
+    billingMode: publicEnvironment.billingMode,
+    enableDemoAccess: publicEnvironment.enableDemoAccess,
+  }, isLocalDevelopmentEnvironment(env))
 }
 
 export function assertSignInAccessEnabled() {}
@@ -287,18 +296,20 @@ export async function verifyCredentials(event: H3Event, email: string, password:
     return requireActiveSessionFromWorkspace(event, session)
   }
 
-  const seededAccount = workspaceSeed.authAccounts.find(account => account.email === normalizedEmail)
-  if (seededAccount && seededAccount.password === password) {
-    const session = getMockSessionBySeedUserId(seededAccount.userId)
-    if (session)
-      return requireActiveSessionFromWorkspace(event, session)
-  }
+  if (areSeededReviewCredentialsEnabledForCurrentEnvironment()) {
+    const seededAccount = workspaceSeed.authAccounts.find(account => account.email === normalizedEmail)
+    if (seededAccount && seededAccount.password === password) {
+      const session = getMockSessionBySeedUserId(seededAccount.userId)
+      if (session)
+        return requireActiveSessionFromWorkspace(event, session)
+    }
 
-  const registeredAccount = registeredAccounts.get(normalizedEmail)
-  if (registeredAccount && registeredAccount.password === password) {
-    const session = registeredSessions.get(registeredAccount.userId)
-    if (session)
-      return requireActiveSessionFromWorkspace(event, session)
+    const registeredAccount = registeredAccounts.get(normalizedEmail)
+    if (registeredAccount && registeredAccount.password === password) {
+      const session = registeredSessions.get(registeredAccount.userId)
+      if (session)
+        return requireActiveSessionFromWorkspace(event, session)
+    }
   }
 
   const localSession = await verifyLocalAuthCredentials(normalizedEmail, password)

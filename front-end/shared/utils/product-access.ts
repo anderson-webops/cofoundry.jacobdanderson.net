@@ -50,6 +50,10 @@ export function resolveProductAccessPolicy(environment: ProductAccessEnvironment
   }
 }
 
+export function areSeededReviewCredentialsEnabled(environment: ProductAccessEnvironment, isLocalDevelopment: boolean) {
+  return resolveProductAccessPolicy(environment, isLocalDevelopment).showDemoConveniences
+}
+
 export function buildAccessRequestPath(source = "site", topic = "access") {
   if (topic === "access")
     return buildQueryPath("/auth/sign-up", { source })
