@@ -306,6 +306,7 @@ export function formatAdminActionType(type: AdminActionType) {
     resolve_report: "Resolved report",
     resolve_privacy_request: "Resolved privacy request",
     suspend_user: "Suspended user",
+    verify_email: "Verified email",
     warn_user: "Warned user",
   }[type]
 }

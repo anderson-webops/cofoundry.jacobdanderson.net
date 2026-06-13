@@ -212,6 +212,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     if (!profile || !user)
       return
 
+    profile.verificationBadges.emailVerified = user.verifiedEmail
     profile.verificationBadges.profileComplete = buildProfileReadiness(profile).profileComplete
     profile.verificationBadges.linkedAccounts = Boolean(
       profile.links.linkedin
@@ -1094,6 +1095,28 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     })
   }
 
+  function applyUserEmailVerification(targetUserId: string, adminUserId: string, notes: string, createdAt = now(), actionId?: string) {
+    const user = data.value.users.find(item => item.id === targetUserId)
+    const profile = getProfileByUserId(data.value, targetUserId)
+    if (!user)
+      return
+
+    user.verifiedEmail = true
+    if (profile) {
+      profile.verificationBadges.emailVerified = true
+      syncProfileDerivedState(targetUserId)
+    }
+    recordAdminAction({
+      id: actionId,
+      adminUserId,
+      type: "verify_email",
+      targetId: targetUserId,
+      targetType: "user",
+      notes,
+      createdAt,
+    })
+  }
+
   function applyReportReview(reportId: string, adminUserId: string, notes: string, reviewedAt = now(), actionId?: string) {
     const report = data.value.reports.find(item => item.id === reportId)
     if (!report)
@@ -1198,6 +1221,27 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     })
 
     applyUserRoleChange(response.user.id, response.action.adminUserId || adminUserId, response.user.role, response.action.notes, response.action.createdAt, response.action.id)
+  }
+
+  async function verifyUserEmail(targetUserId: string, adminUserId: string, notes: string) {
+    const response = await $fetch<{
+      action: {
+        id: string
+        adminUserId: string
+        createdAt: string
+        notes: string
+        targetId: string
+      }
+      user: {
+        id: string
+        verifiedEmail: true
+      }
+    }>(`/api/admin/users/${targetUserId}/email-verification`, {
+      method: "POST",
+      body: { notes },
+    })
+
+    applyUserEmailVerification(response.user.id, response.action.adminUserId || adminUserId, response.action.notes, response.action.createdAt, response.action.id)
   }
 
   async function reviewReport(reportId: string, adminUserId: string, notes: string) {
@@ -1326,6 +1370,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     updateCurrentProfile,
     updateProposalStatus,
     updateSubscriptionPlan,
+    verifyUserEmail,
   }
 })
 

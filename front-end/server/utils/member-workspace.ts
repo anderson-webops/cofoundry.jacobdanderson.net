@@ -15,6 +15,7 @@ interface PersistedIdentityInput {
   onboardingCompleted: boolean
   role: User["role"]
   subscriptionPlan: Subscription["plan"]
+  verifiedEmail?: boolean
 }
 
 interface PersistedProfileStateRow {
@@ -105,11 +106,26 @@ function createBaseSeed() {
 function buildBootstrapState(identity: PersistedIdentityInput) {
   const baseSeed = createBaseSeed()
   const resolvedSession = resolveSessionUserFromWorkspace(baseSeed, identity)
-  return buildMemberWorkspaceState(baseSeed, resolvedSession.id) || buildDraftMemberWorkspaceState(resolvedSession)
+  return buildMemberWorkspaceState(baseSeed, resolvedSession.id) || buildDraftMemberWorkspaceState(resolvedSession, undefined, {
+    verifiedEmail: identity.verifiedEmail,
+  })
 }
 
 function buildMergedSeed(state: MemberWorkspaceState) {
-  return mergeMemberWorkspaceState(createBaseSeed(), state)
+  return mergeMemberWorkspaceState(createBaseSeed(), syncWorkspaceVerificationState(state))
+}
+
+function syncWorkspaceVerificationState(state: MemberWorkspaceState): MemberWorkspaceState {
+  return {
+    ...state,
+    profile: {
+      ...state.profile,
+      verificationBadges: {
+        ...state.profile.verificationBadges,
+        emailVerified: state.user.verifiedEmail,
+      },
+    },
+  }
 }
 
 async function buildLocalRuntimeSeed(state: MemberWorkspaceState) {
@@ -477,8 +493,10 @@ async function replaceOpportunities(adminClient: NonNullable<ReturnType<typeof c
 }
 
 export async function persistWholeMemberWorkspaceState(event: H3Event, state: MemberWorkspaceState) {
+  const nextState = syncWorkspaceVerificationState(state)
+
   if (!isSupabaseEnabled(event)) {
-    await persistLocalMemberWorkspaceState(state)
+    await persistLocalMemberWorkspaceState(nextState)
     return
   }
 
@@ -486,12 +504,12 @@ export async function persistWholeMemberWorkspaceState(event: H3Event, state: Me
   if (!adminClient)
     throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
 
-  await upsertUser(adminClient, state.user)
-  await upsertProfileState(adminClient, state.profile)
-  await upsertSubscription(adminClient, state.subscription)
-  await replaceBookmarks(adminClient, state.user.id, state.bookmarks)
-  await replaceSavedSearches(adminClient, state.user.id, state.savedSearches)
-  await replaceOpportunities(adminClient, state.user.id, state.opportunities)
+  await upsertUser(adminClient, nextState.user)
+  await upsertProfileState(adminClient, nextState.profile)
+  await upsertSubscription(adminClient, nextState.subscription)
+  await replaceBookmarks(adminClient, nextState.user.id, nextState.bookmarks)
+  await replaceSavedSearches(adminClient, nextState.user.id, nextState.savedSearches)
+  await replaceOpportunities(adminClient, nextState.user.id, nextState.opportunities)
 }
 
 export async function loadMemberWorkspaceState(event: H3Event, identity: PersistedIdentityInput) {
@@ -547,6 +565,7 @@ export async function loadMemberWorkspaceState(event: H3Event, identity: Persist
       id: userRow.id,
       onboardingCompleted: userRow.onboarding_completed,
       role: userRow.role,
+      verifiedEmail: userRow.verified_email,
     })
     await persistWholeMemberWorkspaceState(event, bootstrapState)
     const seed = buildMergedSeed(bootstrapState)
@@ -565,14 +584,14 @@ export async function loadMemberWorkspaceState(event: H3Event, identity: Persist
     }
   }
 
-  const state: MemberWorkspaceState = {
+  const state: MemberWorkspaceState = syncWorkspaceVerificationState({
     user: fromUserRow(userRow),
     profile: profileRow.profile,
     subscription: fromSubscriptionRow(subscriptionRow),
     opportunities: fromOpportunityRows(opportunities),
     bookmarks: fromBookmarkRows(bookmarks),
     savedSearches: fromSavedSearchRows(savedSearches),
-  }
+  })
   const mergedSeed = buildMergedSeed(state)
   const collaborationState = await loadServerCollaborationState(event, userRow.id)
   const seed = mergeServerCollaborationState(mergedSeed, collaborationState)
