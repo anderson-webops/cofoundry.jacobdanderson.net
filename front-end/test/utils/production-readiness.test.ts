@@ -38,6 +38,8 @@ const healthyOperations = {
     started_at: generatedAt,
     status: "succeeded",
   }],
+  contractEnvelopeEvents: [],
+  emailSuppressions: [],
   fileUploads: [{
     created_at: generatedAt,
     id: "upload_clean",
@@ -547,6 +549,76 @@ describe("production readiness snapshot", () => {
     expect(withWebhook.provisioningTasks.find(task => task.id === "stripe-cutover-provisioning")).toMatchObject({
       status: "pass",
       summary: "Last processed webhook 0 days old",
+    })
+  })
+
+  it("tracks contract-envelope provider evidence only after a provider is configured", () => {
+    const withoutEvidence = buildProductionReadinessSnapshot({
+      accessRequests: [],
+      adminPosture: healthyAdminPosture,
+      contactMailConfigured: true,
+      environment: environmentSnapshot(),
+      environmentValidationErrors: [],
+      generatedAt,
+      hasAlertWebhookConfigured: true,
+      hasContractEnvelopeProviderConfigured: true,
+      hasDurableLocalDataDir: true,
+      hasOperationsWorkerToken: true,
+      hasSessionSigningSecret: true,
+      hasTrustVerificationProviderConfigured: false,
+      isLocalDevelopment: false,
+      operations: healthyOperations,
+      privacyRequests: [],
+    })
+    const withoutEvidenceCheckById = new Map(withoutEvidence.groups.flatMap(group => group.checks).map(check => [check.id, check]))
+
+    expect(withoutEvidence.overallStatus).toBe("warn")
+    expect(withoutEvidenceCheckById.get("contract-envelope-evidence")).toMatchObject({
+      status: "warn",
+      summary: "Provider configured, no rows",
+    })
+
+    const withEvidence = buildProductionReadinessSnapshot({
+      accessRequests: [],
+      adminPosture: healthyAdminPosture,
+      contactMailConfigured: true,
+      environment: environmentSnapshot(),
+      environmentValidationErrors: [],
+      generatedAt,
+      hasAlertWebhookConfigured: true,
+      hasContractEnvelopeProviderConfigured: true,
+      hasDurableLocalDataDir: true,
+      hasOperationsWorkerToken: true,
+      hasSessionSigningSecret: true,
+      hasTrustVerificationProviderConfigured: false,
+      isLocalDevelopment: false,
+      operations: {
+        ...healthyOperations,
+        contractEnvelopeEvents: [{
+          completed_pdf_sha256: "a".repeat(64),
+          contract_id: "contract_ledgerloop",
+          contract_version_id: "version_1",
+          created_at: generatedAt,
+          id: "contract_provider_event_1",
+          occurred_at: generatedAt,
+          provider: "docusign",
+          provider_envelope_id: "envelope_123",
+          signed_by_user_ids: ["user_olivia", "user_malik"],
+          status: "completed",
+        }],
+      },
+      privacyRequests: [],
+    })
+    const withEvidenceCheckById = new Map(withEvidence.groups.flatMap(group => group.checks).map(check => [check.id, check]))
+
+    expect(withEvidence.overallStatus).toBe("pass")
+    expect(withEvidenceCheckById.get("contract-envelope-evidence")).toMatchObject({
+      status: "pass",
+      summary: "1 completed, 0 declined/voided/failed, latest 0 days old",
+    })
+    expect(withEvidence.provisioningTasks.find(task => task.id === "contract-envelope-provisioning")).toMatchObject({
+      status: "pass",
+      title: "Contract envelope provider evidence",
     })
   })
 

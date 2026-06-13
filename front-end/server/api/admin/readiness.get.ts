@@ -43,6 +43,11 @@ export default defineEventHandler(async (event) => {
     environmentValidationErrors: collectEnvironmentValidationErrors(process.env),
     generatedAt: new Date().toISOString(),
     hasAlertWebhookConfigured: hasValue(process.env.COFOUNDRY_ALERT_WEBHOOK_URL),
+    hasContractEnvelopeProviderConfigured: hasAnyValue([
+      "COFOUNDRY_CONTRACT_ENVELOPE_PROVIDER",
+      "COFOUNDRY_ESIGNATURE_PROVIDER",
+      "COFOUNDRY_PDF_PROVIDER",
+    ]),
     hasDurableLocalDataDir: hasValue(process.env.COFOUNDRY_LOCAL_DATA_DIR),
     hasOperationsWorkerToken: hasValue(runtimeConfig.operationsWorkerToken) || hasValue(process.env.COFOUNDRY_OPERATIONS_TOKEN) || hasValue(process.env.OPERATIONS_WORKER_TOKEN),
     hasSessionSigningSecret: hasValue(process.env.NUXT_SESSION_SIGNING_SECRET) || hasValue(process.env.SESSION_SIGNING_SECRET),
