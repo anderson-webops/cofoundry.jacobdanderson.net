@@ -199,6 +199,13 @@ export const operationsDigestRunSchema = z.object({
   userId: z.string().trim().min(1).max(120).optional(),
 })
 
+export const operationsMailSmokeSchema = z.object({
+  dryRun: z.boolean().default(false),
+  metadata: z.record(z.string(), z.unknown()).default({}),
+  subject: z.string().trim().min(3).max(160).default("CoFoundry mail smoke test"),
+  toEmail: z.string().trim().email().max(254).optional(),
+})
+
 export const operationsLifecycleNotificationSchema = z.object({
   dryRun: z.boolean().default(false),
   eventType: z.enum([

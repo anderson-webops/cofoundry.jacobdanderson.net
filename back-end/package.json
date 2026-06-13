@@ -17,6 +17,7 @@
     "operations:backup": "node --import tsx scripts/operations-worker.ts backup",
     "operations:digest": "node --import tsx scripts/operations-worker.ts digest",
     "operations:event": "node --import tsx scripts/operations-worker.ts event",
+    "operations:mail-smoke": "node --import tsx scripts/operations-worker.ts mail-smoke",
     "operations:restore-drill": "node --import tsx scripts/operations-worker.ts restore-drill",
     "operations:scan": "node --import tsx scripts/operations-worker.ts scan",
     "seed": "node --env-file-if-exists=../.env --import tsx scripts/seed.ts",

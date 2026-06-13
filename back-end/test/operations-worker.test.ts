@@ -119,6 +119,34 @@ test("operations digest worker sends safe dry-run payloads", async () => {
   })
 })
 
+test("operations mail smoke worker sends a controlled smoke payload", async () => {
+  const { fetchImpl, requests } = createJsonFetch(() => ({ delivered: false, reason: "dry_run" }))
+
+  await runOperationsWorker([
+    "mail-smoke",
+    "--dry-run",
+    "--to-email",
+    "ops@example.com",
+    "--subject",
+    "CoFoundry smoke",
+    "--metadata",
+    "purpose=server-check",
+  ], {
+    env: workerEnv,
+    fetch: fetchImpl,
+    log: () => {},
+  })
+
+  assert.equal(requests.length, 1)
+  assert.equal(requests[0].url, "https://cofoundry.example.com/api/operations/mail-smoke")
+  assert.deepEqual(requests[0].body, {
+    dryRun: true,
+    metadata: { purpose: "server-check" },
+    subject: "CoFoundry smoke",
+    toEmail: "ops@example.com",
+  })
+})
+
 test("operations lifecycle notification worker sends event-specific payloads", async () => {
   const { fetchImpl, requests } = createJsonFetch(() => ({ delivered: false, eventType: "proposal.updated", mode: "mock" }))
 

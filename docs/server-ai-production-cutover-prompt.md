@@ -29,9 +29,10 @@ Stage 2: outbound email provider
 1. Choose the transactional mail provider and verified sending domain.
 2. Add only server-side mail credentials to Vault/host env.
 3. Configure contact/access-request/digest delivery env without exposing provider secrets to the client.
-4. Send a contact-form test, an access-request notification, and a dry-run notification digest.
-5. Only enable scheduled real digest sends after member notification preferences, unsubscribe/opt-out handling, and the support inbox have been verified.
-6. Confirm `/admin/readiness` no longer warns on mail delivery readiness.
+4. Run `npm run operations:mail-smoke -- --to-email <monitored-inbox>` and confirm both inbox receipt and `mail.smoke` telemetry in `/admin/operations`.
+5. Send a contact-form test, an access-request notification, and a dry-run notification digest.
+6. Only enable scheduled real digest sends after member notification preferences, unsubscribe/opt-out handling, and the support inbox have been verified.
+7. Confirm `/admin/readiness` no longer warns on mail delivery readiness.
 
 Stage 3: operations workers
 1. Install or tune the checked-in systemd templates under `deploy/systemd/`.

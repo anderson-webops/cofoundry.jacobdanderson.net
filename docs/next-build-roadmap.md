@@ -247,6 +247,12 @@ Remaining work:
 
 ### 11. Email and outbound system events
 
+Status: worker-authenticated mail smoke telemetry and `/admin/readiness` evidence checks are implemented; live provider setup remains.
+
+Mail transport can now be proven with `npm run operations:mail-smoke -- --to-email <monitored-inbox>`, which records `mail.smoke` delivery rows for `/admin/operations` and `/admin/readiness`.
+
+Remaining provider-backed event templates:
+
 - intro received
 - intro accepted
 - proposal received
