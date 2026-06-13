@@ -12,6 +12,7 @@ CoFoundry can run in production-facing mock/access-request mode today without Su
 ## Daily Checks
 
 - Visit `/admin/readiness` and resolve any fail or warning checks before treating the deployment as production-ready.
+- Use `/admin/readiness`'s server provisioning checklist as the canonical handoff for host-level secrets, durable storage, mail, worker timers, restore drills, monitoring, first-admin bootstrap, and Stripe cutover preparation.
 - Confirm `/api/health` returns `status: "ok"` from the deployed Nuxt app.
 - Visit `/admin/operations` and confirm the newest backup, scanner, digest, and operational-event rows are current.
 - Confirm `/admin/readiness` shows recent restore-drill evidence. A backup without a successful restore drill remains a warning.

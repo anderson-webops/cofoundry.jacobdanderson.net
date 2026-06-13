@@ -106,6 +106,14 @@ describe("production readiness snapshot", () => {
     expect(snapshot.score).toBe(100)
     expect(snapshot.counts.failedChecks).toBe(0)
     expect(snapshot.counts.warningChecks).toBe(0)
+    expect(snapshot.provisioningTasks.find(task => task.id === "backup-worker-provisioning")).toMatchObject({
+      status: "pass",
+      title: "Backup worker schedule",
+    })
+    expect(snapshot.provisioningTasks.find(task => task.id === "stripe-cutover-provisioning")).toMatchObject({
+      status: "info",
+      summary: "Stripe intentionally disabled",
+    })
   })
 
   it("fails hosted production readiness when required launch controls are missing", () => {
@@ -141,6 +149,21 @@ describe("production readiness snapshot", () => {
     expect(snapshot.overallStatus).toBe("fail")
     expect(failedCheckIds).toEqual(expect.arrayContaining(["environment-validation", "public-app-url", "session-signing-secret", "active-admin-access"]))
     expect(warningCheckIds).toEqual(expect.arrayContaining(["mail-transport", "operations-worker-token", "local-durable-store", "backup-recency", "notification-digests", "restore-drill", "monitoring-heartbeat"]))
+    expect(snapshot.provisioningTasks).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        command: "SESSION_SIGNING_SECRET=<vault-managed-random-secret>",
+        id: "session-secret-provisioning",
+        status: "fail",
+      }),
+      expect.objectContaining({
+        id: "worker-token-provisioning",
+        status: "warn",
+      }),
+      expect.objectContaining({
+        id: "restore-drill-provisioning",
+        status: "warn",
+      }),
+    ]))
   })
 
   it("warns on stale operator queues and fails flagged file scans", () => {
@@ -319,5 +342,10 @@ describe("production readiness snapshot", () => {
     expect(snapshot.overallStatus).toBe("warn")
     expect(checkById.get("active-admin-access")?.status).toBe("pass")
     expect(checkById.get("admin-bootstrap-audit")?.status).toBe("warn")
+    expect(snapshot.provisioningTasks.find(task => task.id === "first-admin-bootstrap-provisioning")).toMatchObject({
+      command: "BOOTSTRAP_ADMIN_EMAIL=operator@example.com npm run -w back-end bootstrap-admin",
+      docsPath: "docs/server-ai-admin-bootstrap-prompt.md",
+      status: "warn",
+    })
   })
 })

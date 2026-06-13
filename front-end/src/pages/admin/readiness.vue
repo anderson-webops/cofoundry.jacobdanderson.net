@@ -33,6 +33,23 @@ const priorityChecks = computed(() => {
     .slice(0, 6) || []
 })
 
+const provisioningTasks = computed(() => {
+  const statusRank: Record<ProductionReadinessStatus, number> = {
+    fail: 0,
+    warn: 1,
+    info: 2,
+    pass: 3,
+  }
+
+  return [...(data.value?.provisioningTasks || [])].sort((left, right) => {
+    const statusDiff = statusRank[left.status] - statusRank[right.status]
+    if (statusDiff !== 0)
+      return statusDiff
+
+    return left.title.localeCompare(right.title)
+  })
+})
+
 const scoreContext = computed(() => {
   if (!data.value)
     return "Waiting for server checks."
@@ -136,6 +153,52 @@ const scoreContext = computed(() => {
             <p class="text-sm leading-6 max-w-[28rem] lg:text-right">
               {{ check.action }}
             </p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section v-if="data" class="panel p-6">
+      <div class="flex flex-wrap gap-3 items-start justify-between">
+        <div>
+          <h2 class="text-lg font-semibold">
+            Server provisioning checklist
+          </h2>
+          <p class="muted text-sm leading-6 mt-2">
+            Copy these into the server handoff when an operator or server AI is wiring host-level secrets, timers, workers, and cutovers.
+          </p>
+        </div>
+        <BaseBadge tone="neutral">
+          {{ provisioningTasks.length }} tasks
+        </BaseBadge>
+      </div>
+
+      <div class="surface-row-list mt-5">
+        <article v-for="task in provisioningTasks" :key="task.id" class="surface-row">
+          <div class="gap-5 grid lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.85fr)] lg:items-start">
+            <div class="min-w-0">
+              <div class="flex flex-wrap gap-2">
+                <BaseBadge :tone="statusTone[task.status]">
+                  {{ statusLabel[task.status] }}
+                </BaseBadge>
+                <BaseBadge tone="neutral">
+                  {{ task.summary }}
+                </BaseBadge>
+              </div>
+              <h3 class="text-base font-semibold mt-4">
+                {{ task.title }}
+              </h3>
+              <p class="muted text-sm leading-6 mt-2">
+                {{ task.detail }}
+              </p>
+              <p class="text-sm leading-6 mt-3">
+                {{ task.action }}
+              </p>
+              <p class="text-xs text-[var(--muted)] mt-3">
+                Reference: {{ task.docsPath }}
+              </p>
+            </div>
+            <pre class="text-xs text-[var(--text)] leading-5 p-4 border border-[var(--line)] rounded-2xl bg-[var(--panel-strong)] overflow-x-auto"><code>{{ task.command }}</code></pre>
           </div>
         </article>
       </div>
