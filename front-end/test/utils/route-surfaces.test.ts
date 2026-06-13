@@ -2,8 +2,10 @@ import { existsSync } from "node:fs"
 import { resolve } from "node:path"
 import { describe, expect, it } from "vitest"
 import { adminNavigation, appNavigation, marketingNavigation } from "../../shared/constants/app"
-import { environmentGatedSurfaces, publicMarketingRoutes } from "../../shared/constants/route-surfaces"
+import { environmentGatedSurfaces, isPrivateSurfacePath, publicMarketingRoutes } from "../../shared/constants/route-surfaces"
 import { contractGuidePages, trustCenterPages } from "../../shared/data/public-content"
+import { workspaceSeed } from "../../shared/data/seed"
+import { getPublicRoutePaths } from "../../shared/utils/directory"
 
 const pagesRoot = resolve(process.cwd(), "src/pages")
 
@@ -29,6 +31,25 @@ describe("route surfaces", () => {
   it("keeps public marketing routes backed by real page files", () => {
     for (const route of publicMarketingRoutes)
       expect(routeFileExists(route), `${route} should resolve to a page file`).toBe(true)
+  })
+
+  it("keeps generated public routes sitemap-safe and backed by page patterns", () => {
+    const publicRoutes = getPublicRoutePaths(workspaceSeed)
+
+    expect(new Set(publicRoutes).size).toBe(publicRoutes.length)
+
+    for (const route of publicRoutes) {
+      expect(isPrivateSurfacePath(route), `${route} should not be classified as private`).toBe(false)
+      expect(routeFileExists(route), `${route} should resolve to a page file or dynamic page pattern`).toBe(true)
+    }
+  })
+
+  it("classifies private surfaces without hiding public health checks", () => {
+    for (const route of ["/admin/readiness", "/app/inbox", "/auth/sign-in", "/onboarding", "/api/admin/readiness", "/api/operations/events", "/api/workspace"])
+      expect(isPrivateSurfacePath(route), `${route} should be private`).toBe(true)
+
+    for (const route of ["/", "/find-cofounder", "/people/ava-morgan", "/sitemap.xml", "/robots.txt", "/api/health"])
+      expect(isPrivateSurfacePath(route), `${route} should remain public`).toBe(false)
   })
 
   it("keeps public navigation links aligned with real routes", () => {

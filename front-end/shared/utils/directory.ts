@@ -1,4 +1,5 @@
 import type { Profile, StartupOpportunity, StartupStage, WorkspaceSeed } from "../types/domain"
+import { publicMarketingRoutes } from "../constants/route-surfaces"
 import { contractGuidePages, trustCenterPages } from "../data/public-content"
 import { formatStage } from "./format"
 import { buildProfileReadiness, buildProfileTrustScore } from "./formation"
@@ -8,24 +9,6 @@ const slugPattern = /[^a-z0-9]+/g
 const trimHyphenPattern = /^-|-$/g
 const userPrefixPattern = /^user_/
 const excludedRoleLabels = new Set(["founder", "ceo"])
-const staticPublicRoutes = [
-  "/",
-  "/find-cofounder",
-  "/roles",
-  "/industries",
-  "/stage",
-  "/people",
-  "/startups",
-  "/trust",
-  "/contracts",
-  "/how-it-works",
-  "/pricing",
-  "/faq",
-  "/safety",
-  "/terms",
-  "/privacy",
-  "/contact",
-]
 
 export interface PublicProfileEntry {
   slug: string
@@ -268,7 +251,7 @@ export function getPublicOpportunitiesForStage(seed: WorkspaceSeed, slug: string
 
 export function getPublicRoutePaths(seed: WorkspaceSeed) {
   return [
-    ...staticPublicRoutes,
+    ...publicMarketingRoutes,
     ...trustCenterPages.map(page => `/trust/${page.slug}`),
     ...contractGuidePages.map(page => `/contracts/${page.slug}`),
     ...getRoleHubs(seed).map(entry => `/roles/${entry.slug}`),
