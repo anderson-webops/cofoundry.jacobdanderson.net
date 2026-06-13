@@ -115,6 +115,7 @@ Additional production controls now started:
 - JSON account data export from settings
 - privacy and trust-review request submission from settings, with `/admin/privacy` reading Supabase or the local mock-mode queue
 - `/admin/readiness` launch-readiness scoring from server-side environment, queue, worker, and operations evidence
+- provider-independent trust-verification evidence intake, with worker-authenticated local/Supabase persistence and `/admin/operations` visibility for future phone, social/OAuth, work-domain, identity, and opportunity-ownership providers
 
 ### 4. Production billing path
 

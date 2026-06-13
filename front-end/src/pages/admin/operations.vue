@@ -18,6 +18,7 @@ interface OperationsPayload {
   mode: string
   notificationDeliveries: OpsRow[]
   operationalEvents: OpsRow[]
+  trustVerificationEvents: OpsRow[]
 }
 
 const requestFetch = useRequestFetch()
@@ -49,6 +50,12 @@ const cards = computed(() => [
     title: "Contract envelopes",
   },
   {
+    count: data.value?.trustVerificationEvents.length || 0,
+    description: "Provider-reported identity, social, domain, and ownership checks awaiting operator policy or review.",
+    rows: data.value?.trustVerificationEvents || [],
+    title: "Trust verifications",
+  },
+  {
     count: data.value?.backupRuns.length || 0,
     description: "Recorded backup runs from the external server schedule.",
     rows: data.value?.backupRuns || [],
@@ -66,7 +73,14 @@ function rowStatus(row: OpsRow) {
   return String(row.status || row.scan_status || row.severity || row.reason || "recorded")
 }
 
+function readable(value: unknown) {
+  return String(value || "").replaceAll("_", " ")
+}
+
 function rowTitle(row: OpsRow) {
+  if (row.verification_type && row.target_id)
+    return `${readable(row.verification_type)} · ${row.target_id}`
+
   return String(row.subject || row.original_filename || row.email || row.provider_envelope_id || row.event_type || row.provider || row.id || "Record")
 }
 
@@ -79,11 +93,15 @@ function rowDetail(row: OpsRow) {
   const details = [
     row.event_type ? `event ${row.event_type}` : "",
     row.target_type && row.target_id ? `${row.target_type} ${row.target_id}` : "",
+    row.verification_type ? `check ${readable(row.verification_type)}` : "",
     row.recipient ? `recipient ${row.recipient}` : "",
     row.contract_id ? `contract ${row.contract_id}` : "",
     row.contract_version_id ? `version ${row.contract_version_id}` : "",
     row.category ? `category ${row.category}` : "",
     row.provider ? `provider ${row.provider}` : "",
+    row.provider_subject_id ? `subject ${row.provider_subject_id}` : "",
+    typeof row.confidence === "number" ? `confidence ${Math.round(row.confidence * 100)}%` : "",
+    row.evidence_file_upload_id ? `evidence ${row.evidence_file_upload_id}` : "",
     row.source_event_id ? `source ${row.source_event_id}` : "",
   ].filter(Boolean)
 

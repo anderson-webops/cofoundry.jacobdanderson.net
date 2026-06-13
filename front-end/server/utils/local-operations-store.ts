@@ -1,7 +1,7 @@
 import type { Buffer } from "node:buffer"
 import type { z } from "zod"
 import type { FileUpload, FileUploadRelatedType, SessionUser } from "../../shared/types/domain"
-import type { fileScanResultSchema, fileUploadPolicySchema, operationsBackupRunSchema, operationsContractEnvelopeSchema, operationsEmailSuppressionSchema, operationsEventSchema } from "../../shared/utils/validation"
+import type { fileScanResultSchema, fileUploadPolicySchema, operationsBackupRunSchema, operationsContractEnvelopeSchema, operationsEmailSuppressionSchema, operationsEventSchema, operationsTrustVerificationSchema } from "../../shared/utils/validation"
 import { createHash, randomUUID } from "node:crypto"
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { dirname, resolve } from "node:path"
@@ -13,6 +13,7 @@ type OperationsBackupRunPayload = z.infer<typeof operationsBackupRunSchema>
 type OperationsContractEnvelopePayload = z.infer<typeof operationsContractEnvelopeSchema>
 type OperationsEmailSuppressionPayload = z.infer<typeof operationsEmailSuppressionSchema>
 type OperationsEventPayload = z.infer<typeof operationsEventSchema>
+type OperationsTrustVerificationPayload = z.infer<typeof operationsTrustVerificationSchema>
 
 interface NotificationDeliveryResult {
   bodyPreview?: string | null
@@ -118,6 +119,22 @@ interface LocalContractEnvelopeEventRow {
   status: OperationsContractEnvelopePayload["status"]
 }
 
+interface LocalTrustVerificationEventRow {
+  confidence: number | null
+  created_at: string
+  evidence_file_upload_id: string | null
+  id: string
+  metadata: Record<string, unknown>
+  occurred_at: string
+  provider: string
+  provider_subject_id: string | null
+  source_event_id: string | null
+  status: OperationsTrustVerificationPayload["status"]
+  target_id: string
+  target_type: OperationsTrustVerificationPayload["targetType"]
+  verification_type: OperationsTrustVerificationPayload["verificationType"]
+}
+
 interface LocalOperationsStore {
   backupRuns: LocalBackupRunRow[]
   contractEnvelopeEvents: LocalContractEnvelopeEventRow[]
@@ -125,6 +142,7 @@ interface LocalOperationsStore {
   fileUploads: LocalFileUploadRow[]
   notificationDeliveries: LocalNotificationDeliveryRow[]
   operationalEvents: LocalOperationalEventRow[]
+  trustVerificationEvents: LocalTrustVerificationEventRow[]
   updatedAt: string
   version: 1
 }
@@ -184,6 +202,7 @@ function emptyStore(): LocalOperationsStore {
     fileUploads: [],
     notificationDeliveries: [],
     operationalEvents: [],
+    trustVerificationEvents: [],
     updatedAt: new Date().toISOString(),
     version: 1,
   }
@@ -212,6 +231,7 @@ function pruneStore(store: LocalOperationsStore): LocalOperationsStore {
     fileUploads: withRetention(store.fileUploads),
     notificationDeliveries: withRetention(store.notificationDeliveries),
     operationalEvents: withRetention(store.operationalEvents),
+    trustVerificationEvents: withRetention(store.trustVerificationEvents),
     updatedAt: new Date().toISOString(),
   }
 }
@@ -292,6 +312,7 @@ export async function readLocalOperationsRows() {
     mode: "mock",
     notificationDeliveries: store.notificationDeliveries,
     operationalEvents: store.operationalEvents,
+    trustVerificationEvents: store.trustVerificationEvents,
   }
 }
 
@@ -357,6 +378,30 @@ export async function findLocalEmailSuppression(email: string, category: Operati
     row.email === normalizedEmail
     && (row.category === "all" || row.category === category),
   ) || null
+}
+
+export async function recordLocalTrustVerificationEvent(payload: OperationsTrustVerificationPayload) {
+  return updateStore((store) => {
+    const now = new Date().toISOString()
+    const row: LocalTrustVerificationEventRow = {
+      confidence: typeof payload.confidence === "number" ? payload.confidence : null,
+      created_at: now,
+      evidence_file_upload_id: payload.evidenceFileUploadId || null,
+      id: randomUUID(),
+      metadata: payload.metadata,
+      occurred_at: payload.occurredAt || now,
+      provider: payload.provider,
+      provider_subject_id: payload.providerSubjectId || null,
+      source_event_id: payload.sourceEventId || null,
+      status: payload.status,
+      target_id: payload.targetId,
+      target_type: payload.targetType,
+      verification_type: payload.verificationType,
+    }
+
+    store.trustVerificationEvents = [row, ...store.trustVerificationEvents]
+    return row
+  })
 }
 
 export async function listLocalFileUploadsByRelated(relatedItems: Array<{ relatedId: string, relatedType: FileUploadRelatedType }>) {
