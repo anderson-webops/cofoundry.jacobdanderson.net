@@ -1,0 +1,15 @@
+[Unit]
+Description=CoFoundry unread notification digest worker
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=cofoundry
+Group=cofoundry
+WorkingDirectory=/srv/cofoundry/current
+EnvironmentFile=/etc/cofoundry/operations.env
+ExecStart=/usr/bin/env bash -lc 'dry_run_flag=""; if [ "$${COFOUNDRY_DIGEST_DRY_RUN:-true}" != "false" ]; then dry_run_flag="--dry-run"; fi; npm run operations:digest -- $$dry_run_flag --max-users "$${COFOUNDRY_DIGEST_MAX_USERS:-100}"'
+SyslogIdentifier=cofoundry-operations-digest
+NoNewPrivileges=true
+PrivateTmp=true
