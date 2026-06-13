@@ -118,6 +118,18 @@ function latestRow(rows: Array<Record<string, unknown>>, fields: string[]) {
   }).at(0)
 }
 
+function rowContainsAny(row: Record<string, unknown>, fields: string[], values: string[]) {
+  const haystack = fields
+    .map(field => String(row[field] || "").toLowerCase())
+    .join(" ")
+
+  return values.some(value => haystack.includes(value))
+}
+
+function latestMatchingEvent(rows: Array<Record<string, unknown>>, matcher: (row: Record<string, unknown>) => boolean) {
+  return latestRow(rows.filter(matcher), ["created_at"])
+}
+
 function isLocalhostUrl(value: string) {
   try {
     const url = new URL(value)
@@ -198,6 +210,14 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
   const pendingScans = countRows(input.operations.fileUploads, "scan_status", ["pending"])
   const errorEvents = countRows(input.operations.operationalEvents, "severity", ["error"])
   const warningEvents = countRows(input.operations.operationalEvents, "severity", ["warning"])
+  const latestRestoreDrill = latestMatchingEvent(input.operations.operationalEvents, row =>
+    rowContainsAny(row, ["event_type", "source", "target_type"], ["restore_drill", "restore drill"]))
+  const latestRestoreDrillTime = newestTime(latestRestoreDrill ? [latestRestoreDrill] : [], ["created_at"])
+  const restoreDrillDaysOld = daysSince(latestRestoreDrillTime, nowTime)
+  const latestMonitoringEvent = latestMatchingEvent(input.operations.operationalEvents, row =>
+    rowContainsAny(row, ["event_type", "source", "target_type"], ["monitor", "alert", "uptime"]))
+  const latestMonitoringEventTime = newestTime(latestMonitoringEvent ? [latestMonitoringEvent] : [], ["created_at"])
+  const monitoringEventDaysOld = daysSince(latestMonitoringEventTime, nowTime)
 
   const deploymentChecks = [
     check(
@@ -362,6 +382,40 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
           ? "Recent operational events include warnings that need operator review."
           : "No warning or error operational events are currently in the reviewed telemetry window.",
       "Review `/admin/operations`, fix the underlying worker or service issue, and add a follow-up event after resolution.",
+    ),
+    check(
+      "restore-drill",
+      "Restore drill evidence",
+      !latestRestoreDrill
+        ? "warn"
+        : String(latestRestoreDrill.event_type || "").includes("failed")
+          ? "fail"
+          : restoreDrillDaysOld !== null && restoreDrillDaysOld > 30
+            ? "warn"
+            : "pass",
+      latestRestoreDrill
+        ? `${String(latestRestoreDrill.event_type || "restore drill recorded")}${restoreDrillDaysOld === null ? "" : `, ${restoreDrillDaysOld} day${restoreDrillDaysOld === 1 ? "" : "s"} old`}`
+        : "No restore drill events reported",
+      latestRestoreDrill
+        ? "Restore drill events prove that backup artifacts or durable local stores can be restored into a checked environment."
+        : "Backups are not production evidence until at least one restore drill has been reported.",
+      "Run `npm run operations:restore-drill -- --id restore-YYYYMMDD -- <restore verification command>` and confirm the success event appears in `/admin/operations`.",
+    ),
+    check(
+      "monitoring-heartbeat",
+      "Monitoring and alerting heartbeat",
+      !latestMonitoringEvent
+        ? "warn"
+        : monitoringEventDaysOld !== null && monitoringEventDaysOld > 1
+          ? "warn"
+          : "pass",
+      latestMonitoringEvent
+        ? `${String(latestMonitoringEvent.event_type || "monitoring event recorded")}${monitoringEventDaysOld === null ? "" : `, ${monitoringEventDaysOld} day${monitoringEventDaysOld === 1 ? "" : "s"} old`}`
+        : "No monitoring events reported",
+      latestMonitoringEvent
+        ? "Monitoring or alerting events are reaching the operations telemetry store."
+        : "Production operation needs proof that deploy, uptime, log, or alerting monitors can report into CoFoundry.",
+      "Configure the monitor runner or alert destination to report an info heartbeat and failures through `npm run operations:event`.",
     ),
   ]
 

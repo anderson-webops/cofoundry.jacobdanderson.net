@@ -265,7 +265,7 @@ Provisioning after merge:
 - Account settings include a JSON data export, privacy-request submission, and trust-verification review requests. The settings UI no longer self-awards trust badges.
 - Admins can review privacy and trust-review requests at `/admin/privacy` from Supabase mode or the local mock-mode queue. Reviewed/resolved requests create audit actions and user notifications when Supabase persistence is enabled.
 - Admins can assign queue cases to another admin, route escalations to the right operator lane, and review trust-evidence packages from `/admin/queue` and `/admin/evidence`; these decisions are backed by `admin_actions.metadata` plus the audit log.
-- Admins can review `/admin/readiness` for a server-derived launch-readiness view covering environment, session secrets, mail, local persistence, access/privacy queues, backups, scanner status, digest worker evidence, and operational events.
+- Admins can review `/admin/readiness` for a server-derived launch-readiness view covering environment, session secrets, mail, local persistence, access/privacy queues, backups, restore-drill evidence, scanner status, digest worker evidence, monitoring heartbeats, and operational events.
 - Supabase migrations include RLS policies for user-owned, participant-owned, admin-only, notification, privacy, file-upload, backup, and operational tables.
 - File uploads are represented by server-owned metadata. Supabase mode uses signed Supabase upload/download URLs against the private `cofoundry-private-files` bucket. Mock/access-request mode uses tokenized local upload URLs and stores content under the durable local data directory so a scanner worker can download files through worker-authenticated app URLs.
 - Relationship workspaces now have a server read endpoint and `/app/relationships/:id` page that aggregates conversation, trial, proposal, agreement, unread, and next-action state.
@@ -285,7 +285,7 @@ Checked-in worker commands wrap those endpoints for systemd timers or cron:
 - `npm run operations:backup -- --provider server-backup --artifact-uri <artifact-uri> -- <backup command>` records backup start and final success/failure around the real host backup command.
 - `npm run operations:digest -- --dry-run --max-users 100` verifies scheduled digest delivery before removing `--dry-run`.
 - `COFOUNDRY_FILE_SCANNER_COMMAND="clamscan --no-summary" npm run operations:scan -- --limit 25` polls pending file scans, downloads private uploads, runs the scanner, and reports `clean`, `flagged`, or `failed`.
-- `npm run operations:event -- --source systemd --event-type deploy.completed --metadata release=v1.x` records deploy, monitor, backup, and worker events.
+- `npm run operations:event -- --source systemd --event-type deploy.completed --metadata release=v1.x` records deploy, monitor, backup, and worker events. Report a recent `monitoring.heartbeat` or equivalent monitor/alert event so `/admin/readiness` can prove monitoring is wired.
 - `npm run operations:restore-drill -- --id restore-YYYYMMDD -- <restore verification command>` records restore-drill start and success/failure events.
 
 When Supabase is disabled, these endpoints write durable local telemetry rows to `operations-telemetry.json` with a default retention limit of 200 rows per collection. Local upload content is stored under `local-file-uploads/` in the same data directory and is not committed to source. Set `COFOUNDRY_OPERATIONS_RETENTION_LIMIT` to tune telemetry retention.
@@ -336,7 +336,7 @@ Current deployments can stay in mock mode with no secret-backed services enabled
 - HSTS is intentionally tied to an HTTPS `NUXT_PUBLIC_APP_URL`, so local preview and non-HTTPS development hosts do not receive a misleading transport-security header.
 - If `NUXT_PUBLIC_BACKEND_MODE="mock"` in a production deployment, the product should stay in marketing-shell mode unless `NUXT_PUBLIC_ENABLE_DEMO_ACCESS="true"` is set deliberately for a staging/demo environment.
 - `SESSION_SIGNING_SECRET`, `COFOUNDRY_OPERATIONS_TOKEN`, `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`, and `STRIPE_WEBHOOK_SECRET` should stay externalized through Vault-managed or host-managed secret injection, not committed env files.
-- Backup and observability migrations create `backup_runs` and `operational_events` tables. Source routes now accept worker reports and persist them locally in mock mode, but the actual backup schedule, restore drill, log drain, and alerting provider are still server/operator provisioning tasks.
+- Backup and observability migrations create `backup_runs` and `operational_events` tables. Source routes now accept worker reports and persist them locally in mock mode. `/admin/readiness` now warns until both a restore-drill success and a monitoring/alerting heartbeat have been reported, but the actual backup schedule, restore drill command, log drain, and alerting provider are still server/operator provisioning tasks.
 
 ## Route surfaces
 

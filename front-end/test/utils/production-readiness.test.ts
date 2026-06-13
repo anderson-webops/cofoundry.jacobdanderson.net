@@ -52,12 +52,30 @@ const healthyOperations = {
     notification_count: 1,
     status: "sent",
   }],
-  operationalEvents: [{
-    created_at: generatedAt,
-    event_type: "worker.heartbeat",
-    id: "event_healthy",
-    severity: "info",
-  }],
+  operationalEvents: [
+    {
+      created_at: generatedAt,
+      event_type: "worker.heartbeat",
+      id: "event_healthy",
+      severity: "info",
+      source: "operations-worker",
+    },
+    {
+      created_at: generatedAt,
+      event_type: "restore_drill_succeeded",
+      id: "event_restore_drill",
+      severity: "info",
+      source: "restore-drill-worker",
+      target_type: "restore_drill",
+    },
+    {
+      created_at: generatedAt,
+      event_type: "monitoring.heartbeat",
+      id: "event_monitoring",
+      severity: "info",
+      source: "uptime-monitor",
+    },
+  ],
 }
 
 describe("production readiness snapshot", () => {
@@ -108,7 +126,7 @@ describe("production readiness snapshot", () => {
 
     expect(snapshot.overallStatus).toBe("fail")
     expect(failedCheckIds).toEqual(expect.arrayContaining(["environment-validation", "public-app-url", "session-signing-secret"]))
-    expect(warningCheckIds).toEqual(expect.arrayContaining(["mail-transport", "operations-worker-token", "local-durable-store", "backup-recency", "notification-digests"]))
+    expect(warningCheckIds).toEqual(expect.arrayContaining(["mail-transport", "operations-worker-token", "local-durable-store", "backup-recency", "notification-digests", "restore-drill", "monitoring-heartbeat"]))
   })
 
   it("warns on stale operator queues and fails flagged file scans", () => {
@@ -173,5 +191,82 @@ describe("production readiness snapshot", () => {
     expect(checkById.get("access-request-queue")?.status).toBe("warn")
     expect(checkById.get("privacy-request-queue")?.status).toBe("warn")
     expect(checkById.get("file-scanning")?.status).toBe("fail")
+  })
+
+  it("warns when restore drills and monitoring heartbeats are stale or missing", () => {
+    const snapshot = buildProductionReadinessSnapshot({
+      accessRequests: [],
+      contactMailConfigured: true,
+      environment: environmentSnapshot(),
+      environmentValidationErrors: [],
+      generatedAt,
+      hasDurableLocalDataDir: true,
+      hasOperationsWorkerToken: true,
+      hasSessionSigningSecret: true,
+      isLocalDevelopment: false,
+      operations: {
+        ...healthyOperations,
+        operationalEvents: [{
+          created_at: generatedAt,
+          event_type: "worker.heartbeat",
+          id: "event_worker_only",
+          severity: "info",
+          source: "operations-worker",
+        }],
+      },
+      privacyRequests: [],
+    })
+    const checkById = new Map(snapshot.groups.flatMap(group => group.checks).map(check => [check.id, check]))
+
+    expect(snapshot.overallStatus).toBe("warn")
+    expect(checkById.get("restore-drill")?.status).toBe("warn")
+    expect(checkById.get("monitoring-heartbeat")?.status).toBe("warn")
+  })
+
+  it("fails when the latest restore drill failed", () => {
+    const snapshot = buildProductionReadinessSnapshot({
+      accessRequests: [],
+      contactMailConfigured: true,
+      environment: environmentSnapshot(),
+      environmentValidationErrors: [],
+      generatedAt,
+      hasDurableLocalDataDir: true,
+      hasOperationsWorkerToken: true,
+      hasSessionSigningSecret: true,
+      isLocalDevelopment: false,
+      operations: {
+        ...healthyOperations,
+        operationalEvents: [
+          {
+            created_at: "2026-06-01T12:00:00.000Z",
+            event_type: "restore_drill_succeeded",
+            id: "event_restore_old",
+            severity: "info",
+            source: "restore-drill-worker",
+            target_type: "restore_drill",
+          },
+          {
+            created_at: generatedAt,
+            event_type: "restore_drill_failed",
+            id: "event_restore_failed",
+            severity: "error",
+            source: "restore-drill-worker",
+            target_type: "restore_drill",
+          },
+          {
+            created_at: generatedAt,
+            event_type: "monitoring.heartbeat",
+            id: "event_monitoring",
+            severity: "info",
+            source: "uptime-monitor",
+          },
+        ],
+      },
+      privacyRequests: [],
+    })
+    const checkById = new Map(snapshot.groups.flatMap(group => group.checks).map(check => [check.id, check]))
+
+    expect(snapshot.overallStatus).toBe("fail")
+    expect(checkById.get("restore-drill")?.status).toBe("fail")
   })
 })
