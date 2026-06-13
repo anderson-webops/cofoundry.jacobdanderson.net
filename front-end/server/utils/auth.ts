@@ -7,6 +7,7 @@ import { workspaceSeed } from "~/shared/data/seed"
 import { isLocalDevelopmentEnvironment, readPublicEnvironment } from "~/shared/utils/environment"
 import { resolveProductAccessPolicy } from "~/shared/utils/product-access"
 import { decodeSessionUser, encodeSessionUser, sessionCookieName, sessionSignatureCookieName } from "~/shared/utils/session"
+import { resolveActiveSessionFromSeed } from "~/shared/utils/session-authority"
 import { signInSchema, signUpSchema } from "~/shared/utils/validation"
 import { buildSessionUser } from "~/shared/utils/workspace"
 import { buildDraftMemberWorkspaceState, buildMemberWorkspaceState, resolveSessionUserFromWorkspace } from "~/shared/utils/workspace-persistence"
@@ -17,6 +18,14 @@ import { createSupabaseAdminClient, createSupabaseServerClient, isSupabaseEnable
 
 interface RegisteredAccount extends AuthAccount {
   name: string
+}
+
+interface SupabaseSessionUserRow {
+  email: string
+  id: string
+  onboarding_completed: boolean
+  role: SessionUser["role"]
+  suspended_at: string | null
 }
 
 const registeredAccounts = new Map<string, RegisteredAccount>()
@@ -88,6 +97,37 @@ function buildIdentityInput(session: SessionUser) {
   }
 }
 
+async function readSupabaseSessionUser(event: H3Event, decodedSession: SessionUser) {
+  const adminClient = createSupabaseAdminClient(event)
+  if (!adminClient)
+    throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
+
+  const { data, error } = await adminClient
+    .from("users")
+    .select("id,email,role,onboarding_completed,suspended_at")
+    .eq("id", decodedSession.id)
+    .maybeSingle<SupabaseSessionUserRow>()
+
+  if (error)
+    throw error
+
+  return data
+}
+
+async function requireActiveSessionFromWorkspace(event: H3Event, session: SessionUser) {
+  const workspace = await loadMemberWorkspaceState(event, buildIdentityInput(session))
+  const activeSession = resolveActiveSessionFromSeed(workspace.seed, workspace.session)
+
+  if (!activeSession || activeSession.email !== session.email) {
+    throw createError({
+      statusCode: 403,
+      statusMessage: "This account is not active.",
+    })
+  }
+
+  return activeSession
+}
+
 function areAccountsEnabledForCurrentEnvironment() {
   const publicEnvironment = readPublicEnvironment(process.env)
   const policy = resolveProductAccessPolicy({
@@ -134,15 +174,26 @@ export async function readAuthoritativeSession(event: H3Event) {
     if (!baseSession || baseSession.email !== decodedSession.email)
       return null
 
-    const { session } = await loadMemberWorkspaceState(event, buildIdentityInput(baseSession))
-    return session.email === decodedSession.email ? session : null
+    const { seed, session } = await loadMemberWorkspaceState(event, buildIdentityInput(baseSession))
+    const activeSession = resolveActiveSessionFromSeed(seed, session)
+    return activeSession?.email === decodedSession.email ? activeSession : null
   }
 
-  const { session } = await loadMemberWorkspaceState(event, buildIdentityInput(decodedSession))
-  if (session.email !== decodedSession.email)
+  const persistedUser = await readSupabaseSessionUser(event, decodedSession)
+  if (!persistedUser || persistedUser.email !== decodedSession.email || persistedUser.suspended_at)
     return null
 
-  return session
+  const { seed, session } = await loadMemberWorkspaceState(event, {
+    id: persistedUser.id,
+    email: persistedUser.email,
+    name: decodedSession.name,
+    onboardingCompleted: persistedUser.onboarding_completed,
+    role: persistedUser.role,
+    subscriptionPlan: decodedSession.subscriptionPlan,
+  })
+  const activeSession = resolveActiveSessionFromSeed(seed, session)
+
+  return activeSession?.email === decodedSession.email ? activeSession : null
 }
 
 export async function requireAuthenticatedSession(event: H3Event) {
@@ -231,26 +282,26 @@ export async function verifyCredentials(event: H3Event, email: string, password:
       subscriptionPlan: "free",
     })
 
-    return session
+    return requireActiveSessionFromWorkspace(event, session)
   }
 
   const seededAccount = workspaceSeed.authAccounts.find(account => account.email === normalizedEmail)
   if (seededAccount && seededAccount.password === password) {
     const session = getMockSessionBySeedUserId(seededAccount.userId)
     if (session)
-      return session
+      return requireActiveSessionFromWorkspace(event, session)
   }
 
   const registeredAccount = registeredAccounts.get(normalizedEmail)
   if (registeredAccount && registeredAccount.password === password) {
     const session = registeredSessions.get(registeredAccount.userId)
     if (session)
-      return session
+      return requireActiveSessionFromWorkspace(event, session)
   }
 
   const localSession = await verifyLocalAuthCredentials(normalizedEmail, password)
   if (localSession)
-    return localSession
+    return requireActiveSessionFromWorkspace(event, localSession)
 
   throw createError({
     statusCode: 401,
