@@ -1,19 +1,26 @@
 import type { H3Event } from "h3"
 import type { SessionUser, WorkspaceSeed } from "~/shared/types/domain"
+import type { LifecycleNotificationRequest } from "~/shared/utils/lifecycle-notifications"
 import { randomUUID } from "node:crypto"
 import { buildInboxSnapshot } from "../../shared/utils/inbox"
+import { buildLifecycleNotification } from "../../shared/utils/lifecycle-notifications"
 import { isContactMailConfigured, sendPlainTextEmail } from "./contact"
 import { recordLocalNotificationDelivery } from "./local-operations-store"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
 
 export interface NotificationDeliveryResult {
+  bodyPreview?: string | null
   configured: boolean
   delivered: boolean
   error: string | null
-  reason?: "email_digest_disabled" | "mail_not_configured" | "no_workspace_items" | "sent" | "delivery_failed"
+  eventType?: string
+  metadata?: Record<string, unknown>
+  reason?: "dry_run" | "email_digest_disabled" | "mail_not_configured" | "mock_mode" | "no_workspace_items" | "sent" | "delivery_failed"
   skipped?: boolean
   subject: string
   suppressed?: boolean
+  targetId?: string | null
+  targetType?: string | null
   unreadCount: number
 }
 
@@ -74,16 +81,114 @@ export async function recordNotificationDelivery(event: H3Event, session: Sessio
       id: randomUUID(),
       user_id: session.id,
       channel: "email",
+      body_preview: result.bodyPreview || null,
+      event_type: result.eventType || "digest.unread",
       status: result.delivered ? "sent" : result.configured ? "failed" : "skipped",
       subject: result.subject,
       recipient: session.email,
       notification_count: result.unreadCount,
       error: result.error,
+      metadata: result.metadata || {},
+      target_id: result.targetId || null,
+      target_type: result.targetType || null,
       delivered_at: result.delivered ? new Date().toISOString() : null,
     })
 
   if (error)
     throw error
+}
+
+export function buildLifecycleBodyPreview(body: string) {
+  return body.replace(/\s+/g, " ").trim().slice(0, 240)
+}
+
+export async function sendLifecycleNotification(
+  event: H3Event,
+  seed: WorkspaceSeed,
+  request: LifecycleNotificationRequest,
+  options: { dryRun?: boolean, forceRecordOnlyReason?: "dry_run" | "mock_mode" } = {},
+) {
+  const plan = buildLifecycleNotification(seed, request)
+
+  if (!plan) {
+    throw createError({
+      statusCode: 404,
+      statusMessage: "Lifecycle notification target was not found or is not owned by the recipient.",
+    })
+  }
+
+  const session: SessionUser = {
+    email: plan.recipientEmail,
+    id: plan.userId,
+    name: plan.recipientName,
+    onboardingCompleted: true,
+    role: seed.users.find(user => user.id === plan.userId)?.role || "founder",
+    subscriptionPlan: "free",
+  }
+  const baseResult = {
+    bodyPreview: buildLifecycleBodyPreview(plan.body),
+    eventType: plan.eventType,
+    metadata: plan.metadata,
+    subject: plan.subject,
+    targetId: plan.targetId,
+    targetType: plan.targetType,
+    unreadCount: 1,
+  }
+
+  if (options.dryRun || options.forceRecordOnlyReason) {
+    const reason = options.forceRecordOnlyReason || "dry_run"
+    const result: NotificationDeliveryResult = {
+      ...baseResult,
+      configured: false,
+      delivered: false,
+      error: reason === "dry_run" ? "Dry run; no lifecycle email sent." : "Mock mode records lifecycle notifications without sending email.",
+      reason,
+      skipped: true,
+    }
+    await recordNotificationDelivery(event, session, result)
+    return { delivery: result, plan }
+  }
+
+  if (!isContactMailConfigured()) {
+    const result: NotificationDeliveryResult = {
+      ...baseResult,
+      configured: false,
+      delivered: false,
+      error: null,
+      reason: "mail_not_configured",
+    }
+    await recordNotificationDelivery(event, session, result)
+    return { delivery: result, plan }
+  }
+
+  try {
+    await sendPlainTextEmail({
+      body: plan.body,
+      subject: plan.subject,
+      toEmail: plan.recipientEmail,
+    })
+
+    const result: NotificationDeliveryResult = {
+      ...baseResult,
+      configured: true,
+      delivered: true,
+      error: null,
+      reason: "sent",
+    }
+    await recordNotificationDelivery(event, session, result)
+    return { delivery: result, plan }
+  }
+  catch (error) {
+    const result: NotificationDeliveryResult = {
+      ...baseResult,
+      configured: true,
+      delivered: false,
+      error: error instanceof Error ? error.message : "Lifecycle email delivery failed",
+      reason: "delivery_failed",
+    }
+    await recordNotificationDelivery(event, session, result)
+    return { delivery: result, plan }
+  }
 }
 
 export async function sendUnreadNotificationDigest(event: H3Event, seed: WorkspaceSeed, session: SessionUser, options: UnreadNotificationDigestOptions = {}) {

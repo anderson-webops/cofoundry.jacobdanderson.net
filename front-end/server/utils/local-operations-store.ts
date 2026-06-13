@@ -13,23 +13,33 @@ type OperationsBackupRunPayload = z.infer<typeof operationsBackupRunSchema>
 type OperationsEventPayload = z.infer<typeof operationsEventSchema>
 
 interface NotificationDeliveryResult {
+  bodyPreview?: string | null
   configured: boolean
   delivered: boolean
   error: string | null
+  eventType?: string
+  metadata?: Record<string, unknown>
   subject: string
+  targetId?: string | null
+  targetType?: string | null
   unreadCount: number
 }
 
 interface LocalNotificationDeliveryRow {
+  body_preview: string | null
   channel: string
   created_at: string
   delivered_at: string | null
   error: string | null
+  event_type: string
   id: string
+  metadata: Record<string, unknown>
   notification_count: number
   recipient: string
   status: "sent" | "skipped" | "failed"
   subject: string
+  target_id: string | null
+  target_type: string | null
   user_id: string
 }
 
@@ -426,15 +436,20 @@ export async function readLocalFileUploadContent(uploadId: string) {
 export async function recordLocalNotificationDelivery(session: SessionUser, result: NotificationDeliveryResult) {
   return updateStore((store) => {
     const row: LocalNotificationDeliveryRow = {
+      body_preview: result.bodyPreview || null,
       channel: "email",
       created_at: new Date().toISOString(),
       delivered_at: result.delivered ? new Date().toISOString() : null,
       error: result.error,
+      event_type: result.eventType || "digest.unread",
       id: randomUUID(),
+      metadata: result.metadata || {},
       notification_count: result.unreadCount,
       recipient: session.email,
       status: result.delivered ? "sent" : result.configured ? "failed" : "skipped",
       subject: result.subject,
+      target_id: result.targetId || null,
+      target_type: result.targetType || null,
       user_id: session.id,
     }
 

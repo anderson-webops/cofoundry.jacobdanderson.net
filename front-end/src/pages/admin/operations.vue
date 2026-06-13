@@ -60,6 +60,16 @@ function rowDate(row: OpsRow) {
   const value = row.created_at || row.started_at
   return typeof value === "string" ? formatDate(value) : "No date"
 }
+
+function rowDetail(row: OpsRow) {
+  const details = [
+    row.event_type ? `event ${row.event_type}` : "",
+    row.target_type && row.target_id ? `${row.target_type} ${row.target_id}` : "",
+    row.recipient ? `recipient ${row.recipient}` : "",
+  ].filter(Boolean)
+
+  return details.join(" · ")
+}
 </script>
 
 <template>
@@ -110,6 +120,9 @@ function rowDate(row: OpsRow) {
                 </p>
                 <p class="muted text-xs tracking-[0.12em] mt-2 uppercase">
                   {{ rowStatus(row) }}
+                </p>
+                <p v-if="rowDetail(row)" class="muted text-xs leading-5 mt-2 break-words">
+                  {{ rowDetail(row) }}
                 </p>
               </div>
               <span class="text-xs text-[var(--muted)] whitespace-nowrap">

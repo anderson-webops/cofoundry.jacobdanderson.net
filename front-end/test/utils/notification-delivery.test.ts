@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import { buildDigestContent, isScheduledDigestEmailEnabled, sendUnreadNotificationDigest } from "../../server/utils/notification-delivery"
 import { workspaceSeed } from "../../shared/data/seed"
 import { cloneValue } from "../../shared/utils/clone"
+import { buildLifecycleNotification } from "../../shared/utils/lifecycle-notifications"
 import { buildSessionUser } from "../../shared/utils/workspace"
 
 describe("notification delivery preferences", () => {
@@ -51,5 +52,41 @@ describe("notification delivery preferences", () => {
       skipped: true,
       unreadCount: 0,
     })
+  })
+
+  it("builds lifecycle notification content for signature-required events", () => {
+    const plan = buildLifecycleNotification(workspaceSeed, {
+      eventType: "contract.signature_required",
+      targetId: "contract_ledgerloop",
+      userId: "user_malik",
+    })
+
+    expect(plan).toMatchObject({
+      eventType: "contract.signature_required",
+      href: "/app/contracts/contract_ledgerloop",
+      notificationType: "contract",
+      recipientEmail: "malik@cofoundry.dev",
+      subject: "CoFoundry: signature needed for LedgerLoop Founder Collaboration Agreement",
+      targetId: "contract_ledgerloop",
+      targetType: "contract",
+      userId: "user_malik",
+    })
+    expect(plan?.body).toContain("waiting on your signature")
+  })
+
+  it("does not build lifecycle email content for unrelated or already-satisfied targets", () => {
+    const alreadySigned = buildLifecycleNotification(workspaceSeed, {
+      eventType: "contract.signature_required",
+      targetId: "contract_ledgerloop",
+      userId: "user_olivia",
+    })
+    const unrelated = buildLifecycleNotification(workspaceSeed, {
+      eventType: "proposal.updated",
+      targetId: "proposal_ledgerloop_cto",
+      userId: "user_sofia",
+    })
+
+    expect(alreadySigned).toBeNull()
+    expect(unrelated).toBeNull()
   })
 })

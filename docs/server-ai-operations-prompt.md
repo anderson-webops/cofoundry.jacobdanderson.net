@@ -15,7 +15,7 @@ Source/runtime context:
 - Backend production start remains `node dist/server.js`; do not add dotenv/dotenvx loading to production startup.
 - Server-only secrets must come from Vault-managed or host-managed env files.
 - The app now supports a server-only `COFOUNDRY_OPERATIONS_TOKEN`.
-- The source includes schedulable worker commands: `npm run operations:backup`, `npm run operations:digest`, `npm run operations:scan`, `npm run operations:event`, and `npm run operations:restore-drill`.
+- The source includes schedulable worker commands: `npm run operations:backup`, `npm run operations:digest`, `npm run operations:scan`, `npm run operations:event`, `npm run operations:worker -- lifecycle-notification`, and `npm run operations:restore-drill`.
 - The source includes systemd templates in `deploy/systemd/`. Prefer installing and tuning those templates instead of hand-writing timer units from scratch.
 - In mock/access-request mode, operations telemetry persists to `.data/operations-telemetry.json` and local uploaded scan artifacts persist under `.data/local-file-uploads/` unless `COFOUNDRY_LOCAL_DATA_DIR` points at another durable writable directory.
 
@@ -40,7 +40,25 @@ Tasks:
 
    After dry-run verification, SMTP verification, and confirmation that intended pilot users enabled scheduled digest email in `/app/settings`, switch `dryRun` to `false`.
 
-9. Wire the database backup job through the checked-in lifecycle wrapper:
+9. Verify lifecycle notification rendering and telemetry before wiring live event triggers:
+
+   npm run operations:worker -- lifecycle-notification \
+     --dry-run \
+     --event-type proposal.updated \
+     --target-type proposal \
+     --target-id "<proposal-id>" \
+     --user-id "<recipient-user-id>"
+
+   The raw endpoint equivalent is:
+
+   curl -fsS -X POST "$NUXT_PUBLIC_APP_URL/api/operations/notifications/lifecycle" \
+     -H "Authorization: Bearer $COFOUNDRY_OPERATIONS_TOKEN" \
+     -H "Content-Type: application/json" \
+     --data '{"dryRun":true,"eventType":"proposal.updated","targetType":"proposal","targetId":"<proposal-id>","userId":"<recipient-user-id>"}'
+
+   Mock/access-request mode records the attempt without sending mail. In Supabase mode, keep `dryRun` true until SMTP is verified and lifecycle triggers are connected to the app events that create matches, unread messages, proposal updates, required signatures, report reviews, and subscription changes.
+
+10. Wire the database backup job through the checked-in lifecycle wrapper:
 
    npm run operations:backup -- \
      --provider server-pg-dump \
@@ -56,7 +74,7 @@ Tasks:
 
    On success or failure, call the same endpoint with `status`, `completedAt`, `artifactUri`, `notes`, and useful metadata.
 
-10. Wire the file scanner worker to read the app-managed pending scan queue. Prefer the checked-in worker with the server's approved scanner:
+11. Wire the file scanner worker to read the app-managed pending scan queue. Prefer the checked-in worker with the server's approved scanner:
 
    COFOUNDRY_FILE_SCANNER_COMMAND="clamscan --no-summary" npm run operations:scan -- --limit 25
 
@@ -72,7 +90,7 @@ Tasks:
      -H "Content-Type: application/json" \
      --data '{"scanStatus":"clean","status":"uploaded","notes":"Scanner name/version and signature timestamp"}'
 
-11. Wire deploy, backup, scanner, and monitoring failures through the checked-in event reporter:
+12. Wire deploy, backup, scanner, and monitoring failures through the checked-in event reporter:
 
    npm run operations:event -- \
      --source systemd-timer \
@@ -94,13 +112,13 @@ Tasks:
      --event-type monitoring.heartbeat \
      --severity info
 
-12. Wire a restore drill timer or manual runbook command. `/admin/readiness` should continue to warn until a successful `restore_drill_succeeded` event appears:
+13. Wire a restore drill timer or manual runbook command. `/admin/readiness` should continue to warn until a successful `restore_drill_succeeded` event appears:
 
    npm run operations:restore-drill -- \
      --id restore-YYYYMMDD \
      --metadata environment=staging \
      -- ./scripts/verify-restored-cofoundry.sh
 
-13. Verify `/admin/operations` shows backup runs, operational events, file uploads, and notification deliveries when logged in as an admin.
-14. Document timer names, log paths, backup artifact location, scanner command, restore test procedure, local telemetry path, retention limit, and rollback command in the server runbook.
+14. Verify `/admin/operations` shows backup runs, operational events, file uploads, and notification deliveries when logged in as an admin.
+15. Document timer names, log paths, backup artifact location, scanner command, restore test procedure, local telemetry path, retention limit, lifecycle trigger wiring, and rollback command in the server runbook.
 ```

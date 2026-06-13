@@ -55,10 +55,15 @@ describe("local operations telemetry store", () => {
       status: "uploaded",
     })
     await recordLocalNotificationDelivery(session, {
+      bodyPreview: "Malik updated a proposal.",
       configured: false,
       delivered: false,
       error: "Dry run; no email sent.",
+      eventType: "proposal.updated",
+      metadata: { source: "vitest" },
       subject: "CoFoundry: scheduled digest run",
+      targetId: "proposal_ledgerloop_cto",
+      targetType: "proposal",
       unreadCount: 3,
     })
 
@@ -69,9 +74,14 @@ describe("local operations telemetry store", () => {
     expect(payload.operationalEvents[0]).toMatchObject({ event_type: "scanner.completed", source: "vitest" })
     expect(payload.fileUploads[0]).toMatchObject({ id: "upload_test", scan_status: "clean", status: "uploaded" })
     expect(payload.notificationDeliveries[0]).toMatchObject({
+      body_preview: "Malik updated a proposal.",
+      event_type: "proposal.updated",
+      metadata: { source: "vitest" },
       notification_count: 3,
       status: "skipped",
       subject: "CoFoundry: scheduled digest run",
+      target_id: "proposal_ledgerloop_cto",
+      target_type: "proposal",
       user_id: "user_operations_test",
     })
   })
