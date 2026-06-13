@@ -4,7 +4,7 @@ import { checkSavedSearchCount } from "../../shared/utils/billing"
 import { buildDraftMemberWorkspaceState, buildMemberWorkspaceState, createInitialWorkspaceDocument, mergeMemberWorkspaceState, resolveSessionUserFromWorkspace, sanitizeOwnedProfile, sanitizeUserOwnedBookmarks, sanitizeUserOwnedOpportunities, sanitizeUserOwnedSavedSearches } from "../../shared/utils/workspace-persistence"
 import { mergeLocalAdminAuditState } from "./local-admin-audit"
 import { loadLocalCollaborationState } from "./local-collaboration-store"
-import { persistLocalMemberWorkspaceState, readLocalMemberWorkspaceState } from "./local-member-workspace"
+import { persistLocalMemberWorkspaceState, readLocalMemberWorkspaceState, readLocalMemberWorkspaceStates } from "./local-member-workspace"
 import { loadServerCollaborationState, mergeServerCollaborationState } from "./member-collaboration"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
 
@@ -97,6 +97,12 @@ interface PersistedOpportunityRow {
   updated_at: string
   verification_method: StartupOpportunity["verificationMethod"]
   verification_status: StartupOpportunity["verificationStatus"]
+}
+
+export interface AdminOpportunityWorkspaceSlice {
+  opportunities: StartupOpportunity[]
+  profiles: Profile[]
+  users: User[]
 }
 
 function createBaseSeed() {
@@ -401,6 +407,49 @@ async function selectOpportunities(adminClient: NonNullable<ReturnType<typeof cr
   return (data || []) as PersistedOpportunityRow[]
 }
 
+async function selectAllOpportunities(adminClient: NonNullable<ReturnType<typeof createSupabaseAdminClient>>) {
+  const { data, error } = await adminClient
+    .from("startup_opportunities")
+    .select("*")
+    .order("updated_at", { ascending: false })
+    .limit(500)
+
+  if (error)
+    throw error
+
+  return (data || []) as PersistedOpportunityRow[]
+}
+
+async function selectUsersByIds(adminClient: NonNullable<ReturnType<typeof createSupabaseAdminClient>>, userIds: string[]) {
+  if (!userIds.length)
+    return []
+
+  const { data, error } = await adminClient
+    .from("users")
+    .select("*")
+    .in("id", userIds)
+
+  if (error)
+    throw error
+
+  return (data || []) as PersistedUserRow[]
+}
+
+async function selectProfileStatesByUserIds(adminClient: NonNullable<ReturnType<typeof createSupabaseAdminClient>>, userIds: string[]) {
+  if (!userIds.length)
+    return []
+
+  const { data, error } = await adminClient
+    .from("member_profile_state")
+    .select("*")
+    .in("user_id", userIds)
+
+  if (error)
+    throw error
+
+  return (data || []) as PersistedProfileStateRow[]
+}
+
 async function upsertUser(adminClient: NonNullable<ReturnType<typeof createSupabaseAdminClient>>, user: User) {
   const { error } = await adminClient
     .from("users")
@@ -490,6 +539,69 @@ async function replaceOpportunities(adminClient: NonNullable<ReturnType<typeof c
 
   if (error)
     throw error
+}
+
+function mergeRowsById<T extends { id: string }>(primary: T[], fallback: T[]) {
+  const primaryIds = new Set(primary.map(row => row.id))
+  return [
+    ...primary,
+    ...fallback.filter(row => !primaryIds.has(row.id)),
+  ]
+}
+
+function sortOpportunitiesByUpdate(opportunities: StartupOpportunity[]) {
+  return [...opportunities].sort((left, right) => {
+    const rightTime = new Date(right.updatedAt || right.createdAt).getTime()
+    const leftTime = new Date(left.updatedAt || left.createdAt).getTime()
+    return rightTime - leftTime
+  })
+}
+
+export async function listAdminOpportunityWorkspaceSlice(event: H3Event): Promise<AdminOpportunityWorkspaceSlice> {
+  const baseSeed = createBaseSeed()
+
+  if (!isSupabaseEnabled(event)) {
+    const localStates = (await readLocalMemberWorkspaceStates()).map(syncWorkspaceVerificationState)
+    const auditedSeed = await mergeLocalAdminAuditState({
+      ...baseSeed,
+      opportunities: sortOpportunitiesByUpdate(mergeRowsById(
+        localStates.flatMap(state => state.opportunities),
+        baseSeed.opportunities,
+      )),
+      profiles: mergeRowsById(
+        localStates.map(state => state.profile),
+        baseSeed.profiles,
+      ),
+      users: mergeRowsById(
+        localStates.map(state => state.user),
+        baseSeed.users,
+      ),
+    })
+
+    return {
+      opportunities: sortOpportunitiesByUpdate(auditedSeed.opportunities),
+      profiles: auditedSeed.profiles,
+      users: auditedSeed.users,
+    }
+  }
+
+  const adminClient = createSupabaseAdminClient(event)
+  if (!adminClient)
+    throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
+
+  const opportunityRows = await selectAllOpportunities(adminClient)
+  const opportunities = fromOpportunityRows(opportunityRows)
+  const ownerUserIds = [...new Set(opportunities.map(opportunity => opportunity.ownerUserId))]
+  const [userRows, profileRows] = await Promise.all([
+    selectUsersByIds(adminClient, ownerUserIds),
+    selectProfileStatesByUserIds(adminClient, ownerUserIds),
+  ])
+
+  return {
+    opportunities: sortOpportunitiesByUpdate(mergeRowsById(opportunities, baseSeed.opportunities)),
+    profiles: mergeRowsById(profileRows.map(row => row.profile), baseSeed.profiles),
+    users: mergeRowsById(userRows.map(fromUserRow), baseSeed.users),
+  }
 }
 
 export async function persistWholeMemberWorkspaceState(event: H3Event, state: MemberWorkspaceState) {

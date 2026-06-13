@@ -81,6 +81,11 @@ export async function readLocalMemberWorkspaceState(userId: string) {
   return state ? cloneValue(state) : null
 }
 
+export async function readLocalMemberWorkspaceStates() {
+  const store = await readStore()
+  return cloneValue(store.members)
+}
+
 export async function persistLocalMemberWorkspaceState(state: MemberWorkspaceState) {
   return updateStore((store) => {
     const nextState = cloneValue(state)

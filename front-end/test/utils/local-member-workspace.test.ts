@@ -1,15 +1,17 @@
 import type { H3Event } from "h3"
+import type { StartupOpportunity } from "../../shared/types/domain"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import process from "node:process"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { persistOpportunityVerification } from "../../server/utils/admin-persistence"
 import { persistMockCheckoutSubscription, updateMockSubscriptionRenewal } from "../../server/utils/billing-persistence"
 import { applyCollaborationMutation } from "../../server/utils/collaboration-workflow"
 import { clearLocalAdminAuditStoreForTests } from "../../server/utils/local-admin-audit"
 import { clearLocalCollaborationStoreForTests } from "../../server/utils/local-collaboration-store"
 import { clearLocalMemberWorkspaceStoreForTests } from "../../server/utils/local-member-workspace"
-import { loadMemberWorkspaceState, persistMemberWorkspaceWritePayload } from "../../server/utils/member-workspace"
+import { listAdminOpportunityWorkspaceSlice, loadMemberWorkspaceState, persistMemberWorkspaceWritePayload } from "../../server/utils/member-workspace"
 import { workspaceSeed } from "../../shared/data/seed"
 import { buildSessionUser } from "../../shared/utils/workspace"
 
@@ -77,6 +79,75 @@ describe("local member workspace persistence", () => {
       headline: "Server-persisted local member profile",
     })
     expect(reloaded.state.user.notificationPreferences.unreadDigestEmail).toBe(true)
+  })
+
+  it("lists all local member opportunities for admin review", async () => {
+    const ownerIdentity = {
+      ...identity,
+      email: "casey-founder@example.com",
+      id: "user_casey_founder",
+      name: "Casey Founder",
+      onboardingCompleted: true,
+    }
+    const initial = await loadMemberWorkspaceState(event, ownerIdentity)
+    const createdAt = "2026-06-13T12:00:00.000Z"
+    const opportunity: StartupOpportunity = {
+      ...workspaceSeed.opportunities[0]!,
+      createdAt,
+      id: "opp_casey_manual_review",
+      officialWebsite: "https://casey.example.com",
+      ownerUserId: ownerIdentity.id,
+      riskFlags: ["Ownership claim requires operator review."],
+      slug: "casey-manual-review",
+      startupName: "CaseyOps",
+      updatedAt: createdAt,
+      verificationMethod: "domain",
+      verificationStatus: "manual_review",
+    }
+
+    await persistMemberWorkspaceWritePayload(event, ownerIdentity, {
+      bookmarks: [],
+      notificationPreferences: {
+        unreadDigestEmail: true,
+      },
+      onboardingCompleted: true,
+      opportunities: [opportunity],
+      profile: {
+        ...initial.state.profile,
+        displayName: "Casey Founder",
+        headline: "Founder with a startup listing awaiting operator review.",
+      },
+      savedSearches: [],
+    })
+
+    let slice = await listAdminOpportunityWorkspaceSlice(event)
+    const pendingOpportunity = slice.opportunities.find(item => item.id === opportunity.id)
+
+    expect(pendingOpportunity).toMatchObject({
+      ownerUserId: ownerIdentity.id,
+      verificationStatus: "manual_review",
+    })
+    expect(slice.users.find(user => user.id === ownerIdentity.id)).toMatchObject({
+      email: ownerIdentity.email,
+    })
+    expect(slice.profiles.find(profile => profile.userId === ownerIdentity.id)).toMatchObject({
+      displayName: "Casey Founder",
+    })
+
+    await persistOpportunityVerification(event, {
+      adminUserId: "user_ava",
+      notes: "Verified CaseyOps domain evidence from the admin queue.",
+      opportunityId: opportunity.id,
+      status: "domain_verified",
+      timestamp: "2026-06-13T12:30:00.000Z",
+    })
+
+    slice = await listAdminOpportunityWorkspaceSlice(event)
+
+    expect(slice.opportunities.find(item => item.id === opportunity.id)).toMatchObject({
+      updatedAt: "2026-06-13T12:30:00.000Z",
+      verificationStatus: "domain_verified",
+    })
   })
 
   it("persists mock collaboration mutations through the server route helpers", async () => {
