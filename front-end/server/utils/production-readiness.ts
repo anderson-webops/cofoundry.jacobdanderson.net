@@ -167,6 +167,11 @@ function isMailSmokeDelivery(row: Record<string, unknown>) {
   return String(row.event_type || "").toLowerCase() === "mail.smoke"
 }
 
+function isStripeWebhookProcessedEvent(row: Record<string, unknown>) {
+  return String(row.source || "").toLowerCase() === "stripe.webhook"
+    && String(row.event_type || "").toLowerCase() === "stripe.webhook.processed"
+}
+
 function isLocalhostUrl(value: string) {
   try {
     const url = new URL(value)
@@ -250,6 +255,13 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
   const { public: publicEnvironment } = input.environment
   const mockMode = publicEnvironment.backendMode !== "supabase"
   const stripeMode = publicEnvironment.billingMode === "stripe"
+  const environmentCheck = checkById.get("environment-validation")
+  const stripeWebhookCheck = checkById.get("stripe-webhook-evidence")
+  const stripeCutoverStatus = !stripeMode
+    ? "info"
+    : environmentCheck?.status === "fail"
+      ? "fail"
+      : stripeWebhookCheck?.status || "warn"
 
   return [
     task(
@@ -374,8 +386,8 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
     task(
       "stripe-cutover-provisioning",
       "Stripe cutover",
-      stripeMode ? checkById.get("environment-validation")?.status || "warn" : "info",
-      stripeMode ? "Stripe mode enabled" : "Stripe intentionally disabled",
+      stripeCutoverStatus,
+      stripeMode ? stripeWebhookCheck?.summary || "Stripe mode enabled" : "Stripe intentionally disabled",
       "Live billing should stay disabled until products, prices, webhook signature validation, and customer portal settings are verified.",
       stripeMode
         ? "Confirm Stripe webhook delivery, customer portal setup, and Supabase subscription reconciliation before public checkout."
@@ -389,6 +401,7 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
 export function buildProductionReadinessSnapshot(input: ProductionReadinessInput): ProductionReadinessPayload {
   const nowTime = new Date(input.generatedAt).getTime()
   const { public: publicEnvironment } = input.environment
+  const stripeMode = publicEnvironment.billingMode === "stripe"
   const accessQueue = openAccessQueueState(input.accessRequests, nowTime)
   const privacyQueue = openPrivacyQueueState(input.privacyRequests, nowTime)
   const latestBackup = latestRow(input.operations.backupRuns, ["started_at", "created_at"])
@@ -421,6 +434,20 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
       ? "warn"
       : "pass"
   }
+  const latestStripeWebhookEvent = latestMatchingEvent(input.operations.operationalEvents, isStripeWebhookProcessedEvent)
+  const latestStripeWebhookTime = newestTime(latestStripeWebhookEvent ? [latestStripeWebhookEvent] : [], ["created_at"])
+  const stripeWebhookDaysOld = daysSince(latestStripeWebhookTime, nowTime)
+  let stripeWebhookStatus: ProductionReadinessStatus = "info"
+  if (stripeMode) {
+    stripeWebhookStatus = !latestStripeWebhookEvent || (stripeWebhookDaysOld !== null && stripeWebhookDaysOld > 30)
+      ? "warn"
+      : "pass"
+  }
+  const stripeWebhookSummary = stripeMode
+    ? latestStripeWebhookEvent
+      ? `Last processed webhook${stripeWebhookDaysOld === null ? "" : ` ${stripeWebhookDaysOld} day${stripeWebhookDaysOld === 1 ? "" : "s"} old`}`
+      : "Stripe mode enabled, no processed webhook"
+    : "Stripe intentionally disabled"
   const attentionEvents = input.operations.operationalEvents.filter(row => !isAlertSmokeEvent(row))
   const errorEvents = countRows(attentionEvents, "severity", ["error"])
   const warningEvents = countRows(attentionEvents, "severity", ["warning"])
@@ -677,6 +704,18 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
         : "Do not enable trust-provider callbacks until provider choice, privacy posture, and badge policy are explicit.",
     ),
     check(
+      "stripe-webhook-evidence",
+      "Stripe webhook evidence",
+      stripeWebhookStatus,
+      stripeWebhookSummary,
+      stripeMode
+        ? "Stripe mode needs recent signed webhook evidence before checkout can be treated as reconciled."
+        : "Mock billing is the active production-safe mode; Stripe webhook evidence is not required.",
+      stripeMode
+        ? "Trigger a Stripe checkout/subscription webhook in staging or production and confirm `/admin/operations` shows a `stripe.webhook.processed` row."
+        : "Keep `NUXT_PUBLIC_BILLING_MODE=mock` until Stripe products, prices, customer portal, webhook delivery, and rollback are ready.",
+    ),
+    check(
       "operational-events",
       "Operational events",
       errorEvents ? "fail" : warningEvents ? "warn" : "pass",
@@ -763,7 +802,7 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
     },
     {
       checks: workerChecks,
-      description: "Worker-reported evidence for backups, scanner status, digests, trust-provider callbacks, and operational alerts.",
+      description: "Worker-reported evidence for backups, scanner status, digests, trust-provider callbacks, Stripe webhooks, and operational alerts.",
       id: "workers",
       title: "Worker health",
     },
