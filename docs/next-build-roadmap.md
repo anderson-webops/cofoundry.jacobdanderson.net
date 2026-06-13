@@ -168,9 +168,9 @@ The dashboard now shows the member's current activation gate, and the full activ
 
 ### 7. Operational notifications
 
-Status: source-level lifecycle notification layer implemented; live trigger/provider wiring remains.
+Status: source-level lifecycle notification layer and primary app trigger wiring implemented; live provider/host wiring remains.
 
-The source now has shared lifecycle notification templates, worker-authenticated event delivery, durable delivery telemetry in mock/access-request mode, Supabase migration support for lifecycle metadata, and admin operations visibility for event/target rows.
+The source now has shared lifecycle notification templates, worker-authenticated event delivery, durable delivery telemetry in mock/access-request mode, Supabase migration support for lifecycle metadata, admin operations visibility for event/target rows, and non-blocking lifecycle emits from collaboration, report-review, and mock billing mutations.
 
 Covered lifecycle events:
 
@@ -183,9 +183,9 @@ Covered lifecycle events:
 
 Remaining work:
 
-- Wire the real app event producers to the lifecycle endpoint or internal service path.
 - Verify SMTP/sendmail provider behavior in Supabase mode before enabling real sends.
 - Install worker/timer or queue processing on the production host.
+- Wire any future provider-only events, such as Stripe webhook-only subscription changes, after live providers are configured.
 
 ### 8. Relationship analytics
 

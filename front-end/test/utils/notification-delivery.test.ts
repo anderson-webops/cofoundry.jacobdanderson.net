@@ -89,4 +89,45 @@ describe("notification delivery preferences", () => {
     expect(alreadySigned).toBeNull()
     expect(unrelated).toBeNull()
   })
+
+  it("builds lifecycle content for report reviews from server-supplied metadata", () => {
+    const seed = cloneValue(workspaceSeed)
+    seed.reports = seed.reports.filter(report => report.id !== "report_supabase_only")
+
+    const plan = buildLifecycleNotification(seed, {
+      eventType: "report.reviewed",
+      metadata: { status: "resolved" },
+      targetId: "report_supabase_only",
+      targetType: "report",
+      userId: "user_olivia",
+    })
+
+    expect(plan).toMatchObject({
+      eventType: "report.reviewed",
+      notificationType: "admin",
+      subject: "CoFoundry: your safety report was reviewed",
+      targetId: "report_supabase_only",
+      targetType: "report",
+      userId: "user_olivia",
+    })
+    expect(plan?.body).toContain("resolved your report")
+  })
+
+  it("builds lifecycle content for billing subscription changes", () => {
+    const plan = buildLifecycleNotification(workspaceSeed, {
+      eventType: "subscription.changed",
+      targetId: "subscription_olivia",
+      targetType: "subscription",
+      userId: "user_olivia",
+    })
+
+    expect(plan).toMatchObject({
+      eventType: "subscription.changed",
+      href: "/app/billing",
+      notificationType: "billing",
+      subject: "CoFoundry: pro billing status is active",
+      targetId: "subscription_olivia",
+      targetType: "subscription",
+    })
+  })
 })

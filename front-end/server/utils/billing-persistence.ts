@@ -2,6 +2,7 @@ import type { H3Event } from "h3"
 import type Stripe from "stripe"
 import type { BillingCycle, SessionUser, Subscription, SubscriptionPlan, SubscriptionStatus } from "../../shared/types/domain"
 import { randomUUID } from "node:crypto"
+import { emitLifecycleNotificationEvent } from "./lifecycle-notification-events"
 import { loadMemberWorkspaceState, persistWholeMemberWorkspaceState } from "./member-workspace"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
 
@@ -122,10 +123,27 @@ export async function persistMockCheckoutSubscription(event: H3Event, session: S
     subscription,
   })
 
-  return loadMemberWorkspaceState(event, {
+  const nextWorkspace = await loadMemberWorkspaceState(event, {
     ...buildIdentity(workspace.session),
     subscriptionPlan: subscription.plan,
   })
+
+  await emitLifecycleNotificationEvent(event, nextWorkspace.seed, {
+    eventType: "subscription.changed",
+    metadata: {
+      action: "mock_checkout",
+      billingCycle,
+      checkoutSessionId,
+      plan,
+    },
+    targetId: subscription.id,
+    targetType: "subscription",
+    userId: nextWorkspace.session.id,
+  }, {
+    source: "billing.mock",
+  })
+
+  return nextWorkspace
 }
 
 export async function updateMockSubscriptionRenewal(event: H3Event, session: SessionUser, action: "cancel_at_period_end" | "resume") {
@@ -140,10 +158,25 @@ export async function updateMockSubscriptionRenewal(event: H3Event, session: Ses
     subscription,
   })
 
-  return loadMemberWorkspaceState(event, {
+  const nextWorkspace = await loadMemberWorkspaceState(event, {
     ...buildIdentity(workspace.session),
     subscriptionPlan: subscription.plan,
   })
+
+  await emitLifecycleNotificationEvent(event, nextWorkspace.seed, {
+    eventType: "subscription.changed",
+    metadata: {
+      action,
+      plan: subscription.plan,
+    },
+    targetId: subscription.id,
+    targetType: "subscription",
+    userId: nextWorkspace.session.id,
+  }, {
+    source: "billing.mock",
+  })
+
+  return nextWorkspace
 }
 
 async function selectStripeCustomerId(adminClient: AdminClient, userId: string) {
