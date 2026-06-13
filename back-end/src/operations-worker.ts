@@ -29,6 +29,18 @@ interface OperationsWorkerEnvironment {
   token: string
 }
 
+type OperationsAlertSeverity = "error" | "info" | "warning"
+
+interface OperationsAlertPayload {
+  eventType: string
+  metadata?: Record<string, unknown>
+  severity: OperationsAlertSeverity
+  source: string
+  summary: string
+  targetId?: string | null
+  targetType?: string | null
+}
+
 interface PendingFileScan {
   id: string
   originalFilename: string
@@ -43,6 +55,9 @@ interface OperationsResponse<T> {
 }
 
 const defaultTimeoutMs = 60_000
+const defaultAlertTimeoutMs = 10_000
+const defaultAlertSeverities = new Set<OperationsAlertSeverity>(["error", "warning"])
+const supportedAlertSeverities = new Set<OperationsAlertSeverity>(["error", "info", "warning"])
 
 function readValue(env: EnvironmentSource, key: string) {
   return env[key]?.trim() || ""
@@ -129,6 +144,71 @@ function parseMetadata(flags: Map<string, string[]>) {
   return metadata
 }
 
+function normalizeAlertSeverity(value: string | undefined): OperationsAlertSeverity {
+  return value === "error" || value === "warning" ? value : "info"
+}
+
+function configuredAlertSeverities(env: EnvironmentSource) {
+  const configured = readValue(env, "COFOUNDRY_ALERT_SEVERITIES")
+  if (!configured)
+    return defaultAlertSeverities
+
+  const severities = new Set(
+    configured
+      .split(",")
+      .map(value => value.trim().toLowerCase())
+      .filter((value): value is OperationsAlertSeverity => supportedAlertSeverities.has(value as OperationsAlertSeverity))
+      .filter(Boolean),
+  )
+
+  return severities.size ? severities : defaultAlertSeverities
+}
+
+function shouldSendAlert(env: EnvironmentSource, severity: OperationsAlertSeverity) {
+  return Boolean(readValue(env, "COFOUNDRY_ALERT_WEBHOOK_URL")) && configuredAlertSeverities(env).has(severity)
+}
+
+async function sendOperationsAlert(options: Required<WorkerCommandOptions>, payload: OperationsAlertPayload) {
+  const webhookUrl = readValue(options.env, "COFOUNDRY_ALERT_WEBHOOK_URL")
+  if (!webhookUrl || !shouldSendAlert(options.env, payload.severity))
+    return
+
+  const token = readValue(options.env, "COFOUNDRY_ALERT_WEBHOOK_TOKEN")
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), parsePositiveInteger(readValue(options.env, "COFOUNDRY_ALERT_TIMEOUT_MS"), defaultAlertTimeoutMs))
+
+  try {
+    const response = await options.fetch(webhookUrl, {
+      body: JSON.stringify({
+        appUrl: stripTrailingSlash(readValue(options.env, "NUXT_PUBLIC_APP_URL") || readValue(options.env, "COFOUNDRY_APP_URL")),
+        eventType: payload.eventType,
+        metadata: payload.metadata || {},
+        severity: payload.severity,
+        source: payload.source,
+        summary: payload.summary,
+        targetId: payload.targetId || null,
+        targetType: payload.targetType || null,
+        timestamp: options.now().toISOString(),
+      }),
+      headers: {
+        "content-type": "application/json",
+        ...(token ? { authorization: `Bearer ${token}` } : {}),
+      },
+      method: "POST",
+      signal: controller.signal,
+    })
+
+    if (!response.ok)
+      throw new Error(`Alert webhook returned ${response.status}.`)
+  }
+  catch (error) {
+    options.log(`Operations alert delivery failed: ${error instanceof Error ? error.message : "unknown error"}`)
+  }
+  finally {
+    clearTimeout(timeout)
+  }
+}
+
 export function resolveOperationsWorkerEnvironment(env: EnvironmentSource = process.env): OperationsWorkerEnvironment {
   const appUrl = stripTrailingSlash(readValue(env, "NUXT_PUBLIC_APP_URL") || readValue(env, "COFOUNDRY_APP_URL"))
   const token = readValue(env, "COFOUNDRY_OPERATIONS_TOKEN") || readValue(env, "OPERATIONS_WORKER_TOKEN")
@@ -205,6 +285,37 @@ async function requestJson<T>(
   }
 }
 
+async function reportOperationalEvent(
+  environment: OperationsWorkerEnvironment,
+  body: {
+    actorUserId?: string | null
+    eventType: string
+    metadata?: Record<string, unknown>
+    severity: OperationsAlertSeverity | string
+    source: string
+    targetId?: string | null
+    targetType?: string | null
+  },
+  options: Required<WorkerCommandOptions>,
+) {
+  const response = await requestJson(environment, "/api/operations/events", {
+    body,
+    fetchImpl: options.fetch,
+  })
+
+  await sendOperationsAlert(options, {
+    eventType: body.eventType,
+    metadata: body.metadata,
+    severity: normalizeAlertSeverity(body.severity),
+    source: body.source,
+    summary: `${body.source} reported ${body.eventType} (${body.severity}).`,
+    targetId: body.targetId,
+    targetType: body.targetType,
+  })
+
+  return response
+}
+
 export async function runShellCommand(command: string, options: SpawnOptionsWithoutStdio = {}) {
   return new Promise<number>((resolvePromise, rejectPromise) => {
     const child = spawn(command, {
@@ -270,6 +381,24 @@ async function runBackup(parsed: ParsedArgs, options: Required<WorkerCommandOpti
     },
     fetchImpl: options.fetch,
   })
+
+  if (exitCode !== 0) {
+    await sendOperationsAlert(options, {
+      eventType: "backup_run_failed",
+      metadata: {
+        ...metadata,
+        command,
+        exitCode,
+        provider,
+        ...(artifactUri ? { artifactUri } : {}),
+      },
+      severity: "error",
+      source: "backup-worker",
+      summary: `Backup run ${id} failed with exit code ${exitCode}.`,
+      targetId: id,
+      targetType: "backup_run",
+    })
+  }
 
   if (exitCode !== 0)
     throw new Error(`Backup command failed with exit code ${exitCode}.`)
@@ -368,15 +497,12 @@ async function runScan(parsed: ParsedArgs, options: Required<WorkerCommandOption
   let skipped = 0
 
   if (!scannerCommand && !allowSkip && pendingScans.length) {
-    await requestJson(environment, "/api/operations/events", {
-      body: {
-        eventType: "file_scan_worker_missing_scanner",
-        metadata: { pending: pendingScans.length },
-        severity: "error",
-        source: "file-scan-worker",
-      },
-      fetchImpl: options.fetch,
-    })
+    await reportOperationalEvent(environment, {
+      eventType: "file_scan_worker_missing_scanner",
+      metadata: { pending: pendingScans.length },
+      severity: "error",
+      source: "file-scan-worker",
+    }, options)
     throw new Error("Set COFOUNDRY_FILE_SCANNER_COMMAND or pass --scanner-command before running the scanner worker.")
   }
 
@@ -444,15 +570,12 @@ async function runScan(parsed: ParsedArgs, options: Required<WorkerCommandOption
     }
   }
 
-  await requestJson(environment, "/api/operations/events", {
-    body: {
-      eventType: "file_scan_worker_completed",
-      metadata: { clean, failed, flagged, pending: pendingScans.length, skipped },
-      severity: failed ? "error" : flagged ? "warning" : "info",
-      source: "file-scan-worker",
-    },
-    fetchImpl: options.fetch,
-  })
+  await reportOperationalEvent(environment, {
+    eventType: "file_scan_worker_completed",
+    metadata: { clean, failed, flagged, pending: pendingScans.length, skipped },
+    severity: failed ? "error" : flagged ? "warning" : "info",
+    source: "file-scan-worker",
+  }, options)
 
   options.log(JSON.stringify({ clean, failed, flagged, pending: pendingScans.length, skipped }, null, 2))
 }
@@ -465,18 +588,15 @@ async function runEvent(parsed: ParsedArgs, options: Required<WorkerCommandOptio
   if (!eventType)
     throw new Error("Operational event requires --event-type.")
 
-  const response = await requestJson(environment, "/api/operations/events", {
-    body: {
-      actorUserId: flagValue(parsed.flags, "actor-user-id") || null,
-      eventType,
-      metadata: parseMetadata(parsed.flags),
-      severity: flagValue(parsed.flags, "severity", "info"),
-      source,
-      targetId: flagValue(parsed.flags, "target-id") || null,
-      targetType: flagValue(parsed.flags, "target-type") || null,
-    },
-    fetchImpl: options.fetch,
-  })
+  const response = await reportOperationalEvent(environment, {
+    actorUserId: flagValue(parsed.flags, "actor-user-id") || null,
+    eventType,
+    metadata: parseMetadata(parsed.flags),
+    severity: flagValue(parsed.flags, "severity", "info"),
+    source,
+    targetId: flagValue(parsed.flags, "target-id") || null,
+    targetType: flagValue(parsed.flags, "target-type") || null,
+  }, options)
 
   options.log(JSON.stringify(response, null, 2))
 }
@@ -490,30 +610,24 @@ async function runRestoreDrill(parsed: ParsedArgs, options: Required<WorkerComma
   const metadata = parseMetadata(parsed.flags)
   const command = parsed.commandArgs.join(" ")
 
-  await requestJson(environment, "/api/operations/events", {
-    body: {
-      eventType: "restore_drill_started",
-      metadata: { ...metadata, command },
-      severity: "info",
-      source: "restore-drill-worker",
-      targetId: id,
-      targetType: "restore_drill",
-    },
-    fetchImpl: options.fetch,
-  })
+  await reportOperationalEvent(environment, {
+    eventType: "restore_drill_started",
+    metadata: { ...metadata, command },
+    severity: "info",
+    source: "restore-drill-worker",
+    targetId: id,
+    targetType: "restore_drill",
+  }, options)
 
   const exitCode = await options.runShellCommand(command)
-  await requestJson(environment, "/api/operations/events", {
-    body: {
-      eventType: exitCode === 0 ? "restore_drill_succeeded" : "restore_drill_failed",
-      metadata: { ...metadata, command, exitCode },
-      severity: exitCode === 0 ? "info" : "error",
-      source: "restore-drill-worker",
-      targetId: id,
-      targetType: "restore_drill",
-    },
-    fetchImpl: options.fetch,
-  })
+  await reportOperationalEvent(environment, {
+    eventType: exitCode === 0 ? "restore_drill_succeeded" : "restore_drill_failed",
+    metadata: { ...metadata, command, exitCode },
+    severity: exitCode === 0 ? "info" : "error",
+    source: "restore-drill-worker",
+    targetId: id,
+    targetType: "restore_drill",
+  }, options)
 
   if (exitCode !== 0)
     throw new Error(`Restore drill command failed with exit code ${exitCode}.`)

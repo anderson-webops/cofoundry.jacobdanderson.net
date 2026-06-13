@@ -153,6 +153,141 @@ test("operations lifecycle notification worker sends event-specific payloads", a
   })
 })
 
+test("operations event worker sends configured webhook alerts", async () => {
+  const { fetchImpl, requests } = createJsonFetch(request => request.url === "https://alerts.example.com/cofoundry"
+    ? { accepted: true }
+    : { id: "event_1", mode: "mock" })
+
+  await runOperationsWorker([
+    "event",
+    "--source",
+    "uptime-monitor",
+    "--event-type",
+    "monitoring.failed",
+    "--severity",
+    "error",
+    "--target-type",
+    "monitor",
+    "--target-id",
+    "primary-http",
+    "--metadata",
+    "region=iad",
+  ], {
+    env: {
+      ...workerEnv,
+      COFOUNDRY_ALERT_WEBHOOK_TOKEN: "alert-token",
+      COFOUNDRY_ALERT_WEBHOOK_URL: "https://alerts.example.com/cofoundry",
+    },
+    fetch: fetchImpl,
+    log: () => {},
+    now: () => new Date("2026-06-13T12:00:00.000Z"),
+  })
+
+  assert.equal(requests.length, 2)
+  assert.equal(requests[0].url, "https://cofoundry.example.com/api/operations/events")
+  assert.deepEqual(requests[0].body, {
+    actorUserId: null,
+    eventType: "monitoring.failed",
+    metadata: { region: "iad" },
+    severity: "error",
+    source: "uptime-monitor",
+    targetId: "primary-http",
+    targetType: "monitor",
+  })
+
+  assert.equal(requests[1].url, "https://alerts.example.com/cofoundry")
+  assert.equal(requests[1].headers.get("authorization"), "Bearer alert-token")
+  assert.deepEqual(requests[1].body, {
+    appUrl: "https://cofoundry.example.com",
+    eventType: "monitoring.failed",
+    metadata: { region: "iad" },
+    severity: "error",
+    source: "uptime-monitor",
+    summary: "uptime-monitor reported monitoring.failed (error).",
+    targetId: "primary-http",
+    targetType: "monitor",
+    timestamp: "2026-06-13T12:00:00.000Z",
+  })
+})
+
+test("operations alert webhooks are non-blocking when delivery fails", async () => {
+  const logs: string[] = []
+  const { fetchImpl, requests } = createJsonFetch(request => request.url === "https://alerts.example.com/cofoundry"
+    ? new Response(JSON.stringify({ error: "temporarily unavailable" }), { status: 503 })
+    : { id: "event_2", mode: "mock" })
+
+  await runOperationsWorker([
+    "event",
+    "--source",
+    "backup-monitor",
+    "--event-type",
+    "backup.warning",
+    "--severity",
+    "warning",
+  ], {
+    env: {
+      ...workerEnv,
+      COFOUNDRY_ALERT_WEBHOOK_URL: "https://alerts.example.com/cofoundry",
+    },
+    fetch: fetchImpl,
+    log: message => logs.push(message),
+  })
+
+  assert.equal(requests.length, 2)
+  assert.equal(requests[0].url, "https://cofoundry.example.com/api/operations/events")
+  assert.equal(requests[1].url, "https://alerts.example.com/cofoundry")
+  assert.ok(logs.some(message => message.includes("Operations alert delivery failed: Alert webhook returned 503.")))
+})
+
+test("operations backup worker alerts on failed runs", async () => {
+  const { fetchImpl, requests } = createJsonFetch()
+
+  await assert.rejects(
+    () => runOperationsWorker([
+      "backup",
+      "--id",
+      "backup-failed",
+      "--provider",
+      "pg-dump",
+      "--metadata",
+      "timer=daily",
+      "--",
+      "pg_dump postgres://cofoundry",
+    ], {
+      env: {
+        ...workerEnv,
+        COFOUNDRY_ALERT_WEBHOOK_URL: "https://alerts.example.com/cofoundry",
+      },
+      fetch: fetchImpl,
+      log: () => {},
+      now: () => new Date("2026-06-13T12:05:00.000Z"),
+      runShellCommand: async () => 2,
+    }),
+    /Backup command failed with exit code 2/,
+  )
+
+  assert.equal(requests.length, 3)
+  assert.equal(requests[0].url, "https://cofoundry.example.com/api/operations/backup-runs")
+  assert.equal(requests[1].url, "https://cofoundry.example.com/api/operations/backup-runs")
+  assert.equal(requests[2].url, "https://alerts.example.com/cofoundry")
+  assert.deepEqual(requests[2].body, {
+    appUrl: "https://cofoundry.example.com",
+    eventType: "backup_run_failed",
+    metadata: {
+      command: "pg_dump postgres://cofoundry",
+      exitCode: 2,
+      provider: "pg-dump",
+      timer: "daily",
+    },
+    severity: "error",
+    source: "backup-worker",
+    summary: "Backup run backup-failed failed with exit code 2.",
+    targetId: "backup-failed",
+    targetType: "backup_run",
+    timestamp: "2026-06-13T12:05:00.000Z",
+  })
+})
+
 test("operations scanner downloads local app URLs with worker auth and blocks flagged files", async () => {
   const commands: string[] = []
   const { fetchImpl, requests } = createJsonFetch((request) => {
