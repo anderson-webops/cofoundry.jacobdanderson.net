@@ -1,0 +1,12 @@
+[Unit]
+Description=Run CoFoundry file scan worker frequently
+
+[Timer]
+OnBootSec=2m
+OnUnitActiveSec=5m
+Persistent=true
+RandomizedDelaySec=30s
+Unit=cofoundry-operations-scan.service
+
+[Install]
+WantedBy=timers.target

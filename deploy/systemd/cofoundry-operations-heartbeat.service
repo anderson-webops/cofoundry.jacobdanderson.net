@@ -1,0 +1,15 @@
+[Unit]
+Description=CoFoundry operations heartbeat event
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=cofoundry
+Group=cofoundry
+WorkingDirectory=/srv/cofoundry/current
+EnvironmentFile=/etc/cofoundry/operations.env
+ExecStart=/usr/bin/env bash -lc 'npm run operations:event -- --source systemd-timer --event-type operations_heartbeat --severity info --metadata schedule=hourly'
+SyslogIdentifier=cofoundry-operations-heartbeat
+NoNewPrivileges=true
+PrivateTmp=true

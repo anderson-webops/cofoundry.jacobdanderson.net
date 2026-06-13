@@ -1,0 +1,15 @@
+[Unit]
+Description=CoFoundry restore drill reporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=cofoundry
+Group=cofoundry
+WorkingDirectory=/srv/cofoundry/current
+EnvironmentFile=/etc/cofoundry/operations.env
+ExecStart=/usr/bin/env bash -lc 'test -n "$$COFOUNDRY_RESTORE_DRILL_COMMAND" && npm run operations:restore-drill -- --id "restore-$$(date -u +%%Y%%m%%d)" --metadata schedule=monthly -- $$COFOUNDRY_RESTORE_DRILL_COMMAND'
+SyslogIdentifier=cofoundry-operations-restore-drill
+NoNewPrivileges=true
+PrivateTmp=true

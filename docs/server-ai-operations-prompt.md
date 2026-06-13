@@ -16,6 +16,7 @@ Source/runtime context:
 - Server-only secrets must come from Vault-managed or host-managed env files.
 - The app now supports a server-only `COFOUNDRY_OPERATIONS_TOKEN`.
 - The source includes schedulable worker commands: `npm run operations:backup`, `npm run operations:digest`, `npm run operations:scan`, `npm run operations:event`, and `npm run operations:restore-drill`.
+- The source includes systemd templates in `deploy/systemd/`. Prefer installing and tuning those templates instead of hand-writing timer units from scratch.
 - In mock/access-request mode, operations telemetry persists to `.data/operations-telemetry.json` and local uploaded scan artifacts persist under `.data/local-file-uploads/` unless `COFOUNDRY_LOCAL_DATA_DIR` points at another durable writable directory.
 
 Tasks:
@@ -25,7 +26,8 @@ Tasks:
 4. Restart the app and verify production logs do not mention loading `../.env`.
 5. If Supabase mode is not intentionally enabled, leave `NUXT_PUBLIC_BACKEND_MODE="mock"` and verify the public site remains a marketing/access-request shell.
 6. If Supabase mode is intentionally enabled, verify all migrations in `back-end/supabase/migrations/` have been applied and that `SUPABASE_SERVICE_ROLE_KEY`, `NUXT_PUBLIC_SUPABASE_URL`, `NUXT_PUBLIC_SUPABASE_ANON_KEY`, and `SESSION_SIGNING_SECRET` are present.
-7. Create a systemd timer or equivalent cron for unread digests. First run dry-run mode with the checked-in worker:
+7. Install the checked-in unit templates from `deploy/systemd/` or create equivalent cron entries. Copy `deploy/systemd/cofoundry-operations.env.example` to `/etc/cofoundry/operations.env`, fill in host values from Vault-managed env, and adjust `User=`, `Group=`, and `WorkingDirectory=` if needed.
+8. Create a systemd timer or equivalent cron for unread digests. First run dry-run mode with the checked-in worker:
 
    npm run operations:digest -- --dry-run --max-users 100
 
@@ -38,7 +40,7 @@ Tasks:
 
    After dry-run verification, SMTP verification, and confirmation that intended pilot users enabled scheduled digest email in `/app/settings`, switch `dryRun` to `false`.
 
-8. Wire the database backup job through the checked-in lifecycle wrapper:
+9. Wire the database backup job through the checked-in lifecycle wrapper:
 
    npm run operations:backup -- \
      --provider server-pg-dump \
@@ -54,7 +56,7 @@ Tasks:
 
    On success or failure, call the same endpoint with `status`, `completedAt`, `artifactUri`, `notes`, and useful metadata.
 
-9. Wire the file scanner worker to read the app-managed pending scan queue. Prefer the checked-in worker with the server's approved scanner:
+10. Wire the file scanner worker to read the app-managed pending scan queue. Prefer the checked-in worker with the server's approved scanner:
 
    COFOUNDRY_FILE_SCANNER_COMMAND="clamscan --no-summary" npm run operations:scan -- --limit 25
 
@@ -70,7 +72,7 @@ Tasks:
      -H "Content-Type: application/json" \
      --data '{"scanStatus":"clean","status":"uploaded","notes":"Scanner name/version and signature timestamp"}'
 
-10. Wire deploy, backup, scanner, and monitoring failures through the checked-in event reporter:
+11. Wire deploy, backup, scanner, and monitoring failures through the checked-in event reporter:
 
    npm run operations:event -- \
      --source systemd-timer \
@@ -85,13 +87,13 @@ Tasks:
      -H "Content-Type: application/json" \
      --data '{"eventType":"backup.failed","severity":"error","source":"systemd-timer","metadata":{"runId":"backup-YYYYMMDD-HHMM"}}'
 
-11. Wire a restore drill timer or manual runbook command:
+12. Wire a restore drill timer or manual runbook command:
 
    npm run operations:restore-drill -- \
      --id restore-YYYYMMDD \
      --metadata environment=staging \
      -- ./scripts/verify-restored-cofoundry.sh
 
-12. Verify `/admin/operations` shows backup runs, operational events, file uploads, and notification deliveries when logged in as an admin.
-13. Document timer names, log paths, backup artifact location, scanner command, restore test procedure, local telemetry path, retention limit, and rollback command in the server runbook.
+13. Verify `/admin/operations` shows backup runs, operational events, file uploads, and notification deliveries when logged in as an admin.
+14. Document timer names, log paths, backup artifact location, scanner command, restore test procedure, local telemetry path, retention limit, and rollback command in the server runbook.
 ```

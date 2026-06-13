@@ -1,0 +1,15 @@
+[Unit]
+Description=CoFoundry file scan worker
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=cofoundry
+Group=cofoundry
+WorkingDirectory=/srv/cofoundry/current
+EnvironmentFile=/etc/cofoundry/operations.env
+ExecStart=/usr/bin/env bash -lc 'npm run operations:scan -- --limit "$${COFOUNDRY_SCAN_LIMIT:-25}"'
+SyslogIdentifier=cofoundry-operations-scan
+NoNewPrivileges=true
+PrivateTmp=true

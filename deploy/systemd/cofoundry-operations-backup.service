@@ -1,0 +1,15 @@
+[Unit]
+Description=CoFoundry operations backup reporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=cofoundry
+Group=cofoundry
+WorkingDirectory=/srv/cofoundry/current
+EnvironmentFile=/etc/cofoundry/operations.env
+ExecStart=/usr/bin/env bash -lc 'test -n "$$COFOUNDRY_BACKUP_COMMAND" && npm run operations:backup -- --provider "$${COFOUNDRY_BACKUP_PROVIDER:-server-backup}" --artifact-uri "$$COFOUNDRY_BACKUP_ARTIFACT_URI" -- $$COFOUNDRY_BACKUP_COMMAND'
+SyslogIdentifier=cofoundry-operations-backup
+NoNewPrivileges=true
+PrivateTmp=true
