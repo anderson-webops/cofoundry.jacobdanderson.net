@@ -23,8 +23,9 @@ export async function readAdminOperationsRows(event: H3Event) {
   if (!adminClient)
     throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
 
-  const [backupRuns, emailSuppressions, fileUploads, notificationDeliveries, operationalEvents] = await Promise.all([
+  const [backupRuns, contractEnvelopeEvents, emailSuppressions, fileUploads, notificationDeliveries, operationalEvents] = await Promise.all([
     selectRows(adminClient, "backup_runs"),
+    selectRows(adminClient, "contract_provider_events"),
     selectRows(adminClient, "email_suppressions"),
     selectRows(adminClient, "file_uploads"),
     selectRows(adminClient, "notification_deliveries"),
@@ -33,6 +34,7 @@ export async function readAdminOperationsRows(event: H3Event) {
 
   return {
     backupRuns,
+    contractEnvelopeEvents,
     emailSuppressions,
     fileUploads,
     mode: "supabase",

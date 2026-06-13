@@ -36,6 +36,15 @@ describe("contract document helpers", () => {
       contract: contract!,
       documentText,
       generatedAt: "2026-06-13T12:00:00.000Z",
+      providerEvidence: [{
+        completedPdfFileUploadId: "upload_completed_pdf",
+        completedPdfSha256: "d".repeat(64),
+        occurredAt: "2026-06-13T12:05:00.000Z",
+        provider: "docusign",
+        providerEnvelopeId: "envelope_123",
+        signedByUserIds: ["user_olivia"],
+        status: "completed",
+      }],
       seed: workspaceSeed,
       signatures,
       version: version!,
@@ -44,6 +53,8 @@ describe("contract document helpers", () => {
 
     expect(document).toContain("<!doctype html>")
     expect(document).toContain("Execution Certificate")
+    expect(document).toContain("Provider Evidence")
+    expect(document).toContain("envelope_123")
     expect(document).toContain(certificate.documentSha256)
     expect(document).toContain("Legal Review Notice")
   })
@@ -71,6 +82,7 @@ describe("contract document helpers", () => {
     expect(certificate.status).toBe("pending")
     expect(certificate.parties).toHaveLength(2)
     expect(certificate.parties.some(party => party.signedAt === null)).toBe(true)
+    expect(certificate.providerEvidence).toEqual([])
     expect(certificateText).toContain("Document SHA-256")
     expect(certificateText).toContain("signature pending")
   })

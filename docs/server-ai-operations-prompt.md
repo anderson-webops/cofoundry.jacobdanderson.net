@@ -16,7 +16,7 @@ Source/runtime context:
 - Server-only secrets must come from Vault-managed or host-managed env files.
 - The app now supports a server-only `COFOUNDRY_OPERATIONS_TOKEN`.
 - The worker CLI also supports optional server-only alert webhook env: `COFOUNDRY_ALERT_WEBHOOK_URL`, `COFOUNDRY_ALERT_WEBHOOK_TOKEN`, `COFOUNDRY_ALERT_SEVERITIES`, and `COFOUNDRY_ALERT_TIMEOUT_MS`. Leave these unset until the operator chooses the destination.
-- The source includes schedulable worker commands: `npm run operations:backup`, `npm run operations:digest`, `npm run operations:scan`, `npm run operations:event`, `npm run operations:mail-smoke`, `npm run operations:worker -- lifecycle-notification`, `npm run operations:worker -- email-suppression`, and `npm run operations:restore-drill`.
+- The source includes schedulable worker commands: `npm run operations:backup`, `npm run operations:digest`, `npm run operations:scan`, `npm run operations:event`, `npm run operations:mail-smoke`, `npm run operations:worker -- lifecycle-notification`, `npm run operations:worker -- email-suppression`, `npm run operations:worker -- contract-envelope`, and `npm run operations:restore-drill`.
 - The source includes systemd templates in `deploy/systemd/`. Prefer installing and tuning those templates instead of hand-writing timer units from scratch.
 - In mock/access-request mode, operations telemetry persists to `.data/operations-telemetry.json` and local uploaded scan artifacts persist under `.data/local-file-uploads/` unless `COFOUNDRY_LOCAL_DATA_DIR` points at another durable writable directory.
 
@@ -68,7 +68,29 @@ Tasks:
 
    Confirm `/admin/operations` shows the email suppression row. Optional scheduled digest and relationship workflow emails skip suppressed recipients before live send attempts.
 
-10. Verify lifecycle notification rendering and telemetry before wiring live event triggers:
+10. If an e-signature or PDF provider is selected, wire provider envelope events to the checked-in contract-envelope endpoint:
+
+   npm run operations:worker -- contract-envelope \
+     --contract-id "<contract-id>" \
+     --contract-version-id "<contract-version-id>" \
+     --provider-envelope-id "<provider-envelope-id>" \
+     --status completed \
+     --provider "<signature-provider>" \
+     --completed-pdf-file-upload-id "<file-upload-id>" \
+     --completed-pdf-sha256 "<64-char-sha256>" \
+     --signed-by-user-id "<user-id>" \
+     --source-event-id "<provider-event-id>"
+
+   The raw endpoint equivalent is:
+
+   curl -fsS -X POST "$NUXT_PUBLIC_APP_URL/api/operations/contract-envelopes" \
+     -H "Authorization: Bearer $COFOUNDRY_OPERATIONS_TOKEN" \
+     -H "Content-Type: application/json" \
+     --data '{"contractId":"<contract-id>","contractVersionId":"<contract-version-id>","providerEnvelopeId":"<provider-envelope-id>","status":"completed","provider":"<signature-provider>","completedPdfFileUploadId":"<file-upload-id>","completedPdfSha256":"<64-char-sha256>","signedByUserIds":["<user-id>"],"sourceEventId":"<provider-event-id>"}'
+
+   Confirm `/admin/operations` shows the envelope row. Download the matching contract certificate and confirm the provider evidence section includes the envelope id and completed PDF hash.
+
+11. Verify lifecycle notification rendering and telemetry before wiring live event triggers:
 
    npm run operations:worker -- lifecycle-notification \
      --dry-run \
@@ -86,7 +108,7 @@ Tasks:
 
    Mock/access-request mode records the attempt without sending mail. In Supabase mode, keep `dryRun` true until SMTP is verified, intended pilot users have enabled relationship workflow email in `/app/settings`, the signed `/email/preferences?token=...` link has been tested from a received message, and lifecycle triggers are connected to the app events that create or accept intros, send unread messages, create or update proposals, require signatures, review reports, and change billing state.
 
-11. Wire the database backup job through the checked-in lifecycle wrapper:
+12. Wire the database backup job through the checked-in lifecycle wrapper:
 
    npm run operations:backup -- \
      --provider server-pg-dump \
@@ -102,7 +124,7 @@ Tasks:
 
    On success or failure, call the same endpoint with `status`, `completedAt`, `artifactUri`, `notes`, and useful metadata.
 
-12. Wire the file scanner worker to read the app-managed pending scan queue. Prefer the checked-in worker with the server's approved scanner:
+13. Wire the file scanner worker to read the app-managed pending scan queue. Prefer the checked-in worker with the server's approved scanner:
 
    COFOUNDRY_FILE_SCANNER_COMMAND="clamscan --no-summary" npm run operations:scan -- --limit 25
 
@@ -118,7 +140,7 @@ Tasks:
      -H "Content-Type: application/json" \
      --data '{"scanStatus":"clean","status":"uploaded","notes":"Scanner name/version and signature timestamp"}'
 
-13. Wire deploy, backup, scanner, and monitoring failures through the checked-in event reporter:
+14. Wire deploy, backup, scanner, and monitoring failures through the checked-in event reporter:
 
    npm run operations:event -- \
      --source systemd-timer \
@@ -148,13 +170,13 @@ Tasks:
      --severity warning \
      --metadata purpose=alert-webhook-smoke
 
-14. Wire a restore drill timer or manual runbook command. `/admin/readiness` should continue to warn until a successful `restore_drill_succeeded` event appears:
+15. Wire a restore drill timer or manual runbook command. `/admin/readiness` should continue to warn until a successful `restore_drill_succeeded` event appears:
 
    npm run operations:restore-drill -- \
      --id restore-YYYYMMDD \
      --metadata environment=staging \
      -- ./scripts/verify-restored-cofoundry.sh
 
-15. Verify `/admin/operations` shows backup runs, operational events, file uploads, email suppressions, and notification deliveries when logged in as an admin.
-16. Document timer names, log paths, backup artifact location, scanner command, restore test procedure, local telemetry path, retention limit, mail-smoke result, provider suppression mapping, lifecycle trigger wiring, and rollback command in the server runbook.
+16. Verify `/admin/operations` shows backup runs, operational events, file uploads, contract envelopes, email suppressions, and notification deliveries when logged in as an admin.
+17. Document timer names, log paths, backup artifact location, scanner command, restore test procedure, local telemetry path, retention limit, mail-smoke result, provider suppression mapping, contract-envelope mapping, lifecycle trigger wiring, and rollback command in the server runbook.
 ```

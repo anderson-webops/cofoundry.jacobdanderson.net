@@ -23,6 +23,16 @@ export interface ContractCertificateParty {
   userId: string
 }
 
+export interface ContractProviderEvidence {
+  completedPdfFileUploadId: string | null
+  completedPdfSha256: string | null
+  occurredAt: string
+  provider: string
+  providerEnvelopeId: string
+  signedByUserIds: string[]
+  status: "created" | "sent" | "viewed" | "completed" | "declined" | "voided" | "failed"
+}
+
 export interface ContractExecutionCertificate {
   contractId: string
   contractTitle: string
@@ -30,6 +40,7 @@ export interface ContractExecutionCertificate {
   generatedAt: string
   legalNotice: string
   parties: ContractCertificateParty[]
+  providerEvidence: ContractProviderEvidence[]
   status: "complete" | "pending"
   versionId: string
   versionNumber: number
@@ -105,6 +116,34 @@ export function renderContractHtmlDocument(contract: Contract, version: Contract
           <td colspan="3">No signatures recorded for this version.</td>
         </tr>`
 
+  const providerEvidenceRows = certificate?.providerEvidence.length
+    ? certificate.providerEvidence.map(evidence => `
+        <tr>
+          <td>${escapeHtml(evidence.provider)}</td>
+          <td>${escapeHtml(evidence.providerEnvelopeId)}</td>
+          <td>${escapeHtml(evidence.status)}</td>
+          <td>${escapeHtml(evidence.occurredAt)}</td>
+          <td>${escapeHtml(evidence.completedPdfSha256 || "not reported")}</td>
+        </tr>`).join("")
+    : ""
+
+  const providerEvidenceBlock = providerEvidenceRows
+    ? `
+      <h3>Provider Evidence</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Provider</th>
+            <th>Envelope</th>
+            <th>Status</th>
+            <th>Occurred</th>
+            <th>Completed PDF SHA-256</th>
+          </tr>
+        </thead>
+        <tbody>${providerEvidenceRows}</tbody>
+      </table>`
+    : ""
+
   const certificateBlock = certificate
     ? `
       <section class="certificate">
@@ -114,6 +153,7 @@ export function renderContractHtmlDocument(contract: Contract, version: Contract
           <div><dt>Generated</dt><dd>${escapeHtml(certificate.generatedAt)}</dd></div>
           <div><dt>Document SHA-256</dt><dd class="hash">${escapeHtml(certificate.documentSha256)}</dd></div>
         </dl>
+        ${providerEvidenceBlock}
       </section>`
     : ""
 
@@ -146,7 +186,7 @@ export function renderContractHtmlDocument(contract: Contract, version: Contract
       padding: 48px;
       background: #fffdf8;
     }
-    h1, h2 {
+    h1, h2, h3 {
       line-height: 1.1;
     }
     h1 {
@@ -158,6 +198,10 @@ export function renderContractHtmlDocument(contract: Contract, version: Contract
       font-size: 16px;
       letter-spacing: 0.08em;
       text-transform: uppercase;
+    }
+    h3 {
+      margin: 20px 0 0;
+      font-size: 14px;
     }
     p {
       margin: 0;
@@ -266,6 +310,18 @@ export function renderContractCertificateText(certificate: ContractExecutionCert
     return `- ${party.name} <${party.email}> (${party.userId}): ${signatureStatus}`
   })
 
+  const providerEvidenceLines = certificate.providerEvidence.length
+    ? [
+        "Provider Evidence",
+        ...certificate.providerEvidence.flatMap(evidence => [
+          `- ${evidence.provider} envelope ${evidence.providerEnvelopeId}: ${evidence.status} at ${evidence.occurredAt}`,
+          evidence.completedPdfSha256 ? `  Completed PDF SHA-256: ${evidence.completedPdfSha256}` : "  Completed PDF SHA-256: not reported",
+          evidence.signedByUserIds.length ? `  Provider-reported signers: ${evidence.signedByUserIds.join(", ")}` : "  Provider-reported signers: none",
+        ]),
+        "",
+      ]
+    : []
+
   return [
     "CoFoundry Agreement Execution Certificate",
     "",
@@ -280,6 +336,7 @@ export function renderContractCertificateText(certificate: ContractExecutionCert
     "Parties",
     ...partyLines,
     "",
+    ...providerEvidenceLines,
     "Legal Review Notice",
     certificate.legalNotice,
     "",

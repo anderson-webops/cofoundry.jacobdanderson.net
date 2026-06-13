@@ -1,7 +1,7 @@
 import type { Buffer } from "node:buffer"
 import type { z } from "zod"
 import type { FileUpload, FileUploadRelatedType, SessionUser } from "../../shared/types/domain"
-import type { fileScanResultSchema, fileUploadPolicySchema, operationsBackupRunSchema, operationsEmailSuppressionSchema, operationsEventSchema } from "../../shared/utils/validation"
+import type { fileScanResultSchema, fileUploadPolicySchema, operationsBackupRunSchema, operationsContractEnvelopeSchema, operationsEmailSuppressionSchema, operationsEventSchema } from "../../shared/utils/validation"
 import { createHash, randomUUID } from "node:crypto"
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { dirname, resolve } from "node:path"
@@ -10,6 +10,7 @@ import process from "node:process"
 type FileScanResultPayload = z.infer<typeof fileScanResultSchema>
 type FileUploadPolicyPayload = z.infer<typeof fileUploadPolicySchema>
 type OperationsBackupRunPayload = z.infer<typeof operationsBackupRunSchema>
+type OperationsContractEnvelopePayload = z.infer<typeof operationsContractEnvelopeSchema>
 type OperationsEmailSuppressionPayload = z.infer<typeof operationsEmailSuppressionSchema>
 type OperationsEventPayload = z.infer<typeof operationsEventSchema>
 
@@ -101,8 +102,25 @@ interface LocalEmailSuppressionRow {
   suppressed_at: string
 }
 
+interface LocalContractEnvelopeEventRow {
+  completed_pdf_file_upload_id: string | null
+  completed_pdf_sha256: string | null
+  contract_id: string
+  contract_version_id: string
+  created_at: string
+  id: string
+  metadata: Record<string, unknown>
+  occurred_at: string
+  provider: string
+  provider_envelope_id: string
+  signed_by_user_ids: string[]
+  source_event_id: string | null
+  status: OperationsContractEnvelopePayload["status"]
+}
+
 interface LocalOperationsStore {
   backupRuns: LocalBackupRunRow[]
+  contractEnvelopeEvents: LocalContractEnvelopeEventRow[]
   emailSuppressions: LocalEmailSuppressionRow[]
   fileUploads: LocalFileUploadRow[]
   notificationDeliveries: LocalNotificationDeliveryRow[]
@@ -161,6 +179,7 @@ function retentionLimit() {
 function emptyStore(): LocalOperationsStore {
   return {
     backupRuns: [],
+    contractEnvelopeEvents: [],
     emailSuppressions: [],
     fileUploads: [],
     notificationDeliveries: [],
@@ -188,6 +207,7 @@ function pruneStore(store: LocalOperationsStore): LocalOperationsStore {
   return {
     ...store,
     backupRuns: withRetention(store.backupRuns),
+    contractEnvelopeEvents: withRetention(store.contractEnvelopeEvents),
     emailSuppressions: withRetention(store.emailSuppressions),
     fileUploads: withRetention(store.fileUploads),
     notificationDeliveries: withRetention(store.notificationDeliveries),
@@ -266,12 +286,45 @@ export async function readLocalOperationsRows() {
 
   return {
     backupRuns: store.backupRuns,
+    contractEnvelopeEvents: store.contractEnvelopeEvents,
     emailSuppressions: store.emailSuppressions,
     fileUploads: store.fileUploads,
     mode: "mock",
     notificationDeliveries: store.notificationDeliveries,
     operationalEvents: store.operationalEvents,
   }
+}
+
+export async function recordLocalContractEnvelopeEvent(payload: OperationsContractEnvelopePayload) {
+  return updateStore((store) => {
+    const now = new Date().toISOString()
+    const row: LocalContractEnvelopeEventRow = {
+      completed_pdf_file_upload_id: payload.completedPdfFileUploadId || null,
+      completed_pdf_sha256: payload.completedPdfSha256?.toLowerCase() || null,
+      contract_id: payload.contractId,
+      contract_version_id: payload.contractVersionId,
+      created_at: now,
+      id: randomUUID(),
+      metadata: payload.metadata,
+      occurred_at: payload.occurredAt || now,
+      provider: payload.provider,
+      provider_envelope_id: payload.providerEnvelopeId,
+      signed_by_user_ids: payload.signedByUserIds,
+      source_event_id: payload.sourceEventId || null,
+      status: payload.status,
+    }
+
+    store.contractEnvelopeEvents = [row, ...store.contractEnvelopeEvents]
+    return row
+  })
+}
+
+export async function listLocalContractEnvelopeEvents(contractId: string, contractVersionId: string) {
+  const store = await readStore()
+
+  return newestFirst(store.contractEnvelopeEvents.filter(row =>
+    row.contract_id === contractId && row.contract_version_id === contractVersionId,
+  ))
 }
 
 export async function recordLocalEmailSuppression(payload: OperationsEmailSuppressionPayload) {

@@ -37,8 +37,9 @@ Stage 2: outbound email provider
 Stage 3: operations workers
 1. Install or tune the checked-in systemd templates under `deploy/systemd/`.
 2. Wire backup lifecycle reporting, file scanning, notification digests, monitoring heartbeat events, and restore drills with `COFOUNDRY_OPERATIONS_TOKEN`.
-3. Confirm `/admin/operations` shows fresh rows for backup runs, scanner results, digest runs, operational events, and restore-drill results.
-4. Keep the actual backup artifacts and scanner quarantine outside the repo and outside public web roots.
+3. If a dedicated e-signature or PDF provider is selected, map provider envelope events into `/api/operations/contract-envelopes` and verify the matching contract certificate includes provider envelope evidence.
+4. Confirm `/admin/operations` shows fresh rows for backup runs, scanner results, digest runs, contract envelope events, operational events, and restore-drill results.
+5. Keep the actual backup artifacts, completed-provider PDFs, and scanner quarantine outside the repo and outside public web roots.
 
 Stage 4: Supabase persistence cutover
 1. Apply all SQL migrations in `back-end/supabase/migrations/` to a staging Supabase project first.

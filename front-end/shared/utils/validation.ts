@@ -236,6 +236,20 @@ export const operationsEmailSuppressionSchema = z.object({
   suppressedAt: z.string().datetime("Use an ISO timestamp.").optional(),
 })
 
+export const operationsContractEnvelopeSchema = z.object({
+  completedPdfFileUploadId: z.string().trim().min(1).max(160).nullable().optional(),
+  completedPdfSha256: z.string().trim().regex(/^[a-f0-9]{64}$/i, "Use a lowercase or uppercase SHA-256 hex digest.").nullable().optional(),
+  contractId: z.string().trim().min(1).max(160),
+  contractVersionId: z.string().trim().min(1).max(160),
+  metadata: z.record(z.string(), z.unknown()).default({}),
+  occurredAt: z.string().datetime("Use an ISO timestamp.").optional(),
+  provider: z.string().trim().min(2).max(120).default("external"),
+  providerEnvelopeId: z.string().trim().min(1).max(200),
+  signedByUserIds: z.array(z.string().trim().min(1).max(120)).default([]),
+  sourceEventId: z.string().trim().min(1).max(200).nullable().optional(),
+  status: z.enum(["created", "sent", "viewed", "completed", "declined", "voided", "failed"]),
+})
+
 export const operationsEventSchema = z.object({
   actorUserId: z.string().trim().min(1).max(120).nullable().optional(),
   eventType: z.string().trim().min(2).max(120),

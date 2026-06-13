@@ -219,6 +219,58 @@ test("operations email suppression worker sends provider suppression payloads", 
   })
 })
 
+test("operations contract envelope worker sends provider envelope payloads", async () => {
+  const { fetchImpl, requests } = createJsonFetch(() => ({ envelopeEvent: { id: "envelope_event_1" }, mode: "mock" }))
+
+  await runOperationsWorker([
+    "contract-envelope",
+    "--contract-id",
+    "contract_ledgerloop",
+    "--contract-version-id",
+    "contract_ledgerloop_version_1",
+    "--provider-envelope-id",
+    "envelope_123",
+    "--status",
+    "completed",
+    "--provider",
+    "docusign",
+    "--completed-pdf-file-upload-id",
+    "upload_completed_pdf",
+    "--completed-pdf-sha256",
+    "c".repeat(64),
+    "--signed-by-user-id",
+    "user_olivia",
+    "--signed-by-user-id",
+    "user_malik",
+    "--source-event-id",
+    "provider-envelope-event-1",
+    "--occurred-at",
+    "2026-06-13T13:00:00.000Z",
+    "--metadata",
+    "providerStatus=completed",
+  ], {
+    env: workerEnv,
+    fetch: fetchImpl,
+    log: () => {},
+  })
+
+  assert.equal(requests.length, 1)
+  assert.equal(requests[0].url, "https://cofoundry.example.com/api/operations/contract-envelopes")
+  assert.deepEqual(requests[0].body, {
+    completedPdfFileUploadId: "upload_completed_pdf",
+    completedPdfSha256: "c".repeat(64),
+    contractId: "contract_ledgerloop",
+    contractVersionId: "contract_ledgerloop_version_1",
+    metadata: { providerStatus: "completed" },
+    occurredAt: "2026-06-13T13:00:00.000Z",
+    provider: "docusign",
+    providerEnvelopeId: "envelope_123",
+    signedByUserIds: ["user_olivia", "user_malik"],
+    sourceEventId: "provider-envelope-event-1",
+    status: "completed",
+  })
+})
+
 test("operations event worker sends configured webhook alerts", async () => {
   const { fetchImpl, requests } = createJsonFetch(request => request.url === "https://alerts.example.com/cofoundry"
     ? { accepted: true }
