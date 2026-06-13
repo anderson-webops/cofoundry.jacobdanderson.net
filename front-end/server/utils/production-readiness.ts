@@ -32,6 +32,8 @@ export interface ProductionReadinessProvisioningTask {
 
 export interface ProductionReadinessOperationsRows {
   backupRuns: Array<Record<string, unknown>>
+  contractEnvelopeEvents?: Array<Record<string, unknown>>
+  emailSuppressions?: Array<Record<string, unknown>>
   fileUploads: Array<Record<string, unknown>>
   mode: string
   notificationDeliveries: Array<Record<string, unknown>>
@@ -54,6 +56,7 @@ export interface ProductionReadinessInput {
   environmentValidationErrors: string[]
   generatedAt: string
   hasAlertWebhookConfigured: boolean
+  hasContractEnvelopeProviderConfigured?: boolean
   hasDurableLocalDataDir: boolean
   hasOperationsWorkerToken: boolean
   hasSessionSigningSecret: boolean
@@ -170,6 +173,10 @@ function isMailSmokeDelivery(row: Record<string, unknown>) {
 function isStripeWebhookProcessedEvent(row: Record<string, unknown>) {
   return String(row.source || "").toLowerCase() === "stripe.webhook"
     && String(row.event_type || "").toLowerCase() === "stripe.webhook.processed"
+}
+
+function isCompletedContractEnvelopeEvent(row: Record<string, unknown>) {
+  return String(row.status || "").toLowerCase() === "completed"
 }
 
 function isLocalhostUrl(value: string) {
@@ -323,6 +330,17 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
       "COFOUNDRY_FILE_SCANNER_COMMAND=\"clamscan --no-summary\" npm run operations:scan -- --limit 25",
     ),
     task(
+      "contract-envelope-provisioning",
+      "Contract envelope provider evidence",
+      checkById.get("contract-envelope-evidence")?.status || "info",
+      checkById.get("contract-envelope-evidence")?.summary || "No provider configured",
+      "Dedicated e-signature or PDF providers should report envelope completion evidence before operators rely on provider-backed agreement packets.",
+      input.hasContractEnvelopeProviderConfigured
+        ? "Send a provider smoke or real completed envelope result through the checked-in contract-envelope endpoint and confirm readiness evidence passes."
+        : "Choose an e-signature/PDF provider only if launch policy requires more than typed signatures plus CoFoundry certificates.",
+      "COFOUNDRY_CONTRACT_ENVELOPE_PROVIDER=<provider-name>\nnpm run operations:worker -- contract-envelope --contract-id <contract-id> --contract-version-id <version-id> --provider-envelope-id <provider-envelope-id> --status completed --provider <provider-name> --completed-pdf-sha256 <64-char-sha256>",
+    ),
+    task(
       "trust-verification-provisioning",
       "Trust verification provider evidence",
       checkById.get("trust-verification-evidence")?.status || "info",
@@ -422,6 +440,21 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
   const hasNewerMailSmokeFailure = latestFailedMailSmokeTime !== null && (latestSuccessfulMailSmokeTime === null || latestFailedMailSmokeTime >= latestSuccessfulMailSmokeTime)
   const failedOrFlaggedScans = countRows(input.operations.fileUploads, "scan_status", ["failed", "flagged"])
   const pendingScans = countRows(input.operations.fileUploads, "scan_status", ["pending"])
+  const contractEnvelopeEvents = input.operations.contractEnvelopeEvents || []
+  const completedContractEnvelopeEvents = countRows(contractEnvelopeEvents, "status", ["completed"])
+  const attentionContractEnvelopeEvents = countRows(contractEnvelopeEvents, "status", ["declined", "failed", "voided"])
+  const latestCompletedContractEnvelope = latestMatchingEvent(contractEnvelopeEvents, isCompletedContractEnvelopeEvent)
+  const latestCompletedContractEnvelopeTime = newestTime(latestCompletedContractEnvelope ? [latestCompletedContractEnvelope] : [], ["occurred_at", "created_at"])
+  const contractEnvelopeDaysOld = daysSince(latestCompletedContractEnvelopeTime, nowTime)
+  let contractEnvelopeStatus: ProductionReadinessStatus = "info"
+  if (input.hasContractEnvelopeProviderConfigured) {
+    contractEnvelopeStatus = !latestCompletedContractEnvelope || (contractEnvelopeDaysOld !== null && contractEnvelopeDaysOld > 30)
+      ? "warn"
+      : "pass"
+  }
+  const contractEnvelopeSummary = contractEnvelopeEvents.length
+    ? `${completedContractEnvelopeEvents} completed, ${attentionContractEnvelopeEvents} declined/voided/failed${contractEnvelopeDaysOld === null ? "" : `, latest ${contractEnvelopeDaysOld} day${contractEnvelopeDaysOld === 1 ? "" : "s"} old`}`
+    : input.hasContractEnvelopeProviderConfigured ? "Provider configured, no rows" : "No provider configured"
   const trustVerificationEvents = input.operations.trustVerificationEvents || []
   const latestTrustVerification = latestRow(trustVerificationEvents, ["occurred_at", "created_at"])
   const latestTrustVerificationTime = newestTime(latestTrustVerification ? [latestTrustVerification] : [], ["occurred_at", "created_at"])
@@ -690,6 +723,18 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
       "Schedule `/api/operations/notification-digests/run` and confirm recent rows appear in `/admin/operations`.",
     ),
     check(
+      "contract-envelope-evidence",
+      "Contract envelope provider evidence",
+      contractEnvelopeStatus,
+      contractEnvelopeSummary,
+      input.hasContractEnvelopeProviderConfigured
+        ? "A dedicated e-signature or PDF provider is configured and should report completed envelope evidence into the operations store."
+        : "Dedicated e-signature/PDF provider callbacks are optional until launch policy requires provider-backed agreement packets.",
+      input.hasContractEnvelopeProviderConfigured
+        ? "Run `npm run operations:worker -- contract-envelope --contract-id <contract-id> --contract-version-id <version-id> --provider-envelope-id <provider-envelope-id> --status completed --provider <provider>` and confirm `/admin/operations` shows the row."
+        : "Do not enable contract-provider callbacks until provider choice, document custody, and completed-PDF retention policy are explicit.",
+    ),
+    check(
       "trust-verification-evidence",
       "Trust verification provider evidence",
       trustVerificationStatus,
@@ -802,7 +847,7 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
     },
     {
       checks: workerChecks,
-      description: "Worker-reported evidence for backups, scanner status, digests, trust-provider callbacks, Stripe webhooks, and operational alerts.",
+      description: "Worker-reported evidence for backups, scanner status, digests, contract envelopes, trust-provider callbacks, Stripe webhooks, and operational alerts.",
       id: "workers",
       title: "Worker health",
     },
@@ -817,7 +862,7 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
     counts: {
       accessRequestsOpen: accessQueue.open.length,
       failedChecks,
-      operationsRows: input.operations.backupRuns.length + input.operations.fileUploads.length + input.operations.notificationDeliveries.length + input.operations.operationalEvents.length + trustVerificationEvents.length,
+      operationsRows: input.operations.backupRuns.length + contractEnvelopeEvents.length + (input.operations.emailSuppressions || []).length + input.operations.fileUploads.length + input.operations.notificationDeliveries.length + input.operations.operationalEvents.length + trustVerificationEvents.length,
       privacyRequestsOpen: privacyQueue.open.length,
       warningChecks,
     },

@@ -38,7 +38,7 @@ Stage 3: operations workers
 1. Install or tune the checked-in systemd templates under `deploy/systemd/`.
 2. Wire backup lifecycle reporting, file scanning, notification digests, monitoring heartbeat events, trust-verification evidence, and restore drills with `COFOUNDRY_OPERATIONS_TOKEN`.
 3. If phone, social/OAuth, work-domain, identity, or opportunity-ownership providers are selected, set the matching server-only readiness marker such as `COFOUNDRY_TRUST_VERIFICATION_PROVIDER=<provider>`, map provider results into `/api/operations/trust-verifications`, and confirm the rows appear in `/admin/operations` plus `/admin/readiness` as evidence. Do not treat provider callbacks as automatic member-facing badge grants unless a later source release explicitly encodes that policy.
-4. If a dedicated e-signature or PDF provider is selected, map provider envelope events into `/api/operations/contract-envelopes` and verify the matching contract certificate includes provider envelope evidence.
+4. If a dedicated e-signature or PDF provider is selected, set `COFOUNDRY_CONTRACT_ENVELOPE_PROVIDER=<provider>`, map provider envelope events into `/api/operations/contract-envelopes`, and verify the matching contract certificate includes provider envelope evidence.
 5. Confirm `/admin/operations` shows fresh rows for backup runs, scanner results, digest runs, trust-verification events, contract envelope events, operational events, and restore-drill results.
 6. Keep the actual backup artifacts, completed-provider PDFs, and scanner quarantine outside the repo and outside public web roots.
 
