@@ -4,7 +4,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import process from "node:process"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import { clearLocalOperationsStoreForTests, findLocalEmailSuppression, hashLocalUploadToken, listLocalFileUploadsByRelated, listLocalPendingFileScans, readLocalFileUploadContent, readLocalOperationsRows, recordLocalBackupRun, recordLocalEmailSuppression, recordLocalFileScanResult, recordLocalFileUploadPolicy, recordLocalNotificationDelivery, recordLocalOperationalEvent, writeLocalFileUploadContent } from "../../server/utils/local-operations-store"
+import { clearLocalOperationsStoreForTests, findLocalEmailSuppression, hashLocalUploadToken, listLocalContractEnvelopeEvents, listLocalFileUploadsByRelated, listLocalPendingFileScans, readLocalFileUploadContent, readLocalOperationsRows, recordLocalBackupRun, recordLocalContractEnvelopeEvent, recordLocalEmailSuppression, recordLocalFileScanResult, recordLocalFileUploadPolicy, recordLocalNotificationDelivery, recordLocalOperationalEvent, writeLocalFileUploadContent } from "../../server/utils/local-operations-store"
 
 let dataDirectory: string
 
@@ -75,6 +75,19 @@ describe("local operations telemetry store", () => {
       sourceEventId: "provider-event-1",
       suppressedAt: "2026-04-29T11:00:00.000Z",
     })
+    await recordLocalContractEnvelopeEvent({
+      completedPdfFileUploadId: "upload_completed_pdf",
+      completedPdfSha256: "b".repeat(64),
+      contractId: "contract_ledgerloop",
+      contractVersionId: "contract_ledgerloop_version_1",
+      metadata: { providerStatus: "completed" },
+      occurredAt: "2026-04-29T12:00:00.000Z",
+      provider: "docusign",
+      providerEnvelopeId: "envelope_123",
+      signedByUserIds: ["user_olivia", "user_malik"],
+      sourceEventId: "provider-envelope-event-1",
+      status: "completed",
+    })
 
     const payload = await readLocalOperationsRows()
 
@@ -105,6 +118,20 @@ describe("local operations telemetry store", () => {
 
     const matchedSuppression = await findLocalEmailSuppression("OPERATIONS-TEST@cofoundry.local", "workflow")
     expect(matchedSuppression?.reason).toBe("complaint")
+    expect(payload.contractEnvelopeEvents[0]).toMatchObject({
+      completed_pdf_file_upload_id: "upload_completed_pdf",
+      completed_pdf_sha256: "b".repeat(64),
+      contract_id: "contract_ledgerloop",
+      contract_version_id: "contract_ledgerloop_version_1",
+      provider: "docusign",
+      provider_envelope_id: "envelope_123",
+      signed_by_user_ids: ["user_olivia", "user_malik"],
+      source_event_id: "provider-envelope-event-1",
+      status: "completed",
+    })
+
+    const matchedEnvelopeEvents = await listLocalContractEnvelopeEvents("contract_ledgerloop", "contract_ledgerloop_version_1")
+    expect(matchedEnvelopeEvents).toHaveLength(1)
   })
 
   it("enforces per-collection retention limits", async () => {

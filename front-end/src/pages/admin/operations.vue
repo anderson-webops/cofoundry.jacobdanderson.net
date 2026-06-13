@@ -12,6 +12,7 @@ type OpsRow = Record<string, unknown>
 
 interface OperationsPayload {
   backupRuns: OpsRow[]
+  contractEnvelopeEvents: OpsRow[]
   emailSuppressions: OpsRow[]
   fileUploads: OpsRow[]
   mode: string
@@ -42,6 +43,12 @@ const cards = computed(() => [
     title: "Email suppressions",
   },
   {
+    count: data.value?.contractEnvelopeEvents.length || 0,
+    description: "E-signature or PDF provider envelope status mapped back to CoFoundry contracts.",
+    rows: data.value?.contractEnvelopeEvents || [],
+    title: "Contract envelopes",
+  },
+  {
     count: data.value?.backupRuns.length || 0,
     description: "Recorded backup runs from the external server schedule.",
     rows: data.value?.backupRuns || [],
@@ -60,11 +67,11 @@ function rowStatus(row: OpsRow) {
 }
 
 function rowTitle(row: OpsRow) {
-  return String(row.subject || row.original_filename || row.email || row.event_type || row.provider || row.id || "Record")
+  return String(row.subject || row.original_filename || row.email || row.provider_envelope_id || row.event_type || row.provider || row.id || "Record")
 }
 
 function rowDate(row: OpsRow) {
-  const value = row.created_at || row.suppressed_at || row.started_at
+  const value = row.created_at || row.occurred_at || row.suppressed_at || row.started_at
   return typeof value === "string" ? formatDate(value) : "No date"
 }
 
@@ -73,6 +80,8 @@ function rowDetail(row: OpsRow) {
     row.event_type ? `event ${row.event_type}` : "",
     row.target_type && row.target_id ? `${row.target_type} ${row.target_id}` : "",
     row.recipient ? `recipient ${row.recipient}` : "",
+    row.contract_id ? `contract ${row.contract_id}` : "",
+    row.contract_version_id ? `version ${row.contract_version_id}` : "",
     row.category ? `category ${row.category}` : "",
     row.provider ? `provider ${row.provider}` : "",
     row.source_event_id ? `source ${row.source_event_id}` : "",

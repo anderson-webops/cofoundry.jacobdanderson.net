@@ -500,6 +500,51 @@ async function runEmailSuppression(parsed: ParsedArgs, options: Required<WorkerC
   options.log(JSON.stringify(response, null, 2))
 }
 
+async function runContractEnvelope(parsed: ParsedArgs, options: Required<WorkerCommandOptions>) {
+  const environment = resolveOperationsWorkerEnvironment(options.env)
+  const contractId = flagValue(parsed.flags, "contract-id")
+  const contractVersionId = flagValue(parsed.flags, "contract-version-id")
+  const providerEnvelopeId = flagValue(parsed.flags, "provider-envelope-id")
+  const status = flagValue(parsed.flags, "status")
+  const completedPdfFileUploadId = flagValue(parsed.flags, "completed-pdf-file-upload-id") || null
+  const completedPdfSha256 = flagValue(parsed.flags, "completed-pdf-sha256") || null
+  const occurredAt = flagValue(parsed.flags, "occurred-at") || undefined
+  const provider = flagValue(parsed.flags, "provider", "external")
+  const sourceEventId = flagValue(parsed.flags, "source-event-id") || null
+  const signedByUserIds = flagValues(parsed.flags, "signed-by-user-id")
+
+  if (!contractId)
+    throw new Error("Contract envelope requires --contract-id.")
+
+  if (!contractVersionId)
+    throw new Error("Contract envelope requires --contract-version-id.")
+
+  if (!providerEnvelopeId)
+    throw new Error("Contract envelope requires --provider-envelope-id.")
+
+  if (!status)
+    throw new Error("Contract envelope requires --status.")
+
+  const response = await requestJson(environment, "/api/operations/contract-envelopes", {
+    body: {
+      completedPdfFileUploadId,
+      completedPdfSha256,
+      contractId,
+      contractVersionId,
+      metadata: parseMetadata(parsed.flags),
+      ...(occurredAt ? { occurredAt } : {}),
+      provider,
+      providerEnvelopeId,
+      signedByUserIds,
+      sourceEventId,
+      status,
+    },
+    fetchImpl: options.fetch,
+  })
+
+  options.log(JSON.stringify(response, null, 2))
+}
+
 async function downloadPendingFile(environment: OperationsWorkerEnvironment, item: PendingFileScan, fetchImpl: FetchLike) {
   if (!item.signedDownloadUrl)
     throw new Error(item.signedDownloadError || "No signed download URL was returned for the pending scan.")
@@ -697,6 +742,8 @@ export async function runOperationsWorker(argv: string[], options: WorkerCommand
   switch (parsed.command) {
     case "backup":
       return runBackup(parsed, resolvedOptions)
+    case "contract-envelope":
+      return runContractEnvelope(parsed, resolvedOptions)
     case "digest":
       return runDigest(parsed, resolvedOptions)
     case "event":
@@ -714,7 +761,7 @@ export async function runOperationsWorker(argv: string[], options: WorkerCommand
     default:
       throw new Error([
         "Unknown operations worker command.",
-        "Use one of: backup, digest, email-suppression, event, lifecycle-notification, mail-smoke, restore-drill, scan.",
+        "Use one of: backup, contract-envelope, digest, email-suppression, event, lifecycle-notification, mail-smoke, restore-drill, scan.",
       ].join(" "))
   }
 }

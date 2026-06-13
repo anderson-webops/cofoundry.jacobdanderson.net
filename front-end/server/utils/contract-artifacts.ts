@@ -1,15 +1,18 @@
 import type { H3Event } from "h3"
 import type { Contract, ContractVersion, Signature, WorkspaceSeed } from "../../shared/types/domain"
+import type { ContractProviderEvidence } from "../../shared/utils/contract-documents"
 import { getSubscriptionEntitlements } from "../../shared/utils/billing"
 import { isContractParticipant } from "../../shared/utils/collaboration"
 import { renderContractTextDocument } from "../../shared/utils/contract-documents"
 import { getContractById, getCurrentContractVersion, getSubscriptionByUserId } from "../../shared/utils/workspace"
 import { requireAuthenticatedSession } from "./auth"
+import { listContractProviderEvidence } from "./contract-envelope-events"
 import { loadMemberWorkspaceState } from "./member-workspace"
 
 export interface ContractArtifactContext {
   contract: Contract
   documentText: string
+  providerEvidence: ContractProviderEvidence[]
   seed: WorkspaceSeed
   signatures: Signature[]
   version: ContractVersion
@@ -43,10 +46,12 @@ export async function loadContractArtifactContext(event: H3Event, contractId: st
     signature.contractId === contract.id && signature.contractVersionId === version.id,
   )
   const documentText = renderContractTextDocument(contract, version, signatures)
+  const providerEvidence = await listContractProviderEvidence(event, contract.id, version.id)
 
   return {
     contract,
     documentText,
+    providerEvidence,
     seed: workspace.seed,
     signatures,
     version,

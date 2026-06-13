@@ -194,7 +194,7 @@ Remaining work:
 
 ### 8. Agreement artifacts
 
-Status: first-party agreement artifact layer implemented; external e-signature/PDF vendors remain optional provider work.
+Status: first-party agreement artifact layer implemented; external e-signature/PDF vendors remain optional provider work, with provider envelope evidence intake now ready in source.
 
 The contract detail flow now supports:
 
@@ -202,12 +202,13 @@ The contract detail flow now supports:
 - plain-text agreement export through `?format=text`
 - field-level redlines between contract versions
 - agreement execution certificate downloads with document SHA-256, version metadata, typed-signature evidence, and pending/complete status
+- optional provider envelope evidence in certificate downloads when a worker reports e-signature/PDF provider status for the matching contract version
 - server-side auth, participant ownership checks, paid-plan entitlement checks, and rate limits for downloadable artifacts
 
 Remaining work:
 
 - Decide whether production needs a dedicated e-signature provider or whether typed signatures plus certificate packets are sufficient for the launch use case.
-- If a provider is selected, map provider envelope IDs and completed PDF evidence back into contract versions and signature certificates.
+- If a provider is selected, configure the provider webhook bridge to report envelope IDs, statuses, signer IDs, completed PDF upload IDs, and completed PDF hashes through `/api/operations/contract-envelopes`.
 
 ### 9. Relationship analytics
 
