@@ -12,6 +12,7 @@ import type {
   Signature,
 } from "../../shared/types/domain"
 import type { SubscriptionGateAction } from "../../shared/utils/billing"
+import type { LifecycleNotificationRequest } from "../../shared/utils/lifecycle-notifications"
 import { checkSubscriptionGate } from "../../shared/utils/billing"
 import {
   acknowledgeTrialCollaborationTransition,
@@ -37,6 +38,7 @@ import {
 } from "../../shared/utils/collaboration"
 import { getContractById, getCurrentProposalVersion, getProposalById, getSubscriptionByUserId } from "../../shared/utils/workspace"
 import { recordContractSignatureEvent } from "./contract-signatures"
+import { emitLifecycleNotificationEvents } from "./lifecycle-notification-events"
 import { persistServerCollaborationState } from "./member-collaboration"
 import { loadMemberWorkspaceState } from "./member-workspace"
 
@@ -90,6 +92,7 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
   let nextSeed = workspace.seed
   let result: Record<string, string | null> = {}
   let affectedUsers = [session.id]
+  const lifecycleNotifications: LifecycleNotificationRequest[] = []
   let signatureEvent: { signature: Signature, typedName: string } | null = null
 
   switch (payload.action) {
@@ -116,6 +119,18 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
       nextSeed = transition.seed
       affectedUsers = [session.id, request.fromUserId]
       result = { conversationId: transition.conversationId }
+      if (payload.status === "accepted" && transition.match) {
+        lifecycleNotifications.push({
+          eventType: "match.created",
+          metadata: {
+            actorUserId: session.id,
+            requestId: request.id,
+          },
+          targetId: transition.match.id,
+          targetType: "match",
+          userId: request.fromUserId,
+        })
+      }
       break
     }
 
@@ -130,6 +145,22 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
       nextSeed = transition.seed
       affectedUsers = [...conversation.participantIds]
       result = { messageId: transition.message?.id || null }
+      if (transition.message && (payload.type || "user") === "user") {
+        conversation.participantIds
+          .filter(userId => userId !== session.id)
+          .forEach((userId) => {
+            lifecycleNotifications.push({
+              eventType: "message.unread",
+              metadata: {
+                actorUserId: session.id,
+                conversationId: payload.conversationId,
+              },
+              targetId: transition.message!.id,
+              targetType: "message",
+              userId,
+            })
+          })
+      }
       break
     }
 
@@ -157,6 +188,17 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
       nextSeed = transition.seed
       affectedUsers = [...conversation.participantIds]
       result = { proposalId: transition.proposalId }
+      lifecycleNotifications.push({
+        eventType: "proposal.updated",
+        metadata: {
+          actorUserId: session.id,
+          action: payload.action,
+          conversationId: payload.conversationId,
+        },
+        targetId: transition.proposalId,
+        targetType: "proposal",
+        userId: payload.recipientUserId,
+      })
       break
     }
 
@@ -170,6 +212,17 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
       nextSeed = updateProposalStatusTransition(nextSeed, payload.proposalId, payload.status, session.id, actedAt)
       affectedUsers = [proposal.createdByUserId, proposal.recipientUserId]
       result = { proposalId: proposal.id }
+      lifecycleNotifications.push({
+        eventType: "proposal.updated",
+        metadata: {
+          actorUserId: session.id,
+          action: payload.action,
+          status: payload.status,
+        },
+        targetId: proposal.id,
+        targetType: "proposal",
+        userId: proposal.createdByUserId === session.id ? proposal.recipientUserId : proposal.createdByUserId,
+      })
       break
     }
 
@@ -185,6 +238,17 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
       nextSeed = transition.seed
       affectedUsers = [proposal.createdByUserId, proposal.recipientUserId]
       result = { proposalId: proposal.id, proposalVersionId: transition.version?.id || null }
+      lifecycleNotifications.push({
+        eventType: "proposal.updated",
+        metadata: {
+          actorUserId: session.id,
+          action: payload.action,
+          proposalVersionId: transition.version?.id || null,
+        },
+        targetId: proposal.id,
+        targetType: "proposal",
+        userId: proposal.createdByUserId === session.id ? proposal.recipientUserId : proposal.createdByUserId,
+      })
       break
     }
 
@@ -203,6 +267,18 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
       nextSeed = transition.seed
       affectedUsers = [proposal.createdByUserId, proposal.recipientUserId]
       result = { commentId: transition.comment?.id || null }
+      lifecycleNotifications.push({
+        eventType: "proposal.updated",
+        metadata: {
+          actorUserId: session.id,
+          action: payload.action,
+          proposalCommentId: transition.comment?.id || null,
+          proposalSection: payload.section,
+        },
+        targetId: proposal.id,
+        targetType: "proposal",
+        userId: proposal.createdByUserId === session.id ? proposal.recipientUserId : proposal.createdByUserId,
+      })
       break
     }
 
@@ -218,6 +294,21 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
       nextSeed = transition.seed
       affectedUsers = [proposal.createdByUserId, proposal.recipientUserId]
       result = { contractId: transition.contractId }
+      if (transition.contractId) {
+        affectedUsers.forEach((userId) => {
+          lifecycleNotifications.push({
+            eventType: "contract.signature_required",
+            metadata: {
+              actorUserId: session.id,
+              action: payload.action,
+              proposalId: proposal.id,
+            },
+            targetId: transition.contractId!,
+            targetType: "contract",
+            userId,
+          })
+        })
+      }
       break
     }
 
@@ -237,6 +328,20 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
       const proposal = getProposalById(nextSeed, contract.proposalId)
       affectedUsers = proposal ? [proposal.createdByUserId, proposal.recipientUserId] : [session.id]
       result = { contractId: contract.id }
+      affectedUsers
+        .filter(userId => userId !== session.id)
+        .forEach((userId) => {
+          lifecycleNotifications.push({
+            eventType: "contract.signature_required",
+            metadata: {
+              actorUserId: session.id,
+              action: payload.action,
+            },
+            targetId: contract.id,
+            targetType: "contract",
+            userId,
+          })
+        })
       break
     }
 
@@ -290,6 +395,11 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
   await persistForUsers(event, affectedUsers, nextSeed)
   if (signatureEvent)
     await recordContractSignatureEvent(event, signatureEvent.signature, signatureEvent.typedName)
+  if (lifecycleNotifications.length) {
+    await emitLifecycleNotificationEvents(event, nextSeed, lifecycleNotifications, {
+      source: "workspace.collaboration",
+    })
+  }
 
   return {
     data: nextSeed,

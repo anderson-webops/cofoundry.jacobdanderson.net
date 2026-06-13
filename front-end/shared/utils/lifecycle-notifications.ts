@@ -170,7 +170,12 @@ function buildSignatureRequiredPlan(seed: WorkspaceSeed, request: LifecycleNotif
 
 function buildReportReviewedPlan(seed: WorkspaceSeed, request: LifecycleNotificationRequest, recipientUser: NonNullable<ReturnType<typeof recipient>>) {
   const report = seed.reports.find(item => item.id === request.targetId)
-  if (!report || report.reporterUserId !== request.userId || report.status === "open")
+  const status = report?.status || (request.metadata?.status === "reviewed" || request.metadata?.status === "resolved" ? request.metadata.status : null)
+
+  if (report && report.reporterUserId !== request.userId)
+    return null
+
+  if (!status || status === "open")
     return null
 
   return finalizePlan({
@@ -181,10 +186,10 @@ function buildReportReviewedPlan(seed: WorkspaceSeed, request: LifecycleNotifica
     recipientEmail: recipientUser.email,
     recipientName: recipientUser.name,
     subject: "CoFoundry: your safety report was reviewed",
-    summary: report.status === "resolved"
+    summary: status === "resolved"
       ? "The safety team resolved your report and recorded the moderation outcome."
       : "The safety team reviewed your report and recorded the next moderation step.",
-    targetId: report.id,
+    targetId: request.targetId,
     targetType: "report",
     userId: request.userId,
   })

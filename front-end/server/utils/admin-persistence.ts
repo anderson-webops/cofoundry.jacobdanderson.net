@@ -1,5 +1,6 @@
 import type { H3Event } from "h3"
 import type { AdminAction, AppRole, Notification, OpportunityVerificationStatus, PrivacyRequestStatus, ReportStatus } from "~/shared/types/domain"
+import { workspaceSeed } from "../../shared/data/seed"
 import { persistLocalOpportunityVerification, persistLocalReportStatus, persistLocalUserEmailVerification, persistLocalUserRole, persistLocalUserSuspension, readLocalAdminAuditStore, recordLocalAdminAction, recordLocalUserNotification } from "./local-admin-audit"
 import { updateLocalPrivacyRequestStatus } from "./local-privacy-requests"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
@@ -170,8 +171,16 @@ export async function persistReportStatus(event: H3Event, input: {
   status: ReportStatus
   timestamp: string
 }) {
-  if (!isSupabaseEnabled(event))
-    return persistLocalReportStatus(input)
+  if (!isSupabaseEnabled(event)) {
+    const patch = await persistLocalReportStatus(input)
+    const report = workspaceSeed.reports.find(item => item.id === input.reportId)
+
+    return {
+      id: patch.id,
+      reporterUserId: report?.reporterUserId || null,
+      status: patch.status,
+    }
+  }
 
   const adminClient = createSupabaseAdminClient(event)
   if (!adminClient)
@@ -195,13 +204,20 @@ export async function persistReportStatus(event: H3Event, input: {
     .from("reports")
     .update(patch)
     .eq("id", input.reportId)
-    .select("id")
+    .select("id,reporter_user_id,status")
+    .maybeSingle<{ id: string, reporter_user_id: string, status: ReportStatus }>()
 
   if (error)
     throw error
 
-  if (!data?.length)
+  if (!data)
     throw createError({ statusCode: 404, statusMessage: "Target report was not found." })
+
+  return {
+    id: data.id,
+    reporterUserId: data.reporter_user_id,
+    status: data.status,
+  }
 }
 
 export async function persistOpportunityVerification(event: H3Event, input: {
