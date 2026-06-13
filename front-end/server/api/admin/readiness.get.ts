@@ -3,6 +3,7 @@ import { collectEnvironmentValidationErrors, isLocalDevelopmentEnvironment, read
 import { listAccessRequests } from "../../utils/access-requests"
 import { requireAdminSession } from "../../utils/admin"
 import { readAdminOperationsRows } from "../../utils/admin-operations"
+import { readAdminPosture } from "../../utils/admin-posture"
 import { isContactMailConfigured } from "../../utils/contact"
 import { listPrivacyRequests } from "../../utils/privacy-requests"
 import { buildProductionReadinessSnapshot } from "../../utils/production-readiness"
@@ -23,14 +24,16 @@ export default defineEventHandler(async (event) => {
   })
 
   const runtimeConfig = useRuntimeConfig(event)
-  const [accessRequests, privacyRequests, operations] = await Promise.all([
+  const [accessRequests, privacyRequests, operations, adminPosture] = await Promise.all([
     listAccessRequests(event),
     listPrivacyRequests(event),
     readAdminOperationsRows(event),
+    readAdminPosture(event),
   ])
 
   return buildProductionReadinessSnapshot({
     accessRequests,
+    adminPosture,
     contactMailConfigured: isContactMailConfigured(),
     environment: readEnvironmentSnapshot(process.env),
     environmentValidationErrors: collectEnvironmentValidationErrors(process.env),

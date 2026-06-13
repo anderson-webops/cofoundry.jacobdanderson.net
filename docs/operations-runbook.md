@@ -53,8 +53,9 @@ Each worker call must send `Authorization: Bearer <COFOUNDRY_OPERATIONS_TOKEN>` 
 3. Create the first user through the normal account path.
 4. Run `BOOTSTRAP_ADMIN_EMAIL=operator@example.com npm run -w back-end bootstrap-admin` from the server environment with Vault-injected Supabase secrets.
 5. Verify the corresponding `users` row exists, is not suspended, and has the expected role. CoFoundry signed sessions are accepted only when they map to an active persisted user row.
-6. Verify the user can access `/admin`, `/admin/users`, `/admin/audit`, `/admin/operations`, `/admin/access-requests`, `/admin/privacy`, `/admin/queue`, and `/admin/evidence`.
-7. Only then set `NUXT_PUBLIC_BACKEND_MODE=supabase`.
+6. Verify the bootstrap `admin_actions` row appears in `/admin/audit`, and confirm `/admin/readiness` shows active admin access passing with first-admin bootstrap audit evidence recorded.
+7. Verify the user can access `/admin`, `/admin/users`, `/admin/audit`, `/admin/operations`, `/admin/access-requests`, `/admin/privacy`, `/admin/queue`, and `/admin/evidence` from a staging or maintenance app process running in Supabase mode.
+8. Only then keep the production app process on `NUXT_PUBLIC_BACKEND_MODE=supabase`.
 
 ## Stripe Cutover
 

@@ -24,8 +24,9 @@ Steps:
    - `BOOTSTRAP_ADMIN_USER_ID=<cofoundry-user-id> npm run -w back-end bootstrap-admin`
 5. Verify the script reports an admin action id.
 6. Verify the target row in `users` now has `role='admin'` or the intended `BOOTSTRAP_ADMIN_ROLE`.
-7. Verify `admin_actions` contains the bootstrap role-change audit row.
-8. Restart the app with Supabase mode only after `/admin` access is verified in staging.
+7. Verify `admin_actions` contains the bootstrap role-change audit row with `type='change_user_role'` and `target_type='user'`.
+8. Start or restart a staging/maintenance app process in Supabase mode and confirm `/admin/readiness` shows active admin access passing and first-admin bootstrap audit evidence recorded.
+9. Restart the production app with Supabase mode only after `/admin` access is verified in staging.
 
 Do not enable Stripe. Do not commit any secret values. If the script fails because the target user is missing, create the user through the normal account path first instead of inserting a partial user row by hand.
 ```

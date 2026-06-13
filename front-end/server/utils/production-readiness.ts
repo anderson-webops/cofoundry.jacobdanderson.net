@@ -27,8 +27,16 @@ export interface ProductionReadinessOperationsRows {
   operationalEvents: Array<Record<string, unknown>>
 }
 
+export interface ProductionReadinessAdminPosture {
+  activeAdminCount: number
+  activeInvestorAdminCount: number
+  hasBootstrapAuditEvidence: boolean
+  latestBootstrapAuditAt: string | null
+}
+
 export interface ProductionReadinessInput {
   accessRequests: AccessRequest[]
+  adminPosture: ProductionReadinessAdminPosture
   contactMailConfigured: boolean
   environment: EnvironmentSnapshot
   environmentValidationErrors: string[]
@@ -218,6 +226,8 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
     rowContainsAny(row, ["event_type", "source", "target_type"], ["monitor", "alert", "uptime"]))
   const latestMonitoringEventTime = newestTime(latestMonitoringEvent ? [latestMonitoringEvent] : [], ["created_at"])
   const monitoringEventDaysOld = daysSince(latestMonitoringEventTime, nowTime)
+  const latestBootstrapAuditTime = toTime(input.adminPosture.latestBootstrapAuditAt)
+  const bootstrapAuditDaysOld = daysSince(latestBootstrapAuditTime, nowTime)
 
   const deploymentChecks = [
     check(
@@ -255,6 +265,35 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
         ? "Local development may use localhost defaults."
         : "Production emails, invite links, canonical URLs, and operator handoffs need a stable public origin.",
       "Set NUXT_PUBLIC_APP_URL to the deployed HTTPS origin.",
+    ),
+  ]
+
+  const adminChecks = [
+    check(
+      "active-admin-access",
+      "Active admin access",
+      input.adminPosture.activeAdminCount > 0 ? "pass" : "fail",
+      `${input.adminPosture.activeAdminCount} active admin${input.adminPosture.activeAdminCount === 1 ? "" : "s"}`,
+      input.adminPosture.activeAdminCount > 0
+        ? `${input.adminPosture.activeInvestorAdminCount} active investor-admin account${input.adminPosture.activeInvestorAdminCount === 1 ? "" : "s"} included in the operator role set.`
+        : "No active admin or investor-admin account is available. Operators could be locked out of production control surfaces.",
+      "Create or reinstate a persisted operator account, then run the first-admin bootstrap path before Supabase cutover.",
+    ),
+    check(
+      "admin-bootstrap-audit",
+      "First-admin bootstrap audit",
+      publicEnvironment.backendMode === "supabase"
+        ? input.adminPosture.hasBootstrapAuditEvidence
+          ? "pass"
+          : "warn"
+        : "info",
+      input.adminPosture.hasBootstrapAuditEvidence
+        ? `Admin role-change audit recorded${bootstrapAuditDaysOld === null ? "" : `, ${bootstrapAuditDaysOld} day${bootstrapAuditDaysOld === 1 ? "" : "s"} old`}`
+        : "No admin bootstrap audit row detected",
+      publicEnvironment.backendMode === "supabase"
+        ? "Supabase-backed production should have an auditable first-admin promotion or admin role-change row before operators rely on the console."
+        : "Mock/access-request mode can use the seeded or durable local admin state; Supabase bootstrap evidence is required at live Supabase cutover.",
+      "Run `BOOTSTRAP_ADMIN_EMAIL=operator@example.com npm run -w back-end bootstrap-admin` from the server environment and confirm the audit row appears in `/admin/audit`.",
     ),
   ]
 
@@ -431,6 +470,12 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
       description: "Secrets, mail, and local persistence expectations that keep the production-facing shell safe.",
       id: "security",
       title: "Secrets and persistence",
+    },
+    {
+      checks: adminChecks,
+      description: "Active operator access and audited first-admin bootstrap evidence for the admin console.",
+      id: "admin-control",
+      title: "Admin control plane",
     },
     {
       checks: queueChecks,
