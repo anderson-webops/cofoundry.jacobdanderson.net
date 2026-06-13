@@ -226,6 +226,16 @@ export const operationsLifecycleNotificationSchema = z.object({
   userId: z.string().trim().min(1).max(120),
 })
 
+export const operationsEmailSuppressionSchema = z.object({
+  category: z.enum(["all", "digest", "workflow"]).default("all"),
+  email: z.string().trim().email().max(254).transform(value => value.toLowerCase()),
+  metadata: z.record(z.string(), z.unknown()).default({}),
+  provider: z.string().trim().min(2).max(120).default("external"),
+  reason: z.enum(["bounce", "complaint", "manual", "provider_suppression", "unsubscribe"]),
+  sourceEventId: z.string().trim().min(1).max(200).nullable().optional(),
+  suppressedAt: z.string().datetime("Use an ISO timestamp.").optional(),
+})
+
 export const operationsEventSchema = z.object({
   actorUserId: z.string().trim().min(1).max(120).nullable().optional(),
   eventType: z.string().trim().min(2).max(120),

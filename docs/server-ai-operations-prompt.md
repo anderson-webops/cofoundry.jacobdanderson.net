@@ -16,7 +16,7 @@ Source/runtime context:
 - Server-only secrets must come from Vault-managed or host-managed env files.
 - The app now supports a server-only `COFOUNDRY_OPERATIONS_TOKEN`.
 - The worker CLI also supports optional server-only alert webhook env: `COFOUNDRY_ALERT_WEBHOOK_URL`, `COFOUNDRY_ALERT_WEBHOOK_TOKEN`, `COFOUNDRY_ALERT_SEVERITIES`, and `COFOUNDRY_ALERT_TIMEOUT_MS`. Leave these unset until the operator chooses the destination.
-- The source includes schedulable worker commands: `npm run operations:backup`, `npm run operations:digest`, `npm run operations:scan`, `npm run operations:event`, `npm run operations:mail-smoke`, `npm run operations:worker -- lifecycle-notification`, and `npm run operations:restore-drill`.
+- The source includes schedulable worker commands: `npm run operations:backup`, `npm run operations:digest`, `npm run operations:scan`, `npm run operations:event`, `npm run operations:mail-smoke`, `npm run operations:worker -- lifecycle-notification`, `npm run operations:worker -- email-suppression`, and `npm run operations:restore-drill`.
 - The source includes systemd templates in `deploy/systemd/`. Prefer installing and tuning those templates instead of hand-writing timer units from scratch.
 - In mock/access-request mode, operations telemetry persists to `.data/operations-telemetry.json` and local uploaded scan artifacts persist under `.data/local-file-uploads/` unless `COFOUNDRY_LOCAL_DATA_DIR` points at another durable writable directory.
 
@@ -48,6 +48,25 @@ Tasks:
      --metadata purpose=mail-provider-smoke
 
    Confirm the monitored inbox receives the message, then confirm `/admin/operations` and `/admin/readiness` show a recent `mail.smoke` delivery row. If this fails, keep digest and lifecycle sends in dry-run or record-only mode.
+
+   Before enabling real optional sends, wire provider unsubscribe, bounce, complaint, and manual suppression events to the checked-in suppression endpoint. Example:
+
+   npm run operations:worker -- email-suppression \
+     --email "<recipient-email>" \
+     --category all \
+     --reason complaint \
+     --provider "<mail-provider>" \
+     --source-event-id "<provider-event-id>" \
+     --metadata providerType=spam_complaint
+
+   The raw endpoint equivalent is:
+
+   curl -fsS -X POST "$NUXT_PUBLIC_APP_URL/api/operations/email-suppressions" \
+     -H "Authorization: Bearer $COFOUNDRY_OPERATIONS_TOKEN" \
+     -H "Content-Type: application/json" \
+     --data '{"email":"<recipient-email>","category":"all","reason":"complaint","provider":"<mail-provider>","sourceEventId":"<provider-event-id>","metadata":{"providerType":"spam_complaint"}}'
+
+   Confirm `/admin/operations` shows the email suppression row. Optional scheduled digest and relationship workflow emails skip suppressed recipients before live send attempts.
 
 10. Verify lifecycle notification rendering and telemetry before wiring live event triggers:
 
@@ -136,6 +155,6 @@ Tasks:
      --metadata environment=staging \
      -- ./scripts/verify-restored-cofoundry.sh
 
-15. Verify `/admin/operations` shows backup runs, operational events, file uploads, and notification deliveries when logged in as an admin.
-16. Document timer names, log paths, backup artifact location, scanner command, restore test procedure, local telemetry path, retention limit, mail-smoke result, lifecycle trigger wiring, and rollback command in the server runbook.
+15. Verify `/admin/operations` shows backup runs, operational events, file uploads, email suppressions, and notification deliveries when logged in as an admin.
+16. Document timer names, log paths, backup artifact location, scanner command, restore test procedure, local telemetry path, retention limit, mail-smoke result, provider suppression mapping, lifecycle trigger wiring, and rollback command in the server runbook.
 ```
