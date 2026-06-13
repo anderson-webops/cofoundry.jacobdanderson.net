@@ -20,8 +20,8 @@ describe("notification delivery preferences", () => {
       supportEmail: "support@example.com",
     })
 
-    expect(digestBody).toContain("Turn off scheduled unread digests in CoFoundry settings:")
-    expect(workflowBody).toContain("Turn off relationship workflow emails in CoFoundry settings:")
+    expect(digestBody).toContain("Turn off scheduled unread digest email:")
+    expect(workflowBody).toContain("Turn off relationship workflow email:")
     expect(digestBody).toContain("https://cofoundry.example/app/settings")
     expect(workflowBody).toContain("support@example.com")
     expect(workflowBody).toContain("Service-critical account, security, billing, trust, and support notices may still be sent separately.")
@@ -114,7 +114,7 @@ describe("notification delivery preferences", () => {
     expect(digest.snapshot.actions.some(item => item.kind === "contract")).toBe(true)
     expect(digest.body).toContain("Review proposal")
     expect(digest.body).toContain("/app/contracts/")
-    expect(digest.body).toContain("Turn off scheduled unread digests in CoFoundry settings:")
+    expect(digest.body).toContain("Turn off scheduled unread digest email:")
     expect(digest.body).toContain("https://cofoundry.example/app/settings")
   })
 

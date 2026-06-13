@@ -22,6 +22,7 @@ export const privateWorkspaceRoutePrefixes = [
   "/onboarding",
   "/app",
   "/admin",
+  "/email",
 ] as const
 
 export const privateApiRoutePrefixes = [
