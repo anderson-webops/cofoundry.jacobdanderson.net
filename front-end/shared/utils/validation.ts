@@ -209,16 +209,20 @@ export const operationsMailSmokeSchema = z.object({
 export const operationsLifecycleNotificationSchema = z.object({
   dryRun: z.boolean().default(false),
   eventType: z.enum([
+    "intro.received",
+    "intro.accepted",
     "match.created",
     "message.unread",
+    "proposal.received",
     "proposal.updated",
     "contract.signature_required",
     "report.reviewed",
+    "billing.state_changed",
     "subscription.changed",
   ]),
   metadata: z.record(z.string(), z.unknown()).default({}),
   targetId: z.string().trim().min(1).max(160),
-  targetType: z.enum(["match", "message", "conversation", "proposal", "contract", "report", "subscription"]).nullable().optional(),
+  targetType: z.enum(["connect_request", "match", "message", "conversation", "proposal", "contract", "report", "subscription"]).nullable().optional(),
   userId: z.string().trim().min(1).max(120),
 })
 
