@@ -1,6 +1,7 @@
 import type { H3Event } from "h3"
 import type { SessionUser, WorkspaceSeed } from "~/shared/types/domain"
 import { randomUUID } from "node:crypto"
+import { buildInboxSnapshot } from "../../shared/utils/inbox"
 import { isContactMailConfigured, sendPlainTextEmail } from "./contact"
 import { recordLocalNotificationDelivery } from "./local-operations-store"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
@@ -9,6 +10,8 @@ export interface NotificationDeliveryResult {
   configured: boolean
   delivered: boolean
   error: string | null
+  reason?: "email_digest_disabled" | "mail_not_configured" | "no_workspace_items" | "sent" | "delivery_failed"
+  skipped?: boolean
   subject: string
   suppressed?: boolean
   unreadCount: number
@@ -16,6 +19,7 @@ export interface NotificationDeliveryResult {
 
 export interface UnreadNotificationDigestOptions {
   respectPreferences?: boolean
+  skipIfEmpty?: boolean
 }
 
 export function buildDigestSubject(unreadCount: number) {
@@ -28,22 +32,20 @@ export function isScheduledDigestEmailEnabled(seed: WorkspaceSeed, userId: strin
   return seed.users.find(user => user.id === userId)?.notificationPreferences?.unreadDigestEmail === true
 }
 
-function buildDigestBody(seed: WorkspaceSeed, session: SessionUser) {
-  const unreadNotifications = seed.notifications
-    .filter(notification => notification.userId === session.id && !notification.readAt)
-    .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+export function buildDigestContent(seed: WorkspaceSeed, session: SessionUser) {
+  const snapshot = buildInboxSnapshot(seed, session.id)
 
   const lines = [
     `Hi ${session.name},`,
     "",
-    unreadNotifications.length
+    snapshot.actions.length
       ? "These CoFoundry workspace items still need attention:"
       : "Your CoFoundry workspace queue is clear right now.",
     "",
-    ...unreadNotifications.slice(0, 10).flatMap(notification => [
-      `- ${notification.title}`,
-      `  ${notification.body}`,
-      `  ${notification.href}`,
+    ...snapshot.actions.slice(0, 10).flatMap(item => [
+      `- ${item.title}`,
+      `  ${item.summary}`,
+      `  ${item.href}`,
     ]),
     "",
     "Open your workspace to handle the queue:",
@@ -54,7 +56,7 @@ function buildDigestBody(seed: WorkspaceSeed, session: SessionUser) {
 
   return {
     body: lines.join("\n"),
-    unreadNotifications,
+    snapshot,
   }
 }
 
@@ -85,17 +87,30 @@ export async function recordNotificationDelivery(event: H3Event, session: Sessio
 }
 
 export async function sendUnreadNotificationDigest(event: H3Event, seed: WorkspaceSeed, session: SessionUser, options: UnreadNotificationDigestOptions = {}) {
-  const { body, unreadNotifications } = buildDigestBody(seed, session)
-  const subject = buildDigestSubject(unreadNotifications.length)
+  const { body, snapshot } = buildDigestContent(seed, session)
+  const subject = buildDigestSubject(snapshot.actions.length)
+
+  if (options.skipIfEmpty && !snapshot.actions.length) {
+    return {
+      configured: isContactMailConfigured(),
+      delivered: false,
+      error: null,
+      reason: "no_workspace_items",
+      skipped: true,
+      subject,
+      unreadCount: 0,
+    } satisfies NotificationDeliveryResult
+  }
 
   if (options.respectPreferences && !isScheduledDigestEmailEnabled(seed, session.id)) {
     const result: NotificationDeliveryResult = {
       configured: false,
       delivered: false,
       error: "Scheduled digest email is disabled for this member.",
+      reason: "email_digest_disabled",
       subject,
       suppressed: true,
-      unreadCount: unreadNotifications.length,
+      unreadCount: snapshot.actions.length,
     }
     await recordNotificationDelivery(event, session, result)
     return result
@@ -106,8 +121,9 @@ export async function sendUnreadNotificationDigest(event: H3Event, seed: Workspa
       configured: false,
       delivered: false,
       error: null,
+      reason: "mail_not_configured",
       subject,
-      unreadCount: unreadNotifications.length,
+      unreadCount: snapshot.actions.length,
     }
     await recordNotificationDelivery(event, session, result)
     return result
@@ -124,8 +140,9 @@ export async function sendUnreadNotificationDigest(event: H3Event, seed: Workspa
       configured: true,
       delivered: true,
       error: null,
+      reason: "sent",
       subject,
-      unreadCount: unreadNotifications.length,
+      unreadCount: snapshot.actions.length,
     }
     await recordNotificationDelivery(event, session, result)
     return result
@@ -135,8 +152,9 @@ export async function sendUnreadNotificationDigest(event: H3Event, seed: Workspa
       configured: true,
       delivered: false,
       error: error instanceof Error ? error.message : "Email delivery failed",
+      reason: "delivery_failed",
       subject,
-      unreadCount: unreadNotifications.length,
+      unreadCount: snapshot.actions.length,
     }
     await recordNotificationDelivery(event, session, result)
     return result
