@@ -24,6 +24,7 @@ For a paste-ready staged handoff that covers the remaining external providers, u
 - If `COFOUNDRY_ALERT_WEBHOOK_URL` is configured, confirm `/admin/readiness` shows a recent alert-smoke event. Use `npm run operations:event -- --source uptime-monitor --event-type monitoring.alert_test --severity warning --metadata purpose=alert-webhook-smoke` after changing the alert destination.
 - If contact or digest mail is configured, confirm `/admin/readiness` shows a recent successful mail-smoke delivery. Use `npm run operations:mail-smoke -- --to-email <monitored-inbox>` after changing SMTP/sendmail settings.
 - If `COFOUNDRY_TRUST_VERIFICATION_PROVIDER` or another trust-provider marker is configured, confirm `/admin/readiness` shows recent trust-verification evidence and `/admin/operations` shows the matching provider row.
+- If `NUXT_PUBLIC_BILLING_MODE=stripe` is deliberately enabled, confirm `/admin/readiness` shows recent Stripe webhook evidence and `/admin/operations` shows a matching `stripe.webhook.processed` row.
 - Visit `/admin/audit` and confirm recent moderation, role, report, and privacy-request actions are present after reloads.
 - Visit `/admin/users` and confirm pending emails can be marked verified only after invite, domain, or operator evidence review.
 - Sign in to an invited test account and confirm profile, inbox, and billing preview changes survive an app restart.
@@ -75,3 +76,4 @@ Each worker call must send `Authorization: Bearer <COFOUNDRY_OPERATIONS_TOKEN>` 
 - Keep `NUXT_PUBLIC_BILLING_MODE=mock` until checkout, customer portal, webhook signature validation, and subscription reconciliation have been tested against a staging Stripe account.
 - With live accounts and mock billing, paid-plan changes are operator-managed and should not grant paid entitlements unless `NUXT_PUBLIC_ENABLE_DEMO_ACCESS=true` is deliberately set for staging.
 - Enable Stripe only after the webhook endpoint is registered and `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, public price IDs, and the publishable key are present in the host secret/public env model.
+- After the first signed checkout or subscription webhook, confirm `/admin/operations` shows `stripe.webhook.processed`; Stripe-mode readiness remains a warning until that row exists.

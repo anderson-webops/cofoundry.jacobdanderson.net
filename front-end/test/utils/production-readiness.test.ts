@@ -468,6 +468,88 @@ describe("production readiness snapshot", () => {
     expect(withEvidence.counts.operationsRows).toBe(healthyOperations.backupRuns.length + healthyOperations.fileUploads.length + healthyOperations.notificationDeliveries.length + healthyOperations.operationalEvents.length + 1)
   })
 
+  it("requires processed Stripe webhook evidence only when Stripe billing mode is enabled", () => {
+    const withoutWebhook = buildProductionReadinessSnapshot({
+      accessRequests: [],
+      adminPosture: healthyAdminPosture,
+      contactMailConfigured: true,
+      environment: environmentSnapshot({
+        billingMode: "stripe",
+        stripePriceProMonthly: "price_pro",
+        stripePriceTeamMonthly: "price_team",
+        stripePublishableKey: "pk_test_example",
+      }),
+      environmentValidationErrors: [],
+      generatedAt,
+      hasAlertWebhookConfigured: true,
+      hasDurableLocalDataDir: true,
+      hasOperationsWorkerToken: true,
+      hasSessionSigningSecret: true,
+      hasTrustVerificationProviderConfigured: false,
+      isLocalDevelopment: false,
+      operations: healthyOperations,
+      privacyRequests: [],
+    })
+    const withoutWebhookCheckById = new Map(withoutWebhook.groups.flatMap(group => group.checks).map(check => [check.id, check]))
+
+    expect(withoutWebhook.overallStatus).toBe("warn")
+    expect(withoutWebhookCheckById.get("stripe-webhook-evidence")).toMatchObject({
+      status: "warn",
+      summary: "Stripe mode enabled, no processed webhook",
+    })
+    expect(withoutWebhook.provisioningTasks.find(task => task.id === "stripe-cutover-provisioning")).toMatchObject({
+      status: "warn",
+      summary: "Stripe mode enabled, no processed webhook",
+    })
+
+    const withWebhook = buildProductionReadinessSnapshot({
+      accessRequests: [],
+      adminPosture: healthyAdminPosture,
+      contactMailConfigured: true,
+      environment: environmentSnapshot({
+        billingMode: "stripe",
+        stripePriceProMonthly: "price_pro",
+        stripePriceTeamMonthly: "price_team",
+        stripePublishableKey: "pk_test_example",
+      }),
+      environmentValidationErrors: [],
+      generatedAt,
+      hasAlertWebhookConfigured: true,
+      hasDurableLocalDataDir: true,
+      hasOperationsWorkerToken: true,
+      hasSessionSigningSecret: true,
+      hasTrustVerificationProviderConfigured: false,
+      isLocalDevelopment: false,
+      operations: {
+        ...healthyOperations,
+        operationalEvents: [
+          {
+            created_at: generatedAt,
+            event_type: "stripe.webhook.processed",
+            id: "event_stripe_webhook",
+            severity: "info",
+            source: "stripe.webhook",
+            target_id: "evt_123",
+            target_type: "stripe_event",
+          },
+          ...healthyOperations.operationalEvents,
+        ],
+      },
+      privacyRequests: [],
+    })
+    const withWebhookCheckById = new Map(withWebhook.groups.flatMap(group => group.checks).map(check => [check.id, check]))
+
+    expect(withWebhook.overallStatus).toBe("pass")
+    expect(withWebhookCheckById.get("stripe-webhook-evidence")).toMatchObject({
+      status: "pass",
+      summary: "Last processed webhook 0 days old",
+    })
+    expect(withWebhook.provisioningTasks.find(task => task.id === "stripe-cutover-provisioning")).toMatchObject({
+      status: "pass",
+      summary: "Last processed webhook 0 days old",
+    })
+  })
+
   it("warns in Supabase mode until first-admin bootstrap evidence exists", () => {
     const snapshot = buildProductionReadinessSnapshot({
       accessRequests: [],

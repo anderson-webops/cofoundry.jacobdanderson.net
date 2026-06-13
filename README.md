@@ -305,7 +305,7 @@ The frontend checkout route lives at `front-end/server/api/billing/checkout.post
 - In local or deliberate staging demo mode, mock billing can update a workspace plan preview without contacting Stripe
 - In live account mode with `NUXT_PUBLIC_BILLING_MODE="mock"`, paid-plan changes route to the team and do not mutate entitlements
 - In Stripe mode it creates a Stripe Checkout Session using env-driven price IDs
-- `/api/billing/webhook` verifies Stripe signatures and syncs checkout/subscription updates into the Supabase subscription row
+- `/api/billing/webhook` verifies Stripe signatures, records non-secret webhook processing telemetry, and syncs checkout/subscription updates into the Supabase subscription row
 - `/api/billing/portal` creates a Stripe Customer Portal session for self-service billing management
 - The MVP treats subscriptions as SaaS access. There is no mandatory platform equity in billing
 
@@ -327,6 +327,7 @@ Stripe production setup after deploy:
 2. Register `https://<production-host>/api/billing/webhook` for `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, and `customer.subscription.deleted`.
 3. Configure the Stripe Customer Portal in the Stripe dashboard before exposing self-service plan management.
 4. Keep `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` in Vault-managed or host-managed server env.
+5. Trigger a checkout or subscription webhook and confirm `/admin/operations` shows `stripe.webhook.processed`; `/admin/readiness` warns in Stripe mode until that evidence exists.
 
 ## Production secret model
 

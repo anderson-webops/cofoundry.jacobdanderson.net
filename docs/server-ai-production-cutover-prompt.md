@@ -65,7 +65,8 @@ Stage 6: Stripe billing
 3. Register the webhook URL for checkout and subscription lifecycle events.
 4. Configure the Stripe Customer Portal before exposing self-service plan management.
 5. Test checkout, webhook signature verification, subscription sync, plan downgrade/cancel behavior, and customer-portal access in staging.
-6. Only set `NUXT_PUBLIC_BILLING_MODE=stripe` on production after staging proves subscription state, entitlements, and rollback.
+6. Confirm `/admin/operations` shows a recent `stripe.webhook.processed` row and `/admin/readiness` shows Stripe webhook evidence passing after a signed checkout or subscription webhook.
+7. Only set `NUXT_PUBLIC_BILLING_MODE=stripe` on production after staging proves subscription state, entitlements, readiness evidence, and rollback.
 
 Final verification:
 - Run `npm ci`, `npm run lint`, `npm run typecheck`, `npm run test`, and `npm run build` against the release source if the server environment permits.

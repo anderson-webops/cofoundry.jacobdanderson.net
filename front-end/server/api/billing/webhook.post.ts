@@ -2,6 +2,7 @@ import type { H3Event } from "h3"
 import type Stripe from "stripe"
 import { getHeader, readRawBody } from "h3"
 import { recordStripeCheckoutSession, syncStripeSubscription } from "../../utils/billing-persistence"
+import { recordOperationalEvent } from "../../utils/operations-persistence"
 import { createStripeClient } from "../../utils/stripe"
 
 function getStripeObjectId(value: string | { id: string } | null | undefined) {
@@ -29,7 +30,7 @@ async function handleCheckoutCompleted(event: H3Event, stripe: Stripe, checkoutS
 async function handleStripeEvent(event: H3Event, stripe: Stripe, stripeEvent: Stripe.Event) {
   if (stripeEvent.type === "checkout.session.completed") {
     await handleCheckoutCompleted(event, stripe, stripeEvent.data.object as Stripe.Checkout.Session)
-    return
+    return true
   }
 
   if (
@@ -38,6 +39,44 @@ async function handleStripeEvent(event: H3Event, stripe: Stripe, stripeEvent: St
     || stripeEvent.type === "customer.subscription.deleted"
   ) {
     await syncStripeSubscription(event, stripeEvent.data.object as Stripe.Subscription)
+    return true
+  }
+
+  return false
+}
+
+function getStripeEventObjectId(stripeEvent: Stripe.Event) {
+  const dataObject = stripeEvent.data.object as { id?: unknown } | null
+  return typeof dataObject?.id === "string" ? dataObject.id : null
+}
+
+async function recordStripeWebhookTelemetry(
+  event: H3Event,
+  stripeEvent: Stripe.Event,
+  status: "processed" | "unhandled" | "failed",
+  errorMessage?: string,
+) {
+  try {
+    await recordOperationalEvent(event, {
+      eventType: `stripe.webhook.${status}`,
+      metadata: {
+        apiVersion: stripeEvent.api_version || null,
+        error: errorMessage || null,
+        livemode: stripeEvent.livemode,
+        requestId: stripeEvent.request?.id || null,
+        status,
+        stripeEventId: stripeEvent.id,
+        stripeEventType: stripeEvent.type,
+        stripeObjectId: getStripeEventObjectId(stripeEvent),
+      },
+      severity: status === "failed" ? "error" : "info",
+      source: "stripe.webhook",
+      targetId: stripeEvent.id,
+      targetType: "stripe_event",
+    })
+  }
+  catch {
+    // Webhook reconciliation should not fail just because readiness telemetry cannot be written.
   }
 }
 
@@ -86,7 +125,15 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  await handleStripeEvent(event, stripe, stripeEvent)
+  try {
+    const handled = await handleStripeEvent(event, stripe, stripeEvent)
+    await recordStripeWebhookTelemetry(event, stripeEvent, handled ? "processed" : "unhandled")
+  }
+  catch (error) {
+    const message = error instanceof Error ? error.message : "Stripe webhook processing failed."
+    await recordStripeWebhookTelemetry(event, stripeEvent, "failed", message)
+    throw error
+  }
 
   return {
     received: true,
