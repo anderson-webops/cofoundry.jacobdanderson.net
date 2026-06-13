@@ -70,6 +70,12 @@ async function submitForm() {
         {{ authStore.pending ? "Signing in..." : "Sign in" }}
       </BaseButton>
     </form>
+    <p class="muted text-sm mt-4">
+      Cannot sign in or lost your invite?
+      <NuxtLink to="/auth/recover" class="text-[var(--accent)] font-semibold">
+        Request account help
+      </NuxtLink>
+    </p>
 
     <template v-if="policy.marketingShellOnly">
       <div class="panel-inset mt-8 p-5">

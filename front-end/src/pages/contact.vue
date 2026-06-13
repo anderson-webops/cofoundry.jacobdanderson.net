@@ -24,6 +24,11 @@ function getTopicDefaults(topic: string) {
         subject: "Pricing and team plans",
         message: "I would like more detail on CoFoundry pricing, rollout timing, or team/studio access.",
       }
+    case "account":
+      return {
+        subject: "Account access help",
+        message: "I need help accessing an existing CoFoundry account or invite.",
+      }
     default:
       return {
         subject: "",
