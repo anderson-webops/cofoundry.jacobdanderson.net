@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { accessRequestSchema, adminAccessInviteSchema, adminAccessRequestStatusSchema, adminCommandQueueActionSchema, adminOpportunityVerificationSchema, adminReportStatusSchema, adminUserModerationSchema, adminUserRoleSchema, billingCheckoutSchema, contactSchema, minimumOnboardingSchema, onboardingSchema, operationsBackupRunSchema, operationsContractEnvelopeSchema, operationsDigestRunSchema, operationsEmailSuppressionSchema, operationsEventSchema, opportunitySchema, privacyRequestSchema, proposalSchema, reportSchema, signUpSchema } from "../../shared/utils/validation"
+import { accessRequestSchema, adminAccessInviteSchema, adminAccessRequestStatusSchema, adminCommandQueueActionSchema, adminOpportunityVerificationSchema, adminReportStatusSchema, adminUserModerationSchema, adminUserRoleSchema, billingCheckoutSchema, contactSchema, minimumOnboardingSchema, onboardingSchema, operationsBackupRunSchema, operationsContractEnvelopeSchema, operationsDigestRunSchema, operationsEmailSuppressionSchema, operationsEventSchema, operationsTrustVerificationSchema, opportunitySchema, privacyRequestSchema, proposalSchema, reportSchema, signUpSchema } from "../../shared/utils/validation"
 
 describe("validation schemas", () => {
   it("accepts a valid sign-up payload", () => {
@@ -318,6 +318,19 @@ describe("validation schemas", () => {
       sourceEventId: "provider-envelope-event-1",
       status: "completed",
     })
+    const trustVerification = operationsTrustVerificationSchema.safeParse({
+      confidence: 0.94,
+      evidenceFileUploadId: "upload_trust_evidence",
+      metadata: { providerResult: "domain_match" },
+      occurredAt: "2026-04-29T07:00:00.000Z",
+      provider: "veriff",
+      providerSubjectId: "provider-subject-1",
+      sourceEventId: "provider-trust-event-1",
+      status: "verified",
+      targetId: "profile_user_olivia",
+      targetType: "profile",
+      verificationType: "government_id",
+    })
 
     expect(digestRun).toEqual({
       dryRun: false,
@@ -333,5 +346,6 @@ describe("validation schemas", () => {
       success: true,
     })
     expect(contractEnvelope.success).toBe(true)
+    expect(trustVerification.success).toBe(true)
   })
 })

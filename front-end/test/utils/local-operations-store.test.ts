@@ -4,7 +4,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import process from "node:process"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import { clearLocalOperationsStoreForTests, findLocalEmailSuppression, hashLocalUploadToken, listLocalContractEnvelopeEvents, listLocalFileUploadsByRelated, listLocalPendingFileScans, readLocalFileUploadContent, readLocalOperationsRows, recordLocalBackupRun, recordLocalContractEnvelopeEvent, recordLocalEmailSuppression, recordLocalFileScanResult, recordLocalFileUploadPolicy, recordLocalNotificationDelivery, recordLocalOperationalEvent, writeLocalFileUploadContent } from "../../server/utils/local-operations-store"
+import { clearLocalOperationsStoreForTests, findLocalEmailSuppression, hashLocalUploadToken, listLocalContractEnvelopeEvents, listLocalFileUploadsByRelated, listLocalPendingFileScans, readLocalFileUploadContent, readLocalOperationsRows, recordLocalBackupRun, recordLocalContractEnvelopeEvent, recordLocalEmailSuppression, recordLocalFileScanResult, recordLocalFileUploadPolicy, recordLocalNotificationDelivery, recordLocalOperationalEvent, recordLocalTrustVerificationEvent, writeLocalFileUploadContent } from "../../server/utils/local-operations-store"
 
 let dataDirectory: string
 
@@ -88,6 +88,19 @@ describe("local operations telemetry store", () => {
       sourceEventId: "provider-envelope-event-1",
       status: "completed",
     })
+    await recordLocalTrustVerificationEvent({
+      confidence: 0.94,
+      evidenceFileUploadId: "upload_trust_evidence",
+      metadata: { providerResult: "domain_match" },
+      occurredAt: "2026-04-29T13:00:00.000Z",
+      provider: "persona",
+      providerSubjectId: "inquiry_123",
+      sourceEventId: "provider-trust-event-1",
+      status: "verified",
+      targetId: "profile_user_olivia",
+      targetType: "profile",
+      verificationType: "government_id",
+    })
 
     const payload = await readLocalOperationsRows()
 
@@ -128,6 +141,18 @@ describe("local operations telemetry store", () => {
       signed_by_user_ids: ["user_olivia", "user_malik"],
       source_event_id: "provider-envelope-event-1",
       status: "completed",
+    })
+    expect(payload.trustVerificationEvents[0]).toMatchObject({
+      confidence: 0.94,
+      evidence_file_upload_id: "upload_trust_evidence",
+      metadata: { providerResult: "domain_match" },
+      provider: "persona",
+      provider_subject_id: "inquiry_123",
+      source_event_id: "provider-trust-event-1",
+      status: "verified",
+      target_id: "profile_user_olivia",
+      target_type: "profile",
+      verification_type: "government_id",
     })
 
     const matchedEnvelopeEvents = await listLocalContractEnvelopeEvents("contract_ledgerloop", "contract_ledgerloop_version_1")

@@ -250,6 +250,32 @@ export const operationsContractEnvelopeSchema = z.object({
   status: z.enum(["created", "sent", "viewed", "completed", "declined", "voided", "failed"]),
 })
 
+export const operationsTrustVerificationSchema = z.object({
+  confidence: z.number().min(0).max(1).nullable().optional(),
+  evidenceFileUploadId: z.string().trim().min(1).max(160).nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).default({}),
+  occurredAt: z.string().datetime("Use an ISO timestamp.").optional(),
+  provider: z.string().trim().min(2).max(120).default("external"),
+  providerSubjectId: z.string().trim().min(1).max(200).nullable().optional(),
+  sourceEventId: z.string().trim().min(1).max(200).nullable().optional(),
+  status: z.enum(["verified", "failed", "manual_review", "expired"]),
+  targetId: z.string().trim().min(1).max(160),
+  targetType: z.enum(["profile", "user", "opportunity"]),
+  verificationType: z.enum([
+    "identity",
+    "work_history",
+    "phone",
+    "linkedin",
+    "github",
+    "work_domain",
+    "website",
+    "government_id",
+    "email",
+    "opportunity_domain",
+    "opportunity_owner",
+  ]),
+})
+
 export const operationsEventSchema = z.object({
   actorUserId: z.string().trim().min(1).max(120).nullable().optional(),
   eventType: z.string().trim().min(2).max(120),

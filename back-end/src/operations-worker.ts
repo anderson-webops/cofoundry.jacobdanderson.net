@@ -545,6 +545,55 @@ async function runContractEnvelope(parsed: ParsedArgs, options: Required<WorkerC
   options.log(JSON.stringify(response, null, 2))
 }
 
+async function runTrustVerification(parsed: ParsedArgs, options: Required<WorkerCommandOptions>) {
+  const environment = resolveOperationsWorkerEnvironment(options.env)
+  const targetType = flagValue(parsed.flags, "target-type")
+  const targetId = flagValue(parsed.flags, "target-id")
+  const verificationType = flagValue(parsed.flags, "verification-type")
+  const status = flagValue(parsed.flags, "status")
+  const confidenceValue = flagValue(parsed.flags, "confidence")
+  const evidenceFileUploadId = flagValue(parsed.flags, "evidence-file-upload-id") || null
+  const occurredAt = flagValue(parsed.flags, "occurred-at") || undefined
+  const provider = flagValue(parsed.flags, "provider", "external")
+  const providerSubjectId = flagValue(parsed.flags, "provider-subject-id") || null
+  const sourceEventId = flagValue(parsed.flags, "source-event-id") || null
+  const confidence = confidenceValue ? Number.parseFloat(confidenceValue) : null
+
+  if (!targetType)
+    throw new Error("Trust verification requires --target-type.")
+
+  if (!targetId)
+    throw new Error("Trust verification requires --target-id.")
+
+  if (!verificationType)
+    throw new Error("Trust verification requires --verification-type.")
+
+  if (!status)
+    throw new Error("Trust verification requires --status.")
+
+  if (confidenceValue && (!Number.isFinite(confidence) || confidence === null || confidence < 0 || confidence > 1))
+    throw new Error("Trust verification --confidence must be a number from 0 to 1.")
+
+  const response = await requestJson(environment, "/api/operations/trust-verifications", {
+    body: {
+      confidence,
+      evidenceFileUploadId,
+      metadata: parseMetadata(parsed.flags),
+      ...(occurredAt ? { occurredAt } : {}),
+      provider,
+      providerSubjectId,
+      sourceEventId,
+      status,
+      targetId,
+      targetType,
+      verificationType,
+    },
+    fetchImpl: options.fetch,
+  })
+
+  options.log(JSON.stringify(response, null, 2))
+}
+
 async function downloadPendingFile(environment: OperationsWorkerEnvironment, item: PendingFileScan, fetchImpl: FetchLike) {
   if (!item.signedDownloadUrl)
     throw new Error(item.signedDownloadError || "No signed download URL was returned for the pending scan.")
@@ -758,10 +807,12 @@ export async function runOperationsWorker(argv: string[], options: WorkerCommand
       return runRestoreDrill(parsed, resolvedOptions)
     case "scan":
       return runScan(parsed, resolvedOptions)
+    case "trust-verification":
+      return runTrustVerification(parsed, resolvedOptions)
     default:
       throw new Error([
         "Unknown operations worker command.",
-        "Use one of: backup, contract-envelope, digest, email-suppression, event, lifecycle-notification, mail-smoke, restore-drill, scan.",
+        "Use one of: backup, contract-envelope, digest, email-suppression, event, lifecycle-notification, mail-smoke, restore-drill, scan, trust-verification.",
       ].join(" "))
   }
 }

@@ -271,6 +271,56 @@ test("operations contract envelope worker sends provider envelope payloads", asy
   })
 })
 
+test("operations trust verification worker sends provider verification payloads", async () => {
+  const { fetchImpl, requests } = createJsonFetch(() => ({ mode: "mock", verificationEvent: { id: "trust_event_1" } }))
+
+  await runOperationsWorker([
+    "trust-verification",
+    "--target-type",
+    "profile",
+    "--target-id",
+    "profile_user_olivia",
+    "--verification-type",
+    "government_id",
+    "--status",
+    "verified",
+    "--provider",
+    "persona",
+    "--provider-subject-id",
+    "inquiry_123",
+    "--source-event-id",
+    "provider-trust-event-1",
+    "--evidence-file-upload-id",
+    "upload_trust_evidence",
+    "--confidence",
+    "0.94",
+    "--occurred-at",
+    "2026-06-13T14:00:00.000Z",
+    "--metadata",
+    "providerResult=domain_match",
+  ], {
+    env: workerEnv,
+    fetch: fetchImpl,
+    log: () => {},
+  })
+
+  assert.equal(requests.length, 1)
+  assert.equal(requests[0].url, "https://cofoundry.example.com/api/operations/trust-verifications")
+  assert.deepEqual(requests[0].body, {
+    confidence: 0.94,
+    evidenceFileUploadId: "upload_trust_evidence",
+    metadata: { providerResult: "domain_match" },
+    occurredAt: "2026-06-13T14:00:00.000Z",
+    provider: "persona",
+    providerSubjectId: "inquiry_123",
+    sourceEventId: "provider-trust-event-1",
+    status: "verified",
+    targetId: "profile_user_olivia",
+    targetType: "profile",
+    verificationType: "government_id",
+  })
+})
+
 test("operations event worker sends configured webhook alerts", async () => {
   const { fetchImpl, requests } = createJsonFetch(request => request.url === "https://alerts.example.com/cofoundry"
     ? { accepted: true }
