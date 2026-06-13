@@ -14,6 +14,7 @@ RUN npm run build
 FROM node:20-alpine AS production-stage
 
 WORKDIR /app
+ENV NODE_ENV=production
 
 COPY --from=build-stage /app/front-end/.output ./front-end/.output
 

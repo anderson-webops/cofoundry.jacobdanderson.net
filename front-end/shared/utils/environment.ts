@@ -62,8 +62,25 @@ function isAbsoluteUrl(value: string) {
   }
 }
 
+function isLocalAppUrl(value: string) {
+  try {
+    const url = new URL(value)
+    return ["localhost", "127.0.0.1", "::1"].includes(url.hostname)
+  }
+  catch {
+    return false
+  }
+}
+
 export function isLocalDevelopmentEnvironment(env: EnvironmentSource) {
-  return readValue(env, "NODE_ENV") !== "production"
+  if (readValue(env, "NODE_ENV") === "production")
+    return false
+
+  const configuredAppUrl = readValue(env, "NUXT_PUBLIC_APP_URL")
+  if (!configuredAppUrl)
+    return true
+
+  return isLocalAppUrl(configuredAppUrl)
 }
 
 export function readPublicEnvironment(env: EnvironmentSource): PublicEnvironment {
