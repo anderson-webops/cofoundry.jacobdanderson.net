@@ -1,5 +1,6 @@
 import { resolveServerAppUrl } from "../../utils/app-url"
 import { requireAuthenticatedSession } from "../../utils/auth"
+import { buildOperatorManagedBillingUrl, resolveServerBillingAccessPolicy } from "../../utils/billing-access"
 import { createOrReuseStripeCustomer } from "../../utils/billing-persistence"
 import { assertRateLimit, buildRateLimitKey } from "../../utils/rate-limit"
 import { createStripeClient } from "../../utils/stripe"
@@ -18,6 +19,15 @@ export default defineEventHandler(async (event) => {
   const appUrl = resolveServerAppUrl(event)
 
   if (runtimeConfig.public.billingMode === "mock") {
+    const billingPolicy = resolveServerBillingAccessPolicy(event)
+
+    if (!billingPolicy.mockBillingPreviewEnabled) {
+      return {
+        mode: "managed",
+        portalUrl: buildOperatorManagedBillingUrl(appUrl, "billing-portal"),
+      }
+    }
+
     return {
       mode: "mock",
       portalUrl: `${appUrl}/app/billing`,

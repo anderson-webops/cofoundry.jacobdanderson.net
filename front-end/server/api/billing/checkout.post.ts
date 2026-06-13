@@ -1,6 +1,7 @@
 import { billingCheckoutSchema } from "~/shared/utils/validation"
 import { resolveServerAppUrl } from "../../utils/app-url"
 import { requireAuthenticatedSession } from "../../utils/auth"
+import { buildOperatorManagedBillingUrl, resolveServerBillingAccessPolicy } from "../../utils/billing-access"
 import { createOrReuseStripeCustomer, persistMockCheckoutSubscription, recordStripeCheckoutSession } from "../../utils/billing-persistence"
 import { assertRateLimit, buildRateLimitKey } from "../../utils/rate-limit"
 import { createStripeClient } from "../../utils/stripe"
@@ -18,6 +19,15 @@ export default defineEventHandler(async (event) => {
   const appUrl = resolveServerAppUrl(event)
 
   if (runtimeConfig.public.billingMode === "mock") {
+    const billingPolicy = resolveServerBillingAccessPolicy(event)
+
+    if (!billingPolicy.mockBillingPreviewEnabled) {
+      return {
+        mode: "managed",
+        checkoutUrl: buildOperatorManagedBillingUrl(appUrl, `billing-${payload.plan}`),
+      }
+    }
+
     const workspace = await persistMockCheckoutSubscription(event, session, payload.plan, payload.interval)
 
     return {

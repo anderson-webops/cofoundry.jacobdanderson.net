@@ -13,7 +13,7 @@ usePageSeo("Billing")
 
 const route = useRoute()
 const toastStore = useToastStore()
-const { getServiceLabels } = useProductAccess()
+const { getServiceLabels, policy } = useProductAccess()
 const { authStore, subscription, workspaceStore } = useCurrentMember()
 const runtimeConfig = useRuntimeConfig()
 const serviceLabels = getServiceLabels()
@@ -22,12 +22,32 @@ const pendingPlan = ref("")
 const pendingPortal = ref(false)
 const billingModeLabel = computed(() => serviceLabels.billing)
 const currentPriceLabel = computed(() => getPlanPriceLabel(subscription.value?.plan || "free", subscription.value?.billingCycle || "monthly"))
+const mockBillingPreviewEnabled = computed(() => policy.value.mockBillingPreviewEnabled)
+const operatorManagedBilling = computed(() => policy.value.operatorManagedBilling)
+const selfServeBillingEnabled = computed(() => policy.value.selfServeBillingEnabled)
 const stripeBillingMode = computed(() => runtimeConfig.public.billingMode === "stripe")
+const billingContactPath = computed(() => "/contact?source=app-billing&topic=pricing")
 
 if (route.query.checkout === "success" && authStore.currentUser)
   await workspaceStore.loadWorkspace(true)
 
+function canMutateBillingInApp() {
+  return selfServeBillingEnabled.value || mockBillingPreviewEnabled.value
+}
+
+function paidPlanCtaLabel(tierName: string) {
+  if (operatorManagedBilling.value)
+    return `Request ${tierName}`
+
+  return `Preview ${tierName}`
+}
+
 async function startCheckout(plan: "pro" | "team") {
+  if (!canMutateBillingInApp()) {
+    await navigateTo(`/contact?source=app-billing-${plan}&topic=pricing`)
+    return
+  }
+
   pendingPlan.value = plan
 
   try {
@@ -41,8 +61,16 @@ async function startCheckout(plan: "pro" | "team") {
 
     if (response.mode === "mock") {
       toastStore.push({
-        title: "Billing preview",
-        message: "Self-serve checkout is not live in this environment, so CoFoundry is routing you through the current preview flow.",
+        title: "Billing state updated",
+        message: "This local or staging billing preview updated the workspace plan without contacting Stripe.",
+        tone: "info",
+      })
+    }
+
+    if (response.mode === "managed") {
+      toastStore.push({
+        title: "Billing is operator-managed",
+        message: "Plan changes route through the CoFoundry team until Stripe self-service is enabled.",
         tone: "info",
       })
     }
@@ -55,6 +83,11 @@ async function startCheckout(plan: "pro" | "team") {
 }
 
 async function openBillingPortal() {
+  if (operatorManagedBilling.value) {
+    await navigateTo(billingContactPath.value)
+    return
+  }
+
   pendingPortal.value = true
 
   try {
@@ -64,8 +97,16 @@ async function openBillingPortal() {
 
     if (response.mode === "mock") {
       toastStore.push({
-        title: "Billing portal preview",
-        message: "Self-serve Stripe management is not live in this environment.",
+        title: "Billing state preview",
+        message: "This environment uses local or staging billing controls instead of Stripe portal sessions.",
+        tone: "info",
+      })
+    }
+
+    if (response.mode === "managed") {
+      toastStore.push({
+        title: "Billing is operator-managed",
+        message: "Plan management routes through the CoFoundry team until Stripe self-service is enabled.",
         tone: "info",
       })
     }
@@ -80,6 +121,11 @@ async function openBillingPortal() {
 async function toggleCancellation() {
   if (!authStore.currentUser || !subscription.value || subscription.value.plan === "free")
     return
+
+  if (!mockBillingPreviewEnabled.value) {
+    await navigateTo(billingContactPath.value)
+    return
+  }
 
   if (subscription.value.cancelAtPeriodEnd) {
     const response = await $fetch<{ data: WorkspaceSeed, session: SessionUser }>("/api/billing/subscription", {
@@ -129,7 +175,9 @@ async function toggleCancellation() {
             Current plan
           </h2>
           <p class="muted text-sm leading-6 mt-3">
-            Renewal and cancellation controls stay visible here. There is no off-platform cancellation step.
+            {{ operatorManagedBilling
+              ? "Plan changes route through the CoFoundry team until Stripe self-service is enabled."
+              : "Renewal and cancellation controls stay visible here. There is no off-platform cancellation step." }}
           </p>
         </div>
         <BaseBadge :tone="subscription?.cancelAtPeriodEnd ? 'warning' : 'neutral'">
@@ -169,24 +217,33 @@ async function toggleCancellation() {
           <p class="muted text-sm leading-6 mt-2">
             {{ subscription?.plan === "free"
               ? "Free does not renew."
-              : subscription?.cancelAtPeriodEnd
-                ? "Already scheduled. The plan stays active until the current term ends."
-                : "Available in-product with one click. No support ticket required." }}
+              : operatorManagedBilling
+                ? "Handled by the CoFoundry team until live billing is enabled."
+                : subscription?.cancelAtPeriodEnd
+                  ? "Already scheduled. The plan stays active until the current term ends."
+                  : "Available in-product with one click. No support ticket required." }}
           </p>
         </div>
       </div>
 
       <div class="mt-5 flex flex-wrap gap-3">
         <BaseButton
-          v-if="subscription?.plan !== 'free'"
+          v-if="subscription?.plan !== 'free' && (selfServeBillingEnabled || mockBillingPreviewEnabled)"
           :disabled="pendingPortal"
           variant="primary"
           @click="openBillingPortal"
         >
-          {{ pendingPortal ? "Opening..." : "Manage billing" }}
+          {{ pendingPortal ? "Opening..." : selfServeBillingEnabled ? "Manage billing" : "Manage billing state" }}
         </BaseButton>
         <BaseButton
-          v-if="subscription?.plan !== 'free' && !stripeBillingMode"
+          v-else-if="subscription?.plan !== 'free' && operatorManagedBilling"
+          :to="billingContactPath"
+          variant="primary"
+        >
+          Contact billing
+        </BaseButton>
+        <BaseButton
+          v-if="subscription?.plan !== 'free' && mockBillingPreviewEnabled && !stripeBillingMode"
           :variant="subscription?.cancelAtPeriodEnd ? 'secondary' : 'danger'"
           @click="toggleCancellation"
         >
@@ -227,12 +284,20 @@ async function toggleCancellation() {
             {{ tier.ctaLabel }}
           </BaseButton>
           <BaseButton
-            v-else-if="tier.id !== 'free'"
+            v-else-if="tier.id !== 'free' && canMutateBillingInApp()"
             :disabled="pendingPlan === tier.id"
             block
             @click="startCheckout(tier.id)"
           >
-            {{ pendingPlan === tier.id ? "Redirecting..." : tier.ctaLabel }}
+            {{ pendingPlan === tier.id ? "Redirecting..." : selfServeBillingEnabled ? tier.ctaLabel : paidPlanCtaLabel(tier.name) }}
+          </BaseButton>
+          <BaseButton
+            v-else-if="tier.id !== 'free'"
+            :to="`/contact?source=app-billing-${tier.id}&topic=pricing`"
+            block
+            variant="secondary"
+          >
+            {{ paidPlanCtaLabel(tier.name) }}
           </BaseButton>
           <p v-else class="muted text-sm">
             Always available

@@ -9,6 +9,8 @@ export interface ProductAccessEnvironment {
 export interface ProductAccessPolicy {
   accountsEnabled: boolean
   marketingShellOnly: boolean
+  mockBillingPreviewEnabled: boolean
+  operatorManagedBilling: boolean
   selfServeBillingEnabled: boolean
   showDemoConveniences: boolean
   signInEnabled: boolean
@@ -34,11 +36,15 @@ function buildQueryPath(path: string, query: Record<string, string | undefined>)
 export function resolveProductAccessPolicy(environment: ProductAccessEnvironment, isLocalDevelopment: boolean): ProductAccessPolicy {
   const showDemoConveniences = environment.backendMode === "mock" && (isLocalDevelopment || environment.enableDemoAccess)
   const accountsEnabled = environment.backendMode === "supabase" || showDemoConveniences
+  const mockBillingPreviewEnabled = accountsEnabled && environment.billingMode === "mock" && (isLocalDevelopment || environment.enableDemoAccess)
+  const selfServeBillingEnabled = accountsEnabled && environment.billingMode === "stripe"
 
   return {
     accountsEnabled,
     marketingShellOnly: !accountsEnabled,
-    selfServeBillingEnabled: accountsEnabled && environment.billingMode === "stripe",
+    mockBillingPreviewEnabled,
+    operatorManagedBilling: accountsEnabled && environment.billingMode !== "stripe" && !mockBillingPreviewEnabled,
+    selfServeBillingEnabled,
     showDemoConveniences,
     signInEnabled: true,
   }
@@ -126,8 +132,13 @@ export function getBillingModeLabel(environment: ProductAccessEnvironment, isLoc
   if (environment.billingMode === "stripe")
     return "Stripe-backed subscription operations"
 
-  if (resolveProductAccessPolicy(environment, isLocalDevelopment).showDemoConveniences)
+  const policy = resolveProductAccessPolicy(environment, isLocalDevelopment)
+
+  if (policy.mockBillingPreviewEnabled)
     return "development billing preview"
+
+  if (policy.operatorManagedBilling)
+    return "operator-managed subscription operations"
 
   return "staged subscription operations"
 }
