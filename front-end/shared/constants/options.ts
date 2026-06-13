@@ -126,9 +126,9 @@ export const contactRevealStageOptions: { label: string, value: ContactRevealSta
 
 export const opportunityVerificationOptions: { label: string, value: OpportunityVerificationMethod }[] = [
   { label: "No external proof yet", value: "none" },
-  { label: "Verified company email", value: "work_email" },
-  { label: "Domain control", value: "domain" },
-  { label: "GitHub org ownership", value: "github_org" },
+  { label: "Company email review", value: "work_email" },
+  { label: "Domain-control review", value: "domain" },
+  { label: "GitHub org review", value: "github_org" },
 ]
 
 export const reportReasonOptions: { label: string, value: ReportReason }[] = [
