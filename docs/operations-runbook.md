@@ -20,6 +20,7 @@ For a paste-ready staged handoff that covers the remaining external providers, u
 - Visit `/admin/operations` and confirm the newest backup, scanner, digest, and operational-event rows are current.
 - Confirm `/admin/readiness` shows recent restore-drill evidence. A backup without a successful restore drill remains a warning.
 - Confirm `/admin/readiness` shows a recent monitoring or alerting heartbeat event. The expected event can be `monitoring.heartbeat`, `uptime.heartbeat`, or another monitor/alert event reported through `npm run operations:event`.
+- If `COFOUNDRY_ALERT_WEBHOOK_URL` is configured, confirm `/admin/readiness` shows a recent alert-smoke event. Use `npm run operations:event -- --source uptime-monitor --event-type monitoring.alert_test --severity warning --metadata purpose=alert-webhook-smoke` after changing the alert destination.
 - Visit `/admin/audit` and confirm recent moderation, role, report, and privacy-request actions are present after reloads.
 - Visit `/admin/users` and confirm pending emails can be marked verified only after invite, domain, or operator evidence review.
 - Sign in to an invited test account and confirm profile, inbox, and billing preview changes survive an app restart.

@@ -75,6 +75,13 @@ const healthyOperations = {
       severity: "info",
       source: "uptime-monitor",
     },
+    {
+      created_at: generatedAt,
+      event_type: "monitoring.alert_test",
+      id: "event_alert_smoke",
+      severity: "warning",
+      source: "uptime-monitor",
+    },
   ],
 }
 
@@ -94,6 +101,7 @@ describe("production readiness snapshot", () => {
       environment: environmentSnapshot(),
       environmentValidationErrors: [],
       generatedAt,
+      hasAlertWebhookConfigured: true,
       hasDurableLocalDataDir: true,
       hasOperationsWorkerToken: true,
       hasSessionSigningSecret: true,
@@ -129,6 +137,7 @@ describe("production readiness snapshot", () => {
       environment: environmentSnapshot({ appUrl: "" }),
       environmentValidationErrors: ["NUXT_PUBLIC_APP_URL must be configured."],
       generatedAt,
+      hasAlertWebhookConfigured: false,
       hasDurableLocalDataDir: false,
       hasOperationsWorkerToken: false,
       hasSessionSigningSecret: false,
@@ -148,7 +157,7 @@ describe("production readiness snapshot", () => {
 
     expect(snapshot.overallStatus).toBe("fail")
     expect(failedCheckIds).toEqual(expect.arrayContaining(["environment-validation", "public-app-url", "session-signing-secret", "active-admin-access"]))
-    expect(warningCheckIds).toEqual(expect.arrayContaining(["mail-transport", "operations-worker-token", "local-durable-store", "backup-recency", "notification-digests", "restore-drill", "monitoring-heartbeat"]))
+    expect(warningCheckIds).toEqual(expect.arrayContaining(["mail-transport", "operations-worker-token", "local-durable-store", "backup-recency", "notification-digests", "restore-drill", "monitoring-heartbeat", "alert-webhook-destination"]))
     expect(snapshot.provisioningTasks).toEqual(expect.arrayContaining([
       expect.objectContaining({
         command: "SESSION_SIGNING_SECRET=<vault-managed-random-secret>",
@@ -193,6 +202,7 @@ describe("production readiness snapshot", () => {
       environment: environmentSnapshot(),
       environmentValidationErrors: [],
       generatedAt,
+      hasAlertWebhookConfigured: true,
       hasDurableLocalDataDir: true,
       hasOperationsWorkerToken: true,
       hasSessionSigningSecret: true,
@@ -239,6 +249,7 @@ describe("production readiness snapshot", () => {
       environment: environmentSnapshot(),
       environmentValidationErrors: [],
       generatedAt,
+      hasAlertWebhookConfigured: true,
       hasDurableLocalDataDir: true,
       hasOperationsWorkerToken: true,
       hasSessionSigningSecret: true,
@@ -260,6 +271,7 @@ describe("production readiness snapshot", () => {
     expect(snapshot.overallStatus).toBe("warn")
     expect(checkById.get("restore-drill")?.status).toBe("warn")
     expect(checkById.get("monitoring-heartbeat")?.status).toBe("warn")
+    expect(checkById.get("alert-webhook-destination")?.status).toBe("warn")
   })
 
   it("fails when the latest restore drill failed", () => {
@@ -270,6 +282,7 @@ describe("production readiness snapshot", () => {
       environment: environmentSnapshot(),
       environmentValidationErrors: [],
       generatedAt,
+      hasAlertWebhookConfigured: true,
       hasDurableLocalDataDir: true,
       hasOperationsWorkerToken: true,
       hasSessionSigningSecret: true,
@@ -300,6 +313,13 @@ describe("production readiness snapshot", () => {
             severity: "info",
             source: "uptime-monitor",
           },
+          {
+            created_at: generatedAt,
+            event_type: "monitoring.alert_test",
+            id: "event_alert_smoke",
+            severity: "warning",
+            source: "uptime-monitor",
+          },
         ],
       },
       privacyRequests: [],
@@ -327,6 +347,7 @@ describe("production readiness snapshot", () => {
       }),
       environmentValidationErrors: [],
       generatedAt,
+      hasAlertWebhookConfigured: true,
       hasDurableLocalDataDir: false,
       hasOperationsWorkerToken: true,
       hasSessionSigningSecret: true,

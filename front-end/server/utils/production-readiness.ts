@@ -52,6 +52,7 @@ export interface ProductionReadinessInput {
   environment: EnvironmentSnapshot
   environmentValidationErrors: string[]
   generatedAt: string
+  hasAlertWebhookConfigured: boolean
   hasDurableLocalDataDir: boolean
   hasOperationsWorkerToken: boolean
   hasSessionSigningSecret: boolean
@@ -148,6 +149,11 @@ function rowContainsAny(row: Record<string, unknown>, fields: string[], values: 
 
 function latestMatchingEvent(rows: Array<Record<string, unknown>>, matcher: (row: Record<string, unknown>) => boolean) {
   return latestRow(rows.filter(matcher), ["created_at"])
+}
+
+function isAlertSmokeEvent(row: Record<string, unknown>) {
+  const eventType = String(row.event_type || "").toLowerCase()
+  return eventType.includes("alert_test") || eventType.includes("alert.test")
 }
 
 function isLocalhostUrl(value: string) {
@@ -321,6 +327,15 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
       "npm run operations:event -- --source uptime-monitor --event-type monitoring.heartbeat --severity info",
     ),
     task(
+      "alert-webhook-provisioning",
+      "Alert webhook destination",
+      checkById.get("alert-webhook-destination")?.status || "warn",
+      checkById.get("alert-webhook-destination")?.summary || "Alert webhook state unknown",
+      "Worker-reported warning and error events should reach an external destination when operators are not watching the admin console.",
+      "Configure the server-only alert webhook env, then run an alert smoke event from the production host.",
+      "COFOUNDRY_ALERT_WEBHOOK_URL=<server-only-webhook-url> npm run operations:event -- --source uptime-monitor --event-type monitoring.alert_test --severity warning --metadata purpose=alert-webhook-smoke",
+    ),
+    task(
       "first-admin-bootstrap-provisioning",
       "First-admin bootstrap",
       publicEnvironment.backendMode === "supabase"
@@ -361,8 +376,9 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
   const notificationDaysOld = daysSince(latestNotificationDeliveryTime, nowTime)
   const failedOrFlaggedScans = countRows(input.operations.fileUploads, "scan_status", ["failed", "flagged"])
   const pendingScans = countRows(input.operations.fileUploads, "scan_status", ["pending"])
-  const errorEvents = countRows(input.operations.operationalEvents, "severity", ["error"])
-  const warningEvents = countRows(input.operations.operationalEvents, "severity", ["warning"])
+  const attentionEvents = input.operations.operationalEvents.filter(row => !isAlertSmokeEvent(row))
+  const errorEvents = countRows(attentionEvents, "severity", ["error"])
+  const warningEvents = countRows(attentionEvents, "severity", ["warning"])
   const latestRestoreDrill = latestMatchingEvent(input.operations.operationalEvents, row =>
     rowContainsAny(row, ["event_type", "source", "target_type"], ["restore_drill", "restore drill"]))
   const latestRestoreDrillTime = newestTime(latestRestoreDrill ? [latestRestoreDrill] : [], ["created_at"])
@@ -371,8 +387,23 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
     rowContainsAny(row, ["event_type", "source", "target_type"], ["monitor", "alert", "uptime"]))
   const latestMonitoringEventTime = newestTime(latestMonitoringEvent ? [latestMonitoringEvent] : [], ["created_at"])
   const monitoringEventDaysOld = daysSince(latestMonitoringEventTime, nowTime)
+  const latestAlertSmokeEvent = latestMatchingEvent(input.operations.operationalEvents, isAlertSmokeEvent)
+  const latestAlertSmokeTime = newestTime(latestAlertSmokeEvent ? [latestAlertSmokeEvent] : [], ["created_at"])
+  const alertSmokeDaysOld = daysSince(latestAlertSmokeTime, nowTime)
   const latestBootstrapAuditTime = toTime(input.adminPosture.latestBootstrapAuditAt)
   const bootstrapAuditDaysOld = daysSince(latestBootstrapAuditTime, nowTime)
+  let alertWebhookStatus: ProductionReadinessStatus = "pass"
+  if (input.isLocalDevelopment)
+    alertWebhookStatus = "info"
+  else if (!input.hasAlertWebhookConfigured || !latestAlertSmokeEvent || (alertSmokeDaysOld !== null && alertSmokeDaysOld > 30))
+    alertWebhookStatus = "warn"
+
+  let alertWebhookSummary = "No alert webhook configured"
+  if (input.hasAlertWebhookConfigured) {
+    alertWebhookSummary = latestAlertSmokeEvent
+      ? `Smoke event${alertSmokeDaysOld === null ? "" : ` ${alertSmokeDaysOld} day${alertSmokeDaysOld === 1 ? "" : "s"} old`}`
+      : "Configured, no smoke event"
+  }
 
   const deploymentChecks = [
     check(
@@ -600,6 +631,18 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
         ? "Monitoring or alerting events are reaching the operations telemetry store."
         : "Production operation needs proof that deploy, uptime, log, or alerting monitors can report into CoFoundry.",
       "Configure the monitor runner or alert destination to report an info heartbeat and failures through `npm run operations:event`.",
+    ),
+    check(
+      "alert-webhook-destination",
+      "Alert webhook destination",
+      alertWebhookStatus,
+      alertWebhookSummary,
+      input.hasAlertWebhookConfigured
+        ? "Server-side operations workers have an alert webhook destination for warning/error events."
+        : "Warning and error events are persisted in admin operations, but they will not notify operators outside the app until a destination is configured.",
+      input.hasAlertWebhookConfigured
+        ? "Run `npm run operations:event -- --source uptime-monitor --event-type monitoring.alert_test --severity warning --metadata purpose=alert-webhook-smoke` from the server and confirm the external destination receives it."
+        : "Set COFOUNDRY_ALERT_WEBHOOK_URL in the server-only worker env after choosing the alert destination.",
     ),
   ]
 
