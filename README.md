@@ -250,6 +250,7 @@ Provisioning after merge:
 
 - Sensitive endpoints now have server-side rate limits for auth, contact, billing checkout, collaboration writes, member workspace writes, admin actions, inbox read transitions, data exports, and privacy requests.
 - Nuxt responses include centralized security headers for sniffing protection, frame denial, strict referrer behavior, locked-down browser permissions, and production HTTPS HSTS when `NUXT_PUBLIC_APP_URL` is an HTTPS origin.
+- Private workspace, admin, auth, onboarding, and sensitive API responses also emit `Cache-Control: no-store` and `X-Robots-Tag: noindex, nofollow, noarchive` from server middleware so protected surfaces are not indexed or retained by shared caches.
 - `/.well-known/security.txt` exposes a standards-friendly security contact, canonical URL, expiration, and policy link using the configured support email and public app URL.
 - `/api/health` exposes a no-store, secret-free liveness response for uptime checks and load balancer probes.
 - Scheduled unread workspace digest emails respect each member's account-level email notification preference; seeded review users remain enabled, while newly persisted Supabase users default to disabled until they opt in.
