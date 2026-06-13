@@ -64,6 +64,12 @@ const workspaceRouteMatchers: WorkspaceRouteMatcher[] = [
     description: "Review the company, role shape, and fit signals before you spend outreach capacity.",
   },
   {
+    prefix: "/app/activation",
+    areaLabel: "Workspace",
+    title: "Activation",
+    description: "Move from minimum profile to trust readiness, first intro, and inbox-first follow-through.",
+  },
+  {
     prefix: "/app/inbox",
     areaLabel: "Workspace",
     title: "Inbox",
