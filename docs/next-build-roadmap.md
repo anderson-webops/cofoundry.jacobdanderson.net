@@ -155,12 +155,16 @@ Remaining depth:
 
 ### 6. Production-grade onboarding
 
-Replace seed-first assumptions with a stricter activation path:
+Status: implemented as a shared activation read model, dashboard module, and `/app/activation` route.
+
+The activation path now separates:
 
 - minimum profile
 - trust-critical profile completion
 - first recommended intro
 - inbox-first follow-through
+
+The dashboard now shows the member's current activation gate, and the full activation route lists profile and trust blockers before members increase intro volume.
 
 ### 7. Operational notifications
 

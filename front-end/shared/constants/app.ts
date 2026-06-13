@@ -12,6 +12,7 @@ export const marketingNavigation = [
 
 export const appNavigation = [
   { label: "Overview", to: "/app", icon: "i-carbon-home" },
+  { label: "Activation", to: "/app/activation", icon: "i-carbon-progress-bar-round" },
   { label: "Inbox", to: "/app/inbox", icon: "i-carbon-inbox" },
   { label: "Discover", to: "/app/discover", icon: "i-carbon-search" },
   { label: "Opportunities", to: "/app/opportunities", icon: "i-carbon-launch" },

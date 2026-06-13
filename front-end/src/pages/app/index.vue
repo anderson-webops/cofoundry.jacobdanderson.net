@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { buildActivationPlan } from "~/shared/utils/activation"
 import { recommendOpportunitiesForProfile, recommendProfilesForProfile } from "~/shared/utils/discovery"
 import { formatPlanName } from "~/shared/utils/format"
 import { buildProfileReadiness } from "~/shared/utils/formation"
@@ -17,6 +18,7 @@ const { authStore, profile, subscription, workspaceStore } = useCurrentMember()
 const currentUserId = computed(() => authStore.currentUser?.id || "")
 
 const readiness = computed(() => profile.value ? buildProfileReadiness(profile.value) : null)
+const activationPlan = computed(() => currentUserId.value ? buildActivationPlan(workspaceStore.data, currentUserId.value) : null)
 const inboxSnapshot = computed(() => currentUserId.value ? buildInboxSnapshot(workspaceStore.data, currentUserId.value) : null)
 const profileRecommendations = computed(() => profile.value ? recommendProfilesForProfile(workspaceStore.data, profile.value).slice(0, 3) : [])
 const opportunityRecommendations = computed(() => profile.value ? recommendOpportunitiesForProfile(workspaceStore.data, profile.value).slice(0, 3) : [])
@@ -219,6 +221,8 @@ async function declineConnectRequest(requestId: string, reason: "timing" | "doma
         </div>
       </div>
     </div>
+
+    <ActivationCockpit v-if="activationPlan" :plan="activationPlan" compact />
 
     <div class="gap-5 grid md:gap-6" :class="hasLiveFollowUp ? 'xl:grid-cols-[1.15fr_0.85fr]' : ''">
       <section class="gap-5 grid">
