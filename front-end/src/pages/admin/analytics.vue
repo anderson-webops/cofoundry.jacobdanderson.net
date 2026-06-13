@@ -2,6 +2,7 @@
 import type { SubscriptionPlan } from "~/shared/types/domain"
 import { buildAdminQueueSummary, buildAdminUserRows } from "~/shared/utils/admin"
 import { formatPlanName } from "~/shared/utils/format"
+import { buildRelationshipAnalytics } from "~/shared/utils/relationship-analytics"
 import { buildAdminMetrics } from "~/shared/utils/workspace"
 
 definePageMeta({
@@ -14,6 +15,7 @@ usePageSeo("Admin analytics")
 const workspaceStore = useWorkspaceStore()
 
 const metrics = computed(() => buildAdminMetrics(workspaceStore.data))
+const relationshipAnalytics = computed(() => buildRelationshipAnalytics(workspaceStore.data))
 const queueSummary = computed(() => buildAdminQueueSummary(workspaceStore.data))
 const userRows = computed(() => buildAdminUserRows(workspaceStore.data))
 const planOrder: SubscriptionPlan[] = ["free", "pro", "team"]
@@ -54,6 +56,37 @@ const secondaryMetrics = computed(() => [
     context: "Reports that still need closure.",
   },
 ])
+
+const relationshipRateMetrics = computed(() => [
+  {
+    label: "Intro acceptance",
+    value: `${relationshipAnalytics.value.introAcceptanceRate}%`,
+    context: "Accepted intros divided by responded intros.",
+  },
+  {
+    label: "Trial activation",
+    value: `${relationshipAnalytics.value.trialActivationRate}%`,
+    context: "Matches with an active or completed trial sprint.",
+  },
+  {
+    label: "Proposal coverage",
+    value: `${relationshipAnalytics.value.proposalCoverageRate}%`,
+    context: "Matches that reached at least one structured proposal.",
+  },
+  {
+    label: "Signature completion",
+    value: `${relationshipAnalytics.value.signatureCompletionRate}%`,
+    context: "Completed signatures divided by required agreement signatures.",
+  },
+])
+
+function bottleneckTone(severity: "high" | "medium" | "low") {
+  return {
+    high: "warning",
+    medium: "accent",
+    low: "neutral",
+  }[severity] as "accent" | "neutral" | "warning"
+}
 </script>
 
 <template>
@@ -70,6 +103,108 @@ const secondaryMetrics = computed(() => [
       <MetricTile label="Paid conversion rate" :value="`${metrics.paidConversionRate}%`" context="Users on Pro or Team plans." />
       <MetricTile label="Open safety reports" :value="queueSummary.openReports" context="Current moderation backlog." />
     </div>
+
+    <section class="panel p-6">
+      <div class="flex flex-wrap gap-3 items-start justify-between">
+        <div>
+          <h2 class="text-lg font-semibold">
+            Relationship loop
+          </h2>
+          <p class="muted text-sm leading-6 mt-2 max-w-3xl">
+            Measures whether members are moving from discovery into working relationships, concrete terms, and signed agreements.
+          </p>
+        </div>
+      </div>
+
+      <div class="mt-5 gap-3 grid md:grid-cols-2 xl:grid-cols-4">
+        <MetricTile v-for="item in relationshipRateMetrics" :key="item.label" :label="item.label" :value="item.value" :context="item.context" />
+      </div>
+
+      <div class="mt-5 gap-4 grid xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div class="surface-row-list">
+          <div v-for="stage in relationshipAnalytics.funnel" :key="stage.id" class="surface-row flex gap-4 items-center justify-between">
+            <div>
+              <p class="text-sm font-semibold">
+                {{ stage.label }}
+              </p>
+              <p class="muted text-xs mt-1">
+                {{ stage.description }}
+              </p>
+            </div>
+            <span class="text-xl font-semibold">{{ stage.count }}</span>
+          </div>
+        </div>
+
+        <div class="surface-row-list">
+          <div v-for="item in relationshipAnalytics.timeMetrics" :key="item.id" class="surface-row">
+            <div class="flex gap-4 items-start justify-between">
+              <div>
+                <p class="text-sm font-semibold">
+                  {{ item.label }}
+                </p>
+                <p class="muted text-xs mt-1">
+                  {{ item.context }}
+                </p>
+              </div>
+              <div class="text-right">
+                <p class="text-xl font-semibold">
+                  {{ item.valueLabel }}
+                </p>
+                <p class="muted text-xs mt-1">
+                  {{ item.sampleSize }} sample{{ item.sampleSize === 1 ? "" : "s" }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel p-6">
+      <div class="flex flex-wrap gap-3 items-start justify-between">
+        <div>
+          <h2 class="text-lg font-semibold">
+            Relationship bottlenecks
+          </h2>
+          <p class="muted text-sm leading-6 mt-2 max-w-3xl">
+            Concrete workflow stalls that should become product nudges, support playbooks, or inbox tasks before acquisition volume increases.
+          </p>
+        </div>
+      </div>
+
+      <div class="surface-row-list mt-5">
+        <article v-for="item in relationshipAnalytics.bottlenecks" :key="item.id" class="surface-row">
+          <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div>
+              <div class="flex flex-wrap gap-2">
+                <BaseBadge :tone="bottleneckTone(item.severity)">
+                  {{ item.severity }} priority
+                </BaseBadge>
+                <BaseBadge tone="neutral">
+                  {{ item.count }} open
+                </BaseBadge>
+              </div>
+              <h3 class="text-base font-semibold mt-3">
+                {{ item.label }}
+              </h3>
+              <p class="muted text-sm leading-6 mt-2">
+                {{ item.summary }}
+              </p>
+              <p class="text-sm leading-6 mt-3">
+                {{ item.action }}
+              </p>
+            </div>
+          </div>
+        </article>
+
+        <EmptyState
+          v-if="!relationshipAnalytics.bottlenecks.length"
+          title="No relationship bottlenecks detected"
+          description="The current workflow has no pending intros, unsigned agreement drafts, or relationship stages missing their next artifact."
+          icon="i-carbon-flow"
+        />
+      </div>
+    </section>
 
     <div class="gap-4 grid xl:grid-cols-2">
       <section class="panel p-6">

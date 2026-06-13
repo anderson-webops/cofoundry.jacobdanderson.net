@@ -173,9 +173,26 @@ Move notifications from passive badges into server-owned operational events:
 - `report.reviewed`
 - `subscription.changed`
 
+### 8. Relationship analytics
+
+Status: implemented as a shared read model and admin dashboard section.
+
+The admin analytics page now reports:
+
+- intro acceptance rate
+- trial activation rate
+- proposal coverage rate
+- agreement draft generation rate
+- signature completion rate
+- average time to first reply
+- average time from match to proposal
+- average time from proposal to agreement draft
+- average time from proposal to fully signed agreement when completed samples exist
+- actionable relationship bottlenecks for pending intros, missing proposals, missing agreement drafts, and incomplete signatures
+
 ## Later
 
-### 8. Realtime
+### 9. Realtime
 
 After persistence is stable:
 
@@ -184,21 +201,13 @@ After persistence is stable:
 - proposal status updates
 - inbox refresh without reload
 
-### 9. Email and outbound system events
+### 10. Email and outbound system events
 
 - intro received
 - intro accepted
 - proposal received
 - signature required
 - billing state change
-
-### 10. Relationship analytics
-
-- intro response rate
-- time to first reply
-- time from match to proposal
-- time from proposal to signed agreement
-- paid conversion tied to actual workflow use
 
 ## Backend Contract Status
 
