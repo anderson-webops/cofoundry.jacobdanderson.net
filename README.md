@@ -257,6 +257,7 @@ Provisioning after merge:
 - `/api/health` exposes a no-store, secret-free liveness response for uptime checks and load balancer probes.
 - Scheduled unread workspace digest emails respect each member's account-level email notification preference; seeded review users remain enabled, while newly persisted Supabase users default to disabled until they opt in.
 - Member workspace changes, collaboration workflow updates, and billing preview state persist in Supabase mode and in durable local mock-mode stores.
+- Relationship workspaces support first-class decision notes before or alongside proposals, and those notes persist in durable mock mode and the future Supabase `relationship_decisions` table.
 - Signed sessions are revalidated against persisted user state on every protected request. Role changes take effect without requiring a new login, and suspended users are rejected in both durable mock/access-request mode and Supabase-backed mode.
 - Seeded review account credentials are accepted only in local development or deliberate staging demo access. Production-facing mock/access-request deployments can still sign in invited durable local accounts, but they do not accept seeded review credentials.
 - Admin moderation actions persist user suspension, role changes, report status changes, opportunity verification decisions, notifications, queue assignment/routing metadata, and audit actions in Supabase mode and in the durable local mock-mode admin audit store.

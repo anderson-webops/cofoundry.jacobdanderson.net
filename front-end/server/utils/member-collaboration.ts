@@ -10,6 +10,7 @@ import type {
   Proposal,
   ProposalComment,
   ProposalVersion,
+  RelationshipDecision,
   Signature,
   TrialCollaboration,
   WorkspaceSeed,
@@ -178,6 +179,17 @@ interface PersistedNotificationRow {
   title: string
   type: Notification["type"]
   user_id: string
+}
+
+interface PersistedRelationshipDecisionRow {
+  author_user_id: string
+  body: string
+  created_at: string
+  id: string
+  match_id: string
+  status: RelationshipDecision["status"]
+  title: string
+  updated_at: string
 }
 
 function fromConnectRequestRow(row: PersistedConnectRequestRow): ConnectRequest {
@@ -546,6 +558,32 @@ function toNotificationRow(notification: Notification): PersistedNotificationRow
   }
 }
 
+function fromRelationshipDecisionRow(row: PersistedRelationshipDecisionRow): RelationshipDecision {
+  return {
+    id: row.id,
+    matchId: row.match_id,
+    authorUserId: row.author_user_id,
+    title: row.title,
+    body: row.body,
+    status: row.status,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}
+
+function toRelationshipDecisionRow(decision: RelationshipDecision): PersistedRelationshipDecisionRow {
+  return {
+    id: decision.id,
+    match_id: decision.matchId,
+    author_user_id: decision.authorUserId,
+    title: decision.title,
+    body: decision.body,
+    status: decision.status,
+    created_at: decision.createdAt,
+    updated_at: decision.updatedAt,
+  }
+}
+
 function buildEmptyState(): PersistedCollaborationState {
   return {
     connectRequests: [],
@@ -558,6 +596,7 @@ function buildEmptyState(): PersistedCollaborationState {
     proposalComments: [],
     proposalVersions: [],
     proposals: [],
+    relationshipDecisions: [],
     reports: [],
     signatures: [],
     trialCollaborations: [],
@@ -577,6 +616,7 @@ function mergeCollaborationState(seed: WorkspaceSeed, state: PersistedCollaborat
   nextSeed.contractVersions = state.contractVersions
   nextSeed.signatures = state.signatures
   nextSeed.trialCollaborations = state.trialCollaborations
+  nextSeed.relationshipDecisions = state.relationshipDecisions
   nextSeed.notifications = state.notifications
   return nextSeed
 }
@@ -597,6 +637,7 @@ function extractUserCollaborationState(seed: WorkspaceSeed, userId: string): Per
   const contractVersions = seed.contractVersions.filter(version => contractIds.has(version.contractId))
   const signatures = seed.signatures.filter(signature => contractIds.has(signature.contractId))
   const trialCollaborations = seed.trialCollaborations.filter(trial => matchIds.has(trial.matchId))
+  const relationshipDecisions = seed.relationshipDecisions.filter(decision => matchIds.has(decision.matchId))
   const notifications = seed.notifications.filter(notification => notification.userId === userId)
 
   return {
@@ -612,6 +653,7 @@ function extractUserCollaborationState(seed: WorkspaceSeed, userId: string): Per
     contractVersions,
     signatures,
     trialCollaborations,
+    relationshipDecisions,
     notifications,
   }
 }
@@ -793,6 +835,22 @@ async function selectNotifications(adminClient: AdminClient, userId: string) {
   return (data || []) as PersistedNotificationRow[]
 }
 
+async function selectRelationshipDecisions(adminClient: AdminClient, matchIds: string[]) {
+  if (!matchIds.length)
+    return [] as PersistedRelationshipDecisionRow[]
+
+  const { data, error } = await adminClient
+    .from("relationship_decisions")
+    .select("*")
+    .in("match_id", matchIds)
+    .order("created_at", { ascending: false })
+
+  if (error)
+    throw error
+
+  return (data || []) as PersistedRelationshipDecisionRow[]
+}
+
 async function replaceRows<T extends { id: string }>(
   adminClient: AdminClient,
   table: string,
@@ -834,6 +892,7 @@ export async function loadServerCollaborationState(event: H3Event, userId: strin
   const contractVersions = await selectContractVersions(adminClient, contracts.map(contract => contract.id))
   const signatures = await selectSignatures(adminClient, contracts.map(contract => contract.id))
   const trialCollaborations = await selectTrialCollaborations(adminClient, matches.map(match => match.id))
+  const relationshipDecisions = await selectRelationshipDecisions(adminClient, matches.map(match => match.id))
   const notifications = await selectNotifications(adminClient, userId)
 
   return {
@@ -849,6 +908,7 @@ export async function loadServerCollaborationState(event: H3Event, userId: strin
     contractVersions: contractVersions.map(fromContractVersionRow),
     signatures: signatures.map(fromSignatureRow),
     trialCollaborations: trialCollaborations.map(fromTrialCollaborationRow),
+    relationshipDecisions: relationshipDecisions.map(fromRelationshipDecisionRow),
     notifications: notifications.map(fromNotificationRow),
   } satisfies PersistedCollaborationState
 }
@@ -949,6 +1009,14 @@ export async function persistServerCollaborationState(event: H3Event, userId: st
       ? adminClient.from("trial_collaborations").delete().in("match_id", matchIds)
       : adminClient.from("trial_collaborations").delete().eq("id", "__none__"),
     state.trialCollaborations.map(toTrialCollaborationRow),
+  )
+  await replaceRows(
+    adminClient,
+    "relationship_decisions",
+    () => matchIds.length
+      ? adminClient.from("relationship_decisions").delete().in("match_id", matchIds)
+      : adminClient.from("relationship_decisions").delete().eq("id", "__none__"),
+    state.relationshipDecisions.map(toRelationshipDecisionRow),
   )
   await replaceRows(
     adminClient,

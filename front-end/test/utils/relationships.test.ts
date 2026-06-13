@@ -1,7 +1,7 @@
 import type { WorkspaceSeed } from "../../shared/types/domain"
 import { describe, expect, it } from "vitest"
 import { workspaceSeed } from "../../shared/data/seed"
-import { addProposalCommentTransition } from "../../shared/utils/collaboration"
+import { addProposalCommentTransition, addRelationshipDecisionTransition } from "../../shared/utils/collaboration"
 import {
   buildRelationshipSnapshot,
   getRelationshipHrefForContract,
@@ -53,6 +53,7 @@ describe("relationship snapshots", () => {
       "comment",
       "contract",
       "file",
+      "decision",
       "message",
       "proposal",
       "signature",
@@ -129,10 +130,56 @@ describe("relationship snapshots", () => {
       "contract-decision:contract_version_ledgerloop_1",
       "decision-comment:proposal_comment_1",
       "proposal-decision:proposal_version_ledgerloop_2",
+      "relationship-decision:relationship_decision_ledgerloop_governance",
       "trial-decision-log:trial_olivia_malik",
     ]))
+    expect(snapshot?.decisionLog.find(entry => entry.id === "relationship-decision:relationship_decision_ledgerloop_governance")?.status).toBe("documented")
     expect(snapshot?.decisionLog.find(entry => entry.id === "decision-comment:proposal_comment_1")?.status).toBe("open")
     expect(snapshot?.decisionLog.find(entry => entry.id === "contract-decision:contract_version_ledgerloop_1")?.status).toBe("documented")
+  })
+
+  it("adds relationship-level decision notes before another proposal version exists", () => {
+    const transition = addRelationshipDecisionTransition(
+      workspaceSeed,
+      "match_olivia_malik",
+      "user_malik",
+      "Customer-call ownership",
+      "Olivia owns customer agenda and pricing questions; Malik owns technical feasibility and integration follow-up.",
+      "open",
+      "2026-04-29T15:30:00.000Z",
+      {
+        relationshipDecisionId: "relationship_decision_customer_calls",
+        relationshipDecisionNotificationId: "notification_relationship_decision",
+      },
+    )
+
+    const snapshot = buildRelationshipSnapshot(transition.seed, "user_olivia", "match_olivia_malik")
+
+    expect(snapshot?.decisionLog).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        href: "/app/relationships/match_olivia_malik",
+        id: "relationship-decision:relationship_decision_customer_calls",
+        ownerUserId: "user_malik",
+        status: "open",
+        summary: "Olivia owns customer agenda and pricing questions; Malik owns technical feasibility and integration follow-up.",
+        title: "Customer-call ownership",
+      }),
+    ]))
+    expect(snapshot?.timeline).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: "relationship-decision:relationship_decision_customer_calls",
+        kind: "decision",
+        title: "Customer-call ownership",
+      }),
+    ]))
+    expect(transition.seed.notifications).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: "notification_relationship_decision",
+        href: "/app/relationships/match_olivia_malik",
+        type: "match",
+        userId: "user_olivia",
+      }),
+    ]))
   })
 
   it("adds newly written decision-rights comments to the relationship decision log", () => {

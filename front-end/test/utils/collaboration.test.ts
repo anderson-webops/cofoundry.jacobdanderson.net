@@ -3,6 +3,7 @@ import { reactive } from "vue"
 import { workspaceSeed } from "../../shared/data/seed"
 import { cloneValue } from "../../shared/utils/clone"
 import {
+  addRelationshipDecisionTransition,
   canUserRespondToConnectRequest,
   collaborationContractNeedsUserSignature,
   collaborationProposalNeedsUserResponse,
@@ -13,6 +14,7 @@ import {
   isConversationParticipant,
   isNotificationOwnedByUser,
   isProposalParticipant,
+  isRelationshipParticipant,
   markConversationReadTransition,
   markNotificationReadTransition,
   respondToConnectRequestTransition,
@@ -185,6 +187,47 @@ describe("collaboration helpers", () => {
     expect(outsider.seed.notifications.find(item => item.id === "notification_newest")?.readAt).toBeNull()
   })
 
+  it("records relationship-level decisions only for match participants", () => {
+    const transition = addRelationshipDecisionTransition(
+      workspaceSeed,
+      "match_olivia_malik",
+      "user_olivia",
+      "Investor update ownership",
+      "Olivia owns the investor narrative; Malik reviews claims that depend on technical feasibility.",
+      "documented",
+      "2026-04-16T16:00:00.000Z",
+      {
+        relationshipDecisionId: "relationship_decision_investors",
+        relationshipDecisionNotificationId: "notification_relationship_decision_investors",
+      },
+    )
+
+    expect(transition.decision).toMatchObject({
+      id: "relationship_decision_investors",
+      matchId: "match_olivia_malik",
+      status: "documented",
+    })
+    expect(transition.seed.relationshipDecisions[0]?.id).toBe("relationship_decision_investors")
+    expect(transition.seed.notifications[0]).toMatchObject({
+      id: "notification_relationship_decision_investors",
+      href: "/app/relationships/match_olivia_malik",
+      userId: "user_malik",
+    })
+
+    const rejected = addRelationshipDecisionTransition(
+      workspaceSeed,
+      "match_olivia_malik",
+      "user_sofia",
+      "Outside decision",
+      "This should not be recorded because Sofia is not part of this match.",
+      "open",
+      "2026-04-16T16:05:00.000Z",
+    )
+
+    expect(rejected.decision).toBeNull()
+    expect(rejected.seed.relationshipDecisions).toEqual(workspaceSeed.relationshipDecisions)
+  })
+
   it("enforces ownership predicates before workflow actions run", () => {
     const request = workspaceSeed.connectRequests.find(item => item.id === "connect_arjun_noah")
     const conversation = workspaceSeed.conversations.find(item => item.id === "conversation_olivia_malik")
@@ -207,6 +250,8 @@ describe("collaboration helpers", () => {
     expect(isProposalParticipant(proposal!, "user_emma")).toBe(false)
     expect(isContractParticipant(workspaceSeed, contract!, "user_malik")).toBe(true)
     expect(isContractParticipant(workspaceSeed, contract!, "user_sofia")).toBe(false)
+    expect(isRelationshipParticipant(workspaceSeed, "match_olivia_malik", "user_olivia")).toBe(true)
+    expect(isRelationshipParticipant(workspaceSeed, "match_olivia_malik", "user_sofia")).toBe(false)
     expect(isNotificationOwnedByUser(notification!, "user_olivia")).toBe(true)
     expect(isNotificationOwnedByUser(notification!, "user_malik")).toBe(false)
   })

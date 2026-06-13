@@ -7,6 +7,7 @@ import type {
   ProposalPayload,
   ProposalSectionKey,
   ProposalStatus,
+  RelationshipDecisionRecordStatus,
   SessionUser,
   Signature,
 } from "../../shared/types/domain"
@@ -15,6 +16,7 @@ import { checkSubscriptionGate } from "../../shared/utils/billing"
 import {
   acknowledgeTrialCollaborationTransition,
   addProposalCommentTransition,
+  addRelationshipDecisionTransition,
   canUserRespondToConnectRequest,
   createConnectRequestTransition,
   createContractFromProposalTransition,
@@ -24,6 +26,7 @@ import {
   isConversationParticipant,
   isNotificationOwnedByUser,
   isProposalParticipant,
+  isRelationshipParticipant,
   markConversationReadTransition,
   markNotificationReadTransition,
   respondToConnectRequestTransition,
@@ -50,6 +53,7 @@ export type CollaborationMutationPayload
     | { action: "sign_contract", contractId: string, typedName: string }
     | { action: "start_trial", matchId: string }
     | { action: "acknowledge_trial", trialId: string }
+    | { action: "add_relationship_decision", body: string, matchId: string, status: RelationshipDecisionRecordStatus, title: string }
 
 function buildIdentity(session: SessionUser) {
   return {
@@ -262,6 +266,23 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
       nextSeed = acknowledgeTrialCollaborationTransition(nextSeed, payload.trialId, session.id, actedAt)
       affectedUsers = [...match.participantIds]
       result = { trialId: trial.id }
+      break
+    }
+
+    case "add_relationship_decision": {
+      if (!isRelationshipParticipant(nextSeed, payload.matchId, session.id))
+        throw createError({ statusCode: 403, statusMessage: "You are not part of this relationship." })
+
+      const title = payload.title.trim()
+      const body = payload.body.trim()
+      if (title.length < 4 || body.length < 12)
+        throw createError({ statusCode: 400, statusMessage: "Add a clear title and enough detail for the decision log." })
+
+      const match = nextSeed.matches.find(item => item.id === payload.matchId)!
+      const transition = addRelationshipDecisionTransition(nextSeed, payload.matchId, session.id, title, body, payload.status, actedAt)
+      nextSeed = transition.seed
+      affectedUsers = [...match.participantIds]
+      result = { relationshipDecisionId: transition.decision?.id || null }
       break
     }
   }

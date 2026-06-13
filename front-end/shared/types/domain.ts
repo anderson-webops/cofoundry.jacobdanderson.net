@@ -37,6 +37,7 @@ export type AccessRequestTimeline = "now" | "30_days" | "90_days" | "exploring"
 export type AccessRequestStatus = "open" | "approved" | "denied" | "invited"
 export type StartTimeline = "immediately" | "30_days" | "90_days" | "exploring"
 export type TrialStatus = "draft" | "active" | "completed"
+export type RelationshipDecisionRecordStatus = "open" | "documented"
 export type ContactRevealStage = "matches" | "proposal_accepted" | "contract_generated"
 export type TrustTier = "level_a" | "level_b" | "level_c"
 export type OpportunityVerificationMethod = "none" | "work_email" | "domain" | "github_org"
@@ -484,6 +485,17 @@ export interface TrialCollaboration {
   updatedAt: string
 }
 
+export interface RelationshipDecision {
+  id: string
+  matchId: string
+  authorUserId: string
+  title: string
+  body: string
+  status: RelationshipDecisionRecordStatus
+  createdAt: string
+  updatedAt: string
+}
+
 export interface Subscription {
   id: string
   userId: string
@@ -658,6 +670,7 @@ export interface WorkspaceSeed {
   contractVersions: ContractVersion[]
   signatures: Signature[]
   trialCollaborations: TrialCollaboration[]
+  relationshipDecisions: RelationshipDecision[]
   subscriptions: Subscription[]
   reports: Report[]
   adminActions: AdminAction[]

@@ -17,6 +17,8 @@ import type {
   ProposalSectionKey,
   ProposalStatus,
   ProposalVersion,
+  RelationshipDecision,
+  RelationshipDecisionRecordStatus,
   Signature,
   WorkspaceSeed,
 } from "../types/domain"
@@ -42,6 +44,8 @@ interface IdOverrides {
   signatureId?: string
   trialId?: string
   trialNotificationId?: string
+  relationshipDecisionId?: string
+  relationshipDecisionNotificationId?: string
 }
 
 function nextId(fallback?: string) {
@@ -137,6 +141,11 @@ export function getContractParticipantIds(seed: WorkspaceSeed, contract: Contrac
 
 export function isContractParticipant(seed: WorkspaceSeed, contract: Contract, userId: string) {
   return getContractParticipantIds(seed, contract).includes(userId)
+}
+
+export function isRelationshipParticipant(seed: WorkspaceSeed, matchId: string, userId: string) {
+  const match = seed.matches.find(item => item.id === matchId)
+  return Boolean(match?.participantIds.includes(userId))
 }
 
 export function isNotificationOwnedByUser(notification: Notification, userId: string) {
@@ -679,6 +688,55 @@ export function acknowledgeTrialCollaborationTransition(seed: WorkspaceSeed, tri
   trial.updatedAt = updatedAt
   touchProfileActivity(nextSeed, userId, updatedAt)
   return nextSeed
+}
+
+export function addRelationshipDecisionTransition(
+  seed: WorkspaceSeed,
+  matchId: string,
+  authorUserId: string,
+  title: string,
+  body: string,
+  status: RelationshipDecisionRecordStatus,
+  createdAt: string,
+  ids: IdOverrides = {},
+) {
+  const nextSeed = cloneValue(seed)
+  const match = nextSeed.matches.find(item => item.id === matchId)
+  if (!match || !match.participantIds.includes(authorUserId))
+    return { decision: null, seed: nextSeed }
+
+  const decision: RelationshipDecision = {
+    id: nextId(ids.relationshipDecisionId),
+    matchId,
+    authorUserId,
+    title,
+    body,
+    status,
+    createdAt,
+    updatedAt: createdAt,
+  }
+
+  nextSeed.relationshipDecisions = [decision, ...nextSeed.relationshipDecisions]
+  touchProfileActivity(nextSeed, authorUserId, createdAt)
+
+  const counterpartyId = match.participantIds.find(participantId => participantId !== authorUserId)
+  if (counterpartyId) {
+    createNotification(
+      nextSeed,
+      counterpartyId,
+      "match",
+      "Relationship decision recorded",
+      `${title}: ${body}`,
+      `/app/relationships/${matchId}`,
+      createdAt,
+      ids.relationshipDecisionNotificationId,
+    )
+  }
+
+  return {
+    decision,
+    seed: nextSeed,
+  }
 }
 
 export function markNotificationReadTransition(seed: WorkspaceSeed, notificationId: string, userId: string, readAt: string) {

@@ -9,6 +9,7 @@ import type {
   Proposal,
   ProposalComment,
   ProposalVersion,
+  RelationshipDecision,
   Report,
   Signature,
   TrialCollaboration,
@@ -29,6 +30,7 @@ export interface PersistedCollaborationState {
   proposalComments: ProposalComment[]
   proposalVersions: ProposalVersion[]
   proposals: Proposal[]
+  relationshipDecisions: RelationshipDecision[]
   reports: Report[]
   signatures: Signature[]
   trialCollaborations: TrialCollaboration[]
@@ -78,6 +80,7 @@ function emptyCollaborationState(): PersistedCollaborationState {
     proposalComments: [],
     proposalVersions: [],
     proposals: [],
+    relationshipDecisions: [],
     reports: [],
     signatures: [],
     trialCollaborations: [],
@@ -115,6 +118,7 @@ function pruneStore(store: LocalCollaborationStore): LocalCollaborationStore {
     proposalComments: newestFirst(store.proposalComments).slice(0, limit),
     proposalVersions: newestFirst(store.proposalVersions).slice(0, limit),
     proposals: newestFirst(store.proposals).slice(0, limit),
+    relationshipDecisions: newestFirst(store.relationshipDecisions).slice(0, limit),
     reports: newestFirst(store.reports).slice(0, limit),
     signatures: newestFirst(store.signatures).slice(0, limit),
     trialCollaborations: newestFirst(store.trialCollaborations).slice(0, limit),
@@ -198,6 +202,7 @@ function removeExistingUserState(store: LocalCollaborationStore, userId: string)
   store.contractVersions = store.contractVersions.filter(version => !indexes.contractIds.has(version.contractId))
   store.signatures = store.signatures.filter(signature => !indexes.contractIds.has(signature.contractId))
   store.trialCollaborations = store.trialCollaborations.filter(trial => !indexes.matchIds.has(trial.matchId))
+  store.relationshipDecisions = store.relationshipDecisions.filter(decision => !indexes.matchIds.has(decision.matchId))
   store.notifications = store.notifications.filter(notification => notification.userId !== userId)
 }
 
@@ -221,6 +226,7 @@ export function filterCollaborationStateForUser(state: PersistedCollaborationSta
   const contractVersions = state.contractVersions.filter(version => contractIds.has(version.contractId))
   const signatures = state.signatures.filter(signature => contractIds.has(signature.contractId))
   const trialCollaborations = state.trialCollaborations.filter(trial => matchIds.has(trial.matchId))
+  const relationshipDecisions = state.relationshipDecisions.filter(decision => matchIds.has(decision.matchId))
   const notifications = state.notifications.filter(notification => notification.userId === userId)
 
   return {
@@ -234,6 +240,7 @@ export function filterCollaborationStateForUser(state: PersistedCollaborationSta
     proposalComments,
     proposalVersions,
     proposals,
+    relationshipDecisions,
     reports: state.reports,
     signatures,
     trialCollaborations,
@@ -260,6 +267,7 @@ export async function persistLocalCollaborationState(userId: string, state: Pers
     store.contractVersions = upsertById(store.contractVersions, state.contractVersions)
     store.signatures = upsertById(store.signatures, state.signatures)
     store.trialCollaborations = upsertById(store.trialCollaborations, state.trialCollaborations)
+    store.relationshipDecisions = upsertById(store.relationshipDecisions, state.relationshipDecisions)
     store.notifications = upsertById(store.notifications, state.notifications)
     store.reports = upsertById(store.reports, state.reports)
     return filterCollaborationStateForUser(store, userId)
