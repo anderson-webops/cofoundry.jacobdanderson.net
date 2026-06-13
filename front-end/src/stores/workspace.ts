@@ -148,7 +148,17 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   const persistError = ref("")
   const lastSyncedAt = ref<string | null>(null)
   const loadedUserId = ref("")
+  const lastAuthoritativeWriteSignature = ref<string | null>(null)
   const serverBackedWorkspace = computed(() => Boolean(session.value))
+
+  function createWriteSignature(userId: string) {
+    const payload = buildMemberWorkspaceWritePayload(data.value, userId)
+    return payload ? JSON.stringify(payload) : null
+  }
+
+  function rememberAuthoritativeWorkspace(userId: string) {
+    lastAuthoritativeWriteSignature.value = createWriteSignature(userId)
+  }
 
   function normalizeLegacyConnectRequests() {
     data.value.connectRequests = data.value.connectRequests.map((request) => {
@@ -192,6 +202,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     data.value = cloneValue(workspaceSeed)
     loadedUserId.value = ""
     lastSyncedAt.value = null
+    lastAuthoritativeWriteSignature.value = null
     persistError.value = ""
   }
 
@@ -294,6 +305,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       lastSyncedAt.value = now()
       ensureReady()
       ready.value = true
+      rememberAuthoritativeWorkspace(response.session.id)
       return data.value
     }
     catch (caughtError) {
@@ -313,6 +325,10 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     if (!payload)
       return data.value
 
+    const writeSignature = JSON.stringify(payload)
+    if (!force && writeSignature === lastAuthoritativeWriteSignature.value)
+      return data.value
+
     if (syncing.value && !force)
       return data.value
 
@@ -330,6 +346,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       lastSyncedAt.value = now()
       persistError.value = ""
       ensureReady()
+      rememberAuthoritativeWorkspace(response.session.id)
       return data.value
     }
     catch (caughtError) {
@@ -350,6 +367,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     persistError.value = ""
     ensureReady()
     ready.value = true
+    rememberAuthoritativeWorkspace(payload.session.id)
     return data.value
   }
 

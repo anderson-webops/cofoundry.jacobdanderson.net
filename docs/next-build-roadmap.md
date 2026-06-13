@@ -227,10 +227,22 @@ The admin analytics page now reports:
 
 After persistence is stable:
 
+Status: production-safe refresh bridge implemented; provider-backed realtime remains later.
+
+The app shell now:
+
+- refreshes the authoritative workspace when a signed-in member returns to a visible tab
+- refreshes when the browser comes back online
+- polls conservatively while visible so inbox, message, proposal, contract, notification, and billing state do not require a full reload
+- exposes a manual topbar refresh control with last-sync status
+- avoids write amplification by distinguishing authoritative server snapshots from member-authored edits
+
+Remaining work:
+
 - live message updates
 - typing state
 - proposal status updates
-- inbox refresh without reload
+- push-style inbox refresh without polling
 
 ### 11. Email and outbound system events
 
