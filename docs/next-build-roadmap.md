@@ -187,7 +187,24 @@ Remaining work:
 - Install worker/timer or queue processing on the production host.
 - Wire any future provider-only events, such as Stripe webhook-only subscription changes, after live providers are configured.
 
-### 8. Relationship analytics
+### 8. Agreement artifacts
+
+Status: first-party agreement artifact layer implemented; external e-signature/PDF vendors remain optional provider work.
+
+The contract detail flow now supports:
+
+- print-ready HTML agreement downloads
+- plain-text agreement export through `?format=text`
+- field-level redlines between contract versions
+- agreement execution certificate downloads with document SHA-256, version metadata, typed-signature evidence, and pending/complete status
+- server-side auth, participant ownership checks, paid-plan entitlement checks, and rate limits for downloadable artifacts
+
+Remaining work:
+
+- Decide whether production needs a dedicated e-signature provider or whether typed signatures plus certificate packets are sufficient for the launch use case.
+- If a provider is selected, map provider envelope IDs and completed PDF evidence back into contract versions and signature certificates.
+
+### 9. Relationship analytics
 
 Status: implemented as a shared read model and admin dashboard section.
 
@@ -206,7 +223,7 @@ The admin analytics page now reports:
 
 ## Later
 
-### 9. Realtime
+### 10. Realtime
 
 After persistence is stable:
 
@@ -215,7 +232,7 @@ After persistence is stable:
 - proposal status updates
 - inbox refresh without reload
 
-### 10. Email and outbound system events
+### 11. Email and outbound system events
 
 - intro received
 - intro accepted

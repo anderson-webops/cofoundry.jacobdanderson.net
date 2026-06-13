@@ -1,10 +1,8 @@
-import { getRouterParam, setHeader } from "h3"
-import { getSubscriptionEntitlements } from "~/shared/utils/billing"
-import { isContractParticipant } from "~/shared/utils/collaboration"
-import { renderContractTextDocument } from "~/shared/utils/contract-documents"
-import { getContractById, getCurrentContractVersion, getSubscriptionByUserId } from "~/shared/utils/workspace"
+import { getQuery, getRouterParam, setHeader } from "h3"
+import { renderContractHtmlDocument } from "~/shared/utils/contract-documents"
 import { requireAuthenticatedSession } from "../../../utils/auth"
-import { loadMemberWorkspaceState } from "../../../utils/member-workspace"
+import { loadContractArtifactContext } from "../../../utils/contract-artifacts"
+import { buildContractExecutionCertificate } from "../../../utils/contract-certificate"
 import { assertRateLimit, buildRateLimitKey } from "../../../utils/rate-limit"
 
 const unsafeFilenamePattern = /[^\w.-]+/g
@@ -15,6 +13,7 @@ function safeFilename(value: string) {
 
 export default defineEventHandler(async (event) => {
   const session = await requireAuthenticatedSession(event)
+  const query = getQuery(event)
 
   assertRateLimit(event, {
     key: buildRateLimitKey(event, session.id),
@@ -27,33 +26,21 @@ export default defineEventHandler(async (event) => {
   if (!contractId)
     throw createError({ statusCode: 400, statusMessage: "Contract id is required." })
 
-  const workspace = await loadMemberWorkspaceState(event, {
-    id: session.id,
-    email: session.email,
-    name: session.name,
-    onboardingCompleted: session.onboardingCompleted,
-    role: session.role,
-    subscriptionPlan: session.subscriptionPlan,
-  })
+  const context = await loadContractArtifactContext(event, contractId)
+  const format = query.format === "text" || query.format === "txt" ? "text" : "html"
 
-  const contract = getContractById(workspace.seed, contractId)
-  const version = contract ? getCurrentContractVersion(workspace.seed, contract) : undefined
-  if (!contract || !version)
-    throw createError({ statusCode: 404, statusMessage: "Contract not found." })
+  if (format === "text") {
+    setHeader(event, "Content-Type", "text/plain; charset=utf-8")
+    setHeader(event, "Content-Disposition", `attachment; filename="${safeFilename(context.contract.title)}-v${context.version.versionNumber}.txt"`)
 
-  if (!isContractParticipant(workspace.seed, contract, workspace.session.id))
-    throw createError({ statusCode: 403, statusMessage: "You are not part of this contract." })
+    return context.documentText
+  }
 
-  const subscription = getSubscriptionByUserId(workspace.seed, workspace.session.id)
-  const entitlements = getSubscriptionEntitlements(subscription)
-  if (!entitlements.canPrintContracts)
-    throw createError({ statusCode: 402, statusMessage: "Contract export requires a paid plan." })
+  const certificate = buildContractExecutionCertificate(context)
+  const document = renderContractHtmlDocument(context.contract, context.version, context.signatures, certificate)
 
-  const signatures = workspace.seed.signatures.filter(signature => signature.contractId === contract.id && signature.contractVersionId === version.id)
-  const document = renderContractTextDocument(contract, version, signatures)
-
-  setHeader(event, "Content-Type", "text/plain; charset=utf-8")
-  setHeader(event, "Content-Disposition", `attachment; filename="${safeFilename(contract.title)}-v${version.versionNumber}.txt"`)
+  setHeader(event, "Content-Type", "text/html; charset=utf-8")
+  setHeader(event, "Content-Disposition", `attachment; filename="${safeFilename(context.contract.title)}-v${context.version.versionNumber}.html"`)
 
   return document
 })

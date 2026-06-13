@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
+import { buildContractDocumentHash, buildContractExecutionCertificate } from "../../server/utils/contract-certificate"
 import { workspaceSeed } from "../../shared/data/seed"
-import { buildContractRedline, renderContractTextDocument } from "../../shared/utils/contract-documents"
+import { buildContractRedline, renderContractCertificateText, renderContractHtmlDocument, renderContractTextDocument } from "../../shared/utils/contract-documents"
 import { getContractById, getCurrentContractVersion } from "../../shared/utils/workspace"
 
 describe("contract document helpers", () => {
@@ -20,6 +21,58 @@ describe("contract document helpers", () => {
     expect(document).toContain("Legal Review Notice")
     expect(document).toContain(contract!.title)
     expect(document).toContain("Signatures")
+  })
+
+  it("renders a print-ready html export with certificate metadata", () => {
+    const contract = getContractById(workspaceSeed, "contract_ledgerloop")
+    const version = contract && getCurrentContractVersion(workspaceSeed, contract)
+
+    expect(contract).toBeDefined()
+    expect(version).toBeDefined()
+
+    const signatures = workspaceSeed.signatures.filter(signature => signature.contractId === contract!.id)
+    const documentText = renderContractTextDocument(contract!, version!, signatures)
+    const certificate = buildContractExecutionCertificate({
+      contract: contract!,
+      documentText,
+      generatedAt: "2026-06-13T12:00:00.000Z",
+      seed: workspaceSeed,
+      signatures,
+      version: version!,
+    })
+    const document = renderContractHtmlDocument(contract!, version!, signatures, certificate)
+
+    expect(document).toContain("<!doctype html>")
+    expect(document).toContain("Execution Certificate")
+    expect(document).toContain(certificate.documentSha256)
+    expect(document).toContain("Legal Review Notice")
+  })
+
+  it("builds a certificate with hash and pending party evidence", () => {
+    const contract = getContractById(workspaceSeed, "contract_ledgerloop")
+    const version = contract && getCurrentContractVersion(workspaceSeed, contract)
+
+    expect(contract).toBeDefined()
+    expect(version).toBeDefined()
+
+    const signatures = workspaceSeed.signatures.filter(signature => signature.contractId === contract!.id)
+    const documentText = renderContractTextDocument(contract!, version!, signatures)
+    const certificate = buildContractExecutionCertificate({
+      contract: contract!,
+      documentText,
+      generatedAt: "2026-06-13T12:00:00.000Z",
+      seed: workspaceSeed,
+      signatures,
+      version: version!,
+    })
+    const certificateText = renderContractCertificateText(certificate)
+
+    expect(buildContractDocumentHash(documentText)).toHaveLength(64)
+    expect(certificate.status).toBe("pending")
+    expect(certificate.parties).toHaveLength(2)
+    expect(certificate.parties.some(party => party.signedAt === null)).toBe(true)
+    expect(certificateText).toContain("Document SHA-256")
+    expect(certificateText).toContain("signature pending")
   })
 
   it("builds field-level redlines between versions", () => {
