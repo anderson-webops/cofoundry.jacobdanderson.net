@@ -1,4 +1,5 @@
 import type { H3Event } from "h3"
+import type { EmailPreferenceCategory } from "./email-preferences"
 import type { SessionUser, WorkspaceSeed } from "~/shared/types/domain"
 import type { LifecycleNotificationRequest } from "~/shared/utils/lifecycle-notifications"
 import { randomUUID } from "node:crypto"
@@ -6,10 +7,9 @@ import { buildInboxSnapshot } from "../../shared/utils/inbox"
 import { buildLifecycleNotification } from "../../shared/utils/lifecycle-notifications"
 import { isWorkflowLifecycleEvent, normalizeNotificationPreferences } from "../../shared/utils/notification-preferences"
 import { isContactMailConfigured, sendPlainTextEmail } from "./contact"
+import { createEmailPreferenceManagementUrl } from "./email-preferences"
 import { recordLocalNotificationDelivery } from "./local-operations-store"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
-
-type NotificationPreferenceCategory = "digest" | "workflow"
 
 export interface NotificationDeliveryResult {
   bodyPreview?: string | null
@@ -49,14 +49,28 @@ function isAbsoluteUrl(value: string) {
   }
 }
 
-function resolvePreferenceFooterOptions(event?: H3Event) {
+function resolvePreferenceFooterOptions(
+  event: H3Event | undefined,
+  category: EmailPreferenceCategory,
+  recipient?: { email: string, userId: string },
+) {
   try {
     const runtimeConfig = event ? useRuntimeConfig(event) : useRuntimeConfig()
     const publicConfig = runtimeConfig.public as Partial<Record<"appUrl" | "supportEmail", string | undefined>>
     const appUrl = stripTrailingSlash(publicConfig.appUrl)
+    const settingsUrl = recipient
+      ? createEmailPreferenceManagementUrl({
+          category,
+          email: recipient.email,
+          userId: recipient.userId,
+        }, {
+          appUrl,
+          fallbackUrl: appUrl ? `${appUrl}/app/settings` : "/app/settings",
+        })
+      : appUrl ? `${appUrl}/app/settings` : "/app/settings"
 
     return {
-      settingsUrl: appUrl ? `${appUrl}/app/settings` : "/app/settings",
+      settingsUrl,
       supportEmail: publicConfig.supportEmail?.trim() || defaultSupportEmail,
     }
   }
@@ -70,14 +84,14 @@ function resolvePreferenceFooterOptions(event?: H3Event) {
 
 export function appendNotificationPreferenceFooter(
   body: string,
-  category: NotificationPreferenceCategory,
+  category: EmailPreferenceCategory,
   options: { settingsUrl?: string, supportEmail?: string } = {},
 ) {
   const settingsUrl = options.settingsUrl || "/app/settings"
   const supportEmail = options.supportEmail || defaultSupportEmail
   const categoryLine = category === "digest"
-    ? "Turn off scheduled unread digests in CoFoundry settings:"
-    : "Turn off relationship workflow emails in CoFoundry settings:"
+    ? "Turn off scheduled unread digest email:"
+    : "Turn off relationship workflow email:"
 
   return [
     body.trimEnd(),
@@ -92,7 +106,7 @@ export function appendNotificationPreferenceFooter(
 }
 
 export function buildNotificationPreferenceHeaders(
-  category: NotificationPreferenceCategory,
+  category: EmailPreferenceCategory,
   options: { settingsUrl?: string, supportEmail?: string } = {},
 ) {
   const settingsUrl = options.settingsUrl || "/app/settings"
@@ -210,7 +224,10 @@ export async function sendLifecycleNotification(
     role: seed.users.find(user => user.id === plan.userId)?.role || "founder",
     subscriptionPlan: "free",
   }
-  const footerOptions = resolvePreferenceFooterOptions(event)
+  const footerOptions = resolvePreferenceFooterOptions(event, "workflow", {
+    email: plan.recipientEmail,
+    userId: plan.userId,
+  })
   const body = isWorkflowLifecycleEvent(plan.eventType)
     ? appendNotificationPreferenceFooter(plan.body, "workflow", footerOptions)
     : plan.body
@@ -299,7 +316,10 @@ export async function sendLifecycleNotification(
 }
 
 export async function sendUnreadNotificationDigest(event: H3Event, seed: WorkspaceSeed, session: SessionUser, options: UnreadNotificationDigestOptions = {}) {
-  const footerOptions = resolvePreferenceFooterOptions(event)
+  const footerOptions = resolvePreferenceFooterOptions(event, "digest", {
+    email: session.email,
+    userId: session.id,
+  })
   const { body, snapshot } = buildDigestContent(seed, session, footerOptions)
   const headers = buildNotificationPreferenceHeaders("digest", footerOptions)
   const subject = buildDigestSubject(snapshot.actions.length)

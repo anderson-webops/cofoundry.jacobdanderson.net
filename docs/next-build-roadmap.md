@@ -255,7 +255,7 @@ Status: worker-authenticated mail smoke telemetry and `/admin/readiness` evidenc
 
 Mail transport can now be proven with `npm run operations:mail-smoke -- --to-email <monitored-inbox>`, which records `mail.smoke` delivery rows for `/admin/operations` and `/admin/readiness`.
 
-Provider-backed template names now exist in source for intro received, intro accepted, proposal received, signature required, and billing state change. Optional relationship workflow emails are now gated by a member preference in `/app/settings` and include a settings/support footer plus `List-Unsubscribe` header when sent; scheduled digests keep their separate opt-in, footer, and header. Remaining work is SMTP/provider verification, provider-level suppression handling, and host-side scheduling or queue processing.
+Provider-backed template names now exist in source for intro received, intro accepted, proposal received, signature required, and billing state change. Optional relationship workflow emails are now gated by a member preference in `/app/settings` and include a signed preference-management footer plus `List-Unsubscribe` header when sent; scheduled digests keep their separate opt-in, signed footer, and header. Remaining work is SMTP/provider verification, provider-level suppression handling, and host-side scheduling or queue processing.
 
 ## Backend Contract Status
 

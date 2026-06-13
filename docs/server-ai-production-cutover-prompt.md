@@ -31,7 +31,7 @@ Stage 2: outbound email provider
 3. Configure contact/access-request/digest/lifecycle delivery env without exposing provider secrets to the client.
 4. Run `npm run operations:mail-smoke -- --to-email <monitored-inbox>` and confirm both inbox receipt and `mail.smoke` telemetry in `/admin/operations`.
 5. Send a contact-form test, an access-request notification, a dry-run notification digest, and a dry-run lifecycle notification.
-6. Only enable scheduled real digest sends after member digest preferences, workflow email preferences, in-message settings/footer links, `List-Unsubscribe` headers, provider-level suppression handling, and the support inbox have been verified.
+6. Only enable scheduled real digest sends after member digest preferences, workflow email preferences, signed preference-management links, `List-Unsubscribe` headers, provider-level suppression handling, and the support inbox have been verified. Test at least one `/email/preferences?token=...` link from a received digest or workflow email before turning on real schedules.
 7. Confirm `/admin/readiness` no longer warns on mail delivery readiness.
 
 Stage 3: operations workers
@@ -68,7 +68,7 @@ Stage 6: Stripe billing
 Final verification:
 - Run `npm ci`, `npm run lint`, `npm run typecheck`, `npm run test`, and `npm run build` against the release source if the server environment permits.
 - Verify production logs do not mention loading `../.env`.
-- Verify public marketing pages remain indexable and private/app/admin/auth pages remain `noindex`.
+- Verify public marketing pages remain indexable and private/app/admin/auth/email utility pages remain `noindex`.
 - Verify `/admin/readiness` has no failed checks and only intentional warnings.
 - Record the release tag, migration state, env source, timer names, backup location, restore-drill result, Stripe webhook id, OAuth app ids, and rollback command in the server runbook.
 ```

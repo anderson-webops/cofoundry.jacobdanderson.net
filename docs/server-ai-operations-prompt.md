@@ -39,7 +39,7 @@ Tasks:
      -H "Content-Type: application/json" \
      --data '{"dryRun":true,"maxUsers":100,"onlyWithUnread":true}'
 
-   After dry-run verification, SMTP verification, and confirmation that intended pilot users enabled scheduled digest email in `/app/settings`, switch `dryRun` to `false`.
+   After dry-run verification, SMTP verification, confirmation that intended pilot users enabled scheduled digest email in `/app/settings`, and a successful test of the signed `/email/preferences?token=...` link from a received message, switch `dryRun` to `false`.
 
 9. Verify mail transport with a controlled smoke test after configuring SMTP or sendmail env:
 
@@ -65,7 +65,7 @@ Tasks:
      -H "Content-Type: application/json" \
      --data '{"dryRun":true,"eventType":"proposal.received","targetType":"proposal","targetId":"<proposal-id>","userId":"<recipient-user-id>"}'
 
-   Mock/access-request mode records the attempt without sending mail. In Supabase mode, keep `dryRun` true until SMTP is verified, intended pilot users have enabled relationship workflow email in `/app/settings`, and lifecycle triggers are connected to the app events that create or accept intros, send unread messages, create or update proposals, require signatures, review reports, and change billing state.
+   Mock/access-request mode records the attempt without sending mail. In Supabase mode, keep `dryRun` true until SMTP is verified, intended pilot users have enabled relationship workflow email in `/app/settings`, the signed `/email/preferences?token=...` link has been tested from a received message, and lifecycle triggers are connected to the app events that create or accept intros, send unread messages, create or update proposals, require signatures, review reports, and change billing state.
 
 11. Wire the database backup job through the checked-in lifecycle wrapper:
 
