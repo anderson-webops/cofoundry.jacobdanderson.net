@@ -48,8 +48,16 @@ const healthyOperations = {
   mode: "mock",
   notificationDeliveries: [{
     created_at: generatedAt,
+    event_type: "digest.unread",
     id: "delivery_healthy",
     notification_count: 1,
+    status: "sent",
+  }, {
+    created_at: generatedAt,
+    delivered_at: generatedAt,
+    event_type: "mail.smoke",
+    id: "delivery_mail_smoke",
+    notification_count: 0,
     status: "sent",
   }],
   operationalEvents: [
@@ -121,6 +129,10 @@ describe("production readiness snapshot", () => {
     expect(snapshot.provisioningTasks.find(task => task.id === "stripe-cutover-provisioning")).toMatchObject({
       status: "info",
       summary: "Stripe intentionally disabled",
+    })
+    expect(snapshot.provisioningTasks.find(task => task.id === "mail-provisioning")).toMatchObject({
+      status: "pass",
+      summary: "sent smoke, 0 days old",
     })
   })
 
@@ -272,6 +284,56 @@ describe("production readiness snapshot", () => {
     expect(checkById.get("restore-drill")?.status).toBe("warn")
     expect(checkById.get("monitoring-heartbeat")?.status).toBe("warn")
     expect(checkById.get("alert-webhook-destination")?.status).toBe("warn")
+  })
+
+  it("requires recent successful mail smoke evidence when mail is configured", () => {
+    const withoutSmoke = buildProductionReadinessSnapshot({
+      accessRequests: [],
+      adminPosture: healthyAdminPosture,
+      contactMailConfigured: true,
+      environment: environmentSnapshot(),
+      environmentValidationErrors: [],
+      generatedAt,
+      hasAlertWebhookConfigured: true,
+      hasDurableLocalDataDir: true,
+      hasOperationsWorkerToken: true,
+      hasSessionSigningSecret: true,
+      isLocalDevelopment: false,
+      operations: {
+        ...healthyOperations,
+        notificationDeliveries: healthyOperations.notificationDeliveries.filter(row => row.event_type !== "mail.smoke"),
+      },
+      privacyRequests: [],
+    })
+    const withoutSmokeCheckById = new Map(withoutSmoke.groups.flatMap(group => group.checks).map(check => [check.id, check]))
+
+    expect(withoutSmoke.overallStatus).toBe("warn")
+    expect(withoutSmokeCheckById.get("mail-transport")?.status).toBe("warn")
+
+    const failedSmoke = buildProductionReadinessSnapshot({
+      accessRequests: [],
+      adminPosture: healthyAdminPosture,
+      contactMailConfigured: true,
+      environment: environmentSnapshot(),
+      environmentValidationErrors: [],
+      generatedAt,
+      hasAlertWebhookConfigured: true,
+      hasDurableLocalDataDir: true,
+      hasOperationsWorkerToken: true,
+      hasSessionSigningSecret: true,
+      isLocalDevelopment: false,
+      operations: {
+        ...healthyOperations,
+        notificationDeliveries: healthyOperations.notificationDeliveries.map(row => row.event_type === "mail.smoke"
+          ? { ...row, status: "failed" }
+          : row),
+      },
+      privacyRequests: [],
+    })
+    const failedSmokeCheckById = new Map(failedSmoke.groups.flatMap(group => group.checks).map(check => [check.id, check]))
+
+    expect(failedSmoke.overallStatus).toBe("fail")
+    expect(failedSmokeCheckById.get("mail-transport")?.status).toBe("fail")
   })
 
   it("fails when the latest restore drill failed", () => {

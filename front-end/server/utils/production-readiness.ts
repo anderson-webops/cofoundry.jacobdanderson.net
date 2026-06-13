@@ -156,6 +156,15 @@ function isAlertSmokeEvent(row: Record<string, unknown>) {
   return eventType.includes("alert_test") || eventType.includes("alert.test")
 }
 
+function isDigestDelivery(row: Record<string, unknown>) {
+  const eventType = String(row.event_type || "digest.unread").toLowerCase()
+  return eventType === "digest.unread" || eventType.startsWith("digest.")
+}
+
+function isMailSmokeDelivery(row: Record<string, unknown>) {
+  return String(row.event_type || "").toLowerCase() === "mail.smoke"
+}
+
 function isLocalhostUrl(value: string) {
   try {
     const url = new URL(value)
@@ -267,10 +276,10 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
       "mail-provisioning",
       "Contact and digest mail",
       checkById.get("mail-transport")?.status || "warn",
-      input.contactMailConfigured ? "Mail transport configured" : "Mail transport missing",
+      checkById.get("mail-transport")?.summary || (input.contactMailConfigured ? "Mail transport configured" : "Mail transport missing"),
       "Contact forms and notification digests need SMTP or sendmail so users and operators receive messages.",
-      "Configure CONTACT_* SMTP/sendmail values and verify the support inbox receives contact and digest traffic.",
-      "CONTACT_SMTP_HOST=<smtp-host> CONTACT_FROM_EMAIL=support@cofoundry.dev CONTACT_TO_EMAIL=contacts@jacobdanderson.net",
+      "Configure CONTACT_* SMTP/sendmail values, then run a worker-authenticated smoke test to prove delivery.",
+      "CONTACT_SMTP_HOST=<smtp-host> CONTACT_FROM_EMAIL=support@cofoundry.dev CONTACT_TO_EMAIL=contacts@jacobdanderson.net\nnpm run operations:mail-smoke -- --to-email contacts@jacobdanderson.net",
     ),
     task(
       "worker-token-provisioning",
@@ -372,8 +381,19 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
   const latestBackup = latestRow(input.operations.backupRuns, ["started_at", "created_at"])
   const latestBackupTime = newestTime(input.operations.backupRuns, ["completed_at", "started_at", "created_at"])
   const backupDaysOld = daysSince(latestBackupTime, nowTime)
-  const latestNotificationDeliveryTime = newestTime(input.operations.notificationDeliveries, ["created_at", "delivered_at"])
+  const digestDeliveries = input.operations.notificationDeliveries.filter(isDigestDelivery)
+  const latestNotificationDeliveryTime = newestTime(digestDeliveries, ["created_at", "delivered_at"])
   const notificationDaysOld = daysSince(latestNotificationDeliveryTime, nowTime)
+  const mailSmokeDeliveries = input.operations.notificationDeliveries.filter(isMailSmokeDelivery)
+  const latestMailSmoke = latestRow(mailSmokeDeliveries, ["delivered_at", "created_at"])
+  const latestSuccessfulMailSmoke = latestRow(mailSmokeDeliveries.filter(row => String(row.status || "") === "sent"), ["delivered_at", "created_at"])
+  const latestFailedMailSmoke = latestRow(mailSmokeDeliveries.filter(row => String(row.status || "") === "failed"), ["delivered_at", "created_at"])
+  const latestMailSmokeTime = newestTime(latestMailSmoke ? [latestMailSmoke] : [], ["delivered_at", "created_at"])
+  const latestSuccessfulMailSmokeTime = newestTime(latestSuccessfulMailSmoke ? [latestSuccessfulMailSmoke] : [], ["delivered_at", "created_at"])
+  const latestFailedMailSmokeTime = newestTime(latestFailedMailSmoke ? [latestFailedMailSmoke] : [], ["delivered_at", "created_at"])
+  const mailSmokeDaysOld = daysSince(latestSuccessfulMailSmokeTime, nowTime)
+  const latestMailSmokeStatus = String(latestMailSmoke?.status || "")
+  const hasNewerMailSmokeFailure = latestFailedMailSmokeTime !== null && (latestSuccessfulMailSmokeTime === null || latestFailedMailSmokeTime >= latestSuccessfulMailSmokeTime)
   const failedOrFlaggedScans = countRows(input.operations.fileUploads, "scan_status", ["failed", "flagged"])
   const pendingScans = countRows(input.operations.fileUploads, "scan_status", ["pending"])
   const attentionEvents = input.operations.operationalEvents.filter(row => !isAlertSmokeEvent(row))
@@ -404,6 +424,39 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
       ? `Smoke event${alertSmokeDaysOld === null ? "" : ` ${alertSmokeDaysOld} day${alertSmokeDaysOld === 1 ? "" : "s"} old`}`
       : "Configured, no smoke event"
   }
+
+  let mailTransportStatus: ProductionReadinessStatus = "pass"
+  if (!input.contactMailConfigured)
+    mailTransportStatus = "warn"
+  else if (hasNewerMailSmokeFailure)
+    mailTransportStatus = "fail"
+  else if (!latestSuccessfulMailSmoke)
+    mailTransportStatus = "warn"
+  else if (mailSmokeDaysOld !== null && mailSmokeDaysOld > 30)
+    mailTransportStatus = "warn"
+
+  let mailTransportSummary = input.contactMailConfigured ? "Configured" : "Not configured"
+  if (input.contactMailConfigured && hasNewerMailSmokeFailure) {
+    const failedDaysOld = daysSince(latestFailedMailSmokeTime, nowTime)
+    mailTransportSummary = `failed smoke${failedDaysOld === null ? "" : `, ${failedDaysOld} day${failedDaysOld === 1 ? "" : "s"} old`}`
+  }
+  else if (input.contactMailConfigured && latestSuccessfulMailSmoke) {
+    mailTransportSummary = `sent smoke${mailSmokeDaysOld === null ? "" : `, ${mailSmokeDaysOld} day${mailSmokeDaysOld === 1 ? "" : "s"} old`}`
+  }
+  else if (input.contactMailConfigured && latestMailSmoke) {
+    const latestDaysOld = daysSince(latestMailSmokeTime, nowTime)
+    mailTransportSummary = `${latestMailSmokeStatus || "recorded"} smoke${latestDaysOld === null ? "" : `, ${latestDaysOld} day${latestDaysOld === 1 ? "" : "s"} old`}`
+  }
+  let mailTransportDetail = "Contact submissions and digests can be recorded, but users and operators will not receive outbound email."
+  if (input.contactMailConfigured) {
+    if (latestSuccessfulMailSmoke)
+      mailTransportDetail = "Contact form, notification digest, and lifecycle email delivery have recent smoke-test evidence."
+    else
+      mailTransportDetail = "Mail transport is configured, but readiness still needs a recent successful worker-authenticated smoke test."
+  }
+  const mailTransportAction = input.contactMailConfigured
+    ? "Run `npm run operations:mail-smoke -- --to-email <monitored-inbox>` and confirm the monitored inbox receives the message."
+    : "Configure SMTP or sendmail CONTACT_* environment values."
 
   const deploymentChecks = [
     check(
@@ -497,12 +550,10 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
     check(
       "mail-transport",
       "Contact and digest email",
-      input.contactMailConfigured ? "pass" : "warn",
-      input.contactMailConfigured ? "Configured" : "Not configured",
-      input.contactMailConfigured
-        ? "Contact form and notification digest delivery have a configured mail transport."
-        : "Contact submissions and digests can be recorded, but users and operators will not receive outbound email.",
-      "Configure SMTP or sendmail CONTACT_* environment values.",
+      mailTransportStatus,
+      mailTransportSummary,
+      mailTransportDetail,
+      mailTransportAction,
     ),
     check(
       "local-durable-store",
@@ -575,12 +626,12 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
     check(
       "notification-digests",
       "Notification digest worker",
-      !input.operations.notificationDeliveries.length
+      !digestDeliveries.length
         ? "warn"
         : notificationDaysOld !== null && notificationDaysOld > 1
           ? "warn"
           : "pass",
-      input.operations.notificationDeliveries.length
+      digestDeliveries.length
         ? `Last digest record${notificationDaysOld === null ? "" : ` ${notificationDaysOld} day${notificationDaysOld === 1 ? "" : "s"} old`}`
         : "No digest delivery rows reported",
       "Digest rows prove that the scheduled notification path is running, even when mock mode records a skipped delivery.",

@@ -420,6 +420,24 @@ async function runDigest(parsed: ParsedArgs, options: Required<WorkerCommandOpti
   options.log(JSON.stringify(response, null, 2))
 }
 
+async function runMailSmoke(parsed: ParsedArgs, options: Required<WorkerCommandOptions>) {
+  const environment = resolveOperationsWorkerEnvironment(options.env)
+  const dryRun = parseBooleanFlag(flagValue(parsed.flags, "dry-run", "false"))
+  const subject = flagValue(parsed.flags, "subject")
+  const toEmail = flagValue(parsed.flags, "to-email", readValue(options.env, "COFOUNDRY_MAIL_SMOKE_TO_EMAIL"))
+  const response = await requestJson(environment, "/api/operations/mail-smoke", {
+    body: {
+      dryRun,
+      metadata: parseMetadata(parsed.flags),
+      ...(subject ? { subject } : {}),
+      ...(toEmail ? { toEmail } : {}),
+    },
+    fetchImpl: options.fetch,
+  })
+
+  options.log(JSON.stringify(response, null, 2))
+}
+
 async function runLifecycleNotification(parsed: ParsedArgs, options: Required<WorkerCommandOptions>) {
   const environment = resolveOperationsWorkerEnvironment(options.env)
   const eventType = flagValue(parsed.flags, "event-type")
@@ -654,6 +672,8 @@ export async function runOperationsWorker(argv: string[], options: WorkerCommand
       return runEvent(parsed, resolvedOptions)
     case "lifecycle-notification":
       return runLifecycleNotification(parsed, resolvedOptions)
+    case "mail-smoke":
+      return runMailSmoke(parsed, resolvedOptions)
     case "restore-drill":
       return runRestoreDrill(parsed, resolvedOptions)
     case "scan":
@@ -661,7 +681,7 @@ export async function runOperationsWorker(argv: string[], options: WorkerCommand
     default:
       throw new Error([
         "Unknown operations worker command.",
-        "Use one of: backup, digest, event, lifecycle-notification, restore-drill, scan.",
+        "Use one of: backup, digest, event, lifecycle-notification, mail-smoke, restore-drill, scan.",
       ].join(" "))
   }
 }
