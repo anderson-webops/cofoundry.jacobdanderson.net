@@ -1,6 +1,6 @@
 import type { H3Event } from "h3"
 import type { AdminAction, AppRole, Notification, PrivacyRequestStatus, ReportStatus } from "~/shared/types/domain"
-import { persistLocalReportStatus, persistLocalUserRole, persistLocalUserSuspension, readLocalAdminAuditStore, recordLocalAdminAction, recordLocalUserNotification } from "./local-admin-audit"
+import { persistLocalReportStatus, persistLocalUserEmailVerification, persistLocalUserRole, persistLocalUserSuspension, readLocalAdminAuditStore, recordLocalAdminAction, recordLocalUserNotification } from "./local-admin-audit"
 import { updateLocalPrivacyRequestStatus } from "./local-privacy-requests"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
 
@@ -132,6 +132,27 @@ export async function persistUserRole(event: H3Event, targetUserId: string, role
   const { data, error } = await adminClient
     .from("users")
     .update({ role })
+    .eq("id", targetUserId)
+    .select("id")
+
+  if (error)
+    throw error
+
+  if (!data?.length)
+    throw createError({ statusCode: 404, statusMessage: "Target user was not found." })
+}
+
+export async function persistUserEmailVerification(event: H3Event, targetUserId: string, verifiedEmail: boolean) {
+  if (!isSupabaseEnabled(event))
+    return persistLocalUserEmailVerification(targetUserId, verifiedEmail)
+
+  const adminClient = createSupabaseAdminClient(event)
+  if (!adminClient)
+    throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
+
+  const { data, error } = await adminClient
+    .from("users")
+    .update({ verified_email: verifiedEmail })
     .eq("id", targetUserId)
     .select("id")
 

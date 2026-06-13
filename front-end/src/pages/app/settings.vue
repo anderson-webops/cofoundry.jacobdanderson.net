@@ -4,7 +4,7 @@ import { contactRevealStageOptions } from "~/shared/constants/options"
 import { formatContactRevealStage, formatTrustTier } from "~/shared/utils/format"
 import { buildProfileTrustTier } from "~/shared/utils/formation"
 
-type TrustVerificationType = "phone" | "linkedin" | "github" | "website" | "work_domain" | "government_id"
+type TrustVerificationType = "email" | "phone" | "linkedin" | "github" | "website" | "work_domain" | "government_id"
 
 definePageMeta({
   layout: "app",
@@ -269,6 +269,7 @@ async function requestTrustVerification(type: TrustVerificationType, label: stri
           <TrustSignalStrip v-if="profile" :profile="profile" />
         </div>
         <div class="muted text-sm mt-4 gap-3 grid">
+          <div>Email: {{ currentUser?.verifiedEmail ? "verified" : "pending operator review" }}</div>
           <div>Current tier: {{ formatTrustTier(trustTier) }}</div>
           <div>Level A: verified email and baseline profile.</div>
           <div>Level B: verified identity rails, proof, availability, and intent clarity.</div>
@@ -276,6 +277,9 @@ async function requestTrustVerification(type: TrustVerificationType, label: stri
           <div>Request a review when your evidence is ready. Trust badges update only after operator or provider confirmation.</div>
         </div>
         <div class="mt-5 flex flex-wrap gap-3">
+          <BaseButton v-if="!currentUser?.verifiedEmail" variant="secondary" :disabled="trustVerificationPending === 'email'" @click="requestTrustVerification('email', 'Email verification')">
+            {{ trustVerificationPending === "email" ? "Requesting..." : "Request email review" }}
+          </BaseButton>
           <BaseButton variant="secondary" :disabled="trustVerificationPending === 'phone'" @click="requestTrustVerification('phone', 'Phone verification')">
             {{ trustVerificationPending === "phone" ? "Requesting..." : "Request phone review" }}
           </BaseButton>

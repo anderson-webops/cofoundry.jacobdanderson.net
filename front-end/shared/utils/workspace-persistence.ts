@@ -75,7 +75,9 @@ export function resolveSessionUserFromWorkspace(seed: WorkspaceSeed, input: Sess
   }
 }
 
-export function buildDraftMemberWorkspaceState(session: SessionUser, createdAt = now()): MemberWorkspaceState {
+export function buildDraftMemberWorkspaceState(session: SessionUser, createdAt = now(), options: { verifiedEmail?: boolean } = {}): MemberWorkspaceState {
+  const verifiedEmail = options.verifiedEmail === true
+
   return {
     user: {
       id: session.id,
@@ -83,7 +85,7 @@ export function buildDraftMemberWorkspaceState(session: SessionUser, createdAt =
       role: session.role,
       createdAt,
       linkedProviders: ["email"],
-      verifiedEmail: true,
+      verifiedEmail,
       onboardingCompleted: session.onboardingCompleted,
       notificationPreferences: {
         unreadDigestEmail: false,
@@ -148,7 +150,7 @@ export function buildDraftMemberWorkspaceState(session: SessionUser, createdAt =
       },
       verificationBadges: {
         profileComplete: false,
-        emailVerified: true,
+        emailVerified: verifiedEmail,
         linkedAccounts: false,
       },
       intent: {

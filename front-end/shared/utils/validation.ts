@@ -224,6 +224,10 @@ export const adminUserRoleSchema = z.object({
   role: z.enum(["founder", "collaborator", "admin", "investor_admin"]),
 })
 
+export const adminUserEmailVerificationSchema = z.object({
+  notes: z.string().trim().min(8, "Add a short email-verification note.").max(500, "Keep the email-verification note concise."),
+})
+
 export const adminReportStatusSchema = z.object({
   status: z.enum(["reviewed", "resolved"]),
   notes: z.string().trim().min(8, "Add a short moderation note.").max(500, "Keep the moderation note concise."),

@@ -43,10 +43,26 @@ describe("workspace persistence helpers", () => {
     })
 
     expect(state.user.id).toBe("auth_new_member")
+    expect(state.user.verifiedEmail).toBe(false)
+    expect(state.profile.verificationBadges.emailVerified).toBe(false)
     expect(state.user.notificationPreferences.unreadDigestEmail).toBe(false)
     expect(state.profile.userId).toBe("auth_new_member")
     expect(state.subscription.userId).toBe("auth_new_member")
     expect(state.opportunities).toEqual([])
+  })
+
+  it("can mark invite-backed draft member emails as verified", () => {
+    const state = buildDraftMemberWorkspaceState({
+      id: "auth_invited_member",
+      email: "invited.member@cofoundry.dev",
+      name: "Invited Member",
+      role: "founder",
+      onboardingCompleted: false,
+      subscriptionPlan: "free",
+    }, undefined, { verifiedEmail: true })
+
+    expect(state.user.verifiedEmail).toBe(true)
+    expect(state.profile.verificationBadges.emailVerified).toBe(true)
   })
 
   it("merges persisted member slices over the shared workspace seed", () => {

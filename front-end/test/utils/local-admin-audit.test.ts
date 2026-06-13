@@ -4,7 +4,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import process from "node:process"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { persistAdminAction, persistReportStatus, persistUserNotification, persistUserRole, persistUserSuspension } from "../../server/utils/admin-persistence"
+import { persistAdminAction, persistReportStatus, persistUserEmailVerification, persistUserNotification, persistUserRole, persistUserSuspension } from "../../server/utils/admin-persistence"
 import { clearLocalAdminAuditStoreForTests, mergeLocalAdminAuditState, readLocalAdminAuditStore } from "../../server/utils/local-admin-audit"
 import { workspaceSeed } from "../../shared/data/seed"
 
@@ -38,6 +38,7 @@ describe("local admin audit store", () => {
 
     await persistUserSuspension({} as H3Event, targetUserId, createdAt)
     await persistUserRole({} as H3Event, targetUserId, "admin")
+    await persistUserEmailVerification({} as H3Event, targetUserId, false)
     await persistReportStatus({} as H3Event, {
       adminUserId: "user_ava",
       notes: "Reviewed report in local production mode.",
@@ -75,6 +76,10 @@ describe("local admin audit store", () => {
     expect(mergedSeed.users.find(user => user.id === targetUserId)).toMatchObject({
       role: "admin",
       suspendedAt: createdAt,
+      verifiedEmail: false,
+    })
+    expect(mergedSeed.profiles.find(profile => profile.userId === targetUserId)?.verificationBadges).toMatchObject({
+      emailVerified: false,
     })
     expect(mergedSeed.reports.find(report => report.id === reportId)).toMatchObject({
       reviewNotes: "Reviewed report in local production mode.",

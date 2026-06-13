@@ -24,6 +24,7 @@ const filters = reactive<AdminUserFilters>({
 
 const moderationNotes = reactive<Record<string, string>>({})
 const pendingByUserId = reactive<Record<string, boolean>>({})
+const pendingEmailByUserId = reactive<Record<string, boolean>>({})
 const pendingRoleByUserId = reactive<Record<string, boolean>>({})
 const roleSelections = reactive<Record<string, AppRole | "">>({})
 
@@ -78,6 +79,11 @@ function buildDefaultNote(row: AdminUserRow) {
 function buildDefaultRoleNote(row: AdminUserRow, nextRole: AppRole) {
   const label = row.profile?.displayName || row.user.email
   return `Changed ${label} role from ${formatRole(row.user.role)} to ${formatRole(nextRole)} after admin review.`
+}
+
+function buildDefaultEmailVerificationNote(row: AdminUserRow) {
+  const label = row.profile?.displayName || row.user.email
+  return `Verified ${label} email after invite, domain, or operator evidence review.`
 }
 
 async function toggleSuspension(row: AdminUserRow) {
@@ -158,6 +164,34 @@ async function changeRole(row: AdminUserRow) {
     pendingRoleByUserId[row.user.id] = false
   }
 }
+
+async function verifyEmail(row: AdminUserRow) {
+  if (!authStore.currentUser || row.user.verifiedEmail)
+    return
+
+  pendingEmailByUserId[row.user.id] = true
+
+  try {
+    const note = moderationNotes[row.user.id]?.trim() || buildDefaultEmailVerificationNote(row)
+    await workspaceStore.verifyUserEmail(row.user.id, authStore.currentUser.id, note)
+    toastStore.push({
+      title: "Email verified",
+      message: "The server recorded the verification and added an audit entry.",
+      tone: "success",
+    })
+    moderationNotes[row.user.id] = ""
+  }
+  catch (caughtError) {
+    toastStore.push({
+      title: "Email verification failed",
+      message: caughtError instanceof Error ? caughtError.message : "The email verification could not be recorded.",
+      tone: "danger",
+    })
+  }
+  finally {
+    pendingEmailByUserId[row.user.id] = false
+  }
+}
 </script>
 
 <template>
@@ -186,7 +220,7 @@ async function changeRole(row: AdminUserRow) {
       <div v-if="rows.length" class="p-4 lg:hidden">
         <div class="surface-row-list">
           <article v-for="row in rows" :key="row.user.id" class="surface-row">
-            <div class="flex gap-3 items-start justify-between">
+            <div class="flex flex-wrap gap-3 items-start justify-between">
               <div class="min-w-0">
                 <p class="font-semibold">
                   {{ row.profile?.displayName || row.user.email }}
@@ -195,9 +229,14 @@ async function changeRole(row: AdminUserRow) {
                   {{ row.user.email }}
                 </p>
               </div>
-              <BaseBadge :tone="row.user.suspendedAt ? 'danger' : 'success'">
-                {{ row.user.suspendedAt ? "Suspended" : "Active" }}
-              </BaseBadge>
+              <div class="flex flex-wrap gap-2">
+                <BaseBadge :tone="row.user.suspendedAt ? 'danger' : 'success'">
+                  {{ row.user.suspendedAt ? "Suspended" : "Active" }}
+                </BaseBadge>
+                <BaseBadge :tone="row.user.verifiedEmail ? 'success' : 'warning'">
+                  {{ row.user.verifiedEmail ? "Email verified" : "Email pending" }}
+                </BaseBadge>
+              </div>
             </div>
 
             <p v-if="row.profile?.headline" class="text-sm leading-6 mt-3">
@@ -263,6 +302,14 @@ async function changeRole(row: AdminUserRow) {
                 @click="toggleSuspension(row)"
               >
                 {{ pendingByUserId[row.user.id] ? "Saving..." : row.user.suspendedAt ? "Reinstate" : "Suspend" }}
+              </BaseButton>
+              <BaseButton
+                class="mt-3 w-full"
+                :disabled="pendingEmailByUserId[row.user.id] || row.user.verifiedEmail"
+                variant="secondary"
+                @click="verifyEmail(row)"
+              >
+                {{ pendingEmailByUserId[row.user.id] ? "Saving..." : row.user.verifiedEmail ? "Email verified" : "Verify email" }}
               </BaseButton>
               <div class="mt-4 pt-4 border-t border-[var(--line)]">
                 <SelectInput
@@ -334,6 +381,9 @@ async function changeRole(row: AdminUserRow) {
                 <p class="muted text-xs mt-2">
                   {{ row.user.onboardingCompleted ? "Onboarding complete" : "Onboarding incomplete" }}
                 </p>
+                <BaseBadge class="mt-3" :tone="row.user.verifiedEmail ? 'success' : 'warning'">
+                  {{ row.user.verifiedEmail ? "Email verified" : "Email pending" }}
+                </BaseBadge>
               </td>
               <td class="px-4 py-4">
                 <div class="text-sm">
@@ -374,6 +424,14 @@ async function changeRole(row: AdminUserRow) {
                   @click="toggleSuspension(row)"
                 >
                   {{ pendingByUserId[row.user.id] ? "Saving..." : row.user.suspendedAt ? "Reinstate" : "Suspend" }}
+                </BaseButton>
+                <BaseButton
+                  class="ml-2 mt-3"
+                  :disabled="pendingEmailByUserId[row.user.id] || row.user.verifiedEmail"
+                  variant="secondary"
+                  @click="verifyEmail(row)"
+                >
+                  {{ pendingEmailByUserId[row.user.id] ? "Saving..." : row.user.verifiedEmail ? "Email verified" : "Verify email" }}
                 </BaseButton>
                 <div class="mt-4 pt-4 border-t border-[var(--line)]">
                   <SelectInput

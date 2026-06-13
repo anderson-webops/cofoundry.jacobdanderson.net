@@ -8,6 +8,7 @@ interface LocalUserAdminPatch {
   role?: AppRole
   suspendedAt?: string | null
   updatedAt: string
+  verifiedEmail?: boolean
 }
 
 interface LocalReportAdminPatch {
@@ -176,6 +177,22 @@ export async function persistLocalUserRole(targetUserId: string, role: AppRole) 
   })
 }
 
+export async function persistLocalUserEmailVerification(targetUserId: string, verifiedEmail: boolean) {
+  return updateStore((store) => {
+    const now = new Date().toISOString()
+    const existing = store.userPatches.find(row => row.id === targetUserId)
+    const row: LocalUserAdminPatch = {
+      ...existing,
+      id: targetUserId,
+      updatedAt: now,
+      verifiedEmail,
+    }
+
+    store.userPatches = [row, ...store.userPatches.filter(item => item.id !== targetUserId)]
+    return row
+  })
+}
+
 export async function persistLocalReportStatus(input: {
   adminUserId: string
   notes: string
@@ -256,8 +273,24 @@ export async function mergeLocalAdminAuditState(seed: WorkspaceSeed) {
             ...user,
             role: patch.role || user.role,
             suspendedAt: typeof patch.suspendedAt === "undefined" ? user.suspendedAt : patch.suspendedAt,
+            verifiedEmail: typeof patch.verifiedEmail === "undefined" ? user.verifiedEmail : patch.verifiedEmail,
           }
         : user
+    }),
+    profiles: seed.profiles.map((profile) => {
+      const user = seed.users.find(row => row.id === profile.userId)
+      const patch = userPatchById.get(profile.userId)
+      const verifiedEmail = typeof patch?.verifiedEmail === "undefined" ? user?.verifiedEmail : patch.verifiedEmail
+
+      return typeof verifiedEmail === "boolean"
+        ? {
+            ...profile,
+            verificationBadges: {
+              ...profile.verificationBadges,
+              emailVerified: verifiedEmail,
+            },
+          }
+        : profile
     }),
   } satisfies WorkspaceSeed
 }

@@ -26,6 +26,7 @@ interface SupabaseSessionUserRow {
   onboarding_completed: boolean
   role: SessionUser["role"]
   suspended_at: string | null
+  verified_email: boolean
 }
 
 const registeredAccounts = new Map<string, RegisteredAccount>()
@@ -104,7 +105,7 @@ async function readSupabaseSessionUser(event: H3Event, decodedSession: SessionUs
 
   const { data, error } = await adminClient
     .from("users")
-    .select("id,email,role,onboarding_completed,suspended_at")
+    .select("id,email,role,onboarding_completed,suspended_at,verified_email")
     .eq("id", decodedSession.id)
     .maybeSingle<SupabaseSessionUserRow>()
 
@@ -190,6 +191,7 @@ export async function readAuthoritativeSession(event: H3Event) {
     onboardingCompleted: persistedUser.onboarding_completed,
     role: persistedUser.role,
     subscriptionPlan: decodedSession.subscriptionPlan,
+    verifiedEmail: persistedUser.verified_email,
   })
   const activeSession = resolveActiveSessionFromSeed(seed, session)
 
@@ -318,12 +320,17 @@ export async function createMockAccount(event: H3Event, payload: { email: string
   if (await findLocalAuthSessionByEmail(normalizedEmail))
     throw createError({ statusCode: 409, statusMessage: "An account with that email already exists." })
 
+  const acceptedInvite = payload.inviteToken
+    ? await validateAccessInvite(event, payload.inviteToken, normalizedEmail)
+    : null
+  const verifiedEmail = Boolean(acceptedInvite)
+
   if (isSupabaseEnabled(event)) {
     const adminClient = createSupabaseAdminClient(event)
     const result = await adminClient?.auth.admin.createUser({
       email: normalizedEmail,
       password: payload.password,
-      email_confirm: true,
+      email_confirm: verifiedEmail,
       user_metadata: { name: payload.name },
     })
 
@@ -342,7 +349,7 @@ export async function createMockAccount(event: H3Event, payload: { email: string
       role: "founder",
       subscriptionPlan: "free",
     })
-    const bootstrapState = buildMemberWorkspaceState(workspaceSeed, fallbackSession.id) || buildDraftMemberWorkspaceState(fallbackSession)
+    const bootstrapState = buildMemberWorkspaceState(workspaceSeed, fallbackSession.id) || buildDraftMemberWorkspaceState(fallbackSession, undefined, { verifiedEmail })
     await persistWholeMemberWorkspaceState(event, bootstrapState)
 
     const { session } = await loadMemberWorkspaceState(event, buildIdentityInput(fallbackSession))
@@ -369,7 +376,7 @@ export async function createMockAccount(event: H3Event, payload: { email: string
   if (payload.inviteToken)
     await markAccessInviteAccepted(event, payload.inviteToken)
 
-  await persistWholeMemberWorkspaceState(event, buildDraftMemberWorkspaceState(session))
+  await persistWholeMemberWorkspaceState(event, buildDraftMemberWorkspaceState(session, undefined, { verifiedEmail }))
   const { session: authoritativeSession } = await loadMemberWorkspaceState(event, buildIdentityInput(session))
 
   writeSession(event, authoritativeSession)
