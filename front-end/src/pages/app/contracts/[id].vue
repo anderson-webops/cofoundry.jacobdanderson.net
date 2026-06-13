@@ -65,6 +65,23 @@ function downloadContract() {
     window.location.assign(`/api/contracts/${contract.value.id}/export`)
 }
 
+function downloadCertificate() {
+  if (!contract.value)
+    return
+
+  if (previewOnly.value) {
+    toastStore.push({
+      title: "Certificate requires Pro",
+      message: "Agreement certificate downloads are available on paid plans.",
+      tone: "warning",
+    })
+    return
+  }
+
+  if (import.meta.client)
+    window.location.assign(`/api/contracts/${contract.value.id}/certificate`)
+}
+
 async function loadRedline() {
   if (!contract.value)
     return
@@ -146,6 +163,9 @@ async function signContract() {
         <p class="muted text-sm leading-7">
           This contract is a startup template. It is not legal advice, does not create an attorney-client relationship, and should be reviewed by counsel before execution.
         </p>
+        <p class="muted text-sm leading-7 mt-3">
+          Paid plans can download a print-ready agreement packet and a completion certificate with the agreement hash and typed-signature evidence.
+        </p>
         <p v-if="previewOnly" class="muted text-sm leading-7 mt-3">
           This account is currently in preview mode for agreement drafts. You can review the structure and terms here, but printing and signature collection require a paid plan.
         </p>
@@ -201,7 +221,10 @@ async function signContract() {
               {{ previewOnly ? "Print requires Pro" : "Print / Save PDF" }}
             </BaseButton>
             <BaseButton variant="ghost" :disabled="previewOnly" @click="downloadContract">
-              {{ previewOnly ? "Export requires Pro" : "Download text" }}
+              {{ previewOnly ? "Export requires Pro" : "Download agreement" }}
+            </BaseButton>
+            <BaseButton variant="ghost" :disabled="previewOnly" @click="downloadCertificate">
+              {{ previewOnly ? "Certificate requires Pro" : "Download certificate" }}
             </BaseButton>
             <BaseButton variant="secondary" :disabled="redlinePending" @click="loadRedline">
               {{ redlinePending ? "Checking..." : "View redline" }}
