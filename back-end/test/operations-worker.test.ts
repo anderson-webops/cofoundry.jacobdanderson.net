@@ -181,6 +181,44 @@ test("operations lifecycle notification worker sends event-specific payloads", a
   })
 })
 
+test("operations email suppression worker sends provider suppression payloads", async () => {
+  const { fetchImpl, requests } = createJsonFetch(() => ({ mode: "mock", suppression: { id: "suppression_1" } }))
+
+  await runOperationsWorker([
+    "email-suppression",
+    "--email",
+    "Suppressed@Example.com",
+    "--category",
+    "workflow",
+    "--reason",
+    "complaint",
+    "--provider",
+    "postmark",
+    "--source-event-id",
+    "provider-event-1",
+    "--suppressed-at",
+    "2026-06-13T12:00:00.000Z",
+    "--metadata",
+    "providerType=spam_complaint",
+  ], {
+    env: workerEnv,
+    fetch: fetchImpl,
+    log: () => {},
+  })
+
+  assert.equal(requests.length, 1)
+  assert.equal(requests[0].url, "https://cofoundry.example.com/api/operations/email-suppressions")
+  assert.deepEqual(requests[0].body, {
+    category: "workflow",
+    email: "Suppressed@Example.com",
+    metadata: { providerType: "spam_complaint" },
+    provider: "postmark",
+    reason: "complaint",
+    sourceEventId: "provider-event-1",
+    suppressedAt: "2026-06-13T12:00:00.000Z",
+  })
+})
+
 test("operations event worker sends configured webhook alerts", async () => {
   const { fetchImpl, requests } = createJsonFetch(request => request.url === "https://alerts.example.com/cofoundry"
     ? { accepted: true }

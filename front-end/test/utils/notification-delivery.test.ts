@@ -3,6 +3,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import process from "node:process"
 import { describe, expect, it, vi } from "vitest"
+import { recordLocalEmailSuppression } from "../../server/utils/local-operations-store"
 import { appendNotificationPreferenceFooter, buildDigestContent, buildNotificationPreferenceHeaders, isLifecycleWorkflowEmailEnabled, isScheduledDigestEmailEnabled, sendLifecycleNotification, sendUnreadNotificationDigest } from "../../server/utils/notification-delivery"
 import { workspaceSeed } from "../../shared/data/seed"
 import { cloneValue } from "../../shared/utils/clone"
@@ -116,6 +117,59 @@ describe("notification delivery preferences", () => {
     expect(digest.body).toContain("/app/contracts/")
     expect(digest.body).toContain("Turn off scheduled unread digest email:")
     expect(digest.body).toContain("https://cofoundry.example/app/settings")
+  })
+
+  it("skips optional notification delivery for provider-suppressed recipients", async () => {
+    const seed = cloneValue(workspaceSeed)
+    const dataDirectory = await mkdtemp(join(tmpdir(), "cofoundry-notification-suppression-"))
+    process.env.COFOUNDRY_LOCAL_DATA_DIR = dataDirectory
+    vi.stubGlobal("useRuntimeConfig", () => ({
+      public: {
+        backendMode: "mock",
+      },
+    }))
+
+    try {
+      await recordLocalEmailSuppression({
+        category: "all",
+        email: "malik@cofoundry.dev",
+        metadata: { providerType: "complaint" },
+        provider: "postmark",
+        reason: "complaint",
+      })
+
+      const digest = await sendUnreadNotificationDigest({} as never, seed, buildSessionUser(seed, "user_malik")!, {
+        respectPreferences: true,
+      })
+      const lifecycle = await sendLifecycleNotification({} as never, seed, {
+        eventType: "proposal.received",
+        targetId: "proposal_ledgerloop_cto",
+        targetType: "proposal",
+        userId: "user_malik",
+      })
+
+      expect(digest).toMatchObject({
+        delivered: false,
+        reason: "email_suppressed",
+        skipped: true,
+        suppressed: true,
+      })
+      expect(digest.metadata).toMatchObject({
+        emailSuppressionProvider: "postmark",
+        emailSuppressionReason: "complaint",
+      })
+      expect(lifecycle.delivery).toMatchObject({
+        delivered: false,
+        reason: "email_suppressed",
+        skipped: true,
+        suppressed: true,
+      })
+    }
+    finally {
+      delete process.env.COFOUNDRY_LOCAL_DATA_DIR
+      vi.unstubAllGlobals()
+      await rm(dataDirectory, { force: true, recursive: true })
+    }
   })
 
   it("skips manual digest delivery when the workspace queue is clear", async () => {

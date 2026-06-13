@@ -469,6 +469,37 @@ async function runLifecycleNotification(parsed: ParsedArgs, options: Required<Wo
   options.log(JSON.stringify(response, null, 2))
 }
 
+async function runEmailSuppression(parsed: ParsedArgs, options: Required<WorkerCommandOptions>) {
+  const environment = resolveOperationsWorkerEnvironment(options.env)
+  const email = flagValue(parsed.flags, "email")
+  const reason = flagValue(parsed.flags, "reason")
+  const category = flagValue(parsed.flags, "category", "all")
+  const provider = flagValue(parsed.flags, "provider", "external")
+  const sourceEventId = flagValue(parsed.flags, "source-event-id") || null
+  const suppressedAt = flagValue(parsed.flags, "suppressed-at") || undefined
+
+  if (!email)
+    throw new Error("Email suppression requires --email.")
+
+  if (!reason)
+    throw new Error("Email suppression requires --reason.")
+
+  const response = await requestJson(environment, "/api/operations/email-suppressions", {
+    body: {
+      category,
+      email,
+      metadata: parseMetadata(parsed.flags),
+      provider,
+      reason,
+      sourceEventId,
+      ...(suppressedAt ? { suppressedAt } : {}),
+    },
+    fetchImpl: options.fetch,
+  })
+
+  options.log(JSON.stringify(response, null, 2))
+}
+
 async function downloadPendingFile(environment: OperationsWorkerEnvironment, item: PendingFileScan, fetchImpl: FetchLike) {
   if (!item.signedDownloadUrl)
     throw new Error(item.signedDownloadError || "No signed download URL was returned for the pending scan.")
@@ -670,6 +701,8 @@ export async function runOperationsWorker(argv: string[], options: WorkerCommand
       return runDigest(parsed, resolvedOptions)
     case "event":
       return runEvent(parsed, resolvedOptions)
+    case "email-suppression":
+      return runEmailSuppression(parsed, resolvedOptions)
     case "lifecycle-notification":
       return runLifecycleNotification(parsed, resolvedOptions)
     case "mail-smoke":
@@ -681,7 +714,7 @@ export async function runOperationsWorker(argv: string[], options: WorkerCommand
     default:
       throw new Error([
         "Unknown operations worker command.",
-        "Use one of: backup, digest, event, lifecycle-notification, mail-smoke, restore-drill, scan.",
+        "Use one of: backup, digest, email-suppression, event, lifecycle-notification, mail-smoke, restore-drill, scan.",
       ].join(" "))
   }
 }

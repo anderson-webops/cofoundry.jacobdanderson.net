@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { accessRequestSchema, adminAccessInviteSchema, adminAccessRequestStatusSchema, adminCommandQueueActionSchema, adminOpportunityVerificationSchema, adminReportStatusSchema, adminUserModerationSchema, adminUserRoleSchema, billingCheckoutSchema, contactSchema, minimumOnboardingSchema, onboardingSchema, operationsBackupRunSchema, operationsDigestRunSchema, operationsEventSchema, opportunitySchema, privacyRequestSchema, proposalSchema, reportSchema, signUpSchema } from "../../shared/utils/validation"
+import { accessRequestSchema, adminAccessInviteSchema, adminAccessRequestStatusSchema, adminCommandQueueActionSchema, adminOpportunityVerificationSchema, adminReportStatusSchema, adminUserModerationSchema, adminUserRoleSchema, billingCheckoutSchema, contactSchema, minimumOnboardingSchema, onboardingSchema, operationsBackupRunSchema, operationsDigestRunSchema, operationsEmailSuppressionSchema, operationsEventSchema, opportunitySchema, privacyRequestSchema, proposalSchema, reportSchema, signUpSchema } from "../../shared/utils/validation"
 
 describe("validation schemas", () => {
   it("accepts a valid sign-up payload", () => {
@@ -296,6 +296,15 @@ describe("validation schemas", () => {
       severity: "info",
       source: "systemd-timer",
     })
+    const suppression = operationsEmailSuppressionSchema.safeParse({
+      category: "digest",
+      email: "Suppressed@Example.com",
+      metadata: { providerType: "complaint" },
+      provider: "postmark",
+      reason: "complaint",
+      sourceEventId: "provider-event-1",
+      suppressedAt: "2026-04-29T05:00:00.000Z",
+    })
 
     expect(digestRun).toEqual({
       dryRun: false,
@@ -304,5 +313,11 @@ describe("validation schemas", () => {
     })
     expect(backupRun.success).toBe(true)
     expect(operationalEvent.success).toBe(true)
+    expect(suppression).toMatchObject({
+      data: {
+        email: "suppressed@example.com",
+      },
+      success: true,
+    })
   })
 })

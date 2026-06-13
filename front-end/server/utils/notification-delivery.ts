@@ -8,6 +8,7 @@ import { buildLifecycleNotification } from "../../shared/utils/lifecycle-notific
 import { isWorkflowLifecycleEvent, normalizeNotificationPreferences } from "../../shared/utils/notification-preferences"
 import { isContactMailConfigured, sendPlainTextEmail } from "./contact"
 import { createEmailPreferenceManagementUrl } from "./email-preferences"
+import { findEmailSuppression } from "./email-suppression"
 import { recordLocalNotificationDelivery } from "./local-operations-store"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
 
@@ -18,7 +19,7 @@ export interface NotificationDeliveryResult {
   error: string | null
   eventType?: string
   metadata?: Record<string, unknown>
-  reason?: "dry_run" | "email_digest_disabled" | "mail_not_configured" | "mock_mode" | "no_workspace_items" | "sent" | "delivery_failed" | "workflow_email_disabled"
+  reason?: "dry_run" | "email_digest_disabled" | "email_suppressed" | "mail_not_configured" | "mock_mode" | "no_workspace_items" | "sent" | "delivery_failed" | "workflow_email_disabled"
   skipped?: boolean
   subject: string
   suppressed?: boolean
@@ -201,6 +202,16 @@ export function buildLifecycleBodyPreview(body: string) {
   return body.replace(/\s+/g, " ").trim().slice(0, 240)
 }
 
+function suppressionMetadata(suppression: Record<string, unknown>) {
+  return {
+    emailSuppressionCategory: suppression.category,
+    emailSuppressionId: suppression.id,
+    emailSuppressionProvider: suppression.provider,
+    emailSuppressionReason: suppression.reason,
+    emailSuppressionSourceEventId: suppression.source_event_id,
+  }
+}
+
 export async function sendLifecycleNotification(
   event: H3Event,
   seed: WorkspaceSeed,
@@ -270,6 +281,28 @@ export async function sendLifecycleNotification(
     }
     await recordNotificationDelivery(event, session, result)
     return { delivery: result, plan }
+  }
+
+  if (isWorkflowLifecycleEvent(plan.eventType)) {
+    const suppression = await findEmailSuppression(event, plan.recipientEmail, "workflow")
+
+    if (suppression) {
+      const result: NotificationDeliveryResult = {
+        ...baseResult,
+        configured: false,
+        delivered: false,
+        error: "Recipient is suppressed for relationship workflow email.",
+        metadata: {
+          ...baseResult.metadata,
+          ...suppressionMetadata(suppression),
+        },
+        reason: "email_suppressed",
+        skipped: true,
+        suppressed: true,
+      }
+      await recordNotificationDelivery(event, session, result)
+      return { delivery: result, plan }
+    }
   }
 
   if (!isContactMailConfigured()) {
@@ -343,6 +376,25 @@ export async function sendUnreadNotificationDigest(event: H3Event, seed: Workspa
       delivered: false,
       error: "Scheduled digest email is disabled for this member.",
       reason: "email_digest_disabled",
+      subject,
+      suppressed: true,
+      unreadCount: snapshot.actions.length,
+    }
+    await recordNotificationDelivery(event, session, result)
+    return result
+  }
+
+  const suppression = await findEmailSuppression(event, session.email, "digest")
+
+  if (suppression) {
+    const result: NotificationDeliveryResult = {
+      bodyPreview: buildLifecycleBodyPreview(body),
+      configured: false,
+      delivered: false,
+      error: "Recipient is suppressed for scheduled digest email.",
+      metadata: suppressionMetadata(suppression),
+      reason: "email_suppressed",
+      skipped: true,
       subject,
       suppressed: true,
       unreadCount: snapshot.actions.length,

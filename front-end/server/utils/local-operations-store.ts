@@ -1,7 +1,7 @@
 import type { Buffer } from "node:buffer"
 import type { z } from "zod"
 import type { FileUpload, FileUploadRelatedType, SessionUser } from "../../shared/types/domain"
-import type { fileScanResultSchema, fileUploadPolicySchema, operationsBackupRunSchema, operationsEventSchema } from "../../shared/utils/validation"
+import type { fileScanResultSchema, fileUploadPolicySchema, operationsBackupRunSchema, operationsEmailSuppressionSchema, operationsEventSchema } from "../../shared/utils/validation"
 import { createHash, randomUUID } from "node:crypto"
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { dirname, resolve } from "node:path"
@@ -10,6 +10,7 @@ import process from "node:process"
 type FileScanResultPayload = z.infer<typeof fileScanResultSchema>
 type FileUploadPolicyPayload = z.infer<typeof fileUploadPolicySchema>
 type OperationsBackupRunPayload = z.infer<typeof operationsBackupRunSchema>
+type OperationsEmailSuppressionPayload = z.infer<typeof operationsEmailSuppressionSchema>
 type OperationsEventPayload = z.infer<typeof operationsEventSchema>
 
 interface NotificationDeliveryResult {
@@ -88,8 +89,21 @@ interface LocalOperationalEventRow {
   target_type: string | null
 }
 
+interface LocalEmailSuppressionRow {
+  category: OperationsEmailSuppressionPayload["category"]
+  created_at: string
+  email: string
+  id: string
+  metadata: Record<string, unknown>
+  provider: string
+  reason: OperationsEmailSuppressionPayload["reason"]
+  source_event_id: string | null
+  suppressed_at: string
+}
+
 interface LocalOperationsStore {
   backupRuns: LocalBackupRunRow[]
+  emailSuppressions: LocalEmailSuppressionRow[]
   fileUploads: LocalFileUploadRow[]
   notificationDeliveries: LocalNotificationDeliveryRow[]
   operationalEvents: LocalOperationalEventRow[]
@@ -147,6 +161,7 @@ function retentionLimit() {
 function emptyStore(): LocalOperationsStore {
   return {
     backupRuns: [],
+    emailSuppressions: [],
     fileUploads: [],
     notificationDeliveries: [],
     operationalEvents: [],
@@ -173,6 +188,7 @@ function pruneStore(store: LocalOperationsStore): LocalOperationsStore {
   return {
     ...store,
     backupRuns: withRetention(store.backupRuns),
+    emailSuppressions: withRetention(store.emailSuppressions),
     fileUploads: withRetention(store.fileUploads),
     notificationDeliveries: withRetention(store.notificationDeliveries),
     operationalEvents: withRetention(store.operationalEvents),
@@ -250,11 +266,44 @@ export async function readLocalOperationsRows() {
 
   return {
     backupRuns: store.backupRuns,
+    emailSuppressions: store.emailSuppressions,
     fileUploads: store.fileUploads,
     mode: "mock",
     notificationDeliveries: store.notificationDeliveries,
     operationalEvents: store.operationalEvents,
   }
+}
+
+export async function recordLocalEmailSuppression(payload: OperationsEmailSuppressionPayload) {
+  return updateStore((store) => {
+    const now = new Date().toISOString()
+    const normalizedEmail = payload.email.toLowerCase()
+    const row: LocalEmailSuppressionRow = {
+      category: payload.category,
+      created_at: now,
+      email: normalizedEmail,
+      id: randomUUID(),
+      metadata: payload.metadata,
+      provider: payload.provider,
+      reason: payload.reason,
+      source_event_id: payload.sourceEventId || null,
+      suppressed_at: payload.suppressedAt || now,
+    }
+
+    store.emailSuppressions = [row, ...store.emailSuppressions]
+    return row
+  })
+}
+
+export async function findLocalEmailSuppression(email: string, category: OperationsEmailSuppressionPayload["category"]) {
+  const normalizedEmail = email.trim().toLowerCase()
+  const store = await readStore()
+  const rows = newestFirst(store.emailSuppressions)
+
+  return rows.find(row =>
+    row.email === normalizedEmail
+    && (row.category === "all" || row.category === category),
+  ) || null
 }
 
 export async function listLocalFileUploadsByRelated(relatedItems: Array<{ relatedId: string, relatedType: FileUploadRelatedType }>) {
