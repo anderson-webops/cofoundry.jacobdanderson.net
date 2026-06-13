@@ -13,6 +13,7 @@ import type {
   ProposalPayload,
   ProposalSectionKey,
   ProposalStatus,
+  RelationshipDecisionRecordStatus,
   ReportReason,
   SearchFilters,
   SessionUser,
@@ -26,6 +27,7 @@ import { cloneValue } from "~/shared/utils/clone"
 import {
   acknowledgeTrialCollaborationTransition,
   addProposalCommentTransition,
+  addRelationshipDecisionTransition,
   createConnectRequestTransition,
   createContractFromProposalTransition,
   createProposalCounterVersionTransition,
@@ -746,6 +748,23 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     data.value = addProposalCommentTransition(data.value, proposalId, proposalVersionId, authorUserId, section, body, now()).seed
   }
 
+  async function addRelationshipDecision(matchId: string, authorUserId: string, title: string, body: string, status: RelationshipDecisionRecordStatus) {
+    if (serverBackedWorkspace.value) {
+      const result = await runCollaborationMutation<{ relationshipDecisionId: string | null }>({
+        action: "add_relationship_decision",
+        body,
+        matchId,
+        status,
+        title,
+      })
+      return result?.relationshipDecisionId || null
+    }
+
+    const transition = addRelationshipDecisionTransition(data.value, matchId, authorUserId, title, body, status, now())
+    data.value = transition.seed
+    return transition.decision?.id || null
+  }
+
   async function createContractFromProposal(proposalId: string, actorUserId?: string) {
     const proposal = getProposalById(data.value, proposalId)
     if (!proposal)
@@ -1337,6 +1356,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     createProposal,
     createProposalCounterVersion,
     addProposalComment,
+    addRelationshipDecision,
     completeTrustVerification,
     ensureReady,
     ensureSessionUser,

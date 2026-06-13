@@ -6,13 +6,14 @@ import type {
   Message,
   Profile,
   Proposal,
+  RelationshipDecision,
   TrialCollaboration,
   WorkspaceSeed,
 } from "../types/domain"
 import { collaborationContractNeedsUserSignature, collaborationProposalNeedsUserResponse } from "./collaboration"
 import { getConversationByMatch, getCurrentContractVersion, getCurrentProposalVersion, getMatchByConversation, getProfileByUserId, getProposalById, getTrialForMatch } from "./workspace"
 
-export type RelationshipTimelineKind = "message" | "proposal" | "comment" | "contract" | "signature" | "trial" | "file"
+export type RelationshipTimelineKind = "message" | "proposal" | "comment" | "contract" | "signature" | "trial" | "file" | "decision"
 export type RelationshipDecisionStatus = "open" | "proposed" | "documented" | "signed"
 
 export interface RelationshipNextAction {
@@ -210,6 +211,7 @@ function buildRelationshipTimeline(
   contracts: Contract[],
   trial: TrialCollaboration | null,
   files: RelationshipFileItem[],
+  relationshipDecisions: RelationshipDecision[],
 ) {
   const proposalIds = new Set(proposals.map(proposal => proposal.id))
   const entries: RelationshipTimelineEntry[] = []
@@ -311,12 +313,44 @@ function buildRelationshipTimeline(
     })
   })
 
+  relationshipDecisions.forEach((decision) => {
+    entries.push({
+      actorUserId: decision.authorUserId,
+      createdAt: decision.createdAt,
+      href: `/app/relationships/${decision.matchId}`,
+      id: `relationship-decision:${decision.id}`,
+      kind: "decision",
+      summary: decision.body,
+      title: decision.title,
+    })
+  })
+
   return sortByDateDesc(entries)
 }
 
-function buildRelationshipDecisionLog(seed: WorkspaceSeed, proposals: Proposal[], contracts: Contract[], trial: TrialCollaboration | null) {
+function buildRelationshipDecisionLog(
+  seed: WorkspaceSeed,
+  matchId: string,
+  proposals: Proposal[],
+  contracts: Contract[],
+  trial: TrialCollaboration | null,
+) {
   const proposalIds = new Set(proposals.map(proposal => proposal.id))
   const entries: RelationshipDecisionLogEntry[] = []
+
+  seed.relationshipDecisions
+    .filter(decision => decision.matchId === matchId)
+    .forEach((decision) => {
+      entries.push({
+        createdAt: decision.createdAt,
+        href: `/app/relationships/${decision.matchId}`,
+        id: `relationship-decision:${decision.id}`,
+        ownerUserId: decision.authorUserId,
+        status: decision.status,
+        summary: decision.body,
+        title: decision.title,
+      })
+    })
 
   seed.proposalVersions
     .filter(version => proposalIds.has(version.proposalId))
@@ -397,8 +431,9 @@ export function buildRelationshipSnapshot(seed: WorkspaceSeed, userId: string, m
   const latestMessages = sortByDateDesc(seed.messages.filter(message => message.conversationId === conversation.id)).slice(0, 8)
   const trial = getTrialForMatch(seed, match.id) || null
   const files = buildRelationshipFiles(seed, conversation.id, activeProposals, activeContracts)
-  const timeline = buildRelationshipTimeline(seed, conversation.id, activeProposals, activeContracts, trial, files)
-  const decisionLog = buildRelationshipDecisionLog(seed, activeProposals, activeContracts, trial)
+  const relationshipDecisions = seed.relationshipDecisions.filter(decision => decision.matchId === match.id)
+  const timeline = buildRelationshipTimeline(seed, conversation.id, activeProposals, activeContracts, trial, files, relationshipDecisions)
+  const decisionLog = buildRelationshipDecisionLog(seed, match.id, activeProposals, activeContracts, trial)
 
   return {
     activeContracts,

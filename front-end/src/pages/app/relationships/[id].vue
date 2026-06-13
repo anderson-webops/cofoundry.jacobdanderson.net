@@ -24,6 +24,8 @@ const uploadNotice = ref("")
 const relationshipRefreshPending = ref(false)
 const lastRelationshipRefreshAt = ref("")
 const decisionLogBody = ref("")
+const decisionLogTitle = ref("")
+const decisionLogStatus = ref<"open" | "documented">("open")
 const decisionLogPending = ref(false)
 const decisionLogError = ref("")
 let relationshipRefreshTimer: number | null = null
@@ -44,17 +46,6 @@ const allowedUploadMimeTypes = new Set([
 const relationship = computed(() => data.value?.relationship || null)
 const latestMessages = computed(() => [...(relationship.value?.latestMessages || [])].reverse())
 const currentProfile = computed(() => authStore.currentUser ? getProfileByUserId(workspaceStore.data, authStore.currentUser.id) : null)
-const decisionLogTarget = computed(() => {
-  const proposal = relationship.value?.activeProposals[0]
-  if (!proposal)
-    return null
-
-  return {
-    proposalId: proposal.id,
-    proposalTitle: proposal.title,
-    proposalVersionId: proposal.currentVersionId,
-  }
-})
 const relationshipUploadTarget = computed<{ label: string, purpose: FileUploadPurpose, relatedId: string, relatedType: FileUploadRelatedType } | null>(() => {
   if (!relationship.value)
     return null
@@ -100,6 +91,7 @@ const timelineFilters = [
   { id: "signature", label: "Signatures" },
   { id: "trial", label: "Trial" },
   { id: "file", label: "Files" },
+  { id: "decision", label: "Decisions" },
 ] satisfies Array<{ id: RelationshipTimelineKind | "all", label: string }>
 const filteredTimeline = computed(() => {
   if (!relationship.value)
@@ -135,6 +127,7 @@ function timelineTone(kind: RelationshipTimelineKind) {
   return ({
     comment: "warning",
     contract: "accent",
+    decision: "warning",
     file: "neutral",
     message: "neutral",
     proposal: "accent",
@@ -308,11 +301,12 @@ async function uploadRelationshipFile(event: Event) {
 }
 
 async function addDecisionLogEntry() {
-  if (!decisionLogTarget.value || !authStore.currentUser)
+  if (!relationship.value || !authStore.currentUser)
     return
 
+  const title = decisionLogTitle.value.trim()
   const body = decisionLogBody.value.trim()
-  if (body.length < 12) {
+  if (title.length < 4 || body.length < 12) {
     decisionLogError.value = "Add enough detail for the decision log to be useful later."
     return
   }
@@ -321,18 +315,13 @@ async function addDecisionLogEntry() {
   decisionLogError.value = ""
 
   try {
-    await workspaceStore.addProposalComment(
-      decisionLogTarget.value.proposalId,
-      decisionLogTarget.value.proposalVersionId,
-      authStore.currentUser.id,
-      "decision_rights",
-      body,
-    )
+    await workspaceStore.addRelationshipDecision(relationship.value.match.id, authStore.currentUser.id, title, body, decisionLogStatus.value)
+    decisionLogTitle.value = ""
     decisionLogBody.value = ""
     await refreshRelationship()
     toastStore.push({
       title: "Decision note added",
-      message: "The note is attached to the active proposal and now appears in the relationship log.",
+      message: "The note is now part of the relationship log and visible to both participants.",
       tone: "success",
     })
   }
@@ -570,14 +559,43 @@ async function addDecisionLogEntry() {
                     Add a decision note
                   </h3>
                   <p class="muted text-sm leading-6 mt-2">
-                    Notes are attached to {{ decisionLogTarget?.proposalTitle || "the active proposal" }} so the deal room and relationship log stay in sync.
+                    Record ownership, governance boundaries, and unresolved calls before they become proposal or agreement terms.
                   </p>
                 </div>
-                <BaseBadge :tone="decisionLogTarget ? 'accent' : 'warning'">
-                  {{ decisionLogTarget ? "Proposal-linked" : "Needs proposal" }}
+                <BaseBadge tone="accent">
+                  Relationship-level
                 </BaseBadge>
               </div>
               <div class="mt-4 gap-3 grid">
+                <TextInput
+                  v-model="decisionLogTitle"
+                  label="Decision title"
+                  placeholder="Example: Architecture decisions during the trial"
+                  :error="decisionLogError && decisionLogTitle.trim().length < 4 ? decisionLogError : ''"
+                />
+                <div>
+                  <span class="field-label">
+                    <span>Status</span>
+                  </span>
+                  <div class="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      class="pill"
+                      :class="decisionLogStatus === 'open' ? 'pill-active' : ''"
+                      @click="decisionLogStatus = 'open'"
+                    >
+                      Open question
+                    </button>
+                    <button
+                      type="button"
+                      class="pill"
+                      :class="decisionLogStatus === 'documented' ? 'pill-active' : ''"
+                      @click="decisionLogStatus = 'documented'"
+                    >
+                      Documented
+                    </button>
+                  </div>
+                </div>
                 <TextareaInput
                   v-model="decisionLogBody"
                   label="Decision note"
@@ -588,7 +606,7 @@ async function addDecisionLogEntry() {
                 />
                 <div class="flex justify-end">
                   <BaseButton
-                    :disabled="decisionLogPending || !decisionLogTarget || decisionLogBody.trim().length < 12"
+                    :disabled="decisionLogPending || decisionLogTitle.trim().length < 4 || decisionLogBody.trim().length < 12"
                     @click="addDecisionLogEntry"
                   >
                     {{ decisionLogPending ? "Saving..." : "Add to log" }}

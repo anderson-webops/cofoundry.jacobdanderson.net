@@ -86,6 +86,7 @@ Backend-owned entities:
 - contracts
 - contract versions
 - signatures
+- relationship decisions
 - notifications
 - reports
 - admin actions
@@ -131,7 +132,7 @@ Keep Stripe guarded until ready, but finish the real path cleanly:
 
 The current product still spreads one live relationship across matches, messages, proposals, and contracts.
 
-Status: implemented as a consolidated route with server-owned reads, cross-links from the related conversation/proposal/contract detail surfaces, a filtered relationship timeline, file/artifact visibility, and a decision log derived from proposal, trial, and agreement records.
+Status: implemented as a consolidated route with server-owned reads, cross-links from the related conversation/proposal/contract detail surfaces, a filtered relationship timeline, file/artifact visibility, a decision log derived from relationship notes plus proposal/trial/agreement records, and writable relationship-level decision notes.
 
 The user-facing consolidation is:
 
@@ -150,7 +151,6 @@ That route should unify:
 Remaining depth:
 
 - realtime refresh
-- writable relationship-level decision log entries
 - richer in-context file upload actions and scanner status recovery
 
 ### 6. Production-grade onboarding
@@ -284,6 +284,7 @@ Make the backend the source of truth for these remaining entities:
 - contracts
 - contract_versions
 - signatures
+- relationship_decisions
 - notifications
 - reports
 - admin_actions

@@ -1450,6 +1450,18 @@ export const workspaceSeed: WorkspaceSeed = {
       updatedAt: ts(10, "15:30"),
     },
   ],
+  relationshipDecisions: [
+    {
+      id: "relationship_decision_ledgerloop_governance",
+      matchId: "match_olivia_malik",
+      authorUserId: "user_olivia",
+      title: "Architecture decisions during trial",
+      body: "Malik owns technical architecture calls during the trial sprint, while financing, compliance, and company strategy remain joint review items.",
+      status: "documented",
+      createdAt: ts(10, "16:45"),
+      updatedAt: ts(10, "16:45"),
+    },
+  ],
   subscriptions: [
     {
       id: "subscription_olivia",

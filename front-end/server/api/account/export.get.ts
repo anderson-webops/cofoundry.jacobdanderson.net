@@ -49,6 +49,7 @@ export default defineEventHandler(async (event) => {
       proposalComments: seed.proposalComments.filter(comment => proposalIds.has(comment.proposalId) || comment.authorUserId === session.id),
       proposalVersions: seed.proposalVersions.filter(version => proposalIds.has(version.proposalId)),
       proposals,
+      relationshipDecisions: seed.relationshipDecisions.filter(decision => matchIds.has(decision.matchId) || decision.authorUserId === session.id),
       reports: seed.reports.filter(report => report.reporterUserId === session.id || ownedProfileIds.has(report.targetId)),
       signatures: seed.signatures.filter(signature => signature.userId === session.id || contractIds.has(signature.contractId)),
       trialCollaborations: seed.trialCollaborations.filter(trial => matchIds.has(trial.matchId)),
