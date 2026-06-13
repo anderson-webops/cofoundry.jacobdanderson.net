@@ -80,7 +80,24 @@ function formatChoice(value: string) {
   return value.replaceAll("_", " ")
 }
 
+function isAccountHelpRequest(request: AccessRequest) {
+  return request.source === "auth-recovery"
+}
+
 function defaultNote(request: AccessRequest, action: AccessRequestStatus | "invite") {
+  if (isAccountHelpRequest(request)) {
+    if (action === "invite")
+      return `Issued replacement workspace invite to ${request.email} after verifying the account-help request.`
+
+    if (action === "approved")
+      return `Approved account-help request from ${request.email} after verifying ownership.`
+
+    if (action === "denied")
+      return `Denied account-help request from ${request.email} after ownership review.`
+
+    return `Reopened account-help request from ${request.email} for verification.`
+  }
+
   if (action === "invite")
     return `Issued workspace invite to ${request.email} after access review.`
 
@@ -215,6 +232,9 @@ async function issueInvite(request: AccessRequest) {
               <BaseBadge tone="neutral">
                 {{ formatChoice(request.timeline) }}
               </BaseBadge>
+              <BaseBadge v-if="isAccountHelpRequest(request)" tone="accent">
+                account help
+              </BaseBadge>
             </div>
 
             <h2 class="text-lg font-semibold mt-4">
@@ -232,6 +252,9 @@ async function issueInvite(request: AccessRequest) {
 
             <div class="muted text-xs leading-5 mt-5">
               <p>Source: {{ request.source || "site" }}</p>
+              <p v-if="isAccountHelpRequest(request)">
+                Verify account ownership before issuing a replacement invite or advising on account reset.
+              </p>
               <p>Opened {{ formatDate(request.createdAt) }} · {{ formatRelativeDate(request.createdAt) }}</p>
               <p v-if="request.reviewedAt">
                 Reviewed {{ formatDate(request.reviewedAt) }}

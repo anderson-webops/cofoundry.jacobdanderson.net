@@ -45,7 +45,7 @@ describe("route surfaces", () => {
   })
 
   it("classifies private surfaces without hiding public health checks", () => {
-    for (const route of ["/admin/readiness", "/app/inbox", "/auth/sign-in", "/onboarding", "/api/admin/readiness", "/api/operations/events", "/api/workspace"])
+    for (const route of ["/admin/readiness", "/app/inbox", "/auth/sign-in", "/auth/recover", "/onboarding", "/api/admin/readiness", "/api/operations/events", "/api/workspace"])
       expect(isPrivateSurfacePath(route), `${route} should be private`).toBe(true)
 
     for (const route of ["/", "/find-cofounder", "/people/ava-morgan", "/sitemap.xml", "/robots.txt", "/api/health"])
@@ -55,6 +55,11 @@ describe("route surfaces", () => {
   it("keeps public navigation links aligned with real routes", () => {
     for (const item of marketingNavigation)
       expect(routeFileExists(item.to), `${item.to} should resolve to a page file`).toBe(true)
+  })
+
+  it("keeps auth support routes backed by real pages", () => {
+    for (const route of ["/auth/sign-in", "/auth/sign-up", "/auth/recover"])
+      expect(routeFileExists(route), `${route} should resolve to a page file`).toBe(true)
   })
 
   it("keeps private workspace navigation links aligned with real routes", () => {
