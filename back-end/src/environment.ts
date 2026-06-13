@@ -13,6 +13,7 @@ export interface PublicEnvironment {
   appUrl: string
   backendMode: BackendMode
   billingMode: BillingMode
+  enableDemoAccess: boolean
   featureInvestmentModule: boolean
   stripePriceProMonthly: string
   stripePriceTeamMonthly: string
@@ -24,6 +25,7 @@ export interface PublicEnvironment {
 
 export interface SecretEnvironment {
   operationsWorkerToken: string
+  sessionSigningSecret: string
   stripeSecretKey: string
   stripeWebhookSecret: string
   supabaseServiceRoleKey: string
@@ -55,8 +57,25 @@ function isAbsoluteUrl(value: string) {
   }
 }
 
+function isLocalAppUrl(value: string) {
+  try {
+    const url = new URL(value)
+    return ["localhost", "127.0.0.1", "::1"].includes(url.hostname)
+  }
+  catch {
+    return false
+  }
+}
+
 export function isLocalDevelopmentEnvironment(env: EnvironmentSource) {
-  return readValue(env, "NODE_ENV") !== "production"
+  if (readValue(env, "NODE_ENV") === "production")
+    return false
+
+  const configuredAppUrl = readValue(env, "NUXT_PUBLIC_APP_URL")
+  if (!configuredAppUrl)
+    return true
+
+  return isLocalAppUrl(configuredAppUrl)
 }
 
 export function readPublicEnvironment(env: EnvironmentSource): PublicEnvironment {
@@ -66,6 +85,7 @@ export function readPublicEnvironment(env: EnvironmentSource): PublicEnvironment
     appUrl: configuredAppUrl || (isLocalDevelopmentEnvironment(env) ? localDevelopmentAppUrl : ""),
     backendMode: normalizeBackendMode(readValue(env, "NUXT_PUBLIC_BACKEND_MODE")),
     billingMode: normalizeBillingMode(readValue(env, "NUXT_PUBLIC_BILLING_MODE")),
+    enableDemoAccess: readValue(env, "NUXT_PUBLIC_ENABLE_DEMO_ACCESS") === "true",
     featureInvestmentModule: readValue(env, "NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE") === "true",
     stripePriceProMonthly: readValue(env, "NUXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY"),
     stripePriceTeamMonthly: readValue(env, "NUXT_PUBLIC_STRIPE_PRICE_TEAM_MONTHLY"),
@@ -79,6 +99,7 @@ export function readPublicEnvironment(env: EnvironmentSource): PublicEnvironment
 export function readSecretEnvironment(env: EnvironmentSource): SecretEnvironment {
   return {
     operationsWorkerToken: readValue(env, "COFOUNDRY_OPERATIONS_TOKEN") || readValue(env, "OPERATIONS_WORKER_TOKEN"),
+    sessionSigningSecret: readValue(env, "NUXT_SESSION_SIGNING_SECRET") || readValue(env, "SESSION_SIGNING_SECRET"),
     stripeSecretKey: readValue(env, "STRIPE_SECRET_KEY"),
     stripeWebhookSecret: readValue(env, "STRIPE_WEBHOOK_SECRET"),
     supabaseServiceRoleKey: readValue(env, "SUPABASE_SERVICE_ROLE_KEY"),
@@ -92,6 +113,7 @@ export function collectEnvironmentValidationErrors(env: EnvironmentSource) {
   const configuredAppUrl = readValue(env, "NUXT_PUBLIC_APP_URL")
   const configuredBackendMode = readValue(env, "NUXT_PUBLIC_BACKEND_MODE")
   const configuredBillingMode = readValue(env, "NUXT_PUBLIC_BILLING_MODE")
+  const requiresSignedSessions = !isLocalDevelopmentEnvironment(env) && (publicEnvironment.backendMode === "supabase" || publicEnvironment.enableDemoAccess)
 
   if (configuredAppUrl && !isAbsoluteUrl(configuredAppUrl))
     errors.push("NUXT_PUBLIC_APP_URL must be an absolute URL when it is set.")
@@ -129,6 +151,9 @@ export function collectEnvironmentValidationErrors(env: EnvironmentSource) {
     if (!secretEnvironment.stripeWebhookSecret)
       errors.push("STRIPE_WEBHOOK_SECRET is required when NUXT_PUBLIC_BILLING_MODE=\"stripe\".")
   }
+
+  if (requiresSignedSessions && !secretEnvironment.sessionSigningSecret)
+    errors.push("SESSION_SIGNING_SECRET is required whenever account sessions are enabled in a non-local environment.")
 
   return errors
 }
