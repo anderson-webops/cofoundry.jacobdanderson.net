@@ -17,6 +17,7 @@ export function buildMetadataPayload() {
     app: "CoFoundry",
     backendMode: publicEnvironment.backendMode,
     billingMode: publicEnvironment.billingMode,
+    demoAccessEnabled: publicEnvironment.enableDemoAccess,
     investmentModuleEnabled: publicEnvironment.featureInvestmentModule,
     supportEmail: publicEnvironment.supportEmail,
   }

@@ -2,6 +2,7 @@ import type { AddressInfo } from "node:net"
 import assert from "node:assert/strict"
 import test from "node:test"
 import { resolveBootstrapAdminEnvironment, resolveBootstrapAdminInput } from "../src/bootstrap-admin"
+import { collectEnvironmentValidationErrors, isLocalDevelopmentEnvironment, readPublicEnvironment, readSecretEnvironment } from "../src/environment"
 import { createBackendServer } from "../src/server"
 
 function restoreEnvValue(key: string, value: string | undefined) {
@@ -53,18 +54,24 @@ test("metadata endpoint reflects env-driven flags", async () => {
   const previousBackendMode = process.env.NUXT_PUBLIC_BACKEND_MODE
   const previousBillingMode = process.env.NUXT_PUBLIC_BILLING_MODE
   const previousInvestment = process.env.NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE
+  const previousDemoAccess = process.env.NUXT_PUBLIC_ENABLE_DEMO_ACCESS
+  const previousAppUrl = process.env.NUXT_PUBLIC_APP_URL
   const previousSupportEmail = process.env.NUXT_PUBLIC_SUPPORT_EMAIL
   const previousSupabaseUrl = process.env.NUXT_PUBLIC_SUPABASE_URL
   const previousSupabaseAnonKey = process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY
   const previousSupabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const previousSessionSigningSecret = process.env.SESSION_SIGNING_SECRET
 
   process.env.NUXT_PUBLIC_BACKEND_MODE = "supabase"
   process.env.NUXT_PUBLIC_BILLING_MODE = "mock"
+  process.env.NUXT_PUBLIC_ENABLE_DEMO_ACCESS = "true"
+  process.env.NUXT_PUBLIC_APP_URL = "https://cofoundry.example"
   process.env.NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE = "true"
   process.env.NUXT_PUBLIC_SUPPORT_EMAIL = "support@cofoundry.dev"
   process.env.NUXT_PUBLIC_SUPABASE_URL = "https://cofoundry.supabase.co"
   process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY = "public-anon-key"
   process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-key"
+  process.env.SESSION_SIGNING_SECRET = "session-secret"
 
   try {
     await withServer(async (baseUrl) => {
@@ -75,6 +82,7 @@ test("metadata endpoint reflects env-driven flags", async () => {
       assert.equal(body.app, "CoFoundry")
       assert.equal(body.backendMode, "supabase")
       assert.equal(body.billingMode, "mock")
+      assert.equal(body.demoAccessEnabled, true)
       assert.equal(body.investmentModuleEnabled, true)
       assert.equal(body.supportEmail, "support@cofoundry.dev")
     })
@@ -82,12 +90,45 @@ test("metadata endpoint reflects env-driven flags", async () => {
   finally {
     restoreEnvValue("NUXT_PUBLIC_BACKEND_MODE", previousBackendMode)
     restoreEnvValue("NUXT_PUBLIC_BILLING_MODE", previousBillingMode)
+    restoreEnvValue("NUXT_PUBLIC_ENABLE_DEMO_ACCESS", previousDemoAccess)
+    restoreEnvValue("NUXT_PUBLIC_APP_URL", previousAppUrl)
     restoreEnvValue("NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE", previousInvestment)
     restoreEnvValue("NUXT_PUBLIC_SUPPORT_EMAIL", previousSupportEmail)
     restoreEnvValue("NUXT_PUBLIC_SUPABASE_URL", previousSupabaseUrl)
     restoreEnvValue("NUXT_PUBLIC_SUPABASE_ANON_KEY", previousSupabaseAnonKey)
     restoreEnvValue("SUPABASE_SERVICE_ROLE_KEY", previousSupabaseServiceRoleKey)
+    restoreEnvValue("SESSION_SIGNING_SECRET", previousSessionSigningSecret)
   }
+})
+
+test("backend environment treats configured non-local app URLs as hosted even without NODE_ENV", () => {
+  const env = {
+    NUXT_PUBLIC_APP_URL: "https://cofoundry.example",
+    NUXT_PUBLIC_ENABLE_DEMO_ACCESS: "true",
+  }
+
+  const publicEnvironment = readPublicEnvironment(env)
+  const secretEnvironment = readSecretEnvironment(env)
+  const errors = collectEnvironmentValidationErrors(env)
+
+  assert.equal(isLocalDevelopmentEnvironment(env), false)
+  assert.equal(publicEnvironment.appUrl, "https://cofoundry.example")
+  assert.equal(publicEnvironment.enableDemoAccess, true)
+  assert.equal(secretEnvironment.sessionSigningSecret, "")
+  assert.ok(errors.includes("SESSION_SIGNING_SECRET is required whenever account sessions are enabled in a non-local environment."))
+})
+
+test("backend environment keeps explicit localhost app URLs in local development mode", () => {
+  const env = {
+    NUXT_PUBLIC_APP_URL: "http://127.0.0.1:3000",
+    NUXT_PUBLIC_ENABLE_DEMO_ACCESS: "true",
+  }
+
+  const errors = collectEnvironmentValidationErrors(env)
+
+  assert.equal(isLocalDevelopmentEnvironment(env), true)
+  assert.equal(readPublicEnvironment(env).appUrl, "http://127.0.0.1:3000")
+  assert.equal(errors.includes("SESSION_SIGNING_SECRET is required whenever account sessions are enabled in a non-local environment."), false)
 })
 
 test("unknown routes return a 404 payload", async () => {
