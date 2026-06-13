@@ -1,6 +1,8 @@
 <script setup lang="ts">
 const mobileNavOpen = ref(false)
 
+useWorkspaceRealtimeRefresh()
+
 useHead({
   meta: [
     {
