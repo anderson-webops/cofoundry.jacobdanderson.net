@@ -16,6 +16,7 @@ Source/runtime context:
 - Server-only secrets must come from Vault-managed or host-managed env files.
 - The app now supports a server-only `COFOUNDRY_OPERATIONS_TOKEN`.
 - The worker CLI also supports optional server-only alert webhook env: `COFOUNDRY_ALERT_WEBHOOK_URL`, `COFOUNDRY_ALERT_WEBHOOK_TOKEN`, `COFOUNDRY_ALERT_SEVERITIES`, and `COFOUNDRY_ALERT_TIMEOUT_MS`. Leave these unset until the operator chooses the destination.
+- Trust-provider readiness is optional. Leave `COFOUNDRY_TRUST_VERIFICATION_PROVIDER`, `COFOUNDRY_IDENTITY_VERIFICATION_PROVIDER`, `COFOUNDRY_DOMAIN_VERIFICATION_PROVIDER`, and `COFOUNDRY_SOCIAL_VERIFICATION_PROVIDER` unset until the operator chooses the corresponding provider. Once any marker is set, `/admin/readiness` expects recent trust-verification evidence.
 - The source includes schedulable worker commands: `npm run operations:backup`, `npm run operations:digest`, `npm run operations:scan`, `npm run operations:event`, `npm run operations:mail-smoke`, `npm run operations:worker -- lifecycle-notification`, `npm run operations:worker -- email-suppression`, `npm run operations:worker -- contract-envelope`, `npm run operations:trust-verification`, and `npm run operations:restore-drill`.
 - The source includes systemd templates in `deploy/systemd/`. Prefer installing and tuning those templates instead of hand-writing timer units from scratch.
 - In mock/access-request mode, operations telemetry persists to `.data/operations-telemetry.json` and local uploaded scan artifacts persist under `.data/local-file-uploads/` unless `COFOUNDRY_LOCAL_DATA_DIR` points at another durable writable directory.
@@ -109,7 +110,7 @@ Tasks:
      -H "Content-Type: application/json" \
      --data '{"targetType":"profile","targetId":"<profile-id>","verificationType":"government_id","status":"verified","provider":"<trust-provider>","providerSubjectId":"<provider-subject-id>","sourceEventId":"<provider-event-id>","confidence":0.94}'
 
-   Confirm `/admin/operations` shows the trust-verification row. Treat this as provider evidence for operator review or future policy wiring; do not grant member-facing trust badges solely from a webhook unless the application source has been updated to encode that decision.
+   Confirm `/admin/operations` shows the trust-verification row. If `COFOUNDRY_TRUST_VERIFICATION_PROVIDER` or another trust-provider marker is set, confirm `/admin/readiness` also shows the trust-verification evidence check passing. Treat this as provider evidence for operator review or future policy wiring; do not grant member-facing trust badges solely from a webhook unless the application source has been updated to encode that decision.
 
 12. Verify lifecycle notification rendering and telemetry before wiring live event triggers:
 

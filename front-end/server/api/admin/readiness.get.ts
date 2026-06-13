@@ -13,6 +13,10 @@ function hasValue(value?: string) {
   return Boolean(value?.trim())
 }
 
+function hasAnyValue(keys: string[]) {
+  return keys.some(key => hasValue(process.env[key]))
+}
+
 export default defineEventHandler(async (event) => {
   const session = await requireAdminSession(event)
 
@@ -42,6 +46,12 @@ export default defineEventHandler(async (event) => {
     hasDurableLocalDataDir: hasValue(process.env.COFOUNDRY_LOCAL_DATA_DIR),
     hasOperationsWorkerToken: hasValue(runtimeConfig.operationsWorkerToken) || hasValue(process.env.COFOUNDRY_OPERATIONS_TOKEN) || hasValue(process.env.OPERATIONS_WORKER_TOKEN),
     hasSessionSigningSecret: hasValue(process.env.NUXT_SESSION_SIGNING_SECRET) || hasValue(process.env.SESSION_SIGNING_SECRET),
+    hasTrustVerificationProviderConfigured: hasAnyValue([
+      "COFOUNDRY_TRUST_VERIFICATION_PROVIDER",
+      "COFOUNDRY_IDENTITY_VERIFICATION_PROVIDER",
+      "COFOUNDRY_DOMAIN_VERIFICATION_PROVIDER",
+      "COFOUNDRY_SOCIAL_VERIFICATION_PROVIDER",
+    ]),
     isLocalDevelopment: isLocalDevelopmentEnvironment(process.env),
     operations,
     privacyRequests,

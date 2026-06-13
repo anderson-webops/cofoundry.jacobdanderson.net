@@ -11,6 +11,7 @@ For a paste-ready staged handoff that covers the remaining external providers, u
 - `COFOUNDRY_LOCAL_DATA_DIR` should point at a durable, backed-up directory for member workspace state, collaboration workflow state, access requests, admin audit overlays, privacy/trust review requests, invited local accounts, operations telemetry, and local mock-mode file scan artifacts.
 - `COFOUNDRY_OPERATIONS_TOKEN` should be a long random secret before any `/api/operations/*` worker is scheduled.
 - `COFOUNDRY_ALERT_WEBHOOK_URL` is optional and should stay unset until an operator chooses the alerting destination. When set, operation workers post non-blocking JSON alerts for `error` and `warning` events by default. Use `COFOUNDRY_ALERT_WEBHOOK_TOKEN`, `COFOUNDRY_ALERT_SEVERITIES`, and `COFOUNDRY_ALERT_TIMEOUT_MS` only from server-side env.
+- `COFOUNDRY_TRUST_VERIFICATION_PROVIDER` is optional and should stay unset until an identity, phone, social/OAuth, work-domain, or opportunity-ownership provider is selected. When set, `/admin/readiness` expects recent trust-verification evidence reported through the worker-authenticated endpoint.
 
 ## Daily Checks
 
@@ -22,6 +23,7 @@ For a paste-ready staged handoff that covers the remaining external providers, u
 - Confirm `/admin/readiness` shows a recent monitoring or alerting heartbeat event. The expected event can be `monitoring.heartbeat`, `uptime.heartbeat`, or another monitor/alert event reported through `npm run operations:event`.
 - If `COFOUNDRY_ALERT_WEBHOOK_URL` is configured, confirm `/admin/readiness` shows a recent alert-smoke event. Use `npm run operations:event -- --source uptime-monitor --event-type monitoring.alert_test --severity warning --metadata purpose=alert-webhook-smoke` after changing the alert destination.
 - If contact or digest mail is configured, confirm `/admin/readiness` shows a recent successful mail-smoke delivery. Use `npm run operations:mail-smoke -- --to-email <monitored-inbox>` after changing SMTP/sendmail settings.
+- If `COFOUNDRY_TRUST_VERIFICATION_PROVIDER` or another trust-provider marker is configured, confirm `/admin/readiness` shows recent trust-verification evidence and `/admin/operations` shows the matching provider row.
 - Visit `/admin/audit` and confirm recent moderation, role, report, and privacy-request actions are present after reloads.
 - Visit `/admin/users` and confirm pending emails can be marked verified only after invite, domain, or operator evidence review.
 - Sign in to an invited test account and confirm profile, inbox, and billing preview changes survive an app restart.

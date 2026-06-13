@@ -91,6 +91,7 @@ const healthyOperations = {
       source: "uptime-monitor",
     },
   ],
+  trustVerificationEvents: [],
 }
 
 const healthyAdminPosture = {
@@ -113,6 +114,7 @@ describe("production readiness snapshot", () => {
       hasDurableLocalDataDir: true,
       hasOperationsWorkerToken: true,
       hasSessionSigningSecret: true,
+      hasTrustVerificationProviderConfigured: false,
       isLocalDevelopment: false,
       operations: healthyOperations,
       privacyRequests: [],
@@ -153,6 +155,7 @@ describe("production readiness snapshot", () => {
       hasDurableLocalDataDir: false,
       hasOperationsWorkerToken: false,
       hasSessionSigningSecret: false,
+      hasTrustVerificationProviderConfigured: false,
       isLocalDevelopment: false,
       operations: {
         backupRuns: [],
@@ -160,6 +163,7 @@ describe("production readiness snapshot", () => {
         mode: "mock",
         notificationDeliveries: [],
         operationalEvents: [],
+        trustVerificationEvents: [],
       },
       privacyRequests: [],
     })
@@ -218,6 +222,7 @@ describe("production readiness snapshot", () => {
       hasDurableLocalDataDir: true,
       hasOperationsWorkerToken: true,
       hasSessionSigningSecret: true,
+      hasTrustVerificationProviderConfigured: false,
       isLocalDevelopment: false,
       operations: {
         ...healthyOperations,
@@ -265,6 +270,7 @@ describe("production readiness snapshot", () => {
       hasDurableLocalDataDir: true,
       hasOperationsWorkerToken: true,
       hasSessionSigningSecret: true,
+      hasTrustVerificationProviderConfigured: false,
       isLocalDevelopment: false,
       operations: {
         ...healthyOperations,
@@ -298,6 +304,7 @@ describe("production readiness snapshot", () => {
       hasDurableLocalDataDir: true,
       hasOperationsWorkerToken: true,
       hasSessionSigningSecret: true,
+      hasTrustVerificationProviderConfigured: false,
       isLocalDevelopment: false,
       operations: {
         ...healthyOperations,
@@ -321,6 +328,7 @@ describe("production readiness snapshot", () => {
       hasDurableLocalDataDir: true,
       hasOperationsWorkerToken: true,
       hasSessionSigningSecret: true,
+      hasTrustVerificationProviderConfigured: false,
       isLocalDevelopment: false,
       operations: {
         ...healthyOperations,
@@ -348,6 +356,7 @@ describe("production readiness snapshot", () => {
       hasDurableLocalDataDir: true,
       hasOperationsWorkerToken: true,
       hasSessionSigningSecret: true,
+      hasTrustVerificationProviderConfigured: false,
       isLocalDevelopment: false,
       operations: {
         ...healthyOperations,
@@ -392,6 +401,73 @@ describe("production readiness snapshot", () => {
     expect(checkById.get("restore-drill")?.status).toBe("fail")
   })
 
+  it("tracks trust-provider evidence only after a provider is configured", () => {
+    const withoutEvidence = buildProductionReadinessSnapshot({
+      accessRequests: [],
+      adminPosture: healthyAdminPosture,
+      contactMailConfigured: true,
+      environment: environmentSnapshot(),
+      environmentValidationErrors: [],
+      generatedAt,
+      hasAlertWebhookConfigured: true,
+      hasDurableLocalDataDir: true,
+      hasOperationsWorkerToken: true,
+      hasSessionSigningSecret: true,
+      hasTrustVerificationProviderConfigured: true,
+      isLocalDevelopment: false,
+      operations: healthyOperations,
+      privacyRequests: [],
+    })
+    const withoutEvidenceCheckById = new Map(withoutEvidence.groups.flatMap(group => group.checks).map(check => [check.id, check]))
+
+    expect(withoutEvidence.overallStatus).toBe("warn")
+    expect(withoutEvidenceCheckById.get("trust-verification-evidence")).toMatchObject({
+      status: "warn",
+      summary: "Provider configured, no rows",
+    })
+
+    const withEvidence = buildProductionReadinessSnapshot({
+      accessRequests: [],
+      adminPosture: healthyAdminPosture,
+      contactMailConfigured: true,
+      environment: environmentSnapshot(),
+      environmentValidationErrors: [],
+      generatedAt,
+      hasAlertWebhookConfigured: true,
+      hasDurableLocalDataDir: true,
+      hasOperationsWorkerToken: true,
+      hasSessionSigningSecret: true,
+      hasTrustVerificationProviderConfigured: true,
+      isLocalDevelopment: false,
+      operations: {
+        ...healthyOperations,
+        trustVerificationEvents: [{
+          created_at: generatedAt,
+          id: "trust_event_healthy",
+          occurred_at: generatedAt,
+          provider: "persona",
+          status: "verified",
+          target_id: "profile_user_olivia",
+          target_type: "profile",
+          verification_type: "government_id",
+        }],
+      },
+      privacyRequests: [],
+    })
+    const withEvidenceCheckById = new Map(withEvidence.groups.flatMap(group => group.checks).map(check => [check.id, check]))
+
+    expect(withEvidence.overallStatus).toBe("pass")
+    expect(withEvidenceCheckById.get("trust-verification-evidence")).toMatchObject({
+      status: "pass",
+      summary: "1 verified, 0 manual review, latest 0 days old",
+    })
+    expect(withEvidence.provisioningTasks.find(task => task.id === "trust-verification-provisioning")).toMatchObject({
+      status: "pass",
+      title: "Trust verification provider evidence",
+    })
+    expect(withEvidence.counts.operationsRows).toBe(healthyOperations.backupRuns.length + healthyOperations.fileUploads.length + healthyOperations.notificationDeliveries.length + healthyOperations.operationalEvents.length + 1)
+  })
+
   it("warns in Supabase mode until first-admin bootstrap evidence exists", () => {
     const snapshot = buildProductionReadinessSnapshot({
       accessRequests: [],
@@ -413,6 +489,7 @@ describe("production readiness snapshot", () => {
       hasDurableLocalDataDir: false,
       hasOperationsWorkerToken: true,
       hasSessionSigningSecret: true,
+      hasTrustVerificationProviderConfigured: false,
       isLocalDevelopment: false,
       operations: {
         ...healthyOperations,

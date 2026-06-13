@@ -69,7 +69,7 @@ const scoreContext = computed(() => {
     <PageIntro
       eyebrow="Admin"
       title="Launch readiness"
-      description="A server-derived checklist for the current deployment: environment, secrets, queues, backups, restore drills, scanner evidence, notification workers, monitoring, and operational events."
+      description="A server-derived checklist for the current deployment: environment, secrets, queues, backups, restore drills, scanner evidence, trust-provider evidence, notification workers, monitoring, and operational events."
     >
       <template #actions>
         <BaseBadge :tone="data ? statusTone[data.overallStatus] : 'neutral'">
