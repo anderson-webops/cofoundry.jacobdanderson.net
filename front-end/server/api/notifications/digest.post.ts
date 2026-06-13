@@ -22,11 +22,13 @@ export default defineEventHandler(async (event) => {
     subscriptionPlan: session.subscriptionPlan,
   })
 
-  const delivery = await sendUnreadNotificationDigest(event, workspace.seed, workspace.session)
+  const delivery = await sendUnreadNotificationDigest(event, workspace.seed, workspace.session, { skipIfEmpty: true })
 
   return {
     configured: delivery.configured,
     delivered: delivery.delivered,
+    reason: delivery.reason,
+    skipped: delivery.skipped === true,
     unreadCount: delivery.unreadCount,
   }
 })

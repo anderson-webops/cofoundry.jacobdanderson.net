@@ -15,6 +15,7 @@ const currentUserId = computed(() => authStore.currentUser?.id || "")
 const digestPending = ref(false)
 
 const inboxSnapshot = computed(() => currentUserId.value ? buildInboxSnapshot(workspaceStore.data, currentUserId.value) : null)
+const hasInboxActions = computed(() => Boolean(inboxSnapshot.value?.actions.length))
 
 async function markNotificationRead(notificationId: string) {
   await workspaceStore.markNotificationRead(notificationId)
@@ -24,9 +25,24 @@ async function sendDigest() {
   digestPending.value = true
 
   try {
-    const response = await $fetch<{ configured: boolean, delivered: boolean, unreadCount: number }>("/api/notifications/digest", {
+    const response = await $fetch<{
+      configured: boolean
+      delivered: boolean
+      reason?: "email_digest_disabled" | "mail_not_configured" | "no_workspace_items" | "sent" | "delivery_failed"
+      skipped?: boolean
+      unreadCount: number
+    }>("/api/notifications/digest", {
       method: "POST",
     })
+
+    if (response.skipped && response.reason === "no_workspace_items") {
+      toastStore.push({
+        title: "No digest needed",
+        message: "Your workspace queue is clear, so there is nothing to email right now.",
+        tone: "success",
+      })
+      return
+    }
 
     toastStore.push({
       title: response.delivered ? "Digest sent" : response.configured ? "Digest could not be sent" : "Email not configured",
@@ -69,7 +85,7 @@ async function sendDigest() {
           </p>
         </div>
         <div class="flex flex-wrap gap-3">
-          <BaseButton variant="secondary" :disabled="digestPending" @click="sendDigest">
+          <BaseButton variant="secondary" :disabled="digestPending || !hasInboxActions" @click="sendDigest">
             {{ digestPending ? "Sending..." : "Email digest" }}
           </BaseButton>
           <BaseButton variant="secondary" to="/app/discover">

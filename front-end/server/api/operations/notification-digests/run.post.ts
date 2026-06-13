@@ -1,5 +1,6 @@
 import type { User } from "~/shared/types/domain"
 import { workspaceSeed } from "~/shared/data/seed"
+import { buildInboxSnapshot } from "~/shared/utils/inbox"
 import { operationsDigestRunSchema } from "~/shared/utils/validation"
 import { buildSessionUser } from "~/shared/utils/workspace"
 import { loadMemberWorkspaceState } from "../../../utils/member-workspace"
@@ -21,7 +22,7 @@ function displayNameForEmail(email: string) {
 }
 
 function unreadCountForUser(userId: string) {
-  return workspaceSeed.notifications.filter(notification => notification.userId === userId && !notification.readAt).length
+  return buildInboxSnapshot(workspaceSeed, userId).actions.length
 }
 
 function selectMockDigestSessions(options: { maxUsers: number, onlyWithUnread: boolean, userId?: string }) {
@@ -33,41 +34,18 @@ function selectMockDigestSessions(options: { maxUsers: number, onlyWithUnread: b
     .slice(0, options.maxUsers)
 }
 
-async function selectUnreadUserIds(adminClient: NonNullable<ReturnType<typeof createSupabaseAdminClient>>, maxUsers: number) {
-  const { data, error } = await adminClient
-    .from("notifications")
-    .select("user_id")
-    .is("read_at", null)
-    .order("created_at", { ascending: false })
-    .limit(maxUsers * 10)
-
-  if (error)
-    throw error
-
-  return [...new Set((data || []).map(row => String(row.user_id)).filter(Boolean))].slice(0, maxUsers)
-}
-
 async function selectDigestUsers(
   adminClient: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
   options: { maxUsers: number, onlyWithUnread: boolean, userId?: string },
 ) {
-  const userIds = options.userId
-    ? [options.userId]
-    : options.onlyWithUnread
-      ? await selectUnreadUserIds(adminClient, options.maxUsers)
-      : []
-
-  if (options.onlyWithUnread && !userIds.length)
-    return [] as DigestUserRow[]
-
   const query = adminClient
     .from("users")
     .select("id,email,role,onboarding_completed,email_digest_enabled")
     .order("created_at", { ascending: true })
     .limit(options.maxUsers)
 
-  const { data, error } = userIds.length
-    ? await query.in("id", userIds)
+  const { data, error } = options.userId
+    ? await query.eq("id", options.userId)
     : await query
 
   if (error)
@@ -162,7 +140,7 @@ export default defineEventHandler(async (event) => {
         role: user.role,
         subscriptionPlan: "free",
       })
-      const unreadCount = workspace.seed.notifications.filter(notification => notification.userId === workspace.session.id && !notification.readAt).length
+      const unreadCount = buildInboxSnapshot(workspace.seed, workspace.session.id).actions.length
 
       if (payload.onlyWithUnread && !unreadCount) {
         results.push({
@@ -202,11 +180,14 @@ export default defineEventHandler(async (event) => {
         continue
       }
 
-      const delivery = await sendUnreadNotificationDigest(event, workspace.seed, workspace.session, { respectPreferences: true })
+      const delivery = await sendUnreadNotificationDigest(event, workspace.seed, workspace.session, {
+        respectPreferences: true,
+        skipIfEmpty: true,
+      })
       results.push({
         configured: delivery.configured,
         delivered: delivery.delivered,
-        reason: delivery.suppressed ? "email_digest_disabled" : delivery.delivered ? "sent" : delivery.configured ? "delivery_failed" : "mail_not_configured",
+        reason: delivery.reason || (delivery.suppressed ? "email_digest_disabled" : delivery.delivered ? "sent" : delivery.configured ? "delivery_failed" : "mail_not_configured"),
         unreadCount: delivery.unreadCount,
         userId: user.id,
       })
