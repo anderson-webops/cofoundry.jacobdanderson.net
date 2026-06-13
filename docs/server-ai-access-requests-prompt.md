@@ -7,6 +7,7 @@ Configure CoFoundry's mock/access-request production mode for durable access req
 
 Current app behavior:
 - Public `/auth/sign-up` submits workspace access requests when the backend remains in mock mode.
+- `/auth/recover` submits account-help requests into the same durable queue for invited or existing users who cannot sign in.
 - Admins review requests at `/admin/access-requests`.
 - Admin invite generation creates 30-day invite links for `/auth/sign-up?invite=...&email=...`.
 - Invited member workspace state and collaboration workflow updates are stored locally so profile, inbox, billing preview, intro, message, proposal, and agreement state can survive restarts before Supabase is enabled.
@@ -35,6 +36,7 @@ Please configure the host/runtime:
    - Sign in as an admin.
    - Open `/admin/access-requests`.
    - Approve and issue an invite.
+   - Submit `/auth/recover` and verify the request appears with `source=auth-recovery` and account-help ownership-verification guidance.
    - Open `/admin/audit` and confirm the access/admin action history is visible after a reload.
    - Open the invite link in a fresh browser session and create the invited account.
    - Update the invited account profile and verify paid-plan changes route to the CoFoundry team while Stripe is disabled.

@@ -2,6 +2,8 @@
 
 CoFoundry can run in production-facing mock/access-request mode today without Supabase or Stripe. Treat this runbook as the server-side checklist for the pieces that need durable host setup before switching on live persistence, billing, or background workers.
 
+For a paste-ready staged handoff that covers the remaining external providers, use `docs/server-ai-production-cutover-prompt.md`.
+
 ## Required Host State
 
 - `NUXT_PUBLIC_BACKEND_MODE=mock` and `NUXT_PUBLIC_BILLING_MODE=mock` remain the safe production defaults until Supabase and Stripe are deliberately enabled.
