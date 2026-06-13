@@ -19,6 +19,17 @@ export interface ProductionReadinessGroup {
   title: string
 }
 
+export interface ProductionReadinessProvisioningTask {
+  action: string
+  command: string
+  detail: string
+  docsPath: string
+  id: string
+  status: ProductionReadinessStatus
+  summary: string
+  title: string
+}
+
 export interface ProductionReadinessOperationsRows {
   backupRuns: Array<Record<string, unknown>>
   fileUploads: Array<Record<string, unknown>>
@@ -65,6 +76,7 @@ export interface ProductionReadinessPayload {
     operations: string
   }
   overallStatus: Exclude<ProductionReadinessStatus, "info">
+  provisioningTasks: ProductionReadinessProvisioningTask[]
   score: number
   summary: string
 }
@@ -202,6 +214,139 @@ function summarize(overallStatus: Exclude<ProductionReadinessStatus, "info">, fa
     return `${warningChecks} operational item${warningChecks === 1 ? " should" : "s should"} be tightened, but no hard readiness failures are currently detected.`
 
   return "No launch-critical readiness failures or warnings are currently detected."
+}
+
+function task(
+  id: string,
+  title: string,
+  status: ProductionReadinessStatus,
+  summary: string,
+  detail: string,
+  action: string,
+  command: string,
+  docsPath = "docs/operations-runbook.md",
+): ProductionReadinessProvisioningTask {
+  return { action, command, detail, docsPath, id, status, summary, title }
+}
+
+function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<string, ProductionReadinessCheck>) {
+  const { public: publicEnvironment } = input.environment
+  const mockMode = publicEnvironment.backendMode !== "supabase"
+  const stripeMode = publicEnvironment.billingMode === "stripe"
+
+  return [
+    task(
+      "session-secret-provisioning",
+      "Session signing secret",
+      checkById.get("session-signing-secret")?.status || "warn",
+      input.hasSessionSigningSecret ? "Secret present" : "Secret missing",
+      "Required before hosted sign-in, admin access, and invite-created local accounts are safe.",
+      "Inject a deployment-specific value through the host secret store.",
+      "SESSION_SIGNING_SECRET=<vault-managed-random-secret>",
+    ),
+    task(
+      "local-data-dir-provisioning",
+      "Durable local store",
+      mockMode ? checkById.get("local-durable-store")?.status || "warn" : "info",
+      mockMode
+        ? input.hasDurableLocalDataDir ? "External data directory configured" : "Default .data path in use"
+        : "Supabase mode stores primary data in the database",
+      "Mock/access-request mode persists invites, accounts, admin audit overlays, privacy requests, file metadata, and operations telemetry on disk.",
+      mockMode
+        ? "Mount a durable, backed-up host path and point CoFoundry at it before relying on mock/access-request production mode."
+        : "Keep the local directory for operational scratch data only after Supabase cutover.",
+      "COFOUNDRY_LOCAL_DATA_DIR=/var/lib/cofoundry",
+    ),
+    task(
+      "mail-provisioning",
+      "Contact and digest mail",
+      checkById.get("mail-transport")?.status || "warn",
+      input.contactMailConfigured ? "Mail transport configured" : "Mail transport missing",
+      "Contact forms and notification digests need SMTP or sendmail so users and operators receive messages.",
+      "Configure CONTACT_* SMTP/sendmail values and verify the support inbox receives contact and digest traffic.",
+      "CONTACT_SMTP_HOST=<smtp-host> CONTACT_FROM_EMAIL=support@cofoundry.dev CONTACT_TO_EMAIL=contacts@jacobdanderson.net",
+    ),
+    task(
+      "worker-token-provisioning",
+      "Operations worker token",
+      checkById.get("operations-worker-token")?.status || "warn",
+      input.hasOperationsWorkerToken ? "Worker token configured" : "Worker token missing",
+      "Backup, file scanner, digest, restore-drill, and monitoring reporters need a shared worker token.",
+      "Inject COFOUNDRY_OPERATIONS_TOKEN and use it from every server-side worker/timer.",
+      "COFOUNDRY_OPERATIONS_TOKEN=<vault-managed-worker-token>",
+    ),
+    task(
+      "backup-worker-provisioning",
+      "Backup worker schedule",
+      checkById.get("backup-recency")?.status || "warn",
+      checkById.get("backup-recency")?.summary || "Backup state unknown",
+      "The admin console should show recent backup rows produced by the real host backup command.",
+      "Install a timer that wraps the host backup command with the checked-in operations worker.",
+      "npm run operations:backup -- --provider server-backup --artifact-uri <artifact-uri> -- <backup command>",
+    ),
+    task(
+      "file-scanner-provisioning",
+      "File scanner worker",
+      checkById.get("file-scanning")?.status || "warn",
+      checkById.get("file-scanning")?.summary || "Scanner state unknown",
+      "Private file uploads should be scanned and reported before operators rely on uploaded evidence.",
+      "Configure the approved scanner command and schedule the checked-in scanner worker.",
+      "COFOUNDRY_FILE_SCANNER_COMMAND=\"clamscan --no-summary\" npm run operations:scan -- --limit 25",
+    ),
+    task(
+      "digest-worker-provisioning",
+      "Notification digest worker",
+      checkById.get("notification-digests")?.status || "warn",
+      checkById.get("notification-digests")?.summary || "Digest state unknown",
+      "Scheduled digest rows prove the inbox notification path is running.",
+      "Install the digest timer after SMTP and member notification preferences are verified.",
+      "npm run operations:digest -- --dry-run --max-users 100",
+    ),
+    task(
+      "restore-drill-provisioning",
+      "Restore drill evidence",
+      checkById.get("restore-drill")?.status || "warn",
+      checkById.get("restore-drill")?.summary || "Restore drill state unknown",
+      "Backups are not production evidence until a restore command has succeeded and reported telemetry.",
+      "Run the restore drill wrapper against a staging or verification command and keep the procedure in the server runbook.",
+      "npm run operations:restore-drill -- --id restore-YYYYMMDD -- <restore verification command>",
+    ),
+    task(
+      "monitoring-heartbeat-provisioning",
+      "Monitoring heartbeat",
+      checkById.get("monitoring-heartbeat")?.status || "warn",
+      checkById.get("monitoring-heartbeat")?.summary || "Monitoring state unknown",
+      "The readiness view should show a recent heartbeat or alert event from uptime/log monitoring.",
+      "Wire the monitor or alert destination to report both heartbeat and failure events through the operations reporter.",
+      "npm run operations:event -- --source uptime-monitor --event-type monitoring.heartbeat --severity info",
+    ),
+    task(
+      "first-admin-bootstrap-provisioning",
+      "First-admin bootstrap",
+      publicEnvironment.backendMode === "supabase"
+        ? checkById.get("admin-bootstrap-audit")?.status || "warn"
+        : "info",
+      publicEnvironment.backendMode === "supabase"
+        ? checkById.get("admin-bootstrap-audit")?.summary || "Bootstrap audit state unknown"
+        : "Required at Supabase cutover",
+      "Supabase-backed production should have an auditable first-admin promotion before operators rely on the console.",
+      "Run the bootstrap script from a server environment with Vault-injected Supabase service-role credentials.",
+      "BOOTSTRAP_ADMIN_EMAIL=operator@example.com npm run -w back-end bootstrap-admin",
+      "docs/server-ai-admin-bootstrap-prompt.md",
+    ),
+    task(
+      "stripe-cutover-provisioning",
+      "Stripe cutover",
+      stripeMode ? checkById.get("environment-validation")?.status || "warn" : "info",
+      stripeMode ? "Stripe mode enabled" : "Stripe intentionally disabled",
+      "Live billing should stay disabled until products, prices, webhook signature validation, and customer portal settings are verified.",
+      stripeMode
+        ? "Confirm Stripe webhook delivery, customer portal setup, and Supabase subscription reconciliation before public checkout."
+        : "Keep billing in mock/operator-managed mode until the Stripe account and webhook setup are ready.",
+      "NUXT_PUBLIC_BILLING_MODE=stripe STRIPE_SECRET_KEY=<vault-managed-key> STRIPE_WEBHOOK_SECRET=<vault-managed-secret>",
+      "README.md#billing-notes",
+    ),
+  ]
 }
 
 export function buildProductionReadinessSnapshot(input: ProductionReadinessInput): ProductionReadinessPayload {
@@ -491,6 +636,7 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
     },
   ]
   const checks = groups.flatMap(group => group.checks)
+  const checkById = new Map(checks.map(item => [item.id, item]))
   const failedChecks = checks.filter(item => item.status === "fail").length
   const warningChecks = checks.filter(item => item.status === "warn").length
   const overallStatus = getOverallStatus(checks)
@@ -511,6 +657,7 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
       operations: input.operations.mode,
     },
     overallStatus,
+    provisioningTasks: buildProvisioningTasks(input, checkById),
     score: scoreChecks(checks),
     summary: summarize(overallStatus, failedChecks, warningChecks),
   }
