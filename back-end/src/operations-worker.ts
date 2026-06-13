@@ -291,6 +291,37 @@ async function runDigest(parsed: ParsedArgs, options: Required<WorkerCommandOpti
   options.log(JSON.stringify(response, null, 2))
 }
 
+async function runLifecycleNotification(parsed: ParsedArgs, options: Required<WorkerCommandOptions>) {
+  const environment = resolveOperationsWorkerEnvironment(options.env)
+  const eventType = flagValue(parsed.flags, "event-type")
+  const targetId = flagValue(parsed.flags, "target-id")
+  const targetType = flagValue(parsed.flags, "target-type") || null
+  const userId = flagValue(parsed.flags, "user-id")
+
+  if (!eventType)
+    throw new Error("Lifecycle notification requires --event-type.")
+
+  if (!targetId)
+    throw new Error("Lifecycle notification requires --target-id.")
+
+  if (!userId)
+    throw new Error("Lifecycle notification requires --user-id.")
+
+  const response = await requestJson(environment, "/api/operations/notifications/lifecycle", {
+    body: {
+      dryRun: parseBooleanFlag(flagValue(parsed.flags, "dry-run", "false")),
+      eventType,
+      metadata: parseMetadata(parsed.flags),
+      targetId,
+      targetType,
+      userId,
+    },
+    fetchImpl: options.fetch,
+  })
+
+  options.log(JSON.stringify(response, null, 2))
+}
+
 async function downloadPendingFile(environment: OperationsWorkerEnvironment, item: PendingFileScan, fetchImpl: FetchLike) {
   if (!item.signedDownloadUrl)
     throw new Error(item.signedDownloadError || "No signed download URL was returned for the pending scan.")
@@ -507,6 +538,8 @@ export async function runOperationsWorker(argv: string[], options: WorkerCommand
       return runDigest(parsed, resolvedOptions)
     case "event":
       return runEvent(parsed, resolvedOptions)
+    case "lifecycle-notification":
+      return runLifecycleNotification(parsed, resolvedOptions)
     case "restore-drill":
       return runRestoreDrill(parsed, resolvedOptions)
     case "scan":
@@ -514,7 +547,7 @@ export async function runOperationsWorker(argv: string[], options: WorkerCommand
     default:
       throw new Error([
         "Unknown operations worker command.",
-        "Use one of: backup, digest, event, restore-drill, scan.",
+        "Use one of: backup, digest, event, lifecycle-notification, restore-drill, scan.",
       ].join(" "))
   }
 }

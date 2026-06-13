@@ -119,6 +119,40 @@ test("operations digest worker sends safe dry-run payloads", async () => {
   })
 })
 
+test("operations lifecycle notification worker sends event-specific payloads", async () => {
+  const { fetchImpl, requests } = createJsonFetch(() => ({ delivered: false, eventType: "proposal.updated", mode: "mock" }))
+
+  await runOperationsWorker([
+    "lifecycle-notification",
+    "--dry-run",
+    "--event-type",
+    "proposal.updated",
+    "--target-type",
+    "proposal",
+    "--target-id",
+    "proposal_ledgerloop_cto",
+    "--user-id",
+    "user_malik",
+    "--metadata",
+    "source=test",
+  ], {
+    env: workerEnv,
+    fetch: fetchImpl,
+    log: () => {},
+  })
+
+  assert.equal(requests.length, 1)
+  assert.equal(requests[0].url, "https://cofoundry.example.com/api/operations/notifications/lifecycle")
+  assert.deepEqual(requests[0].body, {
+    dryRun: true,
+    eventType: "proposal.updated",
+    metadata: { source: "test" },
+    targetId: "proposal_ledgerloop_cto",
+    targetType: "proposal",
+    userId: "user_malik",
+  })
+})
+
 test("operations scanner downloads local app URLs with worker auth and blocks flagged files", async () => {
   const commands: string[] = []
   const { fetchImpl, requests } = createJsonFetch((request) => {

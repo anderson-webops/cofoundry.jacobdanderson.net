@@ -199,6 +199,22 @@ export const operationsDigestRunSchema = z.object({
   userId: z.string().trim().min(1).max(120).optional(),
 })
 
+export const operationsLifecycleNotificationSchema = z.object({
+  dryRun: z.boolean().default(false),
+  eventType: z.enum([
+    "match.created",
+    "message.unread",
+    "proposal.updated",
+    "contract.signature_required",
+    "report.reviewed",
+    "subscription.changed",
+  ]),
+  metadata: z.record(z.string(), z.unknown()).default({}),
+  targetId: z.string().trim().min(1).max(160),
+  targetType: z.enum(["match", "message", "conversation", "proposal", "contract", "report", "subscription"]).nullable().optional(),
+  userId: z.string().trim().min(1).max(120),
+})
+
 export const operationsEventSchema = z.object({
   actorUserId: z.string().trim().min(1).max(120).nullable().optional(),
   eventType: z.string().trim().min(2).max(120),
