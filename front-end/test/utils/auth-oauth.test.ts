@@ -19,6 +19,14 @@ describe("oauth provider configuration", () => {
     expect([...providers].sort()).toEqual(["github", "google"])
   })
 
+  it("supports comma and space separated generic provider markers", () => {
+    const providers = readConfiguredOAuthProviders({
+      COFOUNDRY_OAUTH_PROVIDER: "google, github",
+    })
+
+    expect([...providers]).toEqual(["google", "github"])
+  })
+
   it("does not treat non-provider marker values as enabled providers", () => {
     expect(isOAuthProviderEnabled("github", {
       COFOUNDRY_OAUTH_PROVIDER: "enabled",
