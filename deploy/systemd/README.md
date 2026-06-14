@@ -28,7 +28,7 @@ systemctl status cofoundry-operations-heartbeat.service
 journalctl -u cofoundry-operations-heartbeat.service -n 100 --no-pager
 ```
 
-Then sign in as an admin and confirm `/admin/operations` shows the heartbeat event. Repeat with the digest worker in dry-run mode before enabling real digest delivery.
+Then sign in as an admin and confirm `/admin/operations` shows the `monitoring.heartbeat` event and `/admin/readiness` marks the monitoring heartbeat check as passing. Repeat with the digest worker in dry-run mode before enabling real digest delivery.
 
 ## Notes
 

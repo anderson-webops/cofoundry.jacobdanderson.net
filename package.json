@@ -33,6 +33,7 @@
     "operations:backup": "npm run -w back-end operations:backup --",
     "operations:digest": "npm run -w back-end operations:digest --",
     "operations:event": "npm run -w back-end operations:event --",
+    "operations:heartbeat": "npm run -w back-end operations:heartbeat --",
     "operations:mail-smoke": "npm run -w back-end operations:mail-smoke --",
     "operations:restore-drill": "npm run -w back-end operations:restore-drill --",
     "operations:scan": "npm run -w back-end operations:scan --",

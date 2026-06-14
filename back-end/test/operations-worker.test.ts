@@ -378,6 +378,32 @@ test("operations event worker sends configured webhook alerts", async () => {
   })
 })
 
+test("operations heartbeat worker emits readiness-recognized monitoring events", async () => {
+  const { fetchImpl, requests } = createJsonFetch(() => ({ id: "event_heartbeat", mode: "mock" }))
+
+  await runOperationsWorker([
+    "heartbeat",
+    "--metadata",
+    "schedule=hourly",
+  ], {
+    env: workerEnv,
+    fetch: fetchImpl,
+    log: () => {},
+  })
+
+  assert.equal(requests.length, 1)
+  assert.equal(requests[0].url, "https://cofoundry.example.com/api/operations/events")
+  assert.deepEqual(requests[0].body, {
+    actorUserId: null,
+    eventType: "monitoring.heartbeat",
+    metadata: { schedule: "hourly" },
+    severity: "info",
+    source: "systemd-timer",
+    targetId: "cofoundry-operations-heartbeat",
+    targetType: "monitor",
+  })
+})
+
 test("operations alert webhooks are non-blocking when delivery fails", async () => {
   const logs: string[] = []
   const { fetchImpl, requests } = createJsonFetch(request => request.url === "https://alerts.example.com/cofoundry"

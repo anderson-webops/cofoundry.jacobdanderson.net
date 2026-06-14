@@ -744,6 +744,21 @@ async function runEvent(parsed: ParsedArgs, options: Required<WorkerCommandOptio
   options.log(JSON.stringify(response, null, 2))
 }
 
+async function runHeartbeat(parsed: ParsedArgs, options: Required<WorkerCommandOptions>) {
+  const environment = resolveOperationsWorkerEnvironment(options.env)
+  const response = await reportOperationalEvent(environment, {
+    actorUserId: null,
+    eventType: flagValue(parsed.flags, "event-type", "monitoring.heartbeat"),
+    metadata: parseMetadata(parsed.flags),
+    severity: flagValue(parsed.flags, "severity", "info"),
+    source: flagValue(parsed.flags, "source", "systemd-timer"),
+    targetId: flagValue(parsed.flags, "target-id", "cofoundry-operations-heartbeat"),
+    targetType: flagValue(parsed.flags, "target-type", "monitor"),
+  }, options)
+
+  options.log(JSON.stringify(response, null, 2))
+}
+
 async function runRestoreDrill(parsed: ParsedArgs, options: Required<WorkerCommandOptions>) {
   if (!parsed.commandArgs.length)
     throw new Error("Restore drill worker requires a command after --.")
@@ -799,6 +814,8 @@ export async function runOperationsWorker(argv: string[], options: WorkerCommand
       return runEvent(parsed, resolvedOptions)
     case "email-suppression":
       return runEmailSuppression(parsed, resolvedOptions)
+    case "heartbeat":
+      return runHeartbeat(parsed, resolvedOptions)
     case "lifecycle-notification":
       return runLifecycleNotification(parsed, resolvedOptions)
     case "mail-smoke":
@@ -812,7 +829,7 @@ export async function runOperationsWorker(argv: string[], options: WorkerCommand
     default:
       throw new Error([
         "Unknown operations worker command.",
-        "Use one of: backup, contract-envelope, digest, email-suppression, event, lifecycle-notification, mail-smoke, restore-drill, scan, trust-verification.",
+        "Use one of: backup, contract-envelope, digest, email-suppression, event, heartbeat, lifecycle-notification, mail-smoke, restore-drill, scan, trust-verification.",
       ].join(" "))
   }
 }

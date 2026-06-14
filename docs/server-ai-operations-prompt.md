@@ -19,7 +19,7 @@ Source/runtime context:
 - Email-suppression provider readiness is optional. Leave `COFOUNDRY_EMAIL_SUPPRESSION_PROVIDER` and `COFOUNDRY_MAIL_SUPPRESSION_PROVIDER` unset until the outbound mail provider's bounce, complaint, unsubscribe, and manual-suppression callbacks are mapped. Once either marker is set, `/admin/readiness` expects recent suppression evidence.
 - Trust-provider readiness is optional. Leave `COFOUNDRY_TRUST_VERIFICATION_PROVIDER`, `COFOUNDRY_IDENTITY_VERIFICATION_PROVIDER`, `COFOUNDRY_DOMAIN_VERIFICATION_PROVIDER`, and `COFOUNDRY_SOCIAL_VERIFICATION_PROVIDER` unset until the operator chooses the corresponding provider. Once any marker is set, `/admin/readiness` expects recent trust-verification evidence.
 - Contract-envelope provider readiness is optional. Leave `COFOUNDRY_CONTRACT_ENVELOPE_PROVIDER`, `COFOUNDRY_ESIGNATURE_PROVIDER`, and `COFOUNDRY_PDF_PROVIDER` unset unless a dedicated e-signature/PDF provider is selected. Once any marker is set, `/admin/readiness` expects recent completed envelope evidence.
-- The source includes schedulable worker commands: `npm run operations:backup`, `npm run operations:digest`, `npm run operations:scan`, `npm run operations:event`, `npm run operations:mail-smoke`, `npm run operations:worker -- lifecycle-notification`, `npm run operations:worker -- email-suppression`, `npm run operations:worker -- contract-envelope`, `npm run operations:trust-verification`, and `npm run operations:restore-drill`.
+- The source includes schedulable worker commands: `npm run operations:backup`, `npm run operations:digest`, `npm run operations:scan`, `npm run operations:heartbeat`, `npm run operations:event`, `npm run operations:mail-smoke`, `npm run operations:worker -- lifecycle-notification`, `npm run operations:worker -- email-suppression`, `npm run operations:worker -- contract-envelope`, `npm run operations:trust-verification`, and `npm run operations:restore-drill`.
 - The source includes systemd templates in `deploy/systemd/`. Prefer installing and tuning those templates instead of hand-writing timer units from scratch.
 - In mock/access-request mode, operations telemetry persists to `.data/operations-telemetry.json` and local uploaded scan artifacts persist under `.data/local-file-uploads/` unless `COFOUNDRY_LOCAL_DATA_DIR` points at another durable writable directory.
 
@@ -185,6 +185,11 @@ Tasks:
      --source uptime-monitor \
      --event-type monitoring.heartbeat \
      --severity info
+
+   The checked-in canonical command emits the same readiness-recognized event shape and is what the systemd heartbeat template uses:
+
+   npm run operations:heartbeat -- \
+     --metadata schedule=hourly
 
    If `COFOUNDRY_ALERT_WEBHOOK_URL` is configured, verify a warning or error event reaches the destination without exposing the webhook URL or token in app logs:
 
