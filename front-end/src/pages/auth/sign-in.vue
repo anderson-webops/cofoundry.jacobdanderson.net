@@ -1,5 +1,10 @@
 <script setup lang="ts">
+import type { SupportedOAuthProvider } from "~/shared/utils/oauth-providers"
 import { signInSchema } from "~/shared/utils/validation"
+
+interface OAuthProvidersResponse {
+  providers: SupportedOAuthProvider[]
+}
 
 definePageMeta({
   layout: "auth",
@@ -14,6 +19,14 @@ const route = useRoute()
 const { buildAccessRequestPath, policy } = useProductAccess()
 const accessRequestPath = buildAccessRequestPath("auth-sign-in", "access")
 const talkToTeamPath = buildAccessRequestPath("auth-sign-in", "contact")
+const oauthProviderLabels: Record<SupportedOAuthProvider, string> = {
+  github: "GitHub",
+  google: "Google",
+}
+const { data: oauthProvidersResponse } = await useFetch<OAuthProvidersResponse>("/api/auth/providers", {
+  default: () => ({ providers: [] }),
+})
+const oauthProviders = computed(() => oauthProvidersResponse.value?.providers || [])
 
 const form = reactive({
   email: "",
@@ -51,6 +64,16 @@ async function submitForm() {
   }
   catch {}
 }
+
+async function submitProvider(provider: SupportedOAuthProvider) {
+  errors.value = {}
+  authStore.clearError()
+
+  try {
+    await authStore.signInWithProvider(provider)
+  }
+  catch {}
+}
 </script>
 
 <template>
@@ -71,6 +94,27 @@ async function submitForm() {
 
     <div v-if="oauthErrorMessage" class="bg-[color:color-mix(in_srgb,var(--danger)_10%,transparent)] text-sm text-[var(--danger)] mt-5 p-4 border border-[color:color-mix(in_srgb,var(--danger)_28%,transparent)] rounded-3xl">
       {{ oauthErrorMessage }}
+    </div>
+
+    <div v-if="oauthProviders.length" class="mt-8 gap-4 grid">
+      <div class="muted text-xs tracking-[0.22em] flex gap-3 uppercase items-center">
+        <span class="bg-[var(--line)] flex-1 h-px" />
+        <span>Provider sign-in</span>
+        <span class="bg-[var(--line)] flex-1 h-px" />
+      </div>
+      <div class="gap-3 grid sm:grid-cols-2">
+        <BaseButton
+          v-for="provider in oauthProviders"
+          :key="provider"
+          variant="secondary"
+          block
+          :disabled="authStore.pending"
+          :aria-label="`Continue with ${oauthProviderLabels[provider]}`"
+          @click="submitProvider(provider)"
+        >
+          Continue with {{ oauthProviderLabels[provider] }}
+        </BaseButton>
+      </div>
     </div>
 
     <form class="mt-8 gap-4 grid" @submit.prevent="submitForm">

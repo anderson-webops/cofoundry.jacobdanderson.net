@@ -57,10 +57,11 @@ Stage 5: OAuth or external auth provider
 1. Register only the intended OAuth providers and callback URLs.
 2. Add provider client secrets to Vault/host env only.
 3. Keep `COFOUNDRY_OAUTH_PROVIDER`, `COFOUNDRY_GOOGLE_OAUTH_PROVIDER`, and `COFOUNDRY_GITHUB_OAUTH_PROVIDER` unset until Supabase mode is active for the staging process and the provider callback URL includes `/api/auth/oauth/callback`.
-4. Set only the selected provider marker, then verify new account creation, existing account linking, suspended-user rejection, session expiration, sign-out, and admin role rehydration.
-5. Confirm `/admin/operations` records `auth.oauth.signed_in` and `/admin/readiness` shows the external-auth provider check passing after the smoke sign-in.
-6. Keep unsupported providers blocked with the existing 501/400 responses.
-7. Confirm `/auth/recover` remains available as an operator-mediated fallback.
+4. Set only the selected provider marker, restart the app process, and confirm `/auth/sign-in` shows only the selected provider button.
+5. Verify new account creation, existing account linking, suspended-user rejection, session expiration, sign-out, and admin role rehydration.
+6. Confirm `/admin/operations` records `auth.oauth.signed_in` and `/admin/readiness` shows the external-auth provider check passing after the smoke sign-in.
+7. Keep unsupported providers blocked with the existing 501/400 responses.
+8. Confirm `/auth/recover` remains available as an operator-mediated fallback.
 
 Stage 6: Stripe billing
 1. Create Stripe products/prices for the intended production plans.

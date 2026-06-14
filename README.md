@@ -242,7 +242,7 @@ Provisioning after merge:
 2. Run `npm run seed` against the target Supabase project.
 3. Set `NODE_ENV=production` on the app server process. The Docker production stage already does this; systemd or other host-managed app units should do the same.
 4. Configure `SESSION_SIGNING_SECRET` in the server environment or Vault injection.
-5. Enable only the intended Supabase password/email account path first. Keep OAuth/external auth provider env markers blank until the provider app callback URLs, account linking, suspended-user rejection, role rehydration, and rollback have been smoke-tested.
+5. Enable only the intended Supabase password/email account path first. Keep OAuth/external auth provider env markers blank until the provider app callback URLs, account linking, suspended-user rejection, role rehydration, and rollback have been smoke-tested. Provider sign-in buttons remain hidden unless Supabase mode and matching server-side OAuth markers are active.
 6. Assign the first real admin user server-side before using `/admin`: `BOOTSTRAP_ADMIN_EMAIL=operator@example.com npm run -w back-end bootstrap-admin`. The script requires Supabase mode and the Vault-injected `SUPABASE_SERVICE_ROLE_KEY`; it updates an existing user row and records an admin action that `/admin/readiness` uses as first-admin bootstrap evidence.
 7. Turn on Stripe env only when checkout and webhook infrastructure are ready.
 8. Configure `COFOUNDRY_OPERATIONS_TOKEN` before enabling scheduled digests, backup-run reporting, operational event ingestion, or file-scan callbacks.

@@ -1,4 +1,5 @@
 import type { SessionUser } from "~/shared/types/domain"
+import type { SupportedOAuthProvider } from "~/shared/utils/oauth-providers"
 import { acceptHMRUpdate, defineStore } from "pinia"
 import { useSessionState } from "~/composables/useSessionState"
 import { useWorkspaceStore } from "~/stores/workspace"
@@ -74,7 +75,7 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
-  async function signInWithProvider(provider: "google" | "github") {
+  async function signInWithProvider(provider: SupportedOAuthProvider) {
     pending.value = true
     clearError()
 
