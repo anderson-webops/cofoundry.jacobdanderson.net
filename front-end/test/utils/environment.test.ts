@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { collectEnvironmentValidationErrors, readPublicEnvironment } from "../../shared/utils/environment"
+import { collectEnvironmentValidationErrors, readDeploymentMetadata, readPublicEnvironment } from "../../shared/utils/environment"
 
 describe("environment helpers", () => {
   it("keeps localhost defaults only for local mock development", () => {
@@ -42,6 +42,29 @@ describe("environment helpers", () => {
     })
 
     expect(environment.appUrl).toBe("http://127.0.0.1:3000")
+  })
+
+  it("reads safe deployment metadata from canonical or deploy-provider env", () => {
+    expect(readDeploymentMetadata({
+      BUILD_TIMESTAMP: "2026-06-12T11:55:00.000Z",
+      RELEASE_VERSION: "v1.1.78",
+      SOURCE_VERSION: "dcb599f5b5f1a72e5d78b4e0f19f3c9b5e1a1234",
+    })).toEqual({
+      commitSha: "dcb599f5b5f1a72e5d78b4e0f19f3c9b5e1a1234",
+      deployedAt: "2026-06-12T11:55:00.000Z",
+      release: "v1.1.78",
+    })
+
+    expect(readDeploymentMetadata({
+      COFOUNDRY_COMMIT_SHA: "cofoundry-sha",
+      COFOUNDRY_DEPLOYED_AT: "2026-06-12T12:00:00.000Z",
+      COFOUNDRY_RELEASE: "v1.1.79",
+      SOURCE_VERSION: "source-version",
+    })).toEqual({
+      commitSha: "cofoundry-sha",
+      deployedAt: "2026-06-12T12:00:00.000Z",
+      release: "v1.1.79",
+    })
   })
 
   it("requires public and secret supabase values when supabase mode is enabled", () => {

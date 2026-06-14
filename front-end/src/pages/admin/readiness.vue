@@ -62,6 +62,13 @@ const scoreContext = computed(() => {
 
   return "Readiness checks are currently green."
 })
+
+function shortCommit(value?: string) {
+  if (!value)
+    return ""
+
+  return value.length > 12 ? value.slice(0, 12) : value
+}
 </script>
 
 <template>
@@ -109,10 +116,19 @@ const scoreContext = computed(() => {
           <BaseBadge tone="neutral">
             Operations {{ data.mode.operations }}
           </BaseBadge>
+          <BaseBadge v-if="data.deployment.release" tone="success">
+            Release {{ data.deployment.release }}
+          </BaseBadge>
+          <BaseBadge v-if="data.deployment.commitSha" tone="neutral">
+            Commit {{ shortCommit(data.deployment.commitSha) }}
+          </BaseBadge>
         </div>
       </div>
       <p class="text-xs text-[var(--muted)] mt-5">
         Generated {{ formatDate(data.generatedAt) }} from server-side configuration and persisted queue/worker rows.
+        <span v-if="data.deployment.deployedAt">
+          Deployed {{ formatDate(data.deployment.deployedAt) }}.
+        </span>
       </p>
     </section>
 

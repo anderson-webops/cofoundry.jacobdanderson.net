@@ -1,5 +1,5 @@
 import type { AccessRequest, PrivacyRequest } from "~/shared/types/domain"
-import type { EnvironmentSnapshot } from "~/shared/utils/environment"
+import type { DeploymentMetadata, EnvironmentSnapshot } from "~/shared/utils/environment"
 
 export type ProductionReadinessStatus = "pass" | "warn" | "fail" | "info"
 
@@ -62,6 +62,7 @@ export interface ProductionReadinessInput {
   accessRequests: AccessRequest[]
   adminPosture: ProductionReadinessAdminPosture
   contactMailConfigured: boolean
+  deploymentMetadata: DeploymentMetadata
   environment: EnvironmentSnapshot
   environmentValidationErrors: string[]
   generatedAt: string
@@ -87,6 +88,7 @@ export interface ProductionReadinessPayload {
     warningChecks: number
   }
   cutoverPhases: ProductionReadinessCutoverPhase[]
+  deployment: DeploymentMetadata
   generatedAt: string
   groups: ProductionReadinessGroup[]
   mode: {
@@ -205,6 +207,20 @@ function isLocalhostUrl(value: string) {
   catch {
     return false
   }
+}
+
+function shortCommit(value: string) {
+  return value.length > 12 ? value.slice(0, 12) : value
+}
+
+function deploymentSummary(metadata: DeploymentMetadata) {
+  if (metadata.release)
+    return metadata.release
+
+  if (metadata.commitSha)
+    return shortCommit(metadata.commitSha)
+
+  return "No release metadata"
 }
 
 function openAccessQueueState(accessRequests: AccessRequest[], nowTime: number) {
@@ -558,6 +574,7 @@ function buildCutoverPhases(input: ProductionReadinessInput, checkById: Map<stri
             checkById.get("environment-validation"),
             checkById.get("launch-mode"),
             checkById.get("public-app-url"),
+            checkById.get("deployment-identity"),
             checkById.get("session-signing-secret"),
             checkById.get("local-durable-store"),
             checkById.get("operations-worker-token"),
@@ -636,6 +653,8 @@ function buildCutoverPhases(input: ProductionReadinessInput, checkById: Map<stri
 export function buildProductionReadinessSnapshot(input: ProductionReadinessInput): ProductionReadinessPayload {
   const nowTime = new Date(input.generatedAt).getTime()
   const { public: publicEnvironment } = input.environment
+  const hasDeploymentIdentity = Boolean(input.deploymentMetadata.release || input.deploymentMetadata.commitSha)
+  const deploymentIdentityStatus: ProductionReadinessStatus = hasDeploymentIdentity ? "pass" : input.isLocalDevelopment ? "info" : "warn"
   const stripeMode = publicEnvironment.billingMode === "stripe"
   const accessQueue = openAccessQueueState(input.accessRequests, nowTime)
   const privacyQueue = openPrivacyQueueState(input.privacyRequests, nowTime)
@@ -830,6 +849,16 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
         ? "Local development may use localhost defaults."
         : "Production emails, invite links, canonical URLs, and operator handoffs need a stable public origin.",
       "Set NUXT_PUBLIC_APP_URL to the deployed HTTPS origin.",
+    ),
+    check(
+      "deployment-identity",
+      "Deployment identity",
+      deploymentIdentityStatus,
+      deploymentSummary(input.deploymentMetadata),
+      hasDeploymentIdentity
+        ? `Release ${input.deploymentMetadata.release || "not set"}${input.deploymentMetadata.commitSha ? `, commit ${shortCommit(input.deploymentMetadata.commitSha)}` : ""}${input.deploymentMetadata.deployedAt ? `, deployed ${input.deploymentMetadata.deployedAt}` : ""}.`
+        : "Hosted operation should expose a release tag or commit SHA so operators can confirm what code is running during incidents and rollbacks.",
+      "Set COFOUNDRY_RELEASE and COFOUNDRY_COMMIT_SHA from the deploy pipeline or host unit environment.",
     ),
   ]
 
@@ -1140,6 +1169,7 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
       warningChecks,
     },
     cutoverPhases: buildCutoverPhases(input, checkById),
+    deployment: input.deploymentMetadata,
     generatedAt: input.generatedAt,
     groups,
     mode: {
