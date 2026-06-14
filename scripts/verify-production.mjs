@@ -14,6 +14,8 @@ const baseUrl = `http://${host}:${port}`
 const release = process.env.COFOUNDRY_RELEASE || "verify-production"
 const commitSha = process.env.COFOUNDRY_COMMIT_SHA || "verify-production-commit"
 const deployedAt = process.env.COFOUNDRY_DEPLOYED_AT || "2026-06-14T00:00:00.000Z"
+const configuredPublicAppUrl = process.env.VERIFY_PRODUCTION_APP_URL ?? ""
+const expectedCanonicalOrigin = normalizeBaseUrl(process.env.VERIFY_PRODUCTION_CANONICAL_ORIGIN || "https://cofoundry.jacobdanderson.net")
 const sessionSigningSecret = "verify-production-session-secret"
 const adminSession = {
   email: "ava@cofoundry.dev",
@@ -44,6 +46,20 @@ function header(response, name) {
 
 function includesNone(value, needles) {
   return needles.every(needle => !value.includes(needle))
+}
+
+function normalizeBaseUrl(value) {
+  const url = new URL(value)
+  url.pathname = url.pathname.replace(/\/+$/, "")
+  url.search = ""
+  url.hash = ""
+
+  return url.toString().replace(/\/+$/, "")
+}
+
+function assertNoLocalUrlLeak(value, label) {
+  assert(!value.includes("localhost"), `${label} should not expose localhost URLs in production verification`)
+  assert(!value.includes("127.0.0.1"), `${label} should not expose 127.0.0.1 URLs in production verification`)
 }
 
 function extractSitemapUrl(robotsText) {
@@ -119,11 +135,12 @@ function startServer() {
     env: {
       ...process.env,
       COFOUNDRY_COMMIT_SHA: commitSha,
+      COFOUNDRY_ALLOW_LOCAL_PUBLIC_APP_URL: "false",
       COFOUNDRY_DEPLOYED_AT: deployedAt,
       COFOUNDRY_RELEASE: release,
       HOST: host,
       NODE_ENV: "production",
-      NUXT_PUBLIC_APP_URL: baseUrl,
+      NUXT_PUBLIC_APP_URL: configuredPublicAppUrl,
       NUXT_PUBLIC_BACKEND_MODE: "mock",
       NUXT_PUBLIC_BILLING_MODE: "mock",
       NUXT_PUBLIC_ENABLE_DEMO_ACCESS: "false",
@@ -175,6 +192,9 @@ try {
   assert(header(home.response, "x-frame-options") === "DENY", "home page should deny frames")
   assert(header(home.response, "referrer-policy") === "strict-origin-when-cross-origin", "home page should set referrer policy")
   assert(header(home.response, "permissions-policy").includes("camera=()"), "home page should set permissions policy")
+  assert(header(home.response, "strict-transport-security").includes("max-age="), "home page should include HSTS for production canonical origin")
+  assert(home.text.includes(expectedCanonicalOrigin), `home page should include canonical production origin ${expectedCanonicalOrigin}`)
+  assertNoLocalUrlLeak(home.text, "home page")
 
   const missing = await fetchText("/definitely-not-a-cofoundry-page")
   assert(missing.response.status === 404, "unknown frontend routes should return 404")
@@ -200,16 +220,24 @@ try {
   assert(robots.response.status === 200, "/robots.txt should return 200")
   assert(robots.text.includes("Disallow: /admin"), "robots.txt should disallow admin routes")
   assert(robots.text.includes("Disallow: /app"), "robots.txt should disallow app routes")
+  assertNoLocalUrlLeak(robots.text, "robots.txt")
   const sitemapUrl = extractSitemapUrl(robots.text)
   assert(sitemapUrl.endsWith("/sitemap.xml"), "robots.txt should advertise an absolute sitemap URL")
   const canonicalBaseUrl = canonicalBaseFromSitemapUrl(sitemapUrl)
-  assert(canonicalBaseUrl.startsWith("http"), "robots sitemap URL should use an absolute public app URL")
+  assert(canonicalBaseUrl === expectedCanonicalOrigin, `robots sitemap URL should use ${expectedCanonicalOrigin}`)
 
   const sitemap = await fetchText("/sitemap.xml")
   assert(sitemap.response.status === 200, "/sitemap.xml should return 200")
+  assertNoLocalUrlLeak(sitemap.text, "sitemap.xml")
   assert(sitemap.text.includes(`<loc>${canonicalBaseUrl}/</loc>`), "sitemap should include home page")
   assert(sitemap.text.includes(`<loc>${canonicalBaseUrl}/find-cofounder</loc>`), "sitemap should include public discovery page")
   assert(includesNone(sitemap.text, ["/admin", "/app", "/api/admin", "/auth/sign-in"]), "sitemap should not include private/auth/admin routes")
+
+  const securityTxt = await fetchText("/.well-known/security.txt")
+  assert(securityTxt.response.status === 200, "/.well-known/security.txt should return 200")
+  assertNoLocalUrlLeak(securityTxt.text, "security.txt")
+  assert(securityTxt.text.includes(`Canonical: ${expectedCanonicalOrigin}/.well-known/security.txt`), "security.txt should include canonical production URL")
+  assert(securityTxt.text.includes(`Policy: ${expectedCanonicalOrigin}/safety`), "security.txt should include production policy URL")
 
   console.log("Production verification passed.")
 }
