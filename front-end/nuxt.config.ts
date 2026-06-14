@@ -121,7 +121,7 @@ export default defineNuxtConfig({
     },
     prerender: {
       crawlLinks: false,
-      routes: [...publicRoutes, "/sitemap.xml", "/robots.txt"],
+      routes: publicRoutes,
     },
     routeRules: {
       "/**": { headers: securityHeaders },
