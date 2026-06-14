@@ -121,3 +121,6 @@ jobs:
 
       - name: Production smoke verification
         run: npm run verify:production
+
+      - name: Public route smoke verification
+        run: npm run verify:public:local
