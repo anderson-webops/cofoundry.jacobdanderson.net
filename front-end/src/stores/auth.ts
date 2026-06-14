@@ -3,8 +3,13 @@ import { acceptHMRUpdate, defineStore } from "pinia"
 import { useSessionState } from "~/composables/useSessionState"
 import { useWorkspaceStore } from "~/stores/workspace"
 
-interface AuthResponse {
+interface SessionAuthResponse {
   session: SessionUser
+}
+
+interface OAuthAuthResponse {
+  redirectUrl?: string
+  session?: SessionUser
 }
 
 export const useAuthStore = defineStore("auth", () => {
@@ -26,7 +31,7 @@ export const useAuthStore = defineStore("auth", () => {
     clearError()
 
     try {
-      const response = await $fetch<AuthResponse>("/api/auth/sign-in", {
+      const response = await $fetch<SessionAuthResponse>("/api/auth/sign-in", {
         method: "POST",
         body: payload,
       })
@@ -49,7 +54,7 @@ export const useAuthStore = defineStore("auth", () => {
     clearError()
 
     try {
-      const response = await $fetch<AuthResponse>("/api/auth/sign-up", {
+      const response = await $fetch<SessionAuthResponse>("/api/auth/sign-up", {
         method: "POST",
         body: payload,
       })
@@ -74,10 +79,18 @@ export const useAuthStore = defineStore("auth", () => {
     clearError()
 
     try {
-      const response = await $fetch<AuthResponse>("/api/auth/oauth", {
+      const response = await $fetch<OAuthAuthResponse>("/api/auth/oauth", {
         method: "POST",
         body: { provider },
       })
+
+      if (response.redirectUrl) {
+        await navigateTo(response.redirectUrl, { external: true })
+        return null
+      }
+
+      if (!response.session)
+        throw new Error("OAuth sign-in did not return a session.")
 
       setSession(response.session)
       await workspaceStore.loadWorkspace(true)
@@ -102,7 +115,7 @@ export const useAuthStore = defineStore("auth", () => {
     pending.value = true
 
     try {
-      const response = await $fetch<AuthResponse>("/api/auth/complete-onboarding", {
+      const response = await $fetch<SessionAuthResponse>("/api/auth/complete-onboarding", {
         method: "POST",
         body: { session: nextSession },
       })

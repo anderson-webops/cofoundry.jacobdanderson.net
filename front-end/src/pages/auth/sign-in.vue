@@ -10,6 +10,7 @@ usePageSeo("Sign in")
 
 const authStore = useAuthStore()
 const toastStore = useToastStore()
+const route = useRoute()
 const { buildAccessRequestPath, policy } = useProductAccess()
 const accessRequestPath = buildAccessRequestPath("auth-sign-in", "access")
 const talkToTeamPath = buildAccessRequestPath("auth-sign-in", "contact")
@@ -19,6 +20,17 @@ const form = reactive({
   password: "",
 })
 const errors = ref<Record<string, string>>({})
+const oauthErrorMessage = computed(() => {
+  const code = typeof route.query.error === "string" ? route.query.error : ""
+  const messages: Record<string, string> = {
+    account_inactive: "That account is not active. Contact the team if you think this is wrong.",
+    oauth_failed: "Provider sign-in could not be completed. Use email/password or request account help.",
+    oauth_provider_disabled: "That provider is not enabled for this deployment yet.",
+    oauth_unavailable: "Provider sign-in is not available in this environment.",
+  }
+
+  return messages[code] || ""
+})
 
 async function submitForm() {
   errors.value = {}
@@ -56,6 +68,10 @@ async function submitForm() {
         ? "Use the email already attached to your approved account or invitation."
         : "Use your account credentials to continue discovery, messaging, proposals, and agreements." }}
     </p>
+
+    <div v-if="oauthErrorMessage" class="bg-[color:color-mix(in_srgb,var(--danger)_10%,transparent)] text-sm text-[var(--danger)] mt-5 p-4 border border-[color:color-mix(in_srgb,var(--danger)_28%,transparent)] rounded-3xl">
+      {{ oauthErrorMessage }}
+    </div>
 
     <form class="mt-8 gap-4 grid" @submit.prevent="submitForm">
       <TextInput

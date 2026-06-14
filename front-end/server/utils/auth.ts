@@ -1,10 +1,13 @@
+import type { User as SupabaseAuthUser } from "@supabase/supabase-js"
 import type { H3Event } from "h3"
-import type { AuthAccount, SessionUser } from "~/shared/types/domain"
+import type { AuthAccount, AuthProvider, SessionUser } from "~/shared/types/domain"
+import type { SupportedOAuthProvider } from "~/shared/utils/oauth-providers"
 import { Buffer } from "node:buffer"
 import { createHmac, timingSafeEqual } from "node:crypto"
 import process from "node:process"
 import { workspaceSeed } from "~/shared/data/seed"
 import { isLocalDevelopmentEnvironment, readPublicEnvironment } from "~/shared/utils/environment"
+import { isOAuthProviderEnabled, normalizeOAuthProvider } from "~/shared/utils/oauth-providers"
 import { resolveProductAccessPolicy, areSeededReviewCredentialsEnabled as resolveSeededReviewCredentialsEnabled } from "~/shared/utils/product-access"
 import { decodeSessionUser, encodeSessionUser, sessionCookieName, sessionSignatureCookieName } from "~/shared/utils/session"
 import { resolveActiveSessionFromSeed } from "~/shared/utils/session-authority"
@@ -12,9 +15,11 @@ import { signInSchema, signUpSchema } from "~/shared/utils/validation"
 import { buildSessionUser } from "~/shared/utils/workspace"
 import { buildDraftMemberWorkspaceState, buildMemberWorkspaceState, resolveSessionUserFromWorkspace } from "~/shared/utils/workspace-persistence"
 import { markAccessInviteAccepted, validateAccessInvite } from "./access-requests"
+import { resolveServerAppUrl } from "./app-url"
 import { createLocalAuthAccount, findLocalAuthSessionByEmail, findLocalAuthSessionById, updateLocalAuthOnboarding, verifyLocalAuthCredentials } from "./local-auth-store"
 import { loadMemberWorkspaceState, persistWholeMemberWorkspaceState } from "./member-workspace"
-import { createSupabaseAdminClient, createSupabaseServerClient, isSupabaseEnabled } from "./supabase"
+import { recordOperationalEvent } from "./operations-persistence"
+import { createSupabaseAdminClient, createSupabaseOAuthClient, createSupabaseServerClient, isSupabaseEnabled } from "./supabase"
 
 interface RegisteredAccount extends AuthAccount {
   name: string
@@ -32,6 +37,51 @@ interface SupabaseSessionUserRow {
 const registeredAccounts = new Map<string, RegisteredAccount>()
 const registeredSessions = new Map<string, SessionUser>()
 const localSessionSigningSecret = "cofoundry-local-session-signing-secret"
+
+function formatOAuthCallbackUrl(event: H3Event, provider: SupportedOAuthProvider) {
+  const callbackUrl = new URL("/api/auth/oauth/callback", resolveServerAppUrl(event))
+  callbackUrl.searchParams.set("provider", provider)
+  return callbackUrl.toString()
+}
+
+function getOAuthErrorRedirect(event: H3Event, code: string) {
+  const redirectUrl = new URL("/auth/sign-in", resolveServerAppUrl(event))
+  redirectUrl.searchParams.set("error", code)
+  return redirectUrl.toString()
+}
+
+function getOAuthSuccessRedirect(event: H3Event, session: SessionUser) {
+  return new URL(session.onboardingCompleted ? "/app" : "/onboarding", resolveServerAppUrl(event)).toString()
+}
+
+function getSupabaseOAuthDisplayName(user: SupabaseAuthUser, email: string) {
+  const metadata = user.user_metadata || {}
+  const candidate = metadata.name || metadata.full_name || metadata.user_name || metadata.preferred_username
+  return typeof candidate === "string" && candidate.trim()
+    ? candidate.trim()
+    : email.split("@")[0] || "CoFoundry member"
+}
+
+function isSupabaseEmailVerified(user: SupabaseAuthUser) {
+  return Boolean(user.email_confirmed_at || user.confirmed_at)
+}
+
+function inferSupabaseOAuthProvider(user: SupabaseAuthUser, fallbackProvider?: SupportedOAuthProvider | null) {
+  const candidates = [
+    fallbackProvider,
+    user.app_metadata?.provider,
+    ...(Array.isArray(user.app_metadata?.providers) ? user.app_metadata.providers : []),
+    ...(Array.isArray(user.identities) ? user.identities.map(identity => identity.provider) : []),
+  ]
+
+  for (const candidate of candidates) {
+    const provider = normalizeOAuthProvider(candidate)
+    if (provider)
+      return provider
+  }
+
+  return null
+}
 
 function readConfiguredSessionSignatureSecret() {
   return process.env.NUXT_SESSION_SIGNING_SECRET || process.env.SESSION_SIGNING_SECRET || ""
@@ -124,6 +174,92 @@ async function requireActiveSessionFromWorkspace(event: H3Event, session: Sessio
       statusCode: 403,
       statusMessage: "This account is not active.",
     })
+  }
+
+  return activeSession
+}
+
+async function recordOAuthTelemetry(event: H3Event, session: SessionUser, provider: SupportedOAuthProvider, verifiedEmail: boolean) {
+  try {
+    await recordOperationalEvent(event, {
+      actorUserId: session.id,
+      eventType: "auth.oauth.signed_in",
+      metadata: {
+        emailVerified: verifiedEmail,
+        provider,
+      },
+      severity: "info",
+      source: "auth.oauth",
+      targetId: session.id,
+      targetType: "user",
+    })
+  }
+  catch (error) {
+    console.warn("[auth] Unable to record OAuth sign-in telemetry.", error)
+  }
+}
+
+async function createSessionFromSupabaseAuthUser(event: H3Event, user: SupabaseAuthUser, provider?: AuthProvider) {
+  const normalizedEmail = user.email?.trim().toLowerCase()
+  if (!normalizedEmail) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "The OAuth provider did not return a verified email address.",
+    })
+  }
+
+  const verifiedEmail = isSupabaseEmailVerified(user)
+  const { seed, session, state } = await loadMemberWorkspaceState(event, {
+    id: user.id,
+    email: normalizedEmail,
+    name: getSupabaseOAuthDisplayName(user, normalizedEmail),
+    onboardingCompleted: false,
+    role: "founder",
+    subscriptionPlan: "free",
+    verifiedEmail,
+  })
+  const activeSession = resolveActiveSessionFromSeed(seed, session)
+
+  if (!activeSession) {
+    throw createError({
+      statusCode: 403,
+      statusMessage: "This account is not active.",
+    })
+  }
+
+  const linkedProviders = new Set<AuthProvider>(state.user.linkedProviders)
+  if (provider)
+    linkedProviders.add(provider)
+
+  const nextVerifiedEmail = state.user.verifiedEmail || verifiedEmail
+  const nextLinkedProviders = [...linkedProviders]
+  const providerChanged = nextLinkedProviders.some(item => !state.user.linkedProviders.includes(item))
+    || nextLinkedProviders.length !== state.user.linkedProviders.length
+  const verifiedEmailChanged = nextVerifiedEmail !== state.user.verifiedEmail
+
+  if (providerChanged || verifiedEmailChanged) {
+    await persistWholeMemberWorkspaceState(event, {
+      ...state,
+      user: {
+        ...state.user,
+        linkedProviders: nextLinkedProviders,
+        verifiedEmail: nextVerifiedEmail,
+      },
+    })
+    const refreshed = await loadMemberWorkspaceState(event, {
+      ...buildIdentityInput(activeSession),
+      verifiedEmail: nextVerifiedEmail,
+    })
+    const refreshedSession = resolveActiveSessionFromSeed(refreshed.seed, refreshed.session)
+
+    if (!refreshedSession) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: "This account is not active.",
+      })
+    }
+
+    return refreshedSession
   }
 
   return activeSession
@@ -267,6 +403,78 @@ export function validateSignUpPayload(payload: unknown) {
   return signUpSchema.parse(payload)
 }
 
+export async function beginSupabaseOAuthSignIn(event: H3Event, provider: SupportedOAuthProvider) {
+  if (!isSupabaseEnabled(event)) {
+    throw createError({
+      statusCode: 501,
+      statusMessage: "OAuth sign-in is not enabled for this deployment yet.",
+    })
+  }
+
+  if (!isOAuthProviderEnabled(provider, process.env)) {
+    throw createError({
+      statusCode: 501,
+      statusMessage: "OAuth sign-in is not enabled for this provider yet.",
+    })
+  }
+
+  const client = createSupabaseOAuthClient(event)
+  if (!client)
+    throw createError({ statusCode: 500, statusMessage: "Supabase OAuth client is unavailable." })
+
+  const result = await client.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo: formatOAuthCallbackUrl(event, provider),
+    },
+  })
+
+  if (result.error || !result.data.url) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: result.error?.message || "Unable to start OAuth sign-in.",
+    })
+  }
+
+  return result.data.url
+}
+
+export async function completeSupabaseOAuthCallback(event: H3Event, code: string, providerHint?: SupportedOAuthProvider | null) {
+  if (!isSupabaseEnabled(event))
+    return getOAuthErrorRedirect(event, "oauth_unavailable")
+
+  if (!code)
+    return getOAuthErrorRedirect(event, "oauth_failed")
+
+  const client = createSupabaseOAuthClient(event)
+  if (!client)
+    return getOAuthErrorRedirect(event, "oauth_unavailable")
+
+  const result = await client.auth.exchangeCodeForSession(code)
+  const user = result.data.user
+  const provider = user ? inferSupabaseOAuthProvider(user, providerHint) : null
+
+  if (result.error || !user || !provider)
+    return getOAuthErrorRedirect(event, "oauth_failed")
+
+  if (!isOAuthProviderEnabled(provider, process.env))
+    return getOAuthErrorRedirect(event, "oauth_provider_disabled")
+
+  try {
+    const session = await createSessionFromSupabaseAuthUser(event, user, provider)
+    writeSession(event, session)
+    await recordOAuthTelemetry(event, session, provider, isSupabaseEmailVerified(user))
+    return getOAuthSuccessRedirect(event, session)
+  }
+  catch (error) {
+    const statusCode = typeof error === "object" && error && "statusCode" in error
+      ? Number(error.statusCode)
+      : 500
+
+    return getOAuthErrorRedirect(event, statusCode === 403 ? "account_inactive" : "oauth_failed")
+  }
+}
+
 export async function verifyCredentials(event: H3Event, email: string, password: string) {
   const normalizedEmail = email.trim().toLowerCase()
 
@@ -284,16 +492,7 @@ export async function verifyCredentials(event: H3Event, email: string, password:
       })
     }
 
-    const { session } = await loadMemberWorkspaceState(event, {
-      id: result.data.user.id,
-      email: normalizedEmail,
-      name: typeof result.data.user.user_metadata?.name === "string" ? result.data.user.user_metadata.name : normalizedEmail.split("@")[0] || "CoFoundry member",
-      onboardingCompleted: false,
-      role: "founder",
-      subscriptionPlan: "free",
-    })
-
-    return requireActiveSessionFromWorkspace(event, session)
+    return createSessionFromSupabaseAuthUser(event, result.data.user, "email")
   }
 
   if (areSeededReviewCredentialsEnabledForCurrentEnvironment()) {

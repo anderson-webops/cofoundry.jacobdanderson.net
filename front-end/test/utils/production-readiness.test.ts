@@ -171,6 +171,57 @@ describe("production readiness snapshot", () => {
     })
   })
 
+  it("passes OAuth provider readiness in Supabase mode after callback smoke evidence", () => {
+    const snapshot = buildProductionReadinessSnapshot({
+      accessRequests: [],
+      adminPosture: healthyAdminPosture,
+      contactMailConfigured: true,
+      environment: environmentSnapshot({
+        backendMode: "supabase",
+        supabaseAnonKey: "anon-key",
+        supabaseUrl: "https://cofoundry.supabase.co",
+      }),
+      environmentValidationErrors: [],
+      generatedAt,
+      hasAlertWebhookConfigured: true,
+      hasDurableLocalDataDir: true,
+      hasOAuthProviderConfigured: true,
+      hasOperationsWorkerToken: true,
+      hasSessionSigningSecret: true,
+      hasTrustVerificationProviderConfigured: false,
+      isLocalDevelopment: false,
+      operations: {
+        ...healthyOperations,
+        operationalEvents: [
+          {
+            actor_user_id: "user_olivia",
+            created_at: generatedAt,
+            event_type: "auth.oauth.signed_in",
+            id: "event_oauth_smoke",
+            metadata: { provider: "github" },
+            severity: "info",
+            source: "auth.oauth",
+            target_id: "user_olivia",
+            target_type: "user",
+          },
+          ...healthyOperations.operationalEvents,
+        ],
+      },
+      privacyRequests: [],
+    })
+    const checkById = new Map(snapshot.groups.flatMap(group => group.checks).map(check => [check.id, check]))
+
+    expect(snapshot.overallStatus).toBe("pass")
+    expect(checkById.get("external-auth-provider")).toMatchObject({
+      status: "pass",
+      summary: "Successful OAuth callback 0 days old",
+    })
+    expect(snapshot.provisioningTasks.find(task => task.id === "external-auth-provider-provisioning")).toMatchObject({
+      status: "pass",
+      title: "External auth provider cutover",
+    })
+  })
+
   it("fails hosted production readiness when required launch controls are missing", () => {
     const snapshot = buildProductionReadinessSnapshot({
       accessRequests: [],
