@@ -3,6 +3,9 @@ const router = useRouter()
 const { getPrimaryAccessCta } = useProductAccess()
 const primaryAccessCta = computed(() => getPrimaryAccessCta("not-found"))
 
+if (import.meta.server)
+  setResponseStatus(404)
+
 usePageSeo("Page unavailable", "The requested CoFoundry page is unavailable or may have moved.", {
   robots: "noindex, nofollow",
 })
