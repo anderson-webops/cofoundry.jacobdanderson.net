@@ -1,6 +1,7 @@
 import { appDescription, appName } from "../constants/app"
 
 const trailingSlashPattern = /\/+$/
+const localSiteHostnames = new Set(["localhost", "127.0.0.1", "::1"])
 
 export interface FaqStructuredDataItem {
   answer: string
@@ -18,6 +19,23 @@ export function normalizeSiteUrl(appUrl?: string | null) {
   catch {
     return null
   }
+}
+
+export function isLocalSiteUrl(appUrl?: string | null) {
+  const siteUrl = normalizeSiteUrl(appUrl)
+  if (!siteUrl)
+    return false
+
+  return localSiteHostnames.has(new URL(siteUrl).hostname)
+}
+
+export function isPublicSiteUrl(appUrl?: string | null) {
+  const siteUrl = normalizeSiteUrl(appUrl)
+  if (!siteUrl)
+    return false
+
+  const url = new URL(siteUrl)
+  return url.protocol === "https:" && !localSiteHostnames.has(url.hostname)
 }
 
 export function buildSiteUrl(appUrl: string | null | undefined, path = "/") {

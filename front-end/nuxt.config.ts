@@ -5,10 +5,12 @@ import { privateApiRoutePrefixes, privateWorkspaceRoutePrefixes } from "./shared
 import { workspaceSeed } from "./shared/data/seed"
 import { getPublicRoutePaths } from "./shared/utils/directory"
 import { assertEnvironmentIsValid, readEnvironmentSnapshot } from "./shared/utils/environment"
+import { isPublicSiteUrl } from "./shared/utils/seo"
 import { defaultThemeSchemeDefinition } from "./shared/utils/theme"
 
 const environment = readEnvironmentSnapshot(process.env)
 const publicRoutes = getPublicRoutePaths(workspaceSeed)
+const prerenderPublicRoutes = isPublicSiteUrl(environment.public.appUrl) ? publicRoutes : []
 const securityHeaders = buildSecurityHeaders({
   appUrl: environment.public.appUrl,
   backendMode: environment.public.backendMode,
@@ -121,7 +123,7 @@ export default defineNuxtConfig({
     },
     prerender: {
       crawlLinks: false,
-      routes: publicRoutes,
+      routes: prerenderPublicRoutes,
     },
     routeRules: {
       "/**": { headers: securityHeaders },
