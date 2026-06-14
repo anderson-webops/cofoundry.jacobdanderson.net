@@ -1,6 +1,5 @@
 import { appDescription, appName } from "~/shared/constants/app"
-
-const trailingSlashPattern = /\/+$/
+import { buildSiteUrl } from "~/shared/utils/seo"
 
 interface PageSeoOptions {
   canonicalPath?: string
@@ -15,12 +14,7 @@ function buildCanonicalUrl(path?: string) {
     return undefined
 
   const runtimeConfig = useRuntimeConfig()
-  const baseUrl = runtimeConfig.public.appUrl?.replace(trailingSlashPattern, "")
-
-  if (!baseUrl)
-    return undefined
-
-  return new URL(path, `${baseUrl}/`).toString()
+  return buildSiteUrl(runtimeConfig.public.appUrl, path) || undefined
 }
 
 export function usePageSeo(title: string, description = appDescription, options: PageSeoOptions = {}) {

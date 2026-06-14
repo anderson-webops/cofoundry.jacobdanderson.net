@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { appDescription, appName } from "~/shared/constants/app"
 import { isPrivateWorkspaceRoutePath } from "~/shared/constants/route-surfaces"
+import { buildSiteStructuredData, buildSiteUrl } from "~/shared/utils/seo"
 import { themeSchemeStyleContent } from "~/shared/utils/theme"
-
-const trailingSlashPattern = /\/$/
 
 const workspaceStore = useWorkspaceStore()
 workspaceStore.ensureReady()
@@ -28,25 +27,9 @@ const analyticsScripts = import.meta.env.PROD
     ]
   : []
 const siteUrl = computed(() => {
-  const configured = runtimeConfig.public.appUrl || "https://cofoundry.jacobdanderson.net"
-  return new URL(route.path || "/", `${configured.replace(trailingSlashPattern, "")}/`).toString()
+  return buildSiteUrl(runtimeConfig.public.appUrl, route.path || "/")
 })
-const structuredData = computed(() => [
-  {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "description": appDescription,
-    "name": appName,
-    "url": "https://cofoundry.jacobdanderson.net",
-  },
-  {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    "description": appDescription,
-    "name": appName,
-    "url": "https://cofoundry.jacobdanderson.net",
-  },
-])
+const structuredData = computed(() => buildSiteStructuredData(runtimeConfig.public.appUrl))
 
 useHead(() => ({
   htmlAttrs: {
@@ -62,10 +45,14 @@ useHead(() => ({
       ]
     : [],
   link: [
-    {
-      rel: "canonical",
-      href: siteUrl.value,
-    },
+    ...(siteUrl.value
+      ? [
+          {
+            rel: "canonical",
+            href: siteUrl.value,
+          },
+        ]
+      : []),
   ],
   script: [
     ...analyticsScripts,
@@ -88,7 +75,7 @@ useSeoMeta({
   description: appDescription,
   ogSiteName: appName,
   ogType: "website",
-  ogUrl: () => siteUrl.value,
+  ogUrl: () => siteUrl.value || undefined,
   robots: () => (noindexRoute.value ? "noindex,nofollow" : undefined),
   twitterCard: "summary_large_image",
   twitterDescription: appDescription,
