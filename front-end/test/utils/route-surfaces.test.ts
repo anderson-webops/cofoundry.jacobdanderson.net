@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 import { resolve } from "node:path"
 import { describe, expect, it } from "vitest"
 import { adminNavigation, appNavigation, marketingNavigation } from "../../shared/constants/app"
@@ -82,5 +82,12 @@ describe("route surfaces", () => {
   it("keeps environment-gated surfaces backed by route files", () => {
     for (const surface of environmentGatedSurfaces)
       expect(routeFileExists(surface.route), `${surface.route} should resolve to a page file`).toBe(true)
+  })
+
+  it("keeps the catch-all unavailable page as a real noindex 404", () => {
+    const source = readFileSync(resolve(pagesRoot, "[...all].vue"), "utf8")
+
+    expect(source).toContain("setResponseStatus(404)")
+    expect(source).toContain("noindex, nofollow")
   })
 })
