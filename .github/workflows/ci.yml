@@ -17,6 +17,11 @@ jobs:
           node-version: 22.x
           cache: npm
 
+      - name: Pin npm version
+        run: |
+          npm i -g npm@11.12.1
+          npm -v
+
       - name: Install deps
         run: npm ci
 
@@ -32,6 +37,11 @@ jobs:
         with:
           node-version: 22.x
           cache: npm
+
+      - name: Pin npm version
+        run: |
+          npm i -g npm@11.12.1
+          npm -v
 
       - name: Install deps
         run: npm ci
@@ -56,6 +66,11 @@ jobs:
           cache: npm
           registry-url: https://registry.npmjs.org/
 
+      - name: Pin npm version
+        run: |
+          npm i -g npm@11.12.1
+          npm -v
+
       - name: Install deps
         run: npm ci
 
@@ -73,6 +88,11 @@ jobs:
           cache: npm
           registry-url: https://registry.npmjs.org/
 
+      - name: Pin npm version
+        run: |
+          npm i -g npm@11.12.1
+          npm -v
+
       - name: Install deps
         run: npm ci
 
@@ -85,9 +105,9 @@ jobs:
   accessibility:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22.x
           cache: npm
@@ -112,6 +132,11 @@ jobs:
         with:
           node-version: 22.x
           cache: npm
+
+      - name: Pin npm version
+        run: |
+          npm i -g npm@11.12.1
+          npm -v
 
       - name: Install deps
         run: npm ci
