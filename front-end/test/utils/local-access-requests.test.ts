@@ -31,7 +31,7 @@ describe("local access request store", () => {
   beforeEach(async () => {
     dataDirectory = await mkdtemp(join(tmpdir(), "cofoundry-access-requests-"))
     process.env.COFOUNDRY_LOCAL_DATA_DIR = dataDirectory
-    process.env.COFOUNDRY_ACCESS_REQUEST_RETENTION_LIMIT = "50"
+    process.env.COFOUNDRY_ACCESS_REQUEST_RETENTION_LIMIT = "5"
     await clearLocalAccessRequestStoreForTests()
   })
 
@@ -97,7 +97,7 @@ describe("local access request store", () => {
     expect(updated.id).toBe(first.id)
     expect(updated.company).toBe("SignalDeck")
 
-    for (let index = 0; index < 55; index += 1) {
+    for (let index = 0; index < 10; index += 1) {
       await createLocalAccessRequest({
         ...basePayload,
         email: `founder-${index}@example.com`,
@@ -105,6 +105,6 @@ describe("local access request store", () => {
       })
     }
 
-    expect(await listLocalAccessRequests()).toHaveLength(50)
+    expect(await listLocalAccessRequests()).toHaveLength(5)
   }, 15_000)
 })

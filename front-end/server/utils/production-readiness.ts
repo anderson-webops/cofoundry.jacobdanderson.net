@@ -271,6 +271,19 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
   const stripeMode = publicEnvironment.billingMode === "stripe"
   const environmentCheck = checkById.get("environment-validation")
   const stripeWebhookCheck = checkById.get("stripe-webhook-evidence")
+  const operationsUnitChecks = [
+    checkById.get("operations-worker-token"),
+    checkById.get("backup-recency"),
+    checkById.get("file-scanning"),
+    checkById.get("notification-digests"),
+    checkById.get("restore-drill"),
+    checkById.get("monitoring-heartbeat"),
+  ].filter((check): check is ProductionReadinessCheck => Boolean(check))
+  const operationsUnitStatus: ProductionReadinessStatus = operationsUnitChecks.some(check => check.status === "fail")
+    ? "fail"
+    : operationsUnitChecks.some(check => check.status === "warn")
+      ? "warn"
+      : "pass"
   const stripeCutoverStatus = !stripeMode
     ? "info"
     : environmentCheck?.status === "fail"
@@ -342,13 +355,23 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
       "COFOUNDRY_OPERATIONS_TOKEN=<vault-managed-worker-token>",
     ),
     task(
+      "operations-unit-installer",
+      "Operations unit installer",
+      operationsUnitStatus,
+      operationsUnitStatus === "pass" ? "Worker telemetry current" : "Install or verify worker timers",
+      "The checked-in systemd installer reduces drift across backup, digest, scanner, heartbeat, alert-smoke, mail-smoke, and restore-drill worker units.",
+      "Run the installer in dry-run mode first, review the generated commands and env file, then install or tune the units on the host.",
+      "sudo deploy/systemd/install-operations-units.sh --dry-run\nsudo deploy/systemd/install-operations-units.sh",
+      "deploy/systemd/README.md",
+    ),
+    task(
       "backup-worker-provisioning",
       "Backup worker schedule",
       checkById.get("backup-recency")?.status || "warn",
       checkById.get("backup-recency")?.summary || "Backup state unknown",
       "The admin console should show recent backup rows produced by the real host backup command.",
       "Install a timer that wraps the host backup command with the checked-in operations worker.",
-      "npm run operations:backup -- --provider server-backup --artifact-uri <artifact-uri> -- <backup command>",
+      "COFOUNDRY_BACKUP_COMMAND=\"<backup command>\"\nsystemctl start cofoundry-operations-backup.service\n# Direct fallback: npm run operations:backup -- --provider server-backup --artifact-uri <artifact-uri> -- <backup command>",
     ),
     task(
       "file-scanner-provisioning",
@@ -357,7 +380,7 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
       checkById.get("file-scanning")?.summary || "Scanner state unknown",
       "Private file uploads should be scanned and reported before operators rely on uploaded evidence.",
       "Configure the approved scanner command and schedule the checked-in scanner worker.",
-      "COFOUNDRY_FILE_SCANNER_COMMAND=\"clamscan --no-summary\" npm run operations:scan -- --limit 25",
+      "COFOUNDRY_FILE_SCANNER_COMMAND=\"clamscan --no-summary\"\nsystemctl start cofoundry-operations-scan.service\n# Direct fallback: npm run operations:scan -- --limit 25",
     ),
     task(
       "contract-envelope-provisioning",
@@ -388,7 +411,7 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
       checkById.get("notification-digests")?.summary || "Digest state unknown",
       "Scheduled digest rows prove the inbox notification path is running.",
       "Install the digest timer after SMTP and member notification preferences are verified.",
-      "npm run operations:digest -- --dry-run --max-users 100",
+      "COFOUNDRY_DIGEST_DRY_RUN=true\nsystemctl start cofoundry-operations-digest.service\n# Direct fallback: npm run operations:digest -- --dry-run --max-users 100",
     ),
     task(
       "restore-drill-provisioning",
@@ -397,7 +420,7 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
       checkById.get("restore-drill")?.summary || "Restore drill state unknown",
       "Backups are not production evidence until a restore command has succeeded and reported telemetry.",
       "Run the restore drill wrapper against a staging or verification command and keep the procedure in the server runbook.",
-      "npm run operations:restore-drill -- --id restore-YYYYMMDD -- <restore verification command>",
+      "COFOUNDRY_RESTORE_DRILL_COMMAND=\"<restore verification command>\"\nsystemctl start cofoundry-operations-restore-drill.service\n# Enable the timer only after manual success: sudo deploy/systemd/install-operations-units.sh --enable-restore-drill",
     ),
     task(
       "monitoring-heartbeat-provisioning",
@@ -406,7 +429,7 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
       checkById.get("monitoring-heartbeat")?.summary || "Monitoring state unknown",
       "The readiness view should show a recent heartbeat or alert event from uptime/log monitoring.",
       "Schedule the canonical heartbeat worker and keep failure events wired through the operations reporter.",
-      "npm run operations:heartbeat -- --metadata schedule=hourly",
+      "systemctl start cofoundry-operations-heartbeat.service\n# Direct fallback: npm run operations:heartbeat -- --metadata schedule=hourly",
     ),
     task(
       "alert-webhook-provisioning",

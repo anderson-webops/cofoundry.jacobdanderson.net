@@ -139,8 +139,14 @@ describe("production readiness snapshot", () => {
       status: "pass",
       summary: "sent smoke, 0 days old",
     })
+    expect(snapshot.provisioningTasks.find(task => task.id === "operations-unit-installer")).toMatchObject({
+      command: "sudo deploy/systemd/install-operations-units.sh --dry-run\nsudo deploy/systemd/install-operations-units.sh",
+      docsPath: "deploy/systemd/README.md",
+      status: "pass",
+      summary: "Worker telemetry current",
+    })
     expect(snapshot.provisioningTasks.find(task => task.id === "monitoring-heartbeat-provisioning")).toMatchObject({
-      command: "npm run operations:heartbeat -- --metadata schedule=hourly",
+      command: "systemctl start cofoundry-operations-heartbeat.service\n# Direct fallback: npm run operations:heartbeat -- --metadata schedule=hourly",
       status: "pass",
     })
     expect(snapshot.provisioningTasks.find(task => task.id === "alert-webhook-provisioning")).toMatchObject({
@@ -275,6 +281,10 @@ describe("production readiness snapshot", () => {
       }),
       expect.objectContaining({
         id: "worker-token-provisioning",
+        status: "warn",
+      }),
+      expect.objectContaining({
+        id: "operations-unit-installer",
         status: "warn",
       }),
       expect.objectContaining({
