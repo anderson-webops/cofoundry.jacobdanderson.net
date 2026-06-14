@@ -19,6 +19,7 @@ For a paste-ready staged handoff that covers the remaining external providers, u
 ## Daily Checks
 
 - Visit `/admin/readiness` and resolve any fail or warning checks before treating the deployment as production-ready.
+- Use `/admin/readiness`'s production cutover phases as the quick-read for which provider stages are active, intentionally disabled, blocked, or complete.
 - Use `/admin/readiness`'s server provisioning checklist as the canonical handoff for host-level secrets, durable storage, mail, worker timers, restore drills, monitoring, first-admin bootstrap, and Stripe cutover preparation.
 - Confirm `/api/health` returns `status: "ok"` from the deployed Nuxt app.
 - Visit `/admin/operations` and confirm the newest backup, scanner, digest, trust-verification, and operational-event rows are current.

@@ -30,6 +30,16 @@ export interface ProductionReadinessProvisioningTask {
   title: string
 }
 
+export interface ProductionReadinessCutoverPhase {
+  action: string
+  detail: string
+  docsPath: string
+  id: string
+  status: ProductionReadinessStatus
+  summary: string
+  title: string
+}
+
 export interface ProductionReadinessOperationsRows {
   backupRuns: Array<Record<string, unknown>>
   contractEnvelopeEvents?: Array<Record<string, unknown>>
@@ -76,6 +86,7 @@ export interface ProductionReadinessPayload {
     privacyRequestsOpen: number
     warningChecks: number
   }
+  cutoverPhases: ProductionReadinessCutoverPhase[]
   generatedAt: string
   groups: ProductionReadinessGroup[]
   mode: {
@@ -263,6 +274,35 @@ function task(
   docsPath = "docs/operations-runbook.md",
 ): ProductionReadinessProvisioningTask {
   return { action, command, detail, docsPath, id, status, summary, title }
+}
+
+function phase(
+  id: string,
+  title: string,
+  status: ProductionReadinessStatus,
+  summary: string,
+  detail: string,
+  action: string,
+  docsPath = "docs/server-ai-production-cutover-prompt.md",
+): ProductionReadinessCutoverPhase {
+  return { action, detail, docsPath, id, status, summary, title }
+}
+
+function aggregateStatus(checks: Array<ProductionReadinessCheck | undefined>): ProductionReadinessStatus {
+  const presentChecks = checks.filter((item): item is ProductionReadinessCheck => Boolean(item))
+  if (!presentChecks.length)
+    return "info"
+
+  if (presentChecks.some(item => item.status === "fail"))
+    return "fail"
+
+  if (presentChecks.some(item => item.status === "warn"))
+    return "warn"
+
+  if (presentChecks.some(item => item.status === "pass"))
+    return "pass"
+
+  return "info"
 }
 
 function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<string, ProductionReadinessCheck>) {
@@ -465,6 +505,130 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
         : "Keep billing in mock/operator-managed mode until the Stripe account and webhook setup are ready.",
       "NUXT_PUBLIC_BILLING_MODE=stripe STRIPE_SECRET_KEY=<vault-managed-key> STRIPE_WEBHOOK_SECRET=<vault-managed-secret>",
       "README.md#billing-notes",
+    ),
+  ]
+}
+
+function buildCutoverPhases(input: ProductionReadinessInput, checkById: Map<string, ProductionReadinessCheck>) {
+  const { public: publicEnvironment } = input.environment
+  const mockMode = publicEnvironment.backendMode !== "supabase"
+  const stripeMode = publicEnvironment.billingMode === "stripe"
+  const emailProviderStatus = aggregateStatus([
+    checkById.get("mail-transport"),
+    input.hasEmailSuppressionProviderConfigured ? checkById.get("email-suppression-evidence") : undefined,
+  ])
+  const operationsAutomationStatus = aggregateStatus([
+    checkById.get("operations-worker-token"),
+    checkById.get("backup-recency"),
+    checkById.get("file-scanning"),
+    checkById.get("notification-digests"),
+    checkById.get("restore-drill"),
+    checkById.get("monitoring-heartbeat"),
+    checkById.get("alert-webhook-destination"),
+  ])
+  const supabaseCutoverStatus = publicEnvironment.backendMode === "supabase"
+    ? aggregateStatus([
+        checkById.get("environment-validation"),
+        checkById.get("active-admin-access"),
+        checkById.get("admin-bootstrap-audit"),
+      ])
+    : "info"
+  const externalAuthStatus = input.hasOAuthProviderConfigured
+    ? checkById.get("external-auth-provider")?.status || "warn"
+    : "info"
+  const trustAndAgreementStatus = input.hasTrustVerificationProviderConfigured || input.hasContractEnvelopeProviderConfigured
+    ? aggregateStatus([
+        input.hasTrustVerificationProviderConfigured ? checkById.get("trust-verification-evidence") : undefined,
+        input.hasContractEnvelopeProviderConfigured ? checkById.get("contract-envelope-evidence") : undefined,
+      ])
+    : "info"
+  const stripeCutoverStatus = stripeMode
+    ? aggregateStatus([
+        checkById.get("environment-validation"),
+        checkById.get("stripe-webhook-evidence"),
+      ])
+    : "info"
+
+  return [
+    phase(
+      "durable-mock-baseline",
+      "Durable mock/access-request baseline",
+      mockMode
+        ? aggregateStatus([
+            checkById.get("environment-validation"),
+            checkById.get("launch-mode"),
+            checkById.get("public-app-url"),
+            checkById.get("session-signing-secret"),
+            checkById.get("local-durable-store"),
+            checkById.get("operations-worker-token"),
+            checkById.get("active-admin-access"),
+          ])
+        : "pass",
+      mockMode ? "Active production path" : "Completed before live persistence",
+      "This is the current safe public posture: marketing/discovery pages, access requests, invited local accounts, durable local state, and admin operations without live Supabase or Stripe.",
+      mockMode
+        ? "Resolve baseline failures and warnings before increasing traffic or enabling provider cutovers."
+        : "Keep the local mock/access-request rollback path documented even after Supabase cutover.",
+    ),
+    phase(
+      "outbound-email-provider",
+      "Outbound email provider",
+      emailProviderStatus,
+      input.contactMailConfigured ? "Mail transport configured" : "Mail transport not configured",
+      "Contact, access-request, digest, lifecycle, and support workflows need provider-backed delivery plus suppression handling before real optional sends are scheduled.",
+      input.contactMailConfigured
+        ? "Keep recent mail-smoke evidence current and wire suppression callbacks before enabling scheduled real digests."
+        : "Choose the transactional email provider, configure server-only credentials, and run the mail-smoke worker.",
+      "docs/operations-runbook.md",
+    ),
+    phase(
+      "operations-automation",
+      "Operations automation",
+      operationsAutomationStatus,
+      operationsAutomationStatus === "pass" ? "Workers reporting" : "Worker evidence incomplete",
+      "Backups, scanner results, digest runs, restore drills, monitoring heartbeats, and alert delivery need fresh worker-reported evidence.",
+      "Run or tune the checked-in systemd installer, then verify current rows in `/admin/operations` and `/admin/readiness`.",
+      "deploy/systemd/README.md",
+    ),
+    phase(
+      "supabase-persistence-cutover",
+      "Supabase persistence cutover",
+      supabaseCutoverStatus,
+      publicEnvironment.backendMode === "supabase" ? "Supabase mode active" : "Not enabled",
+      "Live persistence should wait for migrations, Vault-injected Supabase secrets, ownership/RLS checks, and first-admin bootstrap evidence.",
+      publicEnvironment.backendMode === "supabase"
+        ? "Resolve any Supabase-mode readiness warnings before relying on live persisted accounts."
+        : "Keep `NUXT_PUBLIC_BACKEND_MODE=mock` until staging proves Supabase migrations, auth, admin bootstrap, and rollback.",
+    ),
+    phase(
+      "external-auth-cutover",
+      "External auth cutover",
+      externalAuthStatus,
+      input.hasOAuthProviderConfigured ? "Provider marker configured" : "Not enabled",
+      "OAuth buttons and provider account linking should appear only after Supabase mode and a successful provider callback smoke test.",
+      input.hasOAuthProviderConfigured
+        ? "Confirm `/admin/operations` records `auth.oauth.signed_in` and readiness passes before public provider sign-in."
+        : "Leave OAuth provider markers unset until Supabase auth and provider callback URLs are smoke-tested.",
+    ),
+    phase(
+      "trust-and-agreement-providers",
+      "Trust and agreement providers",
+      trustAndAgreementStatus,
+      input.hasTrustVerificationProviderConfigured || input.hasContractEnvelopeProviderConfigured ? "Provider marker configured" : "Not enabled",
+      "Identity, domain, ownership, e-signature, and PDF provider callbacks should create evidence without automatically granting member-facing claims.",
+      input.hasTrustVerificationProviderConfigured || input.hasContractEnvelopeProviderConfigured
+        ? "Send provider smoke rows through the checked-in operations endpoints and confirm admin evidence before exposing provider-backed claims."
+        : "Choose providers only after privacy, badge, document custody, and completed-PDF retention policy are explicit.",
+    ),
+    phase(
+      "stripe-billing-cutover",
+      "Stripe billing cutover",
+      stripeCutoverStatus,
+      stripeMode ? "Stripe mode active" : "Not enabled",
+      "Live billing should wait for products, prices, signed webhooks, subscription reconciliation, customer portal configuration, and rollback.",
+      stripeMode
+        ? "Trigger a signed checkout/subscription webhook and confirm readiness evidence before exposing checkout broadly."
+        : "Keep `NUXT_PUBLIC_BILLING_MODE=mock` until the Stripe account and webhook path are proven in staging.",
     ),
   ]
 }
@@ -975,6 +1139,7 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
       privacyRequestsOpen: privacyQueue.open.length,
       warningChecks,
     },
+    cutoverPhases: buildCutoverPhases(input, checkById),
     generatedAt: input.generatedAt,
     groups,
     mode: {

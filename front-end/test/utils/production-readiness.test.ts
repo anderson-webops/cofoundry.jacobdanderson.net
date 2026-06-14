@@ -153,6 +153,31 @@ describe("production readiness snapshot", () => {
       command: "COFOUNDRY_ALERT_WEBHOOK_URL=<server-only-webhook-url>\nsystemctl start cofoundry-operations-alert-smoke.service",
       status: "pass",
     })
+    expect(snapshot.cutoverPhases).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: "durable-mock-baseline",
+        status: "pass",
+        summary: "Active production path",
+      }),
+      expect.objectContaining({
+        id: "outbound-email-provider",
+        status: "pass",
+      }),
+      expect.objectContaining({
+        id: "operations-automation",
+        status: "pass",
+      }),
+      expect.objectContaining({
+        id: "supabase-persistence-cutover",
+        status: "info",
+        summary: "Not enabled",
+      }),
+      expect.objectContaining({
+        id: "stripe-billing-cutover",
+        status: "info",
+        summary: "Not enabled",
+      }),
+    ]))
   })
 
   it("warns when OAuth provider markers are configured before live auth cutover", () => {
@@ -183,6 +208,10 @@ describe("production readiness snapshot", () => {
     expect(snapshot.provisioningTasks.find(task => task.id === "external-auth-provider-provisioning")).toMatchObject({
       status: "warn",
       title: "External auth provider cutover",
+    })
+    expect(snapshot.cutoverPhases.find(phase => phase.id === "external-auth-cutover")).toMatchObject({
+      status: "warn",
+      summary: "Provider marker configured",
     })
   })
 
@@ -234,6 +263,10 @@ describe("production readiness snapshot", () => {
     expect(snapshot.provisioningTasks.find(task => task.id === "external-auth-provider-provisioning")).toMatchObject({
       status: "pass",
       title: "External auth provider cutover",
+    })
+    expect(snapshot.cutoverPhases.find(phase => phase.id === "external-auth-cutover")).toMatchObject({
+      status: "pass",
+      summary: "Provider marker configured",
     })
   })
 
@@ -292,6 +325,10 @@ describe("production readiness snapshot", () => {
         status: "warn",
       }),
     ]))
+    expect(snapshot.cutoverPhases.find(phase => phase.id === "durable-mock-baseline")).toMatchObject({
+      status: "fail",
+      summary: "Active production path",
+    })
   })
 
   it("warns on stale operator queues and fails flagged file scans", () => {
@@ -568,6 +605,14 @@ describe("production readiness snapshot", () => {
       status: "pass",
       title: "Trust verification provider evidence",
     })
+    expect(withoutEvidence.cutoverPhases.find(phase => phase.id === "trust-and-agreement-providers")).toMatchObject({
+      status: "warn",
+      summary: "Provider marker configured",
+    })
+    expect(withEvidence.cutoverPhases.find(phase => phase.id === "trust-and-agreement-providers")).toMatchObject({
+      status: "pass",
+      summary: "Provider marker configured",
+    })
     expect(withEvidence.counts.operationsRows).toBe(healthyOperations.backupRuns.length + healthyOperations.fileUploads.length + healthyOperations.notificationDeliveries.length + healthyOperations.operationalEvents.length + 1)
   })
 
@@ -651,6 +696,14 @@ describe("production readiness snapshot", () => {
       status: "pass",
       summary: "Last processed webhook 0 days old",
     })
+    expect(withoutWebhook.cutoverPhases.find(phase => phase.id === "stripe-billing-cutover")).toMatchObject({
+      status: "warn",
+      summary: "Stripe mode active",
+    })
+    expect(withWebhook.cutoverPhases.find(phase => phase.id === "stripe-billing-cutover")).toMatchObject({
+      status: "pass",
+      summary: "Stripe mode active",
+    })
   })
 
   it("tracks contract-envelope provider evidence only after a provider is configured", () => {
@@ -721,6 +774,14 @@ describe("production readiness snapshot", () => {
       status: "pass",
       title: "Contract envelope provider evidence",
     })
+    expect(withoutEvidence.cutoverPhases.find(phase => phase.id === "trust-and-agreement-providers")).toMatchObject({
+      status: "warn",
+      summary: "Provider marker configured",
+    })
+    expect(withEvidence.cutoverPhases.find(phase => phase.id === "trust-and-agreement-providers")).toMatchObject({
+      status: "pass",
+      summary: "Provider marker configured",
+    })
   })
 
   it("tracks email suppression provider evidence only after a provider is configured", () => {
@@ -789,6 +850,14 @@ describe("production readiness snapshot", () => {
       status: "pass",
       title: "Email suppression provider evidence",
     })
+    expect(withoutEvidence.cutoverPhases.find(phase => phase.id === "outbound-email-provider")).toMatchObject({
+      status: "warn",
+      summary: "Mail transport configured",
+    })
+    expect(withEvidence.cutoverPhases.find(phase => phase.id === "outbound-email-provider")).toMatchObject({
+      status: "pass",
+      summary: "Mail transport configured",
+    })
   })
 
   it("warns in Supabase mode until first-admin bootstrap evidence exists", () => {
@@ -829,6 +898,10 @@ describe("production readiness snapshot", () => {
       command: "BOOTSTRAP_ADMIN_EMAIL=operator@example.com npm run -w back-end bootstrap-admin",
       docsPath: "docs/server-ai-admin-bootstrap-prompt.md",
       status: "warn",
+    })
+    expect(snapshot.cutoverPhases.find(phase => phase.id === "supabase-persistence-cutover")).toMatchObject({
+      status: "warn",
+      summary: "Supabase mode active",
     })
   })
 })

@@ -116,6 +116,47 @@ const scoreContext = computed(() => {
       </p>
     </section>
 
+    <section v-if="data" class="panel p-6">
+      <div class="flex flex-wrap gap-3 items-start justify-between">
+        <div>
+          <h2 class="text-lg font-semibold">
+            Production cutover phases
+          </h2>
+          <p class="muted text-sm leading-6 mt-2">
+            A phase-level view of what is ready now, what is intentionally disabled, and what still needs host or provider work before cutover.
+          </p>
+        </div>
+        <BaseBadge tone="neutral">
+          {{ data.cutoverPhases.length }} phases
+        </BaseBadge>
+      </div>
+
+      <div class="mt-5 gap-3 grid lg:grid-cols-2">
+        <article v-for="phase in data.cutoverPhases" :key="phase.id" class="surface-row">
+          <div class="flex flex-wrap gap-2">
+            <BaseBadge :tone="statusTone[phase.status]">
+              {{ statusLabel[phase.status] }}
+            </BaseBadge>
+            <BaseBadge tone="neutral">
+              {{ phase.summary }}
+            </BaseBadge>
+          </div>
+          <h3 class="text-base font-semibold mt-4">
+            {{ phase.title }}
+          </h3>
+          <p class="muted text-sm leading-6 mt-2">
+            {{ phase.detail }}
+          </p>
+          <p class="text-sm leading-6 mt-3">
+            {{ phase.action }}
+          </p>
+          <p class="text-xs text-[var(--muted)] mt-3">
+            Reference: {{ phase.docsPath }}
+          </p>
+        </article>
+      </div>
+    </section>
+
     <section v-if="priorityChecks.length" class="panel p-6">
       <div class="flex flex-wrap gap-3 items-start justify-between">
         <div>
