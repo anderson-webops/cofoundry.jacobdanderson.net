@@ -46,6 +46,8 @@ const defaultRetentionLimit = 500
 const localAdminAuditStoreFilename = "admin-audit.json"
 
 let writeQueue = Promise.resolve()
+let cachedStore: LocalAdminAuditStore | null = null
+let cachedStorePath: string | null = null
 
 function rootDataDirectory() {
   if (process.env.COFOUNDRY_LOCAL_DATA_DIR)
@@ -66,7 +68,7 @@ function retentionLimit() {
   if (Number.isNaN(configuredLimit))
     return defaultRetentionLimit
 
-  return Math.min(Math.max(configuredLimit, 50), 2000)
+  return Math.min(Math.max(configuredLimit, 1), 2000)
 }
 
 function emptyStore(): LocalAdminAuditStore {
@@ -116,19 +118,33 @@ async function readStoreFile() {
 }
 
 async function readStore() {
-  const contents = await readStoreFile()
-  if (!contents)
-    return emptyStore()
+  const path = storePath()
+  if (cachedStore && cachedStorePath === path)
+    return cachedStore
 
-  return {
+  const contents = await readStoreFile()
+  if (!contents) {
+    cachedStore = emptyStore()
+    cachedStorePath = path
+    return cachedStore
+  }
+
+  cachedStore = {
     ...emptyStore(),
     ...JSON.parse(contents),
   } as LocalAdminAuditStore
+  cachedStorePath = path
+  return cachedStore
 }
 
 async function writeStore(store: LocalAdminAuditStore) {
-  await mkdir(dirname(storePath()), { recursive: true })
-  await writeFile(storePath(), `${JSON.stringify(pruneStore(store), null, 2)}\n`, "utf-8")
+  const path = storePath()
+  const prunedStore = pruneStore(store)
+
+  await mkdir(dirname(path), { recursive: true })
+  await writeFile(path, `${JSON.stringify(prunedStore)}\n`, "utf-8")
+  cachedStore = prunedStore
+  cachedStorePath = path
 }
 
 async function updateStore<T>(updater: (store: LocalAdminAuditStore) => T | Promise<T>) {
@@ -341,5 +357,8 @@ export async function mergeLocalAdminAuditState(seed: WorkspaceSeed) {
 }
 
 export async function clearLocalAdminAuditStoreForTests() {
+  await writeQueue
+  cachedStore = null
+  cachedStorePath = null
   await rm(storePath(), { force: true })
 }

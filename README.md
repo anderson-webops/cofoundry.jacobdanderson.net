@@ -286,6 +286,7 @@ Each endpoint requires `Authorization: Bearer <COFOUNDRY_OPERATIONS_TOKEN>` or `
 
 Checked-in worker commands wrap those endpoints for systemd timers or cron:
 
+- `sudo deploy/systemd/install-operations-units.sh --dry-run` previews the checked-in operations unit install; `sudo deploy/systemd/install-operations-units.sh` installs the default heartbeat, digest, scan, and backup timers while keeping restore-drill opt-in until a manual restore check succeeds.
 - `npm run operations:backup -- --provider server-backup --artifact-uri <artifact-uri> -- <backup command>` records backup start and final success/failure around the real host backup command.
 - `npm run operations:digest -- --dry-run --max-users 100` verifies scheduled digest delivery before removing `--dry-run`.
 - `COFOUNDRY_FILE_SCANNER_COMMAND="clamscan --no-summary" npm run operations:scan -- --limit 25` polls pending file scans, downloads private uploads, runs the scanner, and reports `clean`, `flagged`, or `failed`.

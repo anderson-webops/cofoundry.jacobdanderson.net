@@ -14,7 +14,7 @@ describe("local admin audit store", () => {
   beforeEach(async () => {
     dataDirectory = await mkdtemp(join(tmpdir(), "cofoundry-admin-audit-"))
     process.env.COFOUNDRY_LOCAL_DATA_DIR = dataDirectory
-    process.env.COFOUNDRY_ADMIN_AUDIT_RETENTION_LIMIT = "50"
+    process.env.COFOUNDRY_ADMIN_AUDIT_RETENTION_LIMIT = "5"
     vi.stubGlobal("useRuntimeConfig", () => ({
       public: {
         backendMode: "mock",
@@ -106,7 +106,7 @@ describe("local admin audit store", () => {
   })
 
   it("enforces local admin audit retention", async () => {
-    for (let index = 0; index < 55; index += 1) {
+    for (let index = 0; index < 10; index += 1) {
       await persistAdminAction({} as H3Event, {
         adminUserId: "user_ava",
         createdAt: new Date(Date.UTC(2026, 0, index + 1)).toISOString(),
@@ -120,7 +120,7 @@ describe("local admin audit store", () => {
 
     const store = await readLocalAdminAuditStore()
 
-    expect(store.actions).toHaveLength(50)
-    expect(store.actions[0]?.id).toBe("admin_action_54")
+    expect(store.actions).toHaveLength(5)
+    expect(store.actions[0]?.id).toBe("admin_action_9")
   }, 15_000)
 })

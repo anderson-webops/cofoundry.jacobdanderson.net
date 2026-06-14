@@ -20,7 +20,7 @@ Source/runtime context:
 - Trust-provider readiness is optional. Leave `COFOUNDRY_TRUST_VERIFICATION_PROVIDER`, `COFOUNDRY_IDENTITY_VERIFICATION_PROVIDER`, `COFOUNDRY_DOMAIN_VERIFICATION_PROVIDER`, and `COFOUNDRY_SOCIAL_VERIFICATION_PROVIDER` unset until the operator chooses the corresponding provider. Once any marker is set, `/admin/readiness` expects recent trust-verification evidence.
 - Contract-envelope provider readiness is optional. Leave `COFOUNDRY_CONTRACT_ENVELOPE_PROVIDER`, `COFOUNDRY_ESIGNATURE_PROVIDER`, and `COFOUNDRY_PDF_PROVIDER` unset unless a dedicated e-signature/PDF provider is selected. Once any marker is set, `/admin/readiness` expects recent completed envelope evidence.
 - The source includes schedulable worker commands: `npm run operations:backup`, `npm run operations:digest`, `npm run operations:scan`, `npm run operations:heartbeat`, `npm run operations:alert-smoke`, `npm run operations:event`, `npm run operations:mail-smoke`, `npm run operations:worker -- lifecycle-notification`, `npm run operations:worker -- email-suppression`, `npm run operations:worker -- contract-envelope`, `npm run operations:trust-verification`, and `npm run operations:restore-drill`.
-- The source includes systemd templates in `deploy/systemd/`. Prefer installing and tuning those templates instead of hand-writing timer units from scratch.
+- The source includes systemd templates and a dry-run capable installer in `deploy/systemd/`. Prefer `sudo deploy/systemd/install-operations-units.sh --dry-run` followed by a reviewed install instead of hand-writing timer units from scratch.
 - In mock/access-request mode, operations telemetry persists to `.data/operations-telemetry.json` and local uploaded scan artifacts persist under `.data/local-file-uploads/` unless `COFOUNDRY_LOCAL_DATA_DIR` points at another durable writable directory.
 
 Tasks:
@@ -30,7 +30,12 @@ Tasks:
 4. Restart the app and verify production logs do not mention loading `../.env`.
 5. If Supabase mode is not intentionally enabled, leave `NUXT_PUBLIC_BACKEND_MODE="mock"` and verify the public site remains a marketing/access-request shell.
 6. If Supabase mode is intentionally enabled, verify all migrations in `back-end/supabase/migrations/` have been applied and that `SUPABASE_SERVICE_ROLE_KEY`, `NUXT_PUBLIC_SUPABASE_URL`, `NUXT_PUBLIC_SUPABASE_ANON_KEY`, and `SESSION_SIGNING_SECRET` are present.
-7. Install the checked-in unit templates from `deploy/systemd/` or create equivalent cron entries. Copy `deploy/systemd/cofoundry-operations.env.example` to `/etc/cofoundry/operations.env`, fill in host values from Vault-managed env, and adjust `User=`, `Group=`, and `WorkingDirectory=` if needed. If an alerting destination exists, add `COFOUNDRY_ALERT_WEBHOOK_URL`, optional `COFOUNDRY_ALERT_WEBHOOK_TOKEN`, optional `COFOUNDRY_ALERT_SEVERITIES=error,warning`, and optional `COFOUNDRY_ALERT_TIMEOUT_MS=10000` to the same server-only worker env file. If mail smoke checks are expected, add `COFOUNDRY_MAIL_SMOKE_TO_EMAIL=<monitored-inbox>`.
+7. Preview and install the checked-in unit templates from `deploy/systemd/`, or create equivalent cron entries only if systemd is unavailable:
+
+   sudo deploy/systemd/install-operations-units.sh --dry-run
+   sudo deploy/systemd/install-operations-units.sh
+
+   The installer creates `/etc/cofoundry/operations.env` from the example only when it does not already exist, enables heartbeat/digest/scan/backup timers by default, and leaves the restore-drill timer disabled unless `--enable-restore-drill` is passed. Fill in host values from Vault-managed env, and adjust `User=`, `Group=`, and `WorkingDirectory=` in the templates before installation if needed. If an alerting destination exists, add `COFOUNDRY_ALERT_WEBHOOK_URL`, optional `COFOUNDRY_ALERT_WEBHOOK_TOKEN`, optional `COFOUNDRY_ALERT_SEVERITIES=error,warning`, and optional `COFOUNDRY_ALERT_TIMEOUT_MS=10000` to the same server-only worker env file. If mail smoke checks are expected, add `COFOUNDRY_MAIL_SMOKE_TO_EMAIL=<monitored-inbox>`.
 8. Create a systemd timer or equivalent cron for unread digests. First run dry-run mode with the checked-in worker:
 
    npm run operations:digest -- --dry-run --max-users 100

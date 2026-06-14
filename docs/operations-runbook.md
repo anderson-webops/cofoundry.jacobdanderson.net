@@ -44,7 +44,16 @@ For a paste-ready staged handoff that covers the remaining external providers, u
 
 ## Worker Schedule
 
-Checked-in systemd templates live in `deploy/systemd/`. Use them as the default host implementation, then tune `User=`, `Group=`, `WorkingDirectory=`, calendar intervals, and host wrapper scripts for the actual server.
+Checked-in systemd templates and a dry-run capable installer live in `deploy/systemd/`. Use them as the default host implementation, then tune `User=`, `Group=`, `WorkingDirectory=`, calendar intervals, and host wrapper scripts for the actual server.
+
+Preview and install the default timer set from the deployed checkout:
+
+```sh
+sudo deploy/systemd/install-operations-units.sh --dry-run
+sudo deploy/systemd/install-operations-units.sh
+```
+
+The installer enables heartbeat, digest, scan, and backup timers by default. It creates `/etc/cofoundry/operations.env` only when missing, does not overwrite it unless `--force-env` is passed, and leaves the restore-drill timer disabled unless `--enable-restore-drill` is passed after a manual restore check succeeds.
 
 - Backup runner: wrap the real host backup command with `npm run operations:backup -- --provider server-backup --artifact-uri <artifact-uri> -- <backup command>`. The worker records `running`, then `succeeded` or `failed`, through `POST /api/operations/backup-runs`.
 - Notification digest runner: call `npm run operations:digest -- --dry-run --max-users 100` before enabling real sends. Remove `--dry-run` only after SMTP and member notification preferences are verified. Digest content follows the same inbox action queue used by `/app/inbox`, includes a signed preference-management footer, and sends a `List-Unsubscribe` header. Intros, unread conversations, proposals, signatures, and operational notices are handled consistently. Scheduled digest runs skip members whose `/app/settings` digest preference is disabled; Supabase users default to disabled until they opt in.

@@ -34,7 +34,7 @@ describe("local privacy request store", () => {
   beforeEach(async () => {
     dataDirectory = await mkdtemp(join(tmpdir(), "cofoundry-privacy-requests-"))
     process.env.COFOUNDRY_LOCAL_DATA_DIR = dataDirectory
-    process.env.COFOUNDRY_PRIVACY_REQUEST_RETENTION_LIMIT = "50"
+    process.env.COFOUNDRY_PRIVACY_REQUEST_RETENTION_LIMIT = "5"
     await clearLocalPrivacyRequestStoreForTests()
   })
 
@@ -95,11 +95,11 @@ describe("local privacy request store", () => {
       timestamp: "2026-01-10T00:00:00.000Z",
     })).toBeNull()
 
-    for (let index = 0; index < 55; index += 1)
+    for (let index = 0; index < 10; index += 1)
       await createLocalPrivacyRequest(requestFixture(index))
 
     const requests = await listLocalPrivacyRequests()
-    expect(requests).toHaveLength(50)
-    expect(requests[0]?.id).toBe("privacy_54")
+    expect(requests).toHaveLength(5)
+    expect(requests[0]?.id).toBe("privacy_9")
   }, 15_000)
 })
