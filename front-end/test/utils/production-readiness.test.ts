@@ -140,6 +140,37 @@ describe("production readiness snapshot", () => {
     })
   })
 
+  it("warns when OAuth provider markers are configured before live auth cutover", () => {
+    const snapshot = buildProductionReadinessSnapshot({
+      accessRequests: [],
+      adminPosture: healthyAdminPosture,
+      contactMailConfigured: true,
+      environment: environmentSnapshot(),
+      environmentValidationErrors: [],
+      generatedAt,
+      hasAlertWebhookConfigured: true,
+      hasDurableLocalDataDir: true,
+      hasOAuthProviderConfigured: true,
+      hasOperationsWorkerToken: true,
+      hasSessionSigningSecret: true,
+      hasTrustVerificationProviderConfigured: false,
+      isLocalDevelopment: false,
+      operations: healthyOperations,
+      privacyRequests: [],
+    })
+    const checkById = new Map(snapshot.groups.flatMap(group => group.checks).map(check => [check.id, check]))
+
+    expect(snapshot.overallStatus).toBe("warn")
+    expect(checkById.get("external-auth-provider")).toMatchObject({
+      status: "warn",
+      summary: "Provider marker configured before Supabase auth cutover",
+    })
+    expect(snapshot.provisioningTasks.find(task => task.id === "external-auth-provider-provisioning")).toMatchObject({
+      status: "warn",
+      title: "External auth provider cutover",
+    })
+  })
+
   it("fails hosted production readiness when required launch controls are missing", () => {
     const snapshot = buildProductionReadinessSnapshot({
       accessRequests: [],
