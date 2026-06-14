@@ -77,6 +77,7 @@ Stage 6: Stripe billing
 Final verification:
 - Run `npm ci`, `npm run lint`, `npm run typecheck`, `npm run test`, and `npm run build` against the release source if the server environment permits.
 - Run `npm run verify:production` after `npm run build` to verify the built Nitro server returns expected health, deployment identity, security headers, robots/sitemap, unknown-route 404, admin access control, and readiness metadata.
+- Run `npm run verify:public:local` after `npm run build` to verify the built Nitro server returns coherent public routes, public SEO/security metadata, private-route redirects, noindex behavior, robots/sitemap, and `/.well-known/security.txt` before deploy.
 - Run `npm run verify:public` after deploy to verify the public origin returns expected routes, security headers, health mode, private-route access control, noindex behavior, canonical robots/sitemap URLs, and `/.well-known/security.txt`.
 - Verify production logs do not mention loading `../.env`.
 - Verify `/api/health` and `/admin/readiness` show the deployed release tag or commit SHA.
