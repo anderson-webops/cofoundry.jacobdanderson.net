@@ -290,6 +290,7 @@ Checked-in worker commands wrap those endpoints for systemd timers or cron:
 - `npm run operations:digest -- --dry-run --max-users 100` verifies scheduled digest delivery before removing `--dry-run`.
 - `COFOUNDRY_FILE_SCANNER_COMMAND="clamscan --no-summary" npm run operations:scan -- --limit 25` polls pending file scans, downloads private uploads, runs the scanner, and reports `clean`, `flagged`, or `failed`.
 - `npm run operations:heartbeat -- --metadata schedule=hourly` records the canonical `monitoring.heartbeat` row expected by `/admin/readiness`.
+- `npm run operations:alert-smoke -- --metadata runbook=manual` records and, when `COFOUNDRY_ALERT_WEBHOOK_URL` is configured, delivers the canonical `monitoring.alert_test` row expected by `/admin/readiness`.
 - `npm run operations:event -- --source systemd --event-type deploy.completed --metadata release=v1.x` records deploy, monitor, backup, and worker events. Report a recent `monitoring.heartbeat` or equivalent monitor/alert event so `/admin/readiness` can prove monitoring is wired.
 - `npm run operations:restore-drill -- --id restore-YYYYMMDD -- <restore verification command>` records restore-drill start and success/failure events.
 
