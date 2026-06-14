@@ -622,6 +622,74 @@ describe("production readiness snapshot", () => {
     })
   })
 
+  it("tracks email suppression provider evidence only after a provider is configured", () => {
+    const withoutEvidence = buildProductionReadinessSnapshot({
+      accessRequests: [],
+      adminPosture: healthyAdminPosture,
+      contactMailConfigured: true,
+      environment: environmentSnapshot(),
+      environmentValidationErrors: [],
+      generatedAt,
+      hasAlertWebhookConfigured: true,
+      hasDurableLocalDataDir: true,
+      hasEmailSuppressionProviderConfigured: true,
+      hasOperationsWorkerToken: true,
+      hasSessionSigningSecret: true,
+      hasTrustVerificationProviderConfigured: false,
+      isLocalDevelopment: false,
+      operations: healthyOperations,
+      privacyRequests: [],
+    })
+    const withoutEvidenceCheckById = new Map(withoutEvidence.groups.flatMap(group => group.checks).map(check => [check.id, check]))
+
+    expect(withoutEvidence.overallStatus).toBe("warn")
+    expect(withoutEvidenceCheckById.get("email-suppression-evidence")).toMatchObject({
+      status: "warn",
+      summary: "Provider configured, no rows",
+    })
+
+    const withEvidence = buildProductionReadinessSnapshot({
+      accessRequests: [],
+      adminPosture: healthyAdminPosture,
+      contactMailConfigured: true,
+      environment: environmentSnapshot(),
+      environmentValidationErrors: [],
+      generatedAt,
+      hasAlertWebhookConfigured: true,
+      hasDurableLocalDataDir: true,
+      hasEmailSuppressionProviderConfigured: true,
+      hasOperationsWorkerToken: true,
+      hasSessionSigningSecret: true,
+      hasTrustVerificationProviderConfigured: false,
+      isLocalDevelopment: false,
+      operations: {
+        ...healthyOperations,
+        emailSuppressions: [{
+          category: "all",
+          created_at: generatedAt,
+          email: "suppressed@example.com",
+          id: "email_suppression_1",
+          provider: "postmark",
+          reason: "complaint",
+          source_event_id: "provider_suppression_event_1",
+          suppressed_at: generatedAt,
+        }],
+      },
+      privacyRequests: [],
+    })
+    const withEvidenceCheckById = new Map(withEvidence.groups.flatMap(group => group.checks).map(check => [check.id, check]))
+
+    expect(withEvidence.overallStatus).toBe("pass")
+    expect(withEvidenceCheckById.get("email-suppression-evidence")).toMatchObject({
+      status: "pass",
+      summary: "complaint from postmark, 0 days old",
+    })
+    expect(withEvidence.provisioningTasks.find(task => task.id === "email-suppression-provisioning")).toMatchObject({
+      status: "pass",
+      title: "Email suppression provider evidence",
+    })
+  })
+
   it("warns in Supabase mode until first-admin bootstrap evidence exists", () => {
     const snapshot = buildProductionReadinessSnapshot({
       accessRequests: [],

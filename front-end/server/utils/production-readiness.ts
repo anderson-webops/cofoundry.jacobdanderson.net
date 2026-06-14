@@ -58,6 +58,7 @@ export interface ProductionReadinessInput {
   hasAlertWebhookConfigured: boolean
   hasContractEnvelopeProviderConfigured?: boolean
   hasDurableLocalDataDir: boolean
+  hasEmailSuppressionProviderConfigured?: boolean
   hasOperationsWorkerToken: boolean
   hasSessionSigningSecret: boolean
   hasTrustVerificationProviderConfigured: boolean
@@ -303,6 +304,17 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
       "CONTACT_SMTP_HOST=<smtp-host> CONTACT_FROM_EMAIL=support@cofoundry.dev CONTACT_TO_EMAIL=contacts@jacobdanderson.net\nnpm run operations:mail-smoke -- --to-email contacts@jacobdanderson.net",
     ),
     task(
+      "email-suppression-provisioning",
+      "Email suppression provider evidence",
+      checkById.get("email-suppression-evidence")?.status || "info",
+      checkById.get("email-suppression-evidence")?.summary || "No provider configured",
+      "Mail providers should report bounces, complaints, unsubscribes, and manual suppressions before real optional notifications are scheduled.",
+      input.hasEmailSuppressionProviderConfigured
+        ? "Send a provider smoke or real suppression event through the checked-in suppression endpoint and confirm readiness evidence passes."
+        : "Choose and wire suppression callbacks only after the outbound mail provider is selected.",
+      "COFOUNDRY_EMAIL_SUPPRESSION_PROVIDER=<provider-name>\nnpm run operations:worker -- email-suppression --email <recipient@example.com> --reason complaint --category all --provider <provider-name> --source-event-id <provider-event-id>",
+    ),
+    task(
       "worker-token-provisioning",
       "Operations worker token",
       checkById.get("operations-worker-token")?.status || "warn",
@@ -438,6 +450,19 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
   const mailSmokeDaysOld = daysSince(latestSuccessfulMailSmokeTime, nowTime)
   const latestMailSmokeStatus = String(latestMailSmoke?.status || "")
   const hasNewerMailSmokeFailure = latestFailedMailSmokeTime !== null && (latestSuccessfulMailSmokeTime === null || latestFailedMailSmokeTime >= latestSuccessfulMailSmokeTime)
+  const emailSuppressions = input.operations.emailSuppressions || []
+  const latestEmailSuppression = latestRow(emailSuppressions, ["suppressed_at", "created_at"])
+  const latestEmailSuppressionTime = newestTime(latestEmailSuppression ? [latestEmailSuppression] : [], ["suppressed_at", "created_at"])
+  const emailSuppressionDaysOld = daysSince(latestEmailSuppressionTime, nowTime)
+  let emailSuppressionStatus: ProductionReadinessStatus = "info"
+  if (input.hasEmailSuppressionProviderConfigured) {
+    emailSuppressionStatus = !latestEmailSuppression || (emailSuppressionDaysOld !== null && emailSuppressionDaysOld > 30)
+      ? "warn"
+      : "pass"
+  }
+  const emailSuppressionSummary = latestEmailSuppression
+    ? `${String(latestEmailSuppression.reason || "suppression")} from ${String(latestEmailSuppression.provider || "provider")}${emailSuppressionDaysOld === null ? "" : `, ${emailSuppressionDaysOld} day${emailSuppressionDaysOld === 1 ? "" : "s"} old`}`
+    : input.hasEmailSuppressionProviderConfigured ? "Provider configured, no rows" : "No provider configured"
   const failedOrFlaggedScans = countRows(input.operations.fileUploads, "scan_status", ["failed", "flagged"])
   const pendingScans = countRows(input.operations.fileUploads, "scan_status", ["pending"])
   const contractEnvelopeEvents = input.operations.contractEnvelopeEvents || []
@@ -723,6 +748,18 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
       "Schedule `/api/operations/notification-digests/run` and confirm recent rows appear in `/admin/operations`.",
     ),
     check(
+      "email-suppression-evidence",
+      "Email suppression provider evidence",
+      emailSuppressionStatus,
+      emailSuppressionSummary,
+      input.hasEmailSuppressionProviderConfigured
+        ? "The outbound mail provider should report suppression events so optional digests and workflow emails skip bounced, complained, unsubscribed, or manually suppressed recipients."
+        : "Suppression-provider callbacks are optional until a real outbound mail provider is selected.",
+      input.hasEmailSuppressionProviderConfigured
+        ? "Run `npm run operations:worker -- email-suppression --email <recipient@example.com> --reason complaint --category all --provider <provider>` and confirm `/admin/operations` shows the row."
+        : "Do not schedule real optional sends until provider suppression callbacks and preference links have been smoke-tested.",
+    ),
+    check(
       "contract-envelope-evidence",
       "Contract envelope provider evidence",
       contractEnvelopeStatus,
@@ -847,7 +884,7 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
     },
     {
       checks: workerChecks,
-      description: "Worker-reported evidence for backups, scanner status, digests, contract envelopes, trust-provider callbacks, Stripe webhooks, and operational alerts.",
+      description: "Worker-reported evidence for backups, scanner status, digests, email suppressions, contract envelopes, trust-provider callbacks, Stripe webhooks, and operational alerts.",
       id: "workers",
       title: "Worker health",
     },
@@ -862,7 +899,7 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
     counts: {
       accessRequestsOpen: accessQueue.open.length,
       failedChecks,
-      operationsRows: input.operations.backupRuns.length + contractEnvelopeEvents.length + (input.operations.emailSuppressions || []).length + input.operations.fileUploads.length + input.operations.notificationDeliveries.length + input.operations.operationalEvents.length + trustVerificationEvents.length,
+      operationsRows: input.operations.backupRuns.length + contractEnvelopeEvents.length + emailSuppressions.length + input.operations.fileUploads.length + input.operations.notificationDeliveries.length + input.operations.operationalEvents.length + trustVerificationEvents.length,
       privacyRequestsOpen: privacyQueue.open.length,
       warningChecks,
     },

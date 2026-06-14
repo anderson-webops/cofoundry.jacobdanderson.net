@@ -49,6 +49,10 @@ export default defineEventHandler(async (event) => {
       "COFOUNDRY_PDF_PROVIDER",
     ]),
     hasDurableLocalDataDir: hasValue(process.env.COFOUNDRY_LOCAL_DATA_DIR),
+    hasEmailSuppressionProviderConfigured: hasAnyValue([
+      "COFOUNDRY_EMAIL_SUPPRESSION_PROVIDER",
+      "COFOUNDRY_MAIL_SUPPRESSION_PROVIDER",
+    ]),
     hasOperationsWorkerToken: hasValue(runtimeConfig.operationsWorkerToken) || hasValue(process.env.COFOUNDRY_OPERATIONS_TOKEN) || hasValue(process.env.OPERATIONS_WORKER_TOKEN),
     hasSessionSigningSecret: hasValue(process.env.NUXT_SESSION_SIGNING_SECRET) || hasValue(process.env.SESSION_SIGNING_SECRET),
     hasTrustVerificationProviderConfigured: hasAnyValue([
