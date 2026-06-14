@@ -30,7 +30,7 @@ Tasks:
 4. Restart the app and verify production logs do not mention loading `../.env`.
 5. If Supabase mode is not intentionally enabled, leave `NUXT_PUBLIC_BACKEND_MODE="mock"` and verify the public site remains a marketing/access-request shell.
 6. If Supabase mode is intentionally enabled, verify all migrations in `back-end/supabase/migrations/` have been applied and that `SUPABASE_SERVICE_ROLE_KEY`, `NUXT_PUBLIC_SUPABASE_URL`, `NUXT_PUBLIC_SUPABASE_ANON_KEY`, and `SESSION_SIGNING_SECRET` are present.
-7. Install the checked-in unit templates from `deploy/systemd/` or create equivalent cron entries. Copy `deploy/systemd/cofoundry-operations.env.example` to `/etc/cofoundry/operations.env`, fill in host values from Vault-managed env, and adjust `User=`, `Group=`, and `WorkingDirectory=` if needed. If an alerting destination exists, add `COFOUNDRY_ALERT_WEBHOOK_URL`, optional `COFOUNDRY_ALERT_WEBHOOK_TOKEN`, optional `COFOUNDRY_ALERT_SEVERITIES=error,warning`, and optional `COFOUNDRY_ALERT_TIMEOUT_MS=10000` to the same server-only worker env file.
+7. Install the checked-in unit templates from `deploy/systemd/` or create equivalent cron entries. Copy `deploy/systemd/cofoundry-operations.env.example` to `/etc/cofoundry/operations.env`, fill in host values from Vault-managed env, and adjust `User=`, `Group=`, and `WorkingDirectory=` if needed. If an alerting destination exists, add `COFOUNDRY_ALERT_WEBHOOK_URL`, optional `COFOUNDRY_ALERT_WEBHOOK_TOKEN`, optional `COFOUNDRY_ALERT_SEVERITIES=error,warning`, and optional `COFOUNDRY_ALERT_TIMEOUT_MS=10000` to the same server-only worker env file. If mail smoke checks are expected, add `COFOUNDRY_MAIL_SMOKE_TO_EMAIL=<monitored-inbox>`.
 8. Create a systemd timer or equivalent cron for unread digests. First run dry-run mode with the checked-in worker:
 
    npm run operations:digest -- --dry-run --max-users 100
@@ -45,6 +45,12 @@ Tasks:
    After dry-run verification, SMTP verification, confirmation that intended pilot users enabled scheduled digest email in `/app/settings`, and a successful test of the signed `/email/preferences?token=...` link from a received message, switch `dryRun` to `false`.
 
 9. Verify mail transport with a controlled smoke test after configuring SMTP or sendmail env:
+
+   If the checked-in systemd templates are installed:
+
+   systemctl start cofoundry-operations-mail-smoke.service
+
+   Otherwise run the worker directly:
 
    npm run operations:mail-smoke -- \
      --to-email "<monitored-inbox>" \
@@ -192,6 +198,12 @@ Tasks:
      --metadata schedule=hourly
 
    If `COFOUNDRY_ALERT_WEBHOOK_URL` is configured, verify a warning event reaches the destination without exposing the webhook URL or token in app logs:
+
+   If the checked-in systemd templates are installed:
+
+   systemctl start cofoundry-operations-alert-smoke.service
+
+   Otherwise run the worker directly:
 
    npm run operations:alert-smoke -- \
      --metadata runbook=manual

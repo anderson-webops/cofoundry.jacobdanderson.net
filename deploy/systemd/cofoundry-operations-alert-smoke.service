@@ -1,0 +1,15 @@
+[Unit]
+Description=CoFoundry alert delivery smoke test
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=cofoundry
+Group=cofoundry
+WorkingDirectory=/srv/cofoundry/current
+EnvironmentFile=/etc/cofoundry/operations.env
+ExecStart=/usr/bin/env bash -lc 'npm run operations:alert-smoke -- --metadata runbook=systemd-manual'
+SyslogIdentifier=cofoundry-operations-alert-smoke
+NoNewPrivileges=true
+PrivateTmp=true
