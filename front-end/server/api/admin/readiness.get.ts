@@ -1,5 +1,5 @@
 import process from "node:process"
-import { collectEnvironmentValidationErrors, isLocalDevelopmentEnvironment, readEnvironmentSnapshot } from "~/shared/utils/environment"
+import { collectEnvironmentValidationErrors, isLocalDevelopmentEnvironment, readDeploymentMetadata, readEnvironmentSnapshot } from "~/shared/utils/environment"
 import { listAccessRequests } from "../../utils/access-requests"
 import { requireAdminSession } from "../../utils/admin"
 import { readAdminOperationsRows } from "../../utils/admin-operations"
@@ -39,6 +39,7 @@ export default defineEventHandler(async (event) => {
     accessRequests,
     adminPosture,
     contactMailConfigured: isContactMailConfigured(),
+    deploymentMetadata: readDeploymentMetadata(process.env),
     environment: readEnvironmentSnapshot(process.env),
     environmentValidationErrors: collectEnvironmentValidationErrors(process.env),
     generatedAt: new Date().toISOString(),

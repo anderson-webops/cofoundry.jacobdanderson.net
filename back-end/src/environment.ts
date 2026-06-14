@@ -31,8 +31,24 @@ export interface SecretEnvironment {
   supabaseServiceRoleKey: string
 }
 
+export interface DeploymentMetadata {
+  commitSha: string
+  deployedAt: string
+  release: string
+}
+
 function readValue(env: EnvironmentSource, key: string) {
   return env[key]?.trim() || ""
+}
+
+function readFirstValue(env: EnvironmentSource, keys: string[]) {
+  for (const key of keys) {
+    const value = readValue(env, key)
+    if (value)
+      return value
+  }
+
+  return ""
 }
 
 function stripTrailingSlash(value: string) {
@@ -103,6 +119,14 @@ export function readSecretEnvironment(env: EnvironmentSource): SecretEnvironment
     stripeSecretKey: readValue(env, "STRIPE_SECRET_KEY"),
     stripeWebhookSecret: readValue(env, "STRIPE_WEBHOOK_SECRET"),
     supabaseServiceRoleKey: readValue(env, "SUPABASE_SERVICE_ROLE_KEY"),
+  }
+}
+
+export function readDeploymentMetadata(env: EnvironmentSource): DeploymentMetadata {
+  return {
+    commitSha: readFirstValue(env, ["COFOUNDRY_COMMIT_SHA", "GIT_COMMIT", "COMMIT_SHA", "SOURCE_VERSION", "VERCEL_GIT_COMMIT_SHA"]),
+    deployedAt: readFirstValue(env, ["COFOUNDRY_DEPLOYED_AT", "DEPLOYED_AT", "BUILD_TIMESTAMP"]),
+    release: readFirstValue(env, ["COFOUNDRY_RELEASE", "RELEASE_VERSION", "APP_VERSION"]),
   }
 }
 

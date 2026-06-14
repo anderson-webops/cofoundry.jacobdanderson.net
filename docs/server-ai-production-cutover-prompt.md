@@ -21,9 +21,11 @@ Global rules:
 
 Stage 1: durable mock/access-request baseline
 1. Configure `SESSION_SIGNING_SECRET`, `COFOUNDRY_LOCAL_DATA_DIR`, and `COFOUNDRY_OPERATIONS_TOKEN` from Vault/host env.
-2. Confirm the app user can write access requests, local auth accounts, member workspace state, collaboration state, admin audit overlays, operations telemetry, and local file-upload scan artifacts.
-3. Confirm `/auth/sign-up`, `/auth/recover`, `/admin/access-requests`, `/admin/audit`, `/admin/operations`, and `/admin/readiness` work after an app restart.
-4. Leave Supabase and Stripe disabled at the end of this stage.
+2. Configure non-secret deployment identity values `COFOUNDRY_RELEASE`, `COFOUNDRY_COMMIT_SHA`, and `COFOUNDRY_DEPLOYED_AT` from the deploy pipeline or host unit env.
+3. Confirm `/api/health` and `/admin/readiness` show the expected release tag or commit SHA.
+4. Confirm the app user can write access requests, local auth accounts, member workspace state, collaboration state, admin audit overlays, operations telemetry, and local file-upload scan artifacts.
+5. Confirm `/auth/sign-up`, `/auth/recover`, `/admin/access-requests`, `/admin/audit`, `/admin/operations`, and `/admin/readiness` work after an app restart.
+6. Leave Supabase and Stripe disabled at the end of this stage.
 
 Stage 2: outbound email provider
 1. Choose the transactional mail provider and verified sending domain.
@@ -75,6 +77,7 @@ Stage 6: Stripe billing
 Final verification:
 - Run `npm ci`, `npm run lint`, `npm run typecheck`, `npm run test`, and `npm run build` against the release source if the server environment permits.
 - Verify production logs do not mention loading `../.env`.
+- Verify `/api/health` and `/admin/readiness` show the deployed release tag or commit SHA.
 - Verify public marketing pages remain indexable and private/app/admin/auth/email utility pages remain `noindex`.
 - Verify `/admin/readiness` has no failed checks and only intentional warnings.
 - Record the release tag, migration state, env source, timer names, backup location, restore-drill result, Stripe webhook id, OAuth app ids, and rollback command in the server runbook.

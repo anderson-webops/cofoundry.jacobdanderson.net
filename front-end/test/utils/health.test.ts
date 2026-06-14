@@ -5,6 +5,11 @@ import { readPublicEnvironment } from "../../shared/utils/environment"
 describe("health payload", () => {
   it("publishes safe liveness metadata without secrets", () => {
     const payload = buildHealthPayload({
+      deploymentMetadata: {
+        commitSha: "dcb599f5b5f1a72e5d78b4e0f19f3c9b5e1a1234",
+        deployedAt: "2026-06-12T11:55:00.000Z",
+        release: "v1.1.78",
+      },
       generatedAt: "2026-06-12T12:00:00.000Z",
       publicEnvironment: readPublicEnvironment({
         NODE_ENV: "production",
@@ -15,6 +20,11 @@ describe("health payload", () => {
     })
 
     expect(payload).toEqual({
+      deployment: {
+        commitSha: "dcb599f5b5f1a72e5d78b4e0f19f3c9b5e1a1234",
+        deployedAt: "2026-06-12T11:55:00.000Z",
+        release: "v1.1.78",
+      },
       generatedAt: "2026-06-12T12:00:00.000Z",
       modes: {
         backend: "mock",

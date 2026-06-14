@@ -2,7 +2,7 @@ import type { AddressInfo } from "node:net"
 import assert from "node:assert/strict"
 import test from "node:test"
 import { resolveBootstrapAdminEnvironment, resolveBootstrapAdminInput } from "../src/bootstrap-admin"
-import { collectEnvironmentValidationErrors, isLocalDevelopmentEnvironment, readPublicEnvironment, readSecretEnvironment } from "../src/environment"
+import { collectEnvironmentValidationErrors, isLocalDevelopmentEnvironment, readDeploymentMetadata, readPublicEnvironment, readSecretEnvironment } from "../src/environment"
 import { createBackendServer } from "../src/server"
 
 function restoreEnvValue(key: string, value: string | undefined) {
@@ -46,6 +46,7 @@ test("health endpoint reports service status", async () => {
     assert.equal(response.status, 200)
     assert.equal(body.status, "ok")
     assert.equal(body.service, "cofoundry-back-end")
+    assert.deepEqual(body.deployment, readDeploymentMetadata(process.env))
     assert.equal(typeof body.now, "string")
   })
 })
@@ -61,7 +62,13 @@ test("metadata endpoint reflects env-driven flags", async () => {
   const previousSupabaseAnonKey = process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY
   const previousSupabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   const previousSessionSigningSecret = process.env.SESSION_SIGNING_SECRET
+  const previousRelease = process.env.COFOUNDRY_RELEASE
+  const previousCommitSha = process.env.COFOUNDRY_COMMIT_SHA
+  const previousDeployedAt = process.env.COFOUNDRY_DEPLOYED_AT
 
+  process.env.COFOUNDRY_COMMIT_SHA = "dcb599f5b5f1a72e5d78b4e0f19f3c9b5e1a1234"
+  process.env.COFOUNDRY_DEPLOYED_AT = "2026-06-12T11:55:00.000Z"
+  process.env.COFOUNDRY_RELEASE = "v1.1.78"
   process.env.NUXT_PUBLIC_BACKEND_MODE = "supabase"
   process.env.NUXT_PUBLIC_BILLING_MODE = "mock"
   process.env.NUXT_PUBLIC_ENABLE_DEMO_ACCESS = "true"
@@ -83,11 +90,19 @@ test("metadata endpoint reflects env-driven flags", async () => {
       assert.equal(body.backendMode, "supabase")
       assert.equal(body.billingMode, "mock")
       assert.equal(body.demoAccessEnabled, true)
+      assert.deepEqual(body.deployment, {
+        commitSha: "dcb599f5b5f1a72e5d78b4e0f19f3c9b5e1a1234",
+        deployedAt: "2026-06-12T11:55:00.000Z",
+        release: "v1.1.78",
+      })
       assert.equal(body.investmentModuleEnabled, true)
       assert.equal(body.supportEmail, "support@cofoundry.dev")
     })
   }
   finally {
+    restoreEnvValue("COFOUNDRY_COMMIT_SHA", previousCommitSha)
+    restoreEnvValue("COFOUNDRY_DEPLOYED_AT", previousDeployedAt)
+    restoreEnvValue("COFOUNDRY_RELEASE", previousRelease)
     restoreEnvValue("NUXT_PUBLIC_BACKEND_MODE", previousBackendMode)
     restoreEnvValue("NUXT_PUBLIC_BILLING_MODE", previousBillingMode)
     restoreEnvValue("NUXT_PUBLIC_ENABLE_DEMO_ACCESS", previousDemoAccess)
@@ -129,6 +144,18 @@ test("backend environment keeps explicit localhost app URLs in local development
   assert.equal(isLocalDevelopmentEnvironment(env), true)
   assert.equal(readPublicEnvironment(env).appUrl, "http://127.0.0.1:3000")
   assert.equal(errors.includes("SESSION_SIGNING_SECRET is required whenever account sessions are enabled in a non-local environment."), false)
+})
+
+test("backend environment reads safe deployment metadata from deploy env", () => {
+  assert.deepEqual(readDeploymentMetadata({
+    BUILD_TIMESTAMP: "2026-06-12T11:55:00.000Z",
+    RELEASE_VERSION: "v1.1.78",
+    SOURCE_VERSION: "dcb599f5b5f1a72e5d78b4e0f19f3c9b5e1a1234",
+  }), {
+    commitSha: "dcb599f5b5f1a72e5d78b4e0f19f3c9b5e1a1234",
+    deployedAt: "2026-06-12T11:55:00.000Z",
+    release: "v1.1.78",
+  })
 })
 
 test("unknown routes return a 404 payload", async () => {

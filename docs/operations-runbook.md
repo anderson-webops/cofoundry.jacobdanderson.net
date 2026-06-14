@@ -7,6 +7,7 @@ For a paste-ready staged handoff that covers the remaining external providers, u
 ## Required Host State
 
 - `NUXT_PUBLIC_BACKEND_MODE=mock` and `NUXT_PUBLIC_BILLING_MODE=mock` remain the safe production defaults until Supabase and Stripe are deliberately enabled.
+- `COFOUNDRY_RELEASE`, `COFOUNDRY_COMMIT_SHA`, and `COFOUNDRY_DEPLOYED_AT` are non-secret deployment identity values. Set at least the release or commit SHA from the deploy pipeline or host unit env so `/api/health` and `/admin/readiness` can prove what code is running.
 - `SESSION_SIGNING_SECRET` should be injected from the host secret store even in mock mode so invited-account sessions survive deploys.
 - `COFOUNDRY_LOCAL_DATA_DIR` should point at a durable, backed-up directory for member workspace state, collaboration workflow state, access requests, admin audit overlays, privacy/trust review requests, invited local accounts, operations telemetry, and local mock-mode file scan artifacts.
 - `COFOUNDRY_OPERATIONS_TOKEN` should be a long random secret before any `/api/operations/*` worker is scheduled.
@@ -22,6 +23,7 @@ For a paste-ready staged handoff that covers the remaining external providers, u
 - Use `/admin/readiness`'s production cutover phases as the quick-read for which provider stages are active, intentionally disabled, blocked, or complete.
 - Use `/admin/readiness`'s server provisioning checklist as the canonical handoff for host-level secrets, durable storage, mail, worker timers, restore drills, monitoring, first-admin bootstrap, and Stripe cutover preparation.
 - Confirm `/api/health` returns `status: "ok"` from the deployed Nuxt app.
+- Confirm `/api/health` and `/admin/readiness` show the expected release tag or commit SHA after each deploy.
 - Visit `/admin/operations` and confirm the newest backup, scanner, digest, trust-verification, and operational-event rows are current.
 - Confirm `/admin/readiness` shows recent restore-drill evidence. A backup without a successful restore drill remains a warning.
 - Confirm `/admin/readiness` shows a recent monitoring or alerting heartbeat event. Prefer the canonical `npm run operations:heartbeat -- --metadata schedule=hourly`, which records `monitoring.heartbeat`; equivalent monitor/alert events reported through `npm run operations:event` also work.

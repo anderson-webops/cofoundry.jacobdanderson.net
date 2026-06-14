@@ -3,7 +3,7 @@ import { createServer } from "node:http"
 import { resolve } from "node:path"
 import process from "node:process"
 import { fileURLToPath } from "node:url"
-import { assertEnvironmentIsValid, readPublicEnvironment } from "./environment.js"
+import { assertEnvironmentIsValid, readDeploymentMetadata, readPublicEnvironment } from "./environment.js"
 
 export function resolveBackendPort() {
   const configuredPort = Number(process.env.BACKEND_PORT)
@@ -12,12 +12,14 @@ export function resolveBackendPort() {
 
 export function buildMetadataPayload() {
   const publicEnvironment = readPublicEnvironment(process.env)
+  const deploymentMetadata = readDeploymentMetadata(process.env)
 
   return {
     app: "CoFoundry",
     backendMode: publicEnvironment.backendMode,
     billingMode: publicEnvironment.billingMode,
     demoAccessEnabled: publicEnvironment.enableDemoAccess,
+    deployment: deploymentMetadata,
     investmentModuleEnabled: publicEnvironment.featureInvestmentModule,
     supportEmail: publicEnvironment.supportEmail,
   }
@@ -33,6 +35,7 @@ export function handleRequest(request: IncomingMessage, response: ServerResponse
     response.end(JSON.stringify({
       status: "ok",
       service: "cofoundry-back-end",
+      deployment: readDeploymentMetadata(process.env),
       now: new Date().toISOString(),
     }))
     return

@@ -1,8 +1,21 @@
+import type { ProductionReadinessInput } from "../../server/utils/production-readiness"
 import type { EnvironmentSnapshot } from "../../shared/utils/environment"
 import { describe, expect, it } from "vitest"
-import { buildProductionReadinessSnapshot } from "../../server/utils/production-readiness"
+import { buildProductionReadinessSnapshot as buildProductionReadinessSnapshotBase } from "../../server/utils/production-readiness"
 
 const generatedAt = "2026-06-12T12:00:00.000Z"
+const healthyDeploymentMetadata = {
+  commitSha: "dcb599f5b5f1a72e5d78b4e0f19f3c9b5e1a1234",
+  deployedAt: generatedAt,
+  release: "v1.1.78",
+}
+
+function buildProductionReadinessSnapshot(input: Omit<ProductionReadinessInput, "deploymentMetadata"> & Partial<Pick<ProductionReadinessInput, "deploymentMetadata">>) {
+  return buildProductionReadinessSnapshotBase({
+    deploymentMetadata: healthyDeploymentMetadata,
+    ...input,
+  })
+}
 
 function environmentSnapshot(overrides: Partial<EnvironmentSnapshot["public"]> = {}): EnvironmentSnapshot {
   return {
@@ -123,9 +136,14 @@ describe("production readiness snapshot", () => {
     })
 
     expect(snapshot.overallStatus).toBe("pass")
+    expect(snapshot.deployment).toEqual(healthyDeploymentMetadata)
     expect(snapshot.score).toBe(100)
     expect(snapshot.counts.failedChecks).toBe(0)
     expect(snapshot.counts.warningChecks).toBe(0)
+    expect(snapshot.groups.flatMap(group => group.checks).find(check => check.id === "deployment-identity")).toMatchObject({
+      status: "pass",
+      summary: "v1.1.78",
+    })
     expect(snapshot.provisioningTasks.find(task => task.id === "backup-worker-provisioning")).toMatchObject({
       status: "pass",
       title: "Backup worker schedule",
@@ -178,6 +196,41 @@ describe("production readiness snapshot", () => {
         summary: "Not enabled",
       }),
     ]))
+  })
+
+  it("warns hosted operators when release or commit metadata is missing", () => {
+    const snapshot = buildProductionReadinessSnapshot({
+      accessRequests: [],
+      adminPosture: healthyAdminPosture,
+      contactMailConfigured: true,
+      deploymentMetadata: {
+        commitSha: "",
+        deployedAt: "",
+        release: "",
+      },
+      environment: environmentSnapshot(),
+      environmentValidationErrors: [],
+      generatedAt,
+      hasAlertWebhookConfigured: true,
+      hasDurableLocalDataDir: true,
+      hasOperationsWorkerToken: true,
+      hasSessionSigningSecret: true,
+      hasTrustVerificationProviderConfigured: false,
+      isLocalDevelopment: false,
+      operations: healthyOperations,
+      privacyRequests: [],
+    })
+    const checkById = new Map(snapshot.groups.flatMap(group => group.checks).map(check => [check.id, check]))
+
+    expect(snapshot.overallStatus).toBe("warn")
+    expect(checkById.get("deployment-identity")).toMatchObject({
+      status: "warn",
+      summary: "No release metadata",
+    })
+    expect(snapshot.cutoverPhases.find(phase => phase.id === "durable-mock-baseline")).toMatchObject({
+      status: "warn",
+      summary: "Active production path",
+    })
   })
 
   it("warns when OAuth provider markers are configured before live auth cutover", () => {
