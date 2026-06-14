@@ -307,7 +307,7 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
       checkById.get("mail-transport")?.summary || (input.contactMailConfigured ? "Mail transport configured" : "Mail transport missing"),
       "Contact forms and notification digests need SMTP or sendmail so users and operators receive messages.",
       "Configure CONTACT_* SMTP/sendmail values, then run a worker-authenticated smoke test to prove delivery.",
-      "CONTACT_SMTP_HOST=<smtp-host> CONTACT_FROM_EMAIL=support@cofoundry.dev CONTACT_TO_EMAIL=contacts@jacobdanderson.net\nnpm run operations:mail-smoke -- --to-email contacts@jacobdanderson.net",
+      "CONTACT_SMTP_HOST=<smtp-host> CONTACT_FROM_EMAIL=support@cofoundry.dev CONTACT_TO_EMAIL=contacts@jacobdanderson.net\nCOFOUNDRY_MAIL_SMOKE_TO_EMAIL=contacts@jacobdanderson.net\nsystemctl start cofoundry-operations-mail-smoke.service",
     ),
     task(
       "email-suppression-provisioning",
@@ -415,7 +415,7 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
       checkById.get("alert-webhook-destination")?.summary || "Alert webhook state unknown",
       "Worker-reported warning and error events should reach an external destination when operators are not watching the admin console.",
       "Configure the server-only alert webhook env, then run an alert smoke event from the production host.",
-      "COFOUNDRY_ALERT_WEBHOOK_URL=<server-only-webhook-url> npm run operations:alert-smoke -- --metadata runbook=manual",
+      "COFOUNDRY_ALERT_WEBHOOK_URL=<server-only-webhook-url>\nsystemctl start cofoundry-operations-alert-smoke.service",
     ),
     task(
       "first-admin-bootstrap-provisioning",
@@ -586,7 +586,7 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
       mailTransportDetail = "Mail transport is configured, but readiness still needs a recent successful worker-authenticated smoke test."
   }
   const mailTransportAction = input.contactMailConfigured
-    ? "Run `npm run operations:mail-smoke -- --to-email <monitored-inbox>` and confirm the monitored inbox receives the message."
+    ? "Run `systemctl start cofoundry-operations-mail-smoke.service`, or `npm run operations:mail-smoke -- --to-email <monitored-inbox>` before unit templates are installed, and confirm the monitored inbox receives the message."
     : "Configure SMTP or sendmail CONTACT_* environment values."
   let externalAuthProviderStatus: ProductionReadinessStatus = "info"
   if (input.hasOAuthProviderConfigured) {
@@ -901,7 +901,7 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
         ? "Server-side operations workers have an alert webhook destination for warning/error events."
         : "Warning and error events are persisted in admin operations, but they will not notify operators outside the app until a destination is configured.",
       input.hasAlertWebhookConfigured
-        ? "Run `npm run operations:alert-smoke -- --metadata runbook=manual` from the server and confirm the external destination receives it."
+        ? "Run `systemctl start cofoundry-operations-alert-smoke.service`, or `npm run operations:alert-smoke -- --metadata runbook=manual` before unit templates are installed, and confirm the external destination receives it."
         : "Set COFOUNDRY_ALERT_WEBHOOK_URL in the server-only worker env after choosing the alert destination.",
     ),
   ]

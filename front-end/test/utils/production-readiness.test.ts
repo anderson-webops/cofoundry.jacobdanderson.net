@@ -135,6 +135,7 @@ describe("production readiness snapshot", () => {
       summary: "Stripe intentionally disabled",
     })
     expect(snapshot.provisioningTasks.find(task => task.id === "mail-provisioning")).toMatchObject({
+      command: "CONTACT_SMTP_HOST=<smtp-host> CONTACT_FROM_EMAIL=support@cofoundry.dev CONTACT_TO_EMAIL=contacts@jacobdanderson.net\nCOFOUNDRY_MAIL_SMOKE_TO_EMAIL=contacts@jacobdanderson.net\nsystemctl start cofoundry-operations-mail-smoke.service",
       status: "pass",
       summary: "sent smoke, 0 days old",
     })
@@ -143,7 +144,7 @@ describe("production readiness snapshot", () => {
       status: "pass",
     })
     expect(snapshot.provisioningTasks.find(task => task.id === "alert-webhook-provisioning")).toMatchObject({
-      command: "COFOUNDRY_ALERT_WEBHOOK_URL=<server-only-webhook-url> npm run operations:alert-smoke -- --metadata runbook=manual",
+      command: "COFOUNDRY_ALERT_WEBHOOK_URL=<server-only-webhook-url>\nsystemctl start cofoundry-operations-alert-smoke.service",
       status: "pass",
     })
   })
