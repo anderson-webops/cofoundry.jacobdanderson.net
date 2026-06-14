@@ -1,8 +1,11 @@
 import type { H3Event } from "h3"
+import process from "node:process"
 import { getHeader, getRequestURL } from "h3"
+import { appProductionUrl } from "../../shared/constants/app"
 
 const trailingSlashPattern = /\/+$/
 const localHostnames = new Set(["localhost", "127.0.0.1", "::1"])
+const localPublicAppUrlValues = new Set(["1", "true", "yes"])
 
 function stripTrailingSlash(value: string) {
   return value.replace(trailingSlashPattern, "")
@@ -20,6 +23,22 @@ function isLocalAppUrl(value: string) {
   catch {
     return false
   }
+}
+
+function normalizeFallbackAppUrl(value: string | undefined) {
+  return stripTrailingSlash(value?.trim() || appProductionUrl)
+}
+
+function shouldUseProductionFallback(input: {
+  allowLocalAppUrl?: boolean
+  configuredAppUrl: string
+  nodeEnv?: string
+  requestOrigin: string
+}) {
+  if (input.allowLocalAppUrl || input.nodeEnv !== "production")
+    return false
+
+  return isLocalAppUrl(input.requestOrigin) && (!input.configuredAppUrl || isLocalAppUrl(input.configuredAppUrl))
 }
 
 function originFromHeaders(input: {
@@ -47,14 +66,27 @@ function originFromHeaders(input: {
 }
 
 export function resolveServerAppUrlFromParts(input: {
+  allowLocalAppUrl?: boolean
   configuredAppUrl?: string
   forwardedHost?: string | null
   forwardedProto?: string | null
   host?: string | null
+  nodeEnv?: string
+  productionFallbackAppUrl?: string
   requestOrigin: string
 }) {
   const configuredAppUrl = stripTrailingSlash(input.configuredAppUrl?.trim() || "")
   const requestOrigin = originFromHeaders(input)
+  const productionFallbackAppUrl = normalizeFallbackAppUrl(input.productionFallbackAppUrl)
+
+  if (shouldUseProductionFallback({
+    allowLocalAppUrl: input.allowLocalAppUrl,
+    configuredAppUrl,
+    nodeEnv: input.nodeEnv,
+    requestOrigin,
+  })) {
+    return productionFallbackAppUrl
+  }
 
   if (!configuredAppUrl)
     return requestOrigin
@@ -63,6 +95,10 @@ export function resolveServerAppUrlFromParts(input: {
     return requestOrigin
 
   return configuredAppUrl
+}
+
+function allowLocalPublicAppUrl() {
+  return localPublicAppUrlValues.has(process.env.COFOUNDRY_ALLOW_LOCAL_PUBLIC_APP_URL?.trim().toLowerCase() || "")
 }
 
 export function resolveServerAppUrl(event: H3Event) {
@@ -77,14 +113,19 @@ export function resolveServerAppUrl(event: H3Event) {
     requestUrl = getRequestURL(event)
   }
   catch {
+    if (process.env.NODE_ENV === "production" && !allowLocalPublicAppUrl())
+      return isLocalAppUrl(configuredAppUrl) || !configuredAppUrl ? appProductionUrl : configuredAppUrl
+
     return configuredAppUrl || "http://localhost:3000"
   }
 
   return resolveServerAppUrlFromParts({
+    allowLocalAppUrl: allowLocalPublicAppUrl(),
     configuredAppUrl,
     forwardedHost: getHeader(event, "x-forwarded-host"),
     forwardedProto: getHeader(event, "x-forwarded-proto"),
     host: getHeader(event, "host"),
+    nodeEnv: process.env.NODE_ENV,
     requestOrigin: requestUrl.origin,
   })
 }

@@ -39,4 +39,32 @@ describe("server app URL resolution", () => {
       requestOrigin: "http://localhost:3000",
     })).toBe("https://cofoundry.example")
   })
+
+  it("uses the production fallback when production only sees a local origin", () => {
+    expect(resolveServerAppUrlFromParts({
+      configuredAppUrl: "",
+      host: "localhost:3000",
+      nodeEnv: "production",
+      requestOrigin: "http://localhost:3000",
+    })).toBe("https://cofoundry.jacobdanderson.net")
+  })
+
+  it("uses the production fallback when production is explicitly misconfigured to localhost", () => {
+    expect(resolveServerAppUrlFromParts({
+      configuredAppUrl: "http://localhost",
+      host: "localhost",
+      nodeEnv: "production",
+      requestOrigin: "http://localhost",
+    })).toBe("https://cofoundry.jacobdanderson.net")
+  })
+
+  it("allows local public URLs for explicit local production smoke tests", () => {
+    expect(resolveServerAppUrlFromParts({
+      allowLocalAppUrl: true,
+      configuredAppUrl: "http://127.0.0.1:3401",
+      host: "127.0.0.1:3401",
+      nodeEnv: "production",
+      requestOrigin: "http://127.0.0.1:3401",
+    })).toBe("http://127.0.0.1:3401")
+  })
 })

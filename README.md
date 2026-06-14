@@ -340,7 +340,8 @@ Current deployments can stay in mock mode with no secret-backed services enabled
 - Server-only secrets are expected to come from Vault-managed env files or equivalent host injection later.
 - The repo is already wired so that moving from mock mode to Supabase or Stripe is a config change, not another refactor.
 - Production app processes should set `NODE_ENV=production`. If `NODE_ENV` is omitted, a non-local `NUXT_PUBLIC_APP_URL` is still treated as hosted rather than local development.
-- `NUXT_PUBLIC_APP_URL` falls back to `http://localhost:3000` only for local development. Production SSR avoids localhost-style defaults and derives request origin when needed.
+- `NUXT_PUBLIC_APP_URL` falls back to `http://localhost:3000` only for local development. Production SSR avoids localhost-style defaults, derives the public request origin when proxy headers provide one, and otherwise uses CoFoundry's canonical production origin as a last-resort safety net so public metadata, robots, sitemap, and security.txt do not expose localhost. `/admin/readiness` still fails hosted deployments until `NUXT_PUBLIC_APP_URL` is explicitly set.
+- `COFOUNDRY_ALLOW_LOCAL_PUBLIC_APP_URL=true` is reserved for the checked-in local production-smoke harness. Do not set it on hosted production.
 - HSTS is intentionally tied to an HTTPS `NUXT_PUBLIC_APP_URL`, so local preview and non-HTTPS development hosts do not receive a misleading transport-security header.
 - If `NUXT_PUBLIC_BACKEND_MODE="mock"` in a production deployment, the product should stay in marketing-shell mode unless `NUXT_PUBLIC_ENABLE_DEMO_ACCESS="true"` is set deliberately for a staging/demo environment.
 - `SESSION_SIGNING_SECRET`, `COFOUNDRY_OPERATIONS_TOKEN`, `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`, and `STRIPE_WEBHOOK_SECRET` should stay externalized through Vault-managed or host-managed secret injection, not committed env files.

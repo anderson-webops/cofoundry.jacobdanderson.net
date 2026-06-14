@@ -1,3 +1,4 @@
+import { appProductionUrl } from "~/shared/constants/app"
 import { isLocalSiteUrl, normalizeSiteUrl } from "~/shared/utils/seo"
 
 export function useCanonicalAppUrl() {
@@ -10,6 +11,9 @@ export function useCanonicalAppUrl() {
   const requestOrigin = normalizeSiteUrl(requestUrl.origin)
   if (requestOrigin && !isLocalSiteUrl(requestOrigin))
     return requestOrigin
+
+  if (import.meta.server && import.meta.env.PROD && !configuredAppUrl)
+    return appProductionUrl
 
   return configuredAppUrl
 }

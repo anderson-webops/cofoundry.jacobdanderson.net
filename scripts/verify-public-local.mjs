@@ -55,6 +55,7 @@ function startServer() {
     env: {
       ...process.env,
       COFOUNDRY_COMMIT_SHA: commitSha,
+      COFOUNDRY_ALLOW_LOCAL_PUBLIC_APP_URL: "true",
       COFOUNDRY_DEPLOYED_AT: deployedAt,
       COFOUNDRY_RELEASE: release,
       HOST: host,

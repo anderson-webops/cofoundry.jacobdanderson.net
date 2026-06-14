@@ -1,11 +1,12 @@
 import process from "node:process"
 import { setResponseHeader } from "h3"
+import { resolveServerAppUrl } from "../utils/app-url"
 import { buildSecurityHeaders } from "../utils/security-headers"
 
 export default defineEventHandler((event) => {
   const runtimeConfig = useRuntimeConfig(event)
   const headers = buildSecurityHeaders({
-    appUrl: runtimeConfig.public.appUrl,
+    appUrl: resolveServerAppUrl(event),
     backendMode: runtimeConfig.public.backendMode,
     billingMode: runtimeConfig.public.billingMode,
     isProduction: process.env.NODE_ENV === "production",

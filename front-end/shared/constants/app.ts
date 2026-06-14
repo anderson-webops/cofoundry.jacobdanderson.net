@@ -1,6 +1,7 @@
 export const appName = "CoFoundry"
 export const appTagline = "Find the people you can build a company with."
 export const appDescription = "CoFoundry helps founders and startup collaborators match, structure proposals, and move from interest to agreement without leaving the platform."
+export const appProductionUrl = "https://cofoundry.jacobdanderson.net"
 
 export const marketingNavigation = [
   { label: "Find a cofounder", to: "/find-cofounder" },
