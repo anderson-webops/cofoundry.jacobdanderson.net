@@ -53,6 +53,12 @@ export default defineEventHandler(async (event) => {
       "COFOUNDRY_EMAIL_SUPPRESSION_PROVIDER",
       "COFOUNDRY_MAIL_SUPPRESSION_PROVIDER",
     ]),
+    hasOAuthProviderConfigured: hasAnyValue([
+      "COFOUNDRY_OAUTH_PROVIDER",
+      "COFOUNDRY_EXTERNAL_AUTH_PROVIDER",
+      "COFOUNDRY_GOOGLE_OAUTH_PROVIDER",
+      "COFOUNDRY_GITHUB_OAUTH_PROVIDER",
+    ]),
     hasOperationsWorkerToken: hasValue(runtimeConfig.operationsWorkerToken) || hasValue(process.env.COFOUNDRY_OPERATIONS_TOKEN) || hasValue(process.env.OPERATIONS_WORKER_TOKEN),
     hasSessionSigningSecret: hasValue(process.env.NUXT_SESSION_SIGNING_SECRET) || hasValue(process.env.SESSION_SIGNING_SECRET),
     hasTrustVerificationProviderConfigured: hasAnyValue([

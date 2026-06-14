@@ -59,6 +59,7 @@ export interface ProductionReadinessInput {
   hasContractEnvelopeProviderConfigured?: boolean
   hasDurableLocalDataDir: boolean
   hasEmailSuppressionProviderConfigured?: boolean
+  hasOAuthProviderConfigured?: boolean
   hasOperationsWorkerToken: boolean
   hasSessionSigningSecret: boolean
   hasTrustVerificationProviderConfigured: boolean
@@ -315,6 +316,18 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
       "COFOUNDRY_EMAIL_SUPPRESSION_PROVIDER=<provider-name>\nnpm run operations:worker -- email-suppression --email <recipient@example.com> --reason complaint --category all --provider <provider-name> --source-event-id <provider-event-id>",
     ),
     task(
+      "external-auth-provider-provisioning",
+      "External auth provider cutover",
+      checkById.get("external-auth-provider")?.status || "info",
+      checkById.get("external-auth-provider")?.summary || "No provider configured",
+      "OAuth and external identity providers should stay disabled until Supabase persistence, callback handling, account linking, role rehydration, and rollback are verified.",
+      input.hasOAuthProviderConfigured
+        ? "Unset the OAuth provider marker or complete the live OAuth callback/account-linking implementation and run a staging sign-in smoke."
+        : "Leave OAuth provider markers unset until the identity provider and callback flow are ready for a deliberate cutover.",
+      "COFOUNDRY_OAUTH_PROVIDER=<provider-name>\n# Verify /auth/sign-in provider flow only after source callback support is deployed.",
+      "docs/server-ai-production-cutover-prompt.md",
+    ),
+    task(
       "worker-token-provisioning",
       "Operations worker token",
       checkById.get("operations-worker-token")?.status || "warn",
@@ -567,6 +580,17 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
   const mailTransportAction = input.contactMailConfigured
     ? "Run `npm run operations:mail-smoke -- --to-email <monitored-inbox>` and confirm the monitored inbox receives the message."
     : "Configure SMTP or sendmail CONTACT_* environment values."
+  const externalAuthProviderStatus: ProductionReadinessStatus = input.hasOAuthProviderConfigured ? "warn" : "info"
+  const externalAuthProviderSummary = input.hasOAuthProviderConfigured
+    ? publicEnvironment.backendMode === "supabase"
+      ? "Provider marker configured, OAuth callback still disabled"
+      : "Provider marker configured before Supabase auth cutover"
+    : "No provider configured"
+  const externalAuthProviderDetail = input.hasOAuthProviderConfigured
+    ? publicEnvironment.backendMode === "supabase"
+      ? "OAuth provider env markers are present, but the checked-in OAuth route still blocks live Supabase OAuth until callback, account-linking, and role rehydration are explicitly implemented."
+      : "OAuth provider env markers are present while the deployment remains in mock/access-request mode, so users should not see or rely on live provider sign-in."
+    : "CoFoundry currently keeps live OAuth disabled; email/password, invited local accounts, and operator-mediated access remain the supported production path until a deliberate auth-provider cutover."
 
   const deploymentChecks = [
     check(
@@ -646,6 +670,16 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
         ? "Session cookies can be signed with a deployment-specific secret."
         : "Hosted sign-in, admin access, and invite-created local accounts cannot safely create sessions without this secret.",
       "Inject SESSION_SIGNING_SECRET from the server secret store.",
+    ),
+    check(
+      "external-auth-provider",
+      "External auth provider",
+      externalAuthProviderStatus,
+      externalAuthProviderSummary,
+      externalAuthProviderDetail,
+      input.hasOAuthProviderConfigured
+        ? "Unset OAuth provider markers for mock/access-request production, or ship the live OAuth callback/account-linking path and smoke test it in staging before public cutover."
+        : "Keep OAuth provider markers unset until live auth-provider cutover is explicitly authorized.",
     ),
     check(
       "operations-worker-token",

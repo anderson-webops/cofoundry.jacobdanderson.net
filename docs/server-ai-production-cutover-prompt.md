@@ -56,9 +56,10 @@ Stage 4: Supabase persistence cutover
 Stage 5: OAuth or external auth provider
 1. Register only the intended OAuth providers and callback URLs.
 2. Add provider client secrets to Vault/host env only.
-3. Keep unsupported providers blocked with the existing 501/400 responses.
-4. Verify new account creation, existing account linking, suspended-user rejection, session expiration, sign-out, and admin role rehydration.
-5. Confirm `/auth/recover` remains available as an operator-mediated fallback.
+3. Keep `COFOUNDRY_OAUTH_PROVIDER`, `COFOUNDRY_GOOGLE_OAUTH_PROVIDER`, and `COFOUNDRY_GITHUB_OAUTH_PROVIDER` unset until the source release supports live callback handling and account linking. If any marker is set before that, `/admin/readiness` should warn.
+4. Keep unsupported providers blocked with the existing 501/400 responses.
+5. After source support is deployed, set only the selected provider marker and verify new account creation, existing account linking, suspended-user rejection, session expiration, sign-out, and admin role rehydration.
+6. Confirm `/auth/recover` remains available as an operator-mediated fallback.
 
 Stage 6: Stripe billing
 1. Create Stripe products/prices for the intended production plans.
