@@ -39,7 +39,7 @@ For a paste-ready staged handoff that covers the remaining external providers, u
 - Visit `/admin/queue` and confirm critical cases have an owner and an escalation route when they need cross-admin follow-up. Resolve startup opportunity ownership/domain verification reviews from this queue instead of granting listing badges from member-facing screens. Confirm newly invited members' persisted startup listings appear here when they request domain or ownership verification.
 - Visit `/admin/evidence` and confirm trust-evidence uploads are scanned, reviewed, and visible in `/admin/audit`.
 - Confirm the contact/support inbox is receiving submissions.
-- Confirm a public page response includes `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, and, on HTTPS production origins, `Strict-Transport-Security`.
+- Confirm a public page response includes `Content-Security-Policy`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, and, on HTTPS production origins, `Strict-Transport-Security`.
 - Confirm `/.well-known/security.txt` points to a monitored security/support inbox and the current HTTPS production origin.
 
 ## Worker Schedule
