@@ -11,7 +11,11 @@ const environment = readEnvironmentSnapshot(process.env)
 const publicRoutes = getPublicRoutePaths(workspaceSeed)
 const securityHeaders = buildSecurityHeaders({
   appUrl: environment.public.appUrl,
+  backendMode: environment.public.backendMode,
+  billingMode: environment.public.billingMode,
   isProduction: process.env.NODE_ENV === "production",
+  stripePublishableKey: environment.public.stripePublishableKey,
+  supabaseUrl: environment.public.supabaseUrl,
 })
 const privateRouteHeaders = {
   ...securityHeaders,
