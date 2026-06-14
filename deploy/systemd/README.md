@@ -4,12 +4,24 @@ These templates schedule or run the checked-in operations workers without enabli
 
 ## Install
 
-1. Copy the unit files to `/etc/systemd/system/`.
-2. Copy `cofoundry-operations.env.example` to `/etc/cofoundry/operations.env`.
-3. Fill in real host values from Vault-managed or host-managed env files.
-4. Adjust `User=`, `Group=`, and `WorkingDirectory=` if the deployed checkout is not `/srv/cofoundry/current`.
-5. Run `systemctl daemon-reload`.
-6. Enable the timers you are ready to operate:
+1. Review the templates and adjust `User=`, `Group=`, and `WorkingDirectory=` if the deployed checkout is not `/srv/cofoundry/current`.
+2. Preview the install commands:
+
+```sh
+sudo deploy/systemd/install-operations-units.sh --dry-run
+```
+
+3. Install the unit files and create `/etc/cofoundry/operations.env` from the example if it does not already exist:
+
+```sh
+sudo deploy/systemd/install-operations-units.sh
+```
+
+4. Fill in real host values from Vault-managed or host-managed env files.
+
+The installer enables the heartbeat, digest, scan, and backup timers by default. It does not overwrite an existing env file unless `--force-env` is passed, and it does not enable the restore-drill timer unless `--enable-restore-drill` is passed. Use `--no-enable` when you want to copy units and reload systemd without enabling timers yet.
+
+If you are installing by hand instead, copy the unit files to `/etc/systemd/system/`, copy `cofoundry-operations.env.example` to `/etc/cofoundry/operations.env`, run `systemctl daemon-reload`, and enable the timers you are ready to operate:
 
 ```sh
 systemctl enable --now cofoundry-operations-backup.timer
