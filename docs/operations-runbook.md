@@ -22,6 +22,7 @@ For a paste-ready staged handoff that covers the remaining external providers, u
 - Visit `/admin/readiness` and resolve any fail or warning checks before treating the deployment as production-ready.
 - Use `/admin/readiness`'s production cutover phases as the quick-read for which provider stages are active, intentionally disabled, blocked, or complete.
 - Use `/admin/readiness`'s server provisioning checklist as the canonical handoff for host-level secrets, durable storage, mail, worker timers, restore drills, monitoring, first-admin bootstrap, and Stripe cutover preparation.
+- After every release build, run `npm run verify:production` from the checked-out source. It starts the built Nitro server in mock/access-request mode and verifies health/deployment identity, security headers, robots/sitemap, unknown-route 404s, admin access control, and authenticated readiness metadata.
 - Confirm `/api/health` returns `status: "ok"` from the deployed Nuxt app.
 - Confirm `/api/health` and `/admin/readiness` show the expected release tag or commit SHA after each deploy.
 - Visit `/admin/operations` and confirm the newest backup, scanner, digest, trust-verification, and operational-event rows are current.
