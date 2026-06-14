@@ -8,6 +8,9 @@ const baseOrigin = new URL(baseUrl).origin
 const expectedCanonicalOrigin = normalizeBaseUrl(process.env.VERIFY_PUBLIC_CANONICAL_ORIGIN || baseOrigin)
 const expectedBackendMode = process.env.VERIFY_PUBLIC_EXPECT_BACKEND_MODE || "mock"
 const expectedBillingMode = process.env.VERIFY_PUBLIC_EXPECT_BILLING_MODE || "mock"
+const expectedRelease = blankToUndefined(process.env.VERIFY_PUBLIC_EXPECT_RELEASE)
+const expectedCommitSha = blankToUndefined(process.env.VERIFY_PUBLIC_EXPECT_COMMIT_SHA)
+const requireDeploymentIdentity = booleanEnv(process.env.VERIFY_PUBLIC_REQUIRE_DEPLOYMENT_IDENTITY) || Boolean(expectedRelease || expectedCommitSha)
 const isLocalVerificationTarget = ["localhost", "127.0.0.1", "::1"].includes(baseHostname)
 const publicRoutes = [
   "/",
@@ -36,6 +39,15 @@ function normalizeBaseUrl(value) {
   url.hash = ""
 
   return url.toString().replace(/\/+$/, "")
+}
+
+function blankToUndefined(value) {
+  const trimmed = value?.trim()
+  return trimmed || undefined
+}
+
+function booleanEnv(value) {
+  return ["1", "true", "yes"].includes(value?.trim().toLowerCase() || "")
 }
 
 function header(response, name) {
@@ -79,6 +91,19 @@ function assertPublicPageMetadata(text, route) {
   assert(text.includes(canonicalUrlForRoute(route)), `${route} should include canonical public URL ${canonicalUrlForRoute(route)}`)
 }
 
+function assertDeploymentIdentity(health) {
+  const deployment = health.deployment || {}
+
+  if (requireDeploymentIdentity)
+    assert(Boolean(deployment.release || deployment.commitSha), "/api/health should expose release or commit deployment identity")
+
+  if (expectedRelease)
+    assert(deployment.release === expectedRelease, `/api/health release should be ${expectedRelease}`)
+
+  if (expectedCommitSha)
+    assert(deployment.commitSha === expectedCommitSha, `/api/health commitSha should be ${expectedCommitSha}`)
+}
+
 async function fetchText(path, init = {}) {
   const response = await fetch(`${baseUrl}${path}`, init)
   const text = await response.text()
@@ -111,6 +136,7 @@ assert(healthResponse.status === 200, "/api/health should return 200")
 assert(health.status === "ok", "/api/health should report ok")
 assert(health.modes.backend === expectedBackendMode, `/api/health backend mode should be ${expectedBackendMode}`)
 assert(health.modes.billing === expectedBillingMode, `/api/health billing mode should be ${expectedBillingMode}`)
+assertDeploymentIdentity(health)
 assert(header(healthResponse, "cache-control").includes("no-store"), "/api/health should be no-store")
 
 const adminPage = await fetchText("/admin/readiness", { redirect: "manual" })

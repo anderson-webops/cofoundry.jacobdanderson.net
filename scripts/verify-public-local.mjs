@@ -11,6 +11,9 @@ const publicVerifier = resolve(scriptDir, "verify-public-site.mjs")
 const port = Number(process.env.VERIFY_PUBLIC_LOCAL_PORT || 3401)
 const host = "127.0.0.1"
 const baseUrl = `http://${host}:${port}`
+const release = process.env.COFOUNDRY_RELEASE || "verify-public-local"
+const commitSha = process.env.COFOUNDRY_COMMIT_SHA || "verify-public-local-commit"
+const deployedAt = process.env.COFOUNDRY_DEPLOYED_AT || "2026-06-14T00:00:00.000Z"
 const sessionSigningSecret = "verify-public-local-session-secret"
 
 if (!Number.isInteger(port) || port <= 0 || port > 65535) {
@@ -51,6 +54,9 @@ function startServer() {
     cwd: resolve(projectRoot, "front-end"),
     env: {
       ...process.env,
+      COFOUNDRY_COMMIT_SHA: commitSha,
+      COFOUNDRY_DEPLOYED_AT: deployedAt,
+      COFOUNDRY_RELEASE: release,
       HOST: host,
       NODE_ENV: "production",
       NUXT_PUBLIC_APP_URL: baseUrl,
@@ -105,6 +111,8 @@ async function runPublicVerifier() {
       VERIFY_PUBLIC_CANONICAL_ORIGIN: baseUrl,
       VERIFY_PUBLIC_EXPECT_BACKEND_MODE: "mock",
       VERIFY_PUBLIC_EXPECT_BILLING_MODE: "mock",
+      VERIFY_PUBLIC_EXPECT_COMMIT_SHA: commitSha,
+      VERIFY_PUBLIC_EXPECT_RELEASE: release,
     },
     stdio: "inherit",
   })
