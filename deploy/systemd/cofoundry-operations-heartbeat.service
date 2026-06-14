@@ -9,7 +9,7 @@ User=cofoundry
 Group=cofoundry
 WorkingDirectory=/srv/cofoundry/current
 EnvironmentFile=/etc/cofoundry/operations.env
-ExecStart=/usr/bin/env bash -lc 'npm run operations:event -- --source systemd-timer --event-type operations_heartbeat --severity info --metadata schedule=hourly'
+ExecStart=/usr/bin/env bash -lc 'npm run operations:heartbeat -- --metadata schedule=hourly --metadata timer=cofoundry-operations-heartbeat'
 SyslogIdentifier=cofoundry-operations-heartbeat
 NoNewPrivileges=true
 PrivateTmp=true
