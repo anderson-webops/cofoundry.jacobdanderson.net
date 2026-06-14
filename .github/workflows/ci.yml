@@ -173,3 +173,6 @@ jobs:
 
       - name: Public route smoke verification
         run: npm run verify:public:local
+
+      - name: Production accessibility smoke checks
+        run: npm run a11y:production

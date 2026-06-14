@@ -1,6 +1,6 @@
 # Accessibility QA Checklist
 
-This checklist complements the automated `npm run a11y` axe smoke suite. Run it before shipping landing, matching, pricing, sign-in, privacy, and terms changes.
+This checklist complements the automated axe smoke suites. `npm run a11y` checks the Nuxt dev server, and `npm run a11y:production` checks the built Nitro server after `npm run build`. Run the relevant path before shipping landing, matching, pricing, sign-in, privacy, and terms changes.
 
 ## Screen Reader Pass
 
@@ -23,6 +23,7 @@ This checklist complements the automated `npm run a11y` axe smoke suite. Run it 
 ## Required Automated Evidence
 
 - `npm run a11y`
+- `npm run build`
+- `npm run a11y:production`
 - `npm run lint`
 - `npm run typecheck`
-- `npm run build`

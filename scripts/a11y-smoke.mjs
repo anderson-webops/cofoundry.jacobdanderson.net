@@ -2,6 +2,7 @@ import { spawn } from "node:child_process"
 import { existsSync, readFileSync } from "node:fs"
 import http from "node:http"
 import { createRequire } from "node:module"
+import net from "node:net"
 import { dirname, resolve } from "node:path"
 import process from "node:process"
 import { fileURLToPath } from "node:url"
@@ -11,12 +12,14 @@ const require = createRequire(import.meta.url)
 const axeSourcePath = require.resolve("axe-core/axe.min.js")
 const scriptDir = dirname(fileURLToPath(import.meta.url))
 const projectRoot = resolve(scriptDir, "..")
+const builtServerEntry = resolve(projectRoot, "front-end/.output/server/index.mjs")
 const frontendPackagePath = resolve(projectRoot, "front-end/package.json")
 const frontendPackage = JSON.parse(readFileSync(frontendPackagePath, "utf8"))
 
 const siteName = "CoFoundry"
 const frontendKind = "nuxt"
-const frontendPort = Number(process.env.A11Y_FRONTEND_PORT || 3344)
+const useBuiltServer = booleanEnv(process.env.A11Y_USE_BUILT_SERVER)
+const frontendPort = Number(process.env.A11Y_FRONTEND_PORT || (useBuiltServer ? 3345 : 3344))
 const apiPort = Number(process.env.A11Y_API_PORT || 3044)
 const baseUrl = `http://127.0.0.1:${frontendPort}`
 const apiUrl = `http://127.0.0.1:${apiPort}/api`
@@ -25,8 +28,15 @@ const routes = [
   "/find-cofounder",
   "/how-it-works",
   "/pricing",
+  "/faq",
+  "/trust",
+  "/contracts",
+  "/people",
+  "/startups",
+  "/safety",
   "/privacy",
   "/terms",
+  "/contact",
   "/auth/sign-in"
 ]
 const colorSchemes = (process.env.A11Y_COLOR_SCHEMES || "light,dark")
@@ -46,10 +56,21 @@ const chromeCandidates = [
 
 const chromePath = chromeCandidates.find(candidate => existsSync(candidate))
 if (chromePath) process.env.PUPPETEER_EXECUTABLE_PATH = chromePath
+let frontendPortFallbackDetected = false
+
+function booleanEnv(value) {
+  return ["1", "true", "yes"].includes(value?.trim().toLowerCase() || "")
+}
 
 function writeServerLine(prefix, data) {
   const text = data.toString().trim()
-  if (text) process.stderr.write(`[${prefix}] ${text}\n`)
+  if (!text)
+    return
+
+  if (text.includes("Unable to find an available port"))
+    frontendPortFallbackDetected = true
+
+  process.stderr.write(`[${prefix}] ${text}\n`)
 }
 
 function sendJson(res, body, status = 200) {
@@ -118,6 +139,18 @@ async function listen(server, port) {
   })
 }
 
+async function assertPortAvailable(port, label) {
+  await new Promise((resolveListen, reject) => {
+    const server = net.createServer()
+    server.once("error", (error) => {
+      reject(new Error(`${label} port ${port} is already in use; set ${label === "frontend" ? "A11Y_FRONTEND_PORT" : "A11Y_API_PORT"} to a free port.`, { cause: error }))
+    })
+    server.listen(port, "127.0.0.1", () => {
+      server.close(resolveListen)
+    })
+  })
+}
+
 async function waitForHttp(url, timeoutMs = 45_000) {
   const start = Date.now()
   let lastError
@@ -136,6 +169,38 @@ async function waitForHttp(url, timeoutMs = 45_000) {
 }
 
 function startFrontend() {
+  if (useBuiltServer) {
+    if (!existsSync(builtServerEntry)) {
+      console.error(`Built Nitro server not found at ${builtServerEntry}. Run npm run build before A11Y_USE_BUILT_SERVER=true npm run a11y.`)
+      process.exit(1)
+    }
+
+    const child = spawn(process.execPath, [builtServerEntry], {
+      cwd: resolve(projectRoot, "front-end"),
+      env: {
+        ...process.env,
+        COFOUNDRY_ALLOW_LOCAL_PUBLIC_APP_URL: "true",
+        COFOUNDRY_COMMIT_SHA: process.env.COFOUNDRY_COMMIT_SHA || "a11y-production-commit",
+        COFOUNDRY_DEPLOYED_AT: process.env.COFOUNDRY_DEPLOYED_AT || "2026-06-14T00:00:00.000Z",
+        COFOUNDRY_RELEASE: process.env.COFOUNDRY_RELEASE || "a11y-production",
+        DISABLE_ANALYTICS: "true",
+        HOST: "127.0.0.1",
+        NODE_ENV: "production",
+        NUXT_PUBLIC_APP_URL: baseUrl,
+        NUXT_PUBLIC_BACKEND_MODE: "mock",
+        NUXT_PUBLIC_BILLING_MODE: "mock",
+        NUXT_PUBLIC_ENABLE_DEMO_ACCESS: "false",
+        NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE: "false",
+        PORT: String(frontendPort),
+        SESSION_SIGNING_SECRET: "a11y-production-session-secret",
+      },
+      stdio: ["ignore", "pipe", "pipe"]
+    })
+    child.stdout.on("data", data => writeServerLine("nitro", data))
+    child.stderr.on("data", data => writeServerLine("nitro", data))
+    return child
+  }
+
   const isNuxt = frontendKind === "nuxt" || Object.values(frontendPackage.scripts || {}).some(script => String(script).includes("nuxt"))
   const args = isNuxt
     ? ["exec", "-w", "front-end", "--", "nuxt", "dev", "--host", "127.0.0.1", "--port", String(frontendPort)]
@@ -185,6 +250,26 @@ function closeServer(server) {
   return new Promise(resolveClose => server.close(resolveClose))
 }
 
+async function stopProcess(child) {
+  if (!child || child.exitCode !== null)
+    return
+
+  child.kill("SIGTERM")
+  await new Promise((resolveStop) => {
+    const timeout = setTimeout(() => {
+      if (child.exitCode === null)
+        child.kill("SIGKILL")
+
+      resolveStop()
+    }, 5_000)
+
+    child.once("exit", () => {
+      clearTimeout(timeout)
+      resolveStop()
+    })
+  })
+}
+
 async function analyzePage(browser, route, scheme) {
   const url = `${baseUrl}${route}`
   const page = await browser.newPage()
@@ -214,12 +299,22 @@ async function analyzePage(browser, route, scheme) {
 }
 
 const apiServer = createMockApiServer()
-const frontendProcess = startFrontend()
+let frontendProcess
 let browser
 
 try {
-  await listen(apiServer, apiPort)
+  await assertPortAvailable(frontendPort, "frontend")
+  if (!useBuiltServer)
+    await assertPortAvailable(apiPort, "api")
+
+  frontendProcess = startFrontend()
+
+  if (!useBuiltServer)
+    await listen(apiServer, apiPort)
+
   await waitForHttp(baseUrl)
+  if (frontendPortFallbackDetected)
+    throw new Error(`A11Y frontend did not bind expected port ${frontendPort}.`)
 
   browser = await puppeteer.launch({
     executablePath: chromePath,
@@ -255,6 +350,7 @@ try {
 }
 finally {
   if (browser) await browser.close()
-  frontendProcess.kill("SIGTERM")
-  await closeServer(apiServer)
+  await stopProcess(frontendProcess)
+  if (apiServer.listening)
+    await closeServer(apiServer)
 }

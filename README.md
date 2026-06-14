@@ -142,6 +142,8 @@ npm run lint
 npm run lint-fix
 npm run typecheck
 npm run test:run
+npm run a11y
+npm run a11y:production
 ```
 
 ## Environment modes
