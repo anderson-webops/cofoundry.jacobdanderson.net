@@ -177,6 +177,11 @@ function isStripeWebhookProcessedEvent(row: Record<string, unknown>) {
     && String(row.event_type || "").toLowerCase() === "stripe.webhook.processed"
 }
 
+function isOAuthSignInEvent(row: Record<string, unknown>) {
+  return String(row.source || "").toLowerCase() === "auth.oauth"
+    && String(row.event_type || "").toLowerCase() === "auth.oauth.signed_in"
+}
+
 function isCompletedContractEnvelopeEvent(row: Record<string, unknown>) {
   return String(row.status || "").toLowerCase() === "completed"
 }
@@ -322,9 +327,9 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
       checkById.get("external-auth-provider")?.summary || "No provider configured",
       "OAuth and external identity providers should stay disabled until Supabase persistence, callback handling, account linking, role rehydration, and rollback are verified.",
       input.hasOAuthProviderConfigured
-        ? "Unset the OAuth provider marker or complete the live OAuth callback/account-linking implementation and run a staging sign-in smoke."
+        ? "Run a staging provider sign-in smoke and confirm the successful OAuth callback appears in readiness evidence."
         : "Leave OAuth provider markers unset until the identity provider and callback flow are ready for a deliberate cutover.",
-      "COFOUNDRY_OAUTH_PROVIDER=<provider-name>\n# Verify /auth/sign-in provider flow only after source callback support is deployed.",
+      "COFOUNDRY_OAUTH_PROVIDER=<provider-name>\n# Verify /auth/sign-in provider flow and confirm auth.oauth.signed_in telemetry.",
       "docs/server-ai-production-cutover-prompt.md",
     ),
     task(
@@ -519,6 +524,9 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
       ? `Last processed webhook${stripeWebhookDaysOld === null ? "" : ` ${stripeWebhookDaysOld} day${stripeWebhookDaysOld === 1 ? "" : "s"} old`}`
       : "Stripe mode enabled, no processed webhook"
     : "Stripe intentionally disabled"
+  const latestOAuthSignInEvent = latestMatchingEvent(input.operations.operationalEvents, isOAuthSignInEvent)
+  const latestOAuthSignInTime = newestTime(latestOAuthSignInEvent ? [latestOAuthSignInEvent] : [], ["created_at"])
+  const oauthSignInDaysOld = daysSince(latestOAuthSignInTime, nowTime)
   const attentionEvents = input.operations.operationalEvents.filter(row => !isAlertSmokeEvent(row))
   const errorEvents = countRows(attentionEvents, "severity", ["error"])
   const warningEvents = countRows(attentionEvents, "severity", ["warning"])
@@ -580,17 +588,24 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
   const mailTransportAction = input.contactMailConfigured
     ? "Run `npm run operations:mail-smoke -- --to-email <monitored-inbox>` and confirm the monitored inbox receives the message."
     : "Configure SMTP or sendmail CONTACT_* environment values."
-  const externalAuthProviderStatus: ProductionReadinessStatus = input.hasOAuthProviderConfigured ? "warn" : "info"
+  let externalAuthProviderStatus: ProductionReadinessStatus = "info"
+  if (input.hasOAuthProviderConfigured) {
+    externalAuthProviderStatus = publicEnvironment.backendMode !== "supabase" || !latestOAuthSignInEvent || (oauthSignInDaysOld !== null && oauthSignInDaysOld > 30)
+      ? "warn"
+      : "pass"
+  }
   const externalAuthProviderSummary = input.hasOAuthProviderConfigured
-    ? publicEnvironment.backendMode === "supabase"
-      ? "Provider marker configured, OAuth callback still disabled"
-      : "Provider marker configured before Supabase auth cutover"
+    ? publicEnvironment.backendMode !== "supabase"
+      ? "Provider marker configured before Supabase auth cutover"
+      : latestOAuthSignInEvent
+        ? `Successful OAuth callback${oauthSignInDaysOld === null ? "" : ` ${oauthSignInDaysOld} day${oauthSignInDaysOld === 1 ? "" : "s"} old`}`
+        : "Provider configured, no successful OAuth callback"
     : "No provider configured"
   const externalAuthProviderDetail = input.hasOAuthProviderConfigured
-    ? publicEnvironment.backendMode === "supabase"
-      ? "OAuth provider env markers are present, but the checked-in OAuth route still blocks live Supabase OAuth until callback, account-linking, and role rehydration are explicitly implemented."
-      : "OAuth provider env markers are present while the deployment remains in mock/access-request mode, so users should not see or rely on live provider sign-in."
-    : "CoFoundry currently keeps live OAuth disabled; email/password, invited local accounts, and operator-mediated access remain the supported production path until a deliberate auth-provider cutover."
+    ? publicEnvironment.backendMode !== "supabase"
+      ? "OAuth provider env markers are present while the deployment remains in mock/access-request mode, so users should not see or rely on live provider sign-in."
+      : "OAuth provider env markers are present. Readiness expects a recent successful callback because provider app configuration, callback URLs, account linking, and role rehydration can only be proven by a smoke sign-in."
+    : "CoFoundry keeps live OAuth disabled until a deliberate provider cutover. Email/password, invited local accounts, and operator-mediated access remain the supported production path until then."
 
   const deploymentChecks = [
     check(
@@ -678,7 +693,7 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
       externalAuthProviderSummary,
       externalAuthProviderDetail,
       input.hasOAuthProviderConfigured
-        ? "Unset OAuth provider markers for mock/access-request production, or ship the live OAuth callback/account-linking path and smoke test it in staging before public cutover."
+        ? "Unset OAuth provider markers for mock/access-request production, or run a staging provider sign-in smoke and confirm `auth.oauth.signed_in` telemetry before public cutover."
         : "Keep OAuth provider markers unset until live auth-provider cutover is explicitly authorized.",
     ),
     check(

@@ -1,4 +1,5 @@
-import { assertAccountAccessEnabled, getMockSessionByUserId, writeSession } from "~/server/utils/auth"
+import { assertAccountAccessEnabled, beginSupabaseOAuthSignIn, getMockSessionByUserId, writeSession } from "~/server/utils/auth"
+import { normalizeOAuthProvider } from "~/shared/utils/oauth-providers"
 import { assertRateLimit } from "../../utils/rate-limit"
 import { isSupabaseEnabled } from "../../utils/supabase"
 
@@ -10,19 +11,22 @@ export default defineEventHandler(async (event) => {
     windowMs: 5 * 60 * 1000,
   })
   const body = await readBody<{ provider: "google" | "github" }>(event)
+  const provider = normalizeOAuthProvider(body.provider)
 
-  if (isSupabaseEnabled(event))
-    throw createError({ statusCode: 501, statusMessage: "OAuth sign-in is not enabled for this deployment yet." })
-
-  if (body.provider !== "github" && body.provider !== "google")
+  if (!provider)
     throw createError({ statusCode: 400, statusMessage: "Unsupported OAuth provider." })
+
+  if (isSupabaseEnabled(event)) {
+    const redirectUrl = await beginSupabaseOAuthSignIn(event, provider)
+    return { redirectUrl }
+  }
 
   const providerMap = {
     github: "user_olivia",
     google: "user_malik",
   }
 
-  const session = getMockSessionByUserId(providerMap[body.provider])
+  const session = getMockSessionByUserId(providerMap[provider])
   if (!session)
     throw createError({ statusCode: 400, statusMessage: "OAuth sign-in is unavailable in this environment." })
 
