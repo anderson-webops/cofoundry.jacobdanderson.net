@@ -405,8 +405,8 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
       checkById.get("monitoring-heartbeat")?.status || "warn",
       checkById.get("monitoring-heartbeat")?.summary || "Monitoring state unknown",
       "The readiness view should show a recent heartbeat or alert event from uptime/log monitoring.",
-      "Wire the monitor or alert destination to report both heartbeat and failure events through the operations reporter.",
-      "npm run operations:event -- --source uptime-monitor --event-type monitoring.heartbeat --severity info",
+      "Schedule the canonical heartbeat worker and keep failure events wired through the operations reporter.",
+      "npm run operations:heartbeat -- --metadata schedule=hourly",
     ),
     task(
       "alert-webhook-provisioning",
@@ -415,7 +415,7 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
       checkById.get("alert-webhook-destination")?.summary || "Alert webhook state unknown",
       "Worker-reported warning and error events should reach an external destination when operators are not watching the admin console.",
       "Configure the server-only alert webhook env, then run an alert smoke event from the production host.",
-      "COFOUNDRY_ALERT_WEBHOOK_URL=<server-only-webhook-url> npm run operations:event -- --source uptime-monitor --event-type monitoring.alert_test --severity warning --metadata purpose=alert-webhook-smoke",
+      "COFOUNDRY_ALERT_WEBHOOK_URL=<server-only-webhook-url> npm run operations:alert-smoke -- --metadata runbook=manual",
     ),
     task(
       "first-admin-bootstrap-provisioning",
@@ -890,7 +890,7 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
       latestMonitoringEvent
         ? "Monitoring or alerting events are reaching the operations telemetry store."
         : "Production operation needs proof that deploy, uptime, log, or alerting monitors can report into CoFoundry.",
-      "Configure the monitor runner or alert destination to report an info heartbeat and failures through `npm run operations:event`.",
+      "Schedule `npm run operations:heartbeat -- --metadata schedule=hourly` and keep monitor failure events wired through `npm run operations:event`.",
     ),
     check(
       "alert-webhook-destination",
@@ -901,7 +901,7 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
         ? "Server-side operations workers have an alert webhook destination for warning/error events."
         : "Warning and error events are persisted in admin operations, but they will not notify operators outside the app until a destination is configured.",
       input.hasAlertWebhookConfigured
-        ? "Run `npm run operations:event -- --source uptime-monitor --event-type monitoring.alert_test --severity warning --metadata purpose=alert-webhook-smoke` from the server and confirm the external destination receives it."
+        ? "Run `npm run operations:alert-smoke -- --metadata runbook=manual` from the server and confirm the external destination receives it."
         : "Set COFOUNDRY_ALERT_WEBHOOK_URL in the server-only worker env after choosing the alert destination.",
     ),
   ]
