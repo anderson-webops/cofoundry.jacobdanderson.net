@@ -12,16 +12,34 @@ const expectedRelease = blankToUndefined(process.env.VERIFY_PUBLIC_EXPECT_RELEAS
 const expectedCommitSha = blankToUndefined(process.env.VERIFY_PUBLIC_EXPECT_COMMIT_SHA)
 const requireDeploymentIdentity = booleanEnv(process.env.VERIFY_PUBLIC_REQUIRE_DEPLOYMENT_IDENTITY) || Boolean(expectedRelease || expectedCommitSha)
 const isLocalVerificationTarget = ["localhost", "127.0.0.1", "::1"].includes(baseHostname)
-const publicRoutes = [
+const requiredPublicRoutes = [
   "/",
   "/find-cofounder",
   "/how-it-works",
   "/pricing",
+  "/faq",
+  "/safety",
   "/trust",
+  "/contracts",
+  "/people",
+  "/roles",
+  "/industries",
+  "/stage",
+  "/startups",
   "/terms",
   "/privacy",
   "/contact",
 ]
+const expectedDynamicSitemapPrefixes = [
+  "/contracts/",
+  "/industries/",
+  "/people/",
+  "/roles/",
+  "/stage/",
+  "/startups/",
+  "/trust/",
+]
+const privateSitemapNeedles = ["/admin", "/app", "/api/admin", "/auth/sign-in"]
 
 function fail(message) {
   throw new Error(message)
@@ -58,14 +76,44 @@ function includesNone(value, needles) {
   return needles.every(needle => !value.includes(needle))
 }
 
+function decodeXml(value) {
+  return value
+    .replaceAll("&apos;", "'")
+    .replaceAll("&quot;", "\"")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&amp;", "&")
+}
+
 function extractSitemapUrl(robotsText) {
   const match = robotsText.match(/^Sitemap:\s*(\S+)/m)
   return match?.[1] || ""
 }
 
+function extractSitemapLocs(sitemapText) {
+  return Array.from(sitemapText.matchAll(/<loc>([^<]+)<\/loc>/g), match => decodeXml(match[1]))
+}
+
 function hasNoindex(response, text) {
   return header(response, "x-robots-tag").toLowerCase().includes("noindex")
     || text.toLowerCase().includes("noindex")
+}
+
+function normalizeRoutePath(pathname) {
+  if (!pathname || pathname === "/")
+    return "/"
+
+  return pathname.replace(/\/+$/, "") || "/"
+}
+
+function routePathFromSitemapLoc(loc) {
+  const url = new URL(loc)
+
+  assert(url.origin === expectedCanonicalOrigin, `sitemap URL ${loc} should use ${expectedCanonicalOrigin}`)
+  assert(!url.search, `sitemap URL ${loc} should not include query strings`)
+  assert(!url.hash, `sitemap URL ${loc} should not include fragments`)
+
+  return normalizeRoutePath(url.pathname)
 }
 
 function assertSecurityHeaders(response, route) {
@@ -104,6 +152,22 @@ function assertDeploymentIdentity(health) {
     assert(deployment.commitSha === expectedCommitSha, `/api/health commitSha should be ${expectedCommitSha}`)
 }
 
+function assertSitemapInventory(routes) {
+  assert(routes.length > 0, "sitemap should include at least one public route")
+
+  const routeSet = new Set(routes)
+  assert(routeSet.size === routes.length, "sitemap should not contain duplicate public route URLs")
+
+  for (const route of requiredPublicRoutes)
+    assert(routeSet.has(route), `sitemap should include ${route}`)
+
+  for (const prefix of expectedDynamicSitemapPrefixes)
+    assert(routes.some(route => route.startsWith(prefix)), `sitemap should include at least one ${prefix} detail route`)
+
+  for (const route of routes)
+    assert(includesNone(route, privateSitemapNeedles), `sitemap should not include private/auth/admin route ${route}`)
+}
+
 async function fetchText(path, init = {}) {
   const response = await fetch(`${baseUrl}${path}`, init)
   const text = await response.text()
@@ -123,14 +187,6 @@ async function fetchJson(path, init = {}) {
   return { body, response }
 }
 
-for (const route of publicRoutes) {
-  const page = await fetchText(route)
-  assert(page.response.status === 200, `${route} should return 200`)
-  assertSecurityHeaders(page.response, route)
-  assert(!header(page.response, "x-robots-tag").toLowerCase().includes("noindex"), `${route} should not send noindex headers`)
-  assertPublicPageMetadata(page.text, route)
-}
-
 const { body: health, response: healthResponse } = await fetchJson("/api/health")
 assert(healthResponse.status === 200, "/api/health should return 200")
 assert(health.status === "ok", "/api/health should report ok")
@@ -138,6 +194,32 @@ assert(health.modes.backend === expectedBackendMode, `/api/health backend mode s
 assert(health.modes.billing === expectedBillingMode, `/api/health billing mode should be ${expectedBillingMode}`)
 assertDeploymentIdentity(health)
 assert(header(healthResponse, "cache-control").includes("no-store"), "/api/health should be no-store")
+
+const robots = await fetchText("/robots.txt")
+assert(robots.response.status === 200, "/robots.txt should return 200")
+assert(robots.text.includes("Disallow: /admin"), "robots.txt should disallow admin routes")
+assert(robots.text.includes("Disallow: /app"), "robots.txt should disallow app routes")
+assert(robots.text.includes("Disallow: /auth"), "robots.txt should disallow auth routes")
+assert(!robots.text.includes("localhost"), "robots.txt must not expose localhost URLs in public verification")
+const sitemapUrl = extractSitemapUrl(robots.text)
+assert(sitemapUrl, "robots.txt should advertise sitemap")
+assert(new URL(sitemapUrl).origin === expectedCanonicalOrigin, `robots sitemap should use ${expectedCanonicalOrigin}`)
+
+const sitemap = await fetchText("/sitemap.xml")
+assert(sitemap.response.status === 200, "/sitemap.xml should return 200")
+assert(!sitemap.text.includes("localhost"), "sitemap must not expose localhost URLs in public verification")
+assert(includesNone(sitemap.text, privateSitemapNeedles), "sitemap should not include private/auth/admin routes")
+
+const publicRoutes = extractSitemapLocs(sitemap.text).map(routePathFromSitemapLoc)
+assertSitemapInventory(publicRoutes)
+
+for (const route of publicRoutes) {
+  const page = await fetchText(route)
+  assert(page.response.status === 200, `${route} should return 200`)
+  assertSecurityHeaders(page.response, route)
+  assert(!header(page.response, "x-robots-tag").toLowerCase().includes("noindex"), `${route} should not send noindex headers`)
+  assertPublicPageMetadata(page.text, route)
+}
 
 const adminPage = await fetchText("/admin/readiness", { redirect: "manual" })
 assert([302, 303, 307, 308].includes(adminPage.response.status), "/admin/readiness should redirect unauthenticated users")
@@ -159,26 +241,9 @@ const missing = await fetchText("/definitely-not-a-cofoundry-page")
 assert(missing.response.status === 404, "unknown frontend routes should return 404")
 assert(hasNoindex(missing.response, missing.text), "unknown frontend route should be noindex")
 
-const robots = await fetchText("/robots.txt")
-assert(robots.response.status === 200, "/robots.txt should return 200")
-assert(robots.text.includes("Disallow: /admin"), "robots.txt should disallow admin routes")
-assert(robots.text.includes("Disallow: /app"), "robots.txt should disallow app routes")
-assert(robots.text.includes("Disallow: /auth"), "robots.txt should disallow auth routes")
-assert(!robots.text.includes("localhost"), "robots.txt must not expose localhost URLs in public verification")
-const sitemapUrl = extractSitemapUrl(robots.text)
-assert(sitemapUrl, "robots.txt should advertise sitemap")
-assert(new URL(sitemapUrl).origin === expectedCanonicalOrigin, `robots sitemap should use ${expectedCanonicalOrigin}`)
-
-const sitemap = await fetchText("/sitemap.xml")
-assert(sitemap.response.status === 200, "/sitemap.xml should return 200")
-assert(sitemap.text.includes(`<loc>${expectedCanonicalOrigin}/</loc>`), "sitemap should include home page with canonical origin")
-assert(sitemap.text.includes(`<loc>${expectedCanonicalOrigin}/find-cofounder</loc>`), "sitemap should include discovery page with canonical origin")
-assert(!sitemap.text.includes("localhost"), "sitemap must not expose localhost URLs in public verification")
-assert(includesNone(sitemap.text, ["/admin", "/app", "/api/admin", "/auth/sign-in"]), "sitemap should not include private/auth/admin routes")
-
 const securityTxt = await fetchText("/.well-known/security.txt")
 assert(securityTxt.response.status === 200, "/.well-known/security.txt should return 200")
 assert(securityTxt.text.includes("Contact:"), "security.txt should include Contact")
 assert(securityTxt.text.includes(`Canonical: ${expectedCanonicalOrigin}/.well-known/security.txt`), "security.txt should include canonical production URL")
 
-console.log(`Public site verification passed for ${baseUrl}.`)
+console.log(`Public site verification passed for ${baseUrl} across ${publicRoutes.length} sitemap routes.`)
