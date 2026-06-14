@@ -80,6 +80,7 @@ Final verification:
 - Run `npm run verify:analytics` after `npm run build` to confirm the production analytics trackers are present in the built Nuxt output.
 - Run `npm run verify:production` after `npm run build` to verify the built Nitro server returns expected health, deployment identity, production security headers including HSTS, no localhost leaks in public metadata, canonical robots/sitemap/security.txt URLs, unknown-route 404, admin access control, and readiness metadata.
 - Run `npm run verify:public:local` after `npm run build` to verify the built Nitro server returns coherent sitemap-listed public routes, public SEO/security metadata, private-route redirects, noindex behavior, robots/sitemap, and `/.well-known/security.txt` before deploy.
+- Run `npm run a11y:production` after `npm run build` to verify the built public shell passes axe smoke checks in light and dark mode.
 - Run `VERIFY_PUBLIC_EXPECT_RELEASE=<release> VERIFY_PUBLIC_EXPECT_COMMIT_SHA=<commit> npm run verify:public` after deploy to verify the public origin returns the intended deployment identity, sitemap-listed public routes, security headers, health mode, private-route access control, noindex behavior, canonical robots/sitemap URLs, and `/.well-known/security.txt`. If the host exposes only one identity field, set that one or use `VERIFY_PUBLIC_REQUIRE_DEPLOYMENT_IDENTITY=true`.
 - Verify production logs do not mention loading `../.env`.
 - Verify `/api/health` and `/admin/readiness` show the deployed release tag or commit SHA.
