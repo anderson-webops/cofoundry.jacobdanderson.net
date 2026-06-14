@@ -165,6 +165,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Analytics output verification
+        run: npm run verify:analytics
+
       - name: Production smoke verification
         run: npm run verify:production
 
