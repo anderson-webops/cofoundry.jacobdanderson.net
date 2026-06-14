@@ -2,10 +2,10 @@
 import { faqs } from "~/shared/data/marketing"
 import { buildFaqStructuredData } from "~/shared/utils/seo"
 
-const runtimeConfig = useRuntimeConfig()
+const canonicalAppUrl = useCanonicalAppUrl()
 usePageSeo("FAQ", undefined, {
   canonicalPath: "/faq",
-  structuredData: buildFaqStructuredData(faqs, runtimeConfig.public.appUrl),
+  structuredData: buildFaqStructuredData(faqs, canonicalAppUrl),
 })
 </script>
 

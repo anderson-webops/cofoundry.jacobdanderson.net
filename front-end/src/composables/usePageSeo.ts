@@ -9,19 +9,19 @@ interface PageSeoOptions {
   structuredData?: Record<string, unknown> | Record<string, unknown>[]
 }
 
-function buildCanonicalUrl(path?: string) {
+function buildCanonicalUrl(appUrl: string | null, path?: string) {
   if (!path)
     return undefined
 
-  const runtimeConfig = useRuntimeConfig()
-  return buildSiteUrl(runtimeConfig.public.appUrl, path) || undefined
+  return buildSiteUrl(appUrl, path) || undefined
 }
 
 export function usePageSeo(title: string, description = appDescription, options: PageSeoOptions = {}) {
   const route = useRoute()
+  const appUrl = useCanonicalAppUrl()
   const fullTitle = `${title} · ${appName}`
-  const canonicalUrl = buildCanonicalUrl(options.canonicalPath || route.path)
-  const ogImage = buildCanonicalUrl(options.imagePath || "/og-default.png")
+  const canonicalUrl = buildCanonicalUrl(appUrl, options.canonicalPath || route.path)
+  const ogImage = buildCanonicalUrl(appUrl, options.imagePath || "/og-default.png")
   const pageStructuredData = canonicalUrl
     ? {
         "@context": "https://schema.org",
@@ -31,7 +31,7 @@ export function usePageSeo(title: string, description = appDescription, options:
         "isPartOf": {
           "@type": "WebSite",
           "name": appName,
-          "url": buildCanonicalUrl("/") || canonicalUrl,
+          "url": buildCanonicalUrl(appUrl, "/") || canonicalUrl,
         },
         "name": fullTitle,
         "url": canonicalUrl,

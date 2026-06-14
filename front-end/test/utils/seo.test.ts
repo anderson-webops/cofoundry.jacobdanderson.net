@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { appName } from "../../shared/constants/app"
-import { buildFaqStructuredData, buildSiteStructuredData, buildSiteUrl, normalizeSiteUrl } from "../../shared/utils/seo"
+import { buildFaqStructuredData, buildSiteStructuredData, buildSiteUrl, isLocalSiteUrl, isPublicSiteUrl, normalizeSiteUrl } from "../../shared/utils/seo"
 
 describe("seo helpers", () => {
   it("normalizes configured site origins and builds absolute URLs", () => {
@@ -8,6 +8,16 @@ describe("seo helpers", () => {
     expect(buildSiteUrl("https://cofoundry.example/base/", "/faq")).toBe("https://cofoundry.example/faq")
     expect(buildSiteUrl("", "/faq")).toBeNull()
     expect(buildSiteUrl("not a url", "/faq")).toBeNull()
+  })
+
+  it("classifies local and public production origins", () => {
+    expect(isLocalSiteUrl("http://localhost:3000")).toBe(true)
+    expect(isLocalSiteUrl("http://127.0.0.1:3000")).toBe(true)
+    expect(isLocalSiteUrl("https://cofoundry.example")).toBe(false)
+    expect(isPublicSiteUrl("https://cofoundry.example")).toBe(true)
+    expect(isPublicSiteUrl("http://cofoundry.example")).toBe(false)
+    expect(isPublicSiteUrl("http://localhost:3000")).toBe(false)
+    expect(isPublicSiteUrl("")).toBe(false)
   })
 
   it("builds site structured data from the configured app URL", () => {

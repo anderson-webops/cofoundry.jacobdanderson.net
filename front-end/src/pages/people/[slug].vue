@@ -11,11 +11,11 @@ if (!entry)
   throw createError({ statusCode: 404, statusMessage: "Public profile not found" })
 
 const { profile } = entry
-const runtimeConfig = useRuntimeConfig()
+const canonicalAppUrl = useCanonicalAppUrl()
 const { getIntroCta } = useProductAccess()
 const introCta = computed(() => getIntroCta(`public-profile-${entry.slug}`))
-const publicProfileUrl = runtimeConfig.public.appUrl
-  ? new URL(`/people/${buildPublicProfileSlug(profile)}`, `${runtimeConfig.public.appUrl}/`).toString()
+const publicProfileUrl = canonicalAppUrl
+  ? new URL(`/people/${buildPublicProfileSlug(profile)}`, `${canonicalAppUrl}/`).toString()
   : undefined
 const roleHubSlugs = new Set(getRoleHubs(workspaceSeed).map(entry => entry.slug))
 const linkedRoles = [...new Set([profile.roleScope.primaryRole, ...profile.roles])]

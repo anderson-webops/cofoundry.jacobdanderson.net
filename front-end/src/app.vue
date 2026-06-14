@@ -6,8 +6,8 @@ import { themeSchemeStyleContent } from "~/shared/utils/theme"
 
 const workspaceStore = useWorkspaceStore()
 workspaceStore.ensureReady()
-const runtimeConfig = useRuntimeConfig()
 const route = useRoute()
+const canonicalAppUrl = useCanonicalAppUrl()
 const { scheme } = useThemeScheme()
 const noindexRoute = computed(() => isPrivateWorkspaceRoutePath(route.path))
 const analyticsScripts = import.meta.env.PROD
@@ -27,9 +27,9 @@ const analyticsScripts = import.meta.env.PROD
     ]
   : []
 const siteUrl = computed(() => {
-  return buildSiteUrl(runtimeConfig.public.appUrl, route.path || "/")
+  return buildSiteUrl(canonicalAppUrl, route.path || "/")
 })
-const structuredData = computed(() => buildSiteStructuredData(runtimeConfig.public.appUrl))
+const structuredData = computed(() => buildSiteStructuredData(canonicalAppUrl))
 
 useHead(() => ({
   htmlAttrs: {
