@@ -149,8 +149,8 @@ usePageSeo("Privacy Policy", "Product-specific privacy disclosures for CoFoundry
             <BaseButton variant="ghost" to="/contact">
               Contact page
             </BaseButton>
-            <BaseButton variant="ghost" to="/app/settings">
-              Settings
+            <BaseButton variant="ghost" to="/auth/sign-in">
+              Sign in for settings
             </BaseButton>
           </div>
         </div>

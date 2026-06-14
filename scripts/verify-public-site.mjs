@@ -40,6 +40,19 @@ const expectedDynamicSitemapPrefixes = [
   "/trust/",
 ]
 const privateSitemapNeedles = ["/admin", "/app", "/api/admin", "/auth/sign-in"]
+const ignoredHrefSchemes = ["blob:", "data:", "javascript:", "mailto:", "sms:", "tel:"]
+const ignoredLinkedPathPrefixes = [
+  "/_nuxt/",
+  "/apple-touch-icon",
+  "/favicon",
+  "/og-default.png",
+  "/robots.txt",
+  "/site.webmanifest",
+  "/sitemap.xml",
+  "/.well-known/security.txt",
+]
+const publicNavigationBlocklistPrefixes = ["/admin", "/app", "/api", "/email", "/onboarding"]
+const allowedNoindexLinkedRoutePrefixes = ["/auth"]
 
 function fail(message) {
   throw new Error(message)
@@ -131,6 +144,54 @@ function canonicalUrlForRoute(route) {
   return new URL(route, `${expectedCanonicalOrigin}/`).toString()
 }
 
+function extractAnchorHrefs(html) {
+  const matches = html.matchAll(/<a\b[^>]*\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi)
+
+  return Array.from(matches, match => decodeXml(match[1] || match[2] || match[3] || "").trim())
+}
+
+function routeMatchesPrefix(route, prefix) {
+  return route === prefix || route.startsWith(`${prefix}/`)
+}
+
+function routeMatchesAnyPrefix(route, prefixes) {
+  return prefixes.some(prefix => routeMatchesPrefix(route, prefix))
+}
+
+function formatSources(sources) {
+  const sourceList = Array.from(sources)
+  const visibleSources = sourceList.slice(0, 4).join(", ")
+  const remainingCount = sourceList.length - 4
+
+  return remainingCount > 0 ? `${visibleSources}, and ${remainingCount} more` : visibleSources
+}
+
+function addLinkSource(linkSources, linkedRoute, sourceRoute) {
+  const sources = linkSources.get(linkedRoute) || new Set()
+  sources.add(sourceRoute)
+  linkSources.set(linkedRoute, sources)
+}
+
+function routePathFromInternalHref(rawHref, sourceRoute) {
+  const href = rawHref.trim()
+  if (!href || href.startsWith("#"))
+    return null
+
+  const hrefLower = href.toLowerCase()
+  if (ignoredHrefSchemes.some(scheme => hrefLower.startsWith(scheme)))
+    return null
+
+  const url = new URL(href, canonicalUrlForRoute(sourceRoute))
+  if (![baseOrigin, expectedCanonicalOrigin].includes(url.origin))
+    return null
+
+  const pathname = normalizeRoutePath(url.pathname)
+  if (routeMatchesAnyPrefix(pathname, ignoredLinkedPathPrefixes))
+    return null
+
+  return `${pathname}${url.search}`
+}
+
 function assertPublicPageMetadata(text, route) {
   if (isLocalVerificationTarget)
     return
@@ -166,6 +227,33 @@ function assertSitemapInventory(routes) {
 
   for (const route of routes)
     assert(includesNone(route, privateSitemapNeedles), `sitemap should not include private/auth/admin route ${route}`)
+}
+
+async function assertPublicInternalLinks(linkSources, publicRouteSet) {
+  for (const [linkedRoute, sources] of [...linkSources.entries()].sort(([first], [second]) => first.localeCompare(second))) {
+    const linkedUrl = new URL(linkedRoute, `${baseUrl}/`)
+    const linkedPath = normalizeRoutePath(linkedUrl.pathname)
+    const sourceLabel = formatSources(sources)
+
+    assert(
+      !routeMatchesAnyPrefix(linkedPath, publicNavigationBlocklistPrefixes),
+      `public pages should not link private route ${linkedRoute}; linked from ${sourceLabel}`,
+    )
+
+    const page = await fetchText(linkedRoute, { redirect: "manual" })
+
+    if (routeMatchesAnyPrefix(linkedPath, allowedNoindexLinkedRoutePrefixes)) {
+      assert(page.response.status === 200, `allowed noindex link ${linkedRoute} from ${sourceLabel} should return 200`)
+      assert(hasNoindex(page.response, page.text), `allowed noindex link ${linkedRoute} from ${sourceLabel} should be noindex`)
+      continue
+    }
+
+    assert(page.response.status === 200, `public link ${linkedRoute} from ${sourceLabel} should return 200`)
+    assertSecurityHeaders(page.response, linkedRoute)
+    assert(!hasNoindex(page.response, page.text), `public link ${linkedRoute} from ${sourceLabel} should not be noindex`)
+    assert(publicRouteSet.has(linkedPath), `public link ${linkedRoute} from ${sourceLabel} should be listed in sitemap.xml`)
+    assertPublicPageMetadata(page.text, linkedPath)
+  }
 }
 
 async function fetchText(path, init = {}) {
@@ -213,13 +301,24 @@ assert(includesNone(sitemap.text, privateSitemapNeedles), "sitemap should not in
 const publicRoutes = extractSitemapLocs(sitemap.text).map(routePathFromSitemapLoc)
 assertSitemapInventory(publicRoutes)
 
+const publicRouteSet = new Set(publicRoutes)
+const internalLinkSources = new Map()
+
 for (const route of publicRoutes) {
   const page = await fetchText(route)
   assert(page.response.status === 200, `${route} should return 200`)
   assertSecurityHeaders(page.response, route)
   assert(!header(page.response, "x-robots-tag").toLowerCase().includes("noindex"), `${route} should not send noindex headers`)
   assertPublicPageMetadata(page.text, route)
+
+  for (const href of extractAnchorHrefs(page.text)) {
+    const linkedRoute = routePathFromInternalHref(href, route)
+    if (linkedRoute)
+      addLinkSource(internalLinkSources, linkedRoute, route)
+  }
 }
+
+await assertPublicInternalLinks(internalLinkSources, publicRouteSet)
 
 const adminPage = await fetchText("/admin/readiness", { redirect: "manual" })
 assert([302, 303, 307, 308].includes(adminPage.response.status), "/admin/readiness should redirect unauthenticated users")
@@ -246,4 +345,4 @@ assert(securityTxt.response.status === 200, "/.well-known/security.txt should re
 assert(securityTxt.text.includes("Contact:"), "security.txt should include Contact")
 assert(securityTxt.text.includes(`Canonical: ${expectedCanonicalOrigin}/.well-known/security.txt`), "security.txt should include canonical production URL")
 
-console.log(`Public site verification passed for ${baseUrl} across ${publicRoutes.length} sitemap routes.`)
+console.log(`Public site verification passed for ${baseUrl} across ${publicRoutes.length} sitemap routes and ${internalLinkSources.size} internal links.`)
