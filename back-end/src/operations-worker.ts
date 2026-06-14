@@ -759,6 +759,24 @@ async function runHeartbeat(parsed: ParsedArgs, options: Required<WorkerCommandO
   options.log(JSON.stringify(response, null, 2))
 }
 
+async function runAlertSmoke(parsed: ParsedArgs, options: Required<WorkerCommandOptions>) {
+  const environment = resolveOperationsWorkerEnvironment(options.env)
+  const response = await reportOperationalEvent(environment, {
+    actorUserId: null,
+    eventType: flagValue(parsed.flags, "event-type", "monitoring.alert_test"),
+    metadata: {
+      purpose: "alert-webhook-smoke",
+      ...parseMetadata(parsed.flags),
+    },
+    severity: flagValue(parsed.flags, "severity", "warning"),
+    source: flagValue(parsed.flags, "source", "uptime-monitor"),
+    targetId: flagValue(parsed.flags, "target-id", "cofoundry-alert-webhook"),
+    targetType: flagValue(parsed.flags, "target-type", "monitor"),
+  }, options)
+
+  options.log(JSON.stringify(response, null, 2))
+}
+
 async function runRestoreDrill(parsed: ParsedArgs, options: Required<WorkerCommandOptions>) {
   if (!parsed.commandArgs.length)
     throw new Error("Restore drill worker requires a command after --.")
@@ -804,6 +822,8 @@ export async function runOperationsWorker(argv: string[], options: WorkerCommand
   }
 
   switch (parsed.command) {
+    case "alert-smoke":
+      return runAlertSmoke(parsed, resolvedOptions)
     case "backup":
       return runBackup(parsed, resolvedOptions)
     case "contract-envelope":
@@ -829,7 +849,7 @@ export async function runOperationsWorker(argv: string[], options: WorkerCommand
     default:
       throw new Error([
         "Unknown operations worker command.",
-        "Use one of: backup, contract-envelope, digest, email-suppression, event, heartbeat, lifecycle-notification, mail-smoke, restore-drill, scan, trust-verification.",
+        "Use one of: alert-smoke, backup, contract-envelope, digest, email-suppression, event, heartbeat, lifecycle-notification, mail-smoke, restore-drill, scan, trust-verification.",
       ].join(" "))
   }
 }

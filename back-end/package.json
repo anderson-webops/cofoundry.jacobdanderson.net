@@ -14,6 +14,7 @@
     "lint": "eslint \"src/**/*.{js,ts}\" \"scripts/**/*.ts\" \"test/**/*.ts\"",
     "lint-fix": "eslint \"src/**/*.{js,ts}\" \"scripts/**/*.ts\" \"test/**/*.ts\" --fix",
     "bootstrap-admin": "node --import tsx scripts/bootstrap-admin.ts",
+    "operations:alert-smoke": "node --import tsx scripts/operations-worker.ts alert-smoke",
     "operations:backup": "node --import tsx scripts/operations-worker.ts backup",
     "operations:digest": "node --import tsx scripts/operations-worker.ts digest",
     "operations:event": "node --import tsx scripts/operations-worker.ts event",

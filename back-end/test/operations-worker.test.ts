@@ -404,6 +404,56 @@ test("operations heartbeat worker emits readiness-recognized monitoring events",
   })
 })
 
+test("operations alert smoke worker emits readiness-recognized alert events", async () => {
+  const { fetchImpl, requests } = createJsonFetch(request => request.url === "https://alerts.example.com/cofoundry"
+    ? { accepted: true }
+    : { id: "event_alert_smoke", mode: "mock" })
+
+  await runOperationsWorker([
+    "alert-smoke",
+    "--metadata",
+    "runbook=manual",
+  ], {
+    env: {
+      ...workerEnv,
+      COFOUNDRY_ALERT_WEBHOOK_URL: "https://alerts.example.com/cofoundry",
+    },
+    fetch: fetchImpl,
+    log: () => {},
+    now: () => new Date("2026-06-13T12:10:00.000Z"),
+  })
+
+  assert.equal(requests.length, 2)
+  assert.equal(requests[0].url, "https://cofoundry.example.com/api/operations/events")
+  assert.deepEqual(requests[0].body, {
+    actorUserId: null,
+    eventType: "monitoring.alert_test",
+    metadata: {
+      purpose: "alert-webhook-smoke",
+      runbook: "manual",
+    },
+    severity: "warning",
+    source: "uptime-monitor",
+    targetId: "cofoundry-alert-webhook",
+    targetType: "monitor",
+  })
+  assert.equal(requests[1].url, "https://alerts.example.com/cofoundry")
+  assert.deepEqual(requests[1].body, {
+    appUrl: "https://cofoundry.example.com",
+    eventType: "monitoring.alert_test",
+    metadata: {
+      purpose: "alert-webhook-smoke",
+      runbook: "manual",
+    },
+    severity: "warning",
+    source: "uptime-monitor",
+    summary: "uptime-monitor reported monitoring.alert_test (warning).",
+    targetId: "cofoundry-alert-webhook",
+    targetType: "monitor",
+    timestamp: "2026-06-13T12:10:00.000Z",
+  })
+})
+
 test("operations alert webhooks are non-blocking when delivery fails", async () => {
   const logs: string[] = []
   const { fetchImpl, requests } = createJsonFetch(request => request.url === "https://alerts.example.com/cofoundry"

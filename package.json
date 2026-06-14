@@ -30,6 +30,7 @@
     "lint-serve": "npm run -w front-end lint-fix && npm run -w front-end serve",
     "lint": "npm run -w front-end lint && npm run -w back-end lint",
     "lint-fix": "npm run -w front-end lint-fix && npm run -w back-end lint-fix",
+    "operations:alert-smoke": "npm run -w back-end operations:alert-smoke --",
     "operations:backup": "npm run -w back-end operations:backup --",
     "operations:digest": "npm run -w back-end operations:digest --",
     "operations:event": "npm run -w back-end operations:event --",
