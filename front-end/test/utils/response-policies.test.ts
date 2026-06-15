@@ -14,7 +14,7 @@ describe("response policies", () => {
   })
 
   it("marks sensitive API surfaces as no-store and noindex", () => {
-    for (const path of ["/api/auth/session", "/api/workspace", "/api/admin/readiness", "/api/operations/events"]) {
+    for (const path of ["/api/auth/session", "/api/workspace", "/api/admin/readiness", "/api/operations/events", "/api/operations/realtime-events"]) {
       expect(isPrivateSurfacePath(path), `${path} should be treated as private`).toBe(true)
       expect(buildResponsePolicyHeaders(path)).toMatchObject({
         "Cache-Control": "no-store, max-age=0",

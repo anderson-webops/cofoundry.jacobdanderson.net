@@ -45,7 +45,7 @@ describe("route surfaces", () => {
   })
 
   it("classifies private surfaces without hiding public health checks", () => {
-    for (const route of ["/admin/readiness", "/app/inbox", "/auth/sign-in", "/auth/recover", "/onboarding", "/api/admin/readiness", "/api/operations/events", "/api/operations/mail-smoke", "/api/workspace"])
+    for (const route of ["/admin/readiness", "/app/inbox", "/auth/sign-in", "/auth/recover", "/onboarding", "/api/admin/readiness", "/api/operations/events", "/api/operations/mail-smoke", "/api/operations/realtime-events", "/api/workspace"])
       expect(isPrivateSurfacePath(route), `${route} should be private`).toBe(true)
 
     for (const route of ["/", "/find-cofounder", "/people/ava-morgan", "/sitemap.xml", "/robots.txt", "/api/health"])

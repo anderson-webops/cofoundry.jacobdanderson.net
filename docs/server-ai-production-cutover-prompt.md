@@ -46,6 +46,14 @@ Stage 3: operations workers
 5. Confirm `/admin/operations` shows fresh rows for backup runs, scanner results, digest runs, trust-verification events, contract envelope events, operational events, and restore-drill results.
 6. Keep the actual backup artifacts, completed-provider PDFs, and scanner quarantine outside the repo and outside public web roots.
 
+Stage 3b: realtime scaling, only if the app runs multiple instances
+1. Leave this stage disabled if production runs one Node process; process-local SSE plus polling fallback is the expected single-instance path.
+2. If the host runs more than one app instance, set `COFOUNDRY_EXPECT_MULTI_INSTANCE=true`, `COFOUNDRY_APP_INSTANCE_COUNT=<count>`, and a stable `COFOUNDRY_INSTANCE_ID` for each instance.
+3. Configure `COFOUNDRY_REALTIME_FANOUT_URL` to an internal relay endpoint. Do not expose relay credentials to the client.
+4. Configure the relay to POST each realtime envelope to every app instance at `/api/operations/realtime-events` using `Authorization: Bearer <COFOUNDRY_OPERATIONS_TOKEN>`.
+5. Restart the app instances and confirm `/admin/readiness` shows the workspace realtime fanout check passing.
+6. Run a smoke with two instances: connect a member SSE stream to instance B, trigger a message/proposal/typing event through instance A, and confirm instance B receives the pushed event without waiting for polling fallback.
+
 Stage 4: Supabase persistence cutover
 1. Apply all SQL migrations in `back-end/supabase/migrations/` to a staging Supabase project first.
 2. Confirm `NUXT_PUBLIC_SUPABASE_URL`, `NUXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and `SESSION_SIGNING_SECRET` are available from the host/Vault env used by the app.
@@ -78,7 +86,7 @@ Stage 6: Stripe billing
 Final verification:
 - Run `npm ci`, `npm run lint`, `npm run typecheck`, `npm run test`, `npm run audit`, and `npm run build` against the release source if the server environment permits.
 - Run `npm run verify:analytics` after `npm run build` to confirm the production analytics trackers are present in the built Nuxt output.
-- Run `npm run verify:production` after `npm run build` to verify the built Nitro server returns expected health, health HEAD behavior, deployment identity, production security headers including HSTS, no localhost leaks in public metadata, canonical robots/sitemap/security.txt URLs, unknown-route 404, admin access control, private-surface no-store/noindex response policy, workspace realtime endpoints failing closed without a session, readiness metadata, public-form honeypot handling, intake-quality rejection, and contact-mail graceful degradation.
+- Run `npm run verify:production` after `npm run build` to verify the built Nitro server returns expected health, health HEAD behavior, deployment identity, production security headers including HSTS, no localhost leaks in public metadata, canonical robots/sitemap/security.txt URLs, unknown-route 404, admin access control, private-surface no-store/noindex response policy, workspace realtime endpoints failing closed without a session, operations realtime fanout ingress failing closed without a worker token, readiness metadata, public-form honeypot handling, intake-quality rejection, and contact-mail graceful degradation.
 - Run `npm run verify:public:local` after `npm run build` to verify the built Nitro server returns coherent sitemap-listed public routes, same-origin public links, public SEO/security metadata, private-route redirects, private-surface no-store/noindex response policy, robots/sitemap, and `/.well-known/security.txt` before deploy.
 - Run `npm run a11y:production` after `npm run build` to verify the built public shell passes axe smoke checks in light and dark mode.
 - Run `VERIFY_PUBLIC_EXPECT_RELEASE=<release> VERIFY_PUBLIC_EXPECT_COMMIT_SHA=<commit> npm run verify:public` after deploy to verify the public origin returns the intended deployment identity, sitemap-listed public routes, same-origin public links, security headers, health mode, private-route access control, noindex behavior, canonical robots/sitemap URLs, and `/.well-known/security.txt`. If the host exposes only one identity field, set that one or use `VERIFY_PUBLIC_REQUIRE_DEPLOYMENT_IDENTITY=true`. If it reports local URLs in public output, redeploy the validated release, restart the service, and confirm `NUXT_PUBLIC_APP_URL` is the canonical HTTPS origin in the service environment.
