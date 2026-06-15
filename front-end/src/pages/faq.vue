@@ -3,10 +3,14 @@ import { faqs } from "~/shared/data/marketing"
 import { buildFaqStructuredData } from "~/shared/utils/seo"
 
 const canonicalAppUrl = useCanonicalAppUrl()
-usePageSeo("FAQ", undefined, {
-  canonicalPath: "/faq",
-  structuredData: buildFaqStructuredData(faqs, canonicalAppUrl),
-})
+usePageSeo(
+  "Founder questions about CoFoundry",
+  "Direct answers about CoFoundry accounts, founder matching, public profiles, proposals, agreements, and billing.",
+  {
+    canonicalPath: "/faq",
+    structuredData: buildFaqStructuredData(faqs, canonicalAppUrl),
+  },
+)
 </script>
 
 <template>

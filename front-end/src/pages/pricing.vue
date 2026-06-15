@@ -3,7 +3,13 @@ import { pricingTiers } from "~/shared/data/marketing"
 
 const { getPricingTierCta } = useProductAccess()
 
-usePageSeo("Pricing")
+usePageSeo(
+  "Pricing for startup team formation",
+  "Compare CoFoundry plans for founder discovery, structured outreach, proposal workflows, and agreement preparation.",
+  {
+    canonicalPath: "/pricing",
+  },
+)
 </script>
 
 <template>

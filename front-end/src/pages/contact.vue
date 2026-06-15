@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { contactSchema } from "~/shared/utils/validation"
 
-usePageSeo("Contact")
+usePageSeo(
+  "Contact the CoFoundry team",
+  "Contact CoFoundry for support, workspace access, pricing, partnerships, or help with an existing account.",
+  {
+    canonicalPath: "/contact",
+  },
+)
 
 const route = useRoute()
 const runtimeConfig = useRuntimeConfig()

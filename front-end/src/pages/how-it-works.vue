@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { howItWorksSteps } from "~/shared/data/marketing"
 
-usePageSeo("How it works")
+usePageSeo(
+  "How CoFoundry formation works",
+  "See how CoFoundry moves founder relationships from profile signal to intro, trial sprint, proposal, and agreement.",
+  {
+    canonicalPath: "/how-it-works",
+  },
+)
 </script>
 
 <template>

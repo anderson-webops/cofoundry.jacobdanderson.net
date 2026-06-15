@@ -15,7 +15,7 @@ if (!entry)
 const { opportunity, ownerProfile } = entry
 const introCta = computed(() => getIntroCta(`startup-search-${entry.slug}`))
 
-usePageSeo(opportunity.startupName, opportunity.oneLinePitch, {
+usePageSeo(`${opportunity.startupName} startup search`, opportunity.oneLinePitch, {
   canonicalPath: `/startups/${entry.slug}`,
 })
 </script>
