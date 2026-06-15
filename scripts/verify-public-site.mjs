@@ -145,6 +145,11 @@ function assertSecurityHeaders(response, route) {
     assert(header(response, "strict-transport-security").includes("max-age="), `${route} should include HSTS on HTTPS`)
 }
 
+function assertPrivateResponsePolicy(response, route) {
+  assert(header(response, "cache-control").toLowerCase().includes("no-store"), `${route} should be no-store`)
+  assert(header(response, "x-robots-tag").toLowerCase().includes("noindex"), `${route} should be noindex`)
+}
+
 function canonicalUrlForRoute(route) {
   return new URL(route, `${expectedCanonicalOrigin}/`).toString()
 }
@@ -337,6 +342,11 @@ assert(health.modes.billing === expectedBillingMode, `/api/health billing mode s
 assertDeploymentIdentity(health)
 assert(header(healthResponse, "cache-control").includes("no-store"), "/api/health should be no-store")
 
+const healthHead = await fetchText("/api/health", { method: "HEAD" })
+assert(healthHead.response.status === 200, "/api/health HEAD should return 200")
+assert(header(healthHead.response, "cache-control").includes("no-store"), "/api/health HEAD should be no-store")
+assert(healthHead.text === "", "/api/health HEAD should not return a response body")
+
 const robots = await fetchText("/robots.txt")
 assert(robots.response.status === 200, "/robots.txt should return 200")
 assert(robots.text.includes("Disallow: /admin"), "robots.txt should disallow admin routes")
@@ -377,18 +387,22 @@ await assertPublicInternalLinks(internalLinkSources, publicRouteSet)
 const adminPage = await fetchText("/admin/readiness", { redirect: "manual" })
 assert([302, 303, 307, 308].includes(adminPage.response.status), "/admin/readiness should redirect unauthenticated users")
 assert(hasNoindex(adminPage.response, adminPage.text), "/admin/readiness redirect should be noindex")
+assertPrivateResponsePolicy(adminPage.response, "/admin/readiness redirect")
 
 const appPage = await fetchText("/app", { redirect: "manual" })
 assert([302, 303, 307, 308].includes(appPage.response.status), "/app should redirect unauthenticated users")
 assert(hasNoindex(appPage.response, appPage.text), "/app redirect should be noindex")
+assertPrivateResponsePolicy(appPage.response, "/app redirect")
 
 const adminApi = await fetchJson("/api/admin/readiness")
 assert(adminApi.response.status === 401, "/api/admin/readiness should fail closed without admin session")
 assert(header(adminApi.response, "x-robots-tag").toLowerCase().includes("noindex"), "/api/admin/readiness should be noindex")
+assertPrivateResponsePolicy(adminApi.response, "/api/admin/readiness unauthorized response")
 
 const signIn = await fetchText("/auth/sign-in")
 assert(signIn.response.status === 200, "/auth/sign-in should exist")
 assert(hasNoindex(signIn.response, signIn.text), "/auth/sign-in should be noindex")
+assertPrivateResponsePolicy(signIn.response, "/auth/sign-in")
 
 const missing = await fetchText("/definitely-not-a-cofoundry-page")
 assert(missing.response.status === 404, "unknown frontend routes should return 404")
