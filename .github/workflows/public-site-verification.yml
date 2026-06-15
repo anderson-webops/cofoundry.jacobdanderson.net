@@ -1,0 +1,59 @@
+name: Public Site Verification
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Public origin to verify."
+        required: true
+        type: string
+        default: "https://cofoundry.jacobdanderson.net"
+      expected_release:
+        description: "Expected COFOUNDRY_RELEASE value exposed by /api/health."
+        required: false
+        type: string
+      expected_commit_sha:
+        description: "Expected COFOUNDRY_COMMIT_SHA value exposed by /api/health."
+        required: false
+        type: string
+      require_deployment_identity:
+        description: "Require at least release or commit identity when expected values are not supplied."
+        required: true
+        type: choice
+        options:
+          - "true"
+          - "false"
+        default: "true"
+  repository_dispatch:
+    types:
+      - cofoundry-deployed
+
+permissions:
+  contents: read
+
+jobs:
+  verify-public-origin:
+    runs-on: ubuntu-latest
+    env:
+      VERIFY_PUBLIC_BASE_URL: ${{ inputs.base_url || github.event.client_payload.base_url || 'https://cofoundry.jacobdanderson.net' }}
+      VERIFY_PUBLIC_EXPECT_RELEASE: ${{ inputs.expected_release || github.event.client_payload.expected_release || '' }}
+      VERIFY_PUBLIC_EXPECT_COMMIT_SHA: ${{ inputs.expected_commit_sha || github.event.client_payload.expected_commit_sha || '' }}
+      VERIFY_PUBLIC_REQUIRE_DEPLOYMENT_IDENTITY: ${{ inputs.require_deployment_identity || github.event.client_payload.require_deployment_identity || 'true' }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.x
+          cache: npm
+
+      - name: Pin npm version
+        run: |
+          npm i -g npm@11.12.1
+          npm -v
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Verify deployed public origin
+        run: npm run verify:public
