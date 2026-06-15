@@ -69,6 +69,31 @@ describe("environment helpers", () => {
     })
   })
 
+  it("uses build metadata as a deployment fallback without overriding host env", () => {
+    expect(readDeploymentMetadata({}, {
+      commitSha: "build-sha",
+      deployedAt: "2026-06-12T12:30:00.000Z",
+      release: "v1.1.80",
+    })).toEqual({
+      commitSha: "build-sha",
+      deployedAt: "2026-06-12T12:30:00.000Z",
+      release: "v1.1.80",
+    })
+
+    expect(readDeploymentMetadata({
+      COFOUNDRY_COMMIT_SHA: "host-sha",
+      COFOUNDRY_RELEASE: "v1.1.81",
+    }, {
+      commitSha: "build-sha",
+      deployedAt: "2026-06-12T12:30:00.000Z",
+      release: "v1.1.80",
+    })).toEqual({
+      commitSha: "host-sha",
+      deployedAt: "2026-06-12T12:30:00.000Z",
+      release: "v1.1.81",
+    })
+  })
+
   it("requires public and secret supabase values when supabase mode is enabled", () => {
     const errors = collectEnvironmentValidationErrors({
       NODE_ENV: "production",

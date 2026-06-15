@@ -328,7 +328,7 @@ function failureHints(message) {
     hints.push(`Set NUXT_PUBLIC_APP_URL=${expectedCanonicalOrigin} on the host, rebuild/redeploy, and restart the service. A local URL in robots, sitemap, security.txt, or page metadata usually means the public server is stale or missing the canonical app URL env.`)
 
   if (message.includes("release") || message.includes("commitSha") || message.includes("deployment identity"))
-    hints.push("Verify COFOUNDRY_RELEASE and COFOUNDRY_COMMIT_SHA are exported to the running service, then confirm systemd is running the newly deployed build.")
+    hints.push("Verify COFOUNDRY_RELEASE and COFOUNDRY_COMMIT_SHA are exported to the running service, or confirm the deployed Nuxt build was produced from a Git checkout that could bake in the commit fallback. Then confirm systemd is running the newly deployed build.")
 
   if (message.includes("private route") || message.includes("noindex") || message.includes("auth/admin"))
     hints.push("Check public navigation and legal/footer links. Public sitemap routes should not link directly to app, admin, API, onboarding, or email-management surfaces; auth entry pages must stay noindex.")

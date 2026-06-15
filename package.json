@@ -48,6 +48,7 @@
     "test:e2e": "npm run -w front-end test:e2e",
     "test:run": "npm run test:unit",
     "verify:analytics": "npm run -w front-end verify:analytics",
+    "verify:deployment-identity": "node scripts/verify-deployment-identity-fallback.mjs",
     "verify:public": "node scripts/verify-public-site.mjs",
     "verify:public:dispatch": "node scripts/dispatch-public-verification.mjs",
     "verify:public:local": "node scripts/verify-public-local.mjs",

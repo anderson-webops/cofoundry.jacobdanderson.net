@@ -1,13 +1,14 @@
 import process from "node:process"
 import { send } from "h3"
-import { readDeploymentMetadata, readPublicEnvironment } from "../../shared/utils/environment"
+import { readPublicEnvironment } from "../../shared/utils/environment"
+import { readServerDeploymentMetadata } from "../utils/deployment-metadata"
 import { buildHealthPayload, setHealthResponseHeaders } from "../utils/health"
 
 export default defineEventHandler((event) => {
   setHealthResponseHeaders(event)
 
   const payload = buildHealthPayload({
-    deploymentMetadata: readDeploymentMetadata(process.env),
+    deploymentMetadata: readServerDeploymentMetadata(event),
     generatedAt: new Date().toISOString(),
     publicEnvironment: readPublicEnvironment(process.env),
   })
