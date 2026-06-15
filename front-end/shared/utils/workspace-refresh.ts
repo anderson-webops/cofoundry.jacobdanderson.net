@@ -1,4 +1,11 @@
-export type WorkspaceRefreshReason = "interval" | "manual" | "online" | "visibility"
+export type WorkspaceRefreshReason = "interval" | "manual" | "online" | "realtime" | "visibility"
+
+export interface WorkspaceRealtimePolicyInput {
+  enabled: boolean
+  hasSession: boolean
+  isClient: boolean
+  supportsEventSource: boolean
+}
 
 export interface WorkspaceRefreshPolicyInput {
   hasSession: boolean
@@ -15,11 +22,15 @@ export function shouldRunWorkspaceRefresh(input: WorkspaceRefreshPolicyInput) {
   if (!input.hasSession || input.refreshPending || !input.isOnline)
     return false
 
-  if (input.reason !== "manual" && !input.isVisible)
+  if (!["manual", "realtime"].includes(input.reason) && !input.isVisible)
     return false
 
-  if (input.lastStartedAtMs !== null && input.nowMs - input.lastStartedAtMs < input.minIntervalMs)
+  if (input.reason !== "realtime" && input.lastStartedAtMs !== null && input.nowMs - input.lastStartedAtMs < input.minIntervalMs)
     return false
 
   return true
+}
+
+export function shouldUseWorkspaceRealtime(input: WorkspaceRealtimePolicyInput) {
+  return input.enabled && input.isClient && input.hasSession && input.supportsEventSource
 }

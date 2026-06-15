@@ -399,6 +399,10 @@ assert(adminApi.response.status === 401, "/api/admin/readiness should fail close
 assert(header(adminApi.response, "x-robots-tag").toLowerCase().includes("noindex"), "/api/admin/readiness should be noindex")
 assertPrivateResponsePolicy(adminApi.response, "/api/admin/readiness unauthorized response")
 
+const workspaceEvents = await fetchJson("/api/workspace/events")
+assert(workspaceEvents.response.status === 401, "/api/workspace/events should fail closed without a member session")
+assertPrivateResponsePolicy(workspaceEvents.response, "/api/workspace/events unauthorized response")
+
 const signIn = await fetchText("/auth/sign-in")
 assert(signIn.response.status === 200, "/auth/sign-in should exist")
 assert(hasNoindex(signIn.response, signIn.text), "/auth/sign-in should be noindex")

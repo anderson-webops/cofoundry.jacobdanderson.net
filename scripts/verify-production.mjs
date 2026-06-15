@@ -253,6 +253,10 @@ try {
   assert(adminApi.response.status === 401, "/api/admin/readiness should fail closed without admin session")
   assertPrivateResponsePolicy(adminApi.response, "/api/admin/readiness unauthorized response")
 
+  const workspaceEvents = await fetchJson("/api/workspace/events")
+  assert(workspaceEvents.response.status === 401, "/api/workspace/events should fail closed without a member session")
+  assertPrivateResponsePolicy(workspaceEvents.response, "/api/workspace/events unauthorized response")
+
   const readiness = await fetchJson("/api/admin/readiness", {
     headers: { cookie: signedAdminCookieHeader() },
   })
