@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+const honeypotSchema = z.string().trim().max(500, "Honeypot content is too long.").optional().or(z.literal(""))
+
 export const signInSchema = z.object({
   email: z.string().email("Enter a valid email address."),
   password: z.string().min(8, "Password must be at least 8 characters."),
@@ -21,7 +23,7 @@ export const accessRequestSchema = z.object({
   source: z.string().trim().max(120).optional().or(z.literal("")),
   timeline: z.enum(["now", "30_days", "90_days", "exploring"]),
   useCase: z.string().trim().min(40, "Add enough detail for an admin to evaluate the request.").max(1600, "Keep the request focused."),
-  website: z.string().trim().max(0).optional().or(z.literal("")),
+  website: honeypotSchema,
 })
 
 export const adminAccessRequestStatusSchema = z.object({
@@ -39,7 +41,7 @@ export const contactSchema = z.object({
   company: z.string().optional(),
   subject: z.string().min(3, "Add a short subject."),
   message: z.string().min(20, "Please include enough detail for us to help."),
-  website: z.string().trim().max(0).optional().or(z.literal("")),
+  website: honeypotSchema,
 })
 
 export const minimumOnboardingSchema = z.object({

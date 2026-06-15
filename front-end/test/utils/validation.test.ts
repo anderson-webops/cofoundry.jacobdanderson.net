@@ -105,6 +105,31 @@ describe("validation schemas", () => {
     expect(result.success).toBe(false)
   })
 
+  it("accepts filled public-form honeypot fields so routes can silently drop bot submissions", () => {
+    const contact = contactSchema.safeParse({
+      company: "LedgerLoop",
+      email: "olivia@cofoundry.dev",
+      message: "I need help evaluating whether CoFoundry can support a founder matching workflow for structured proposals.",
+      name: "Olivia Chen",
+      subject: "Workspace access",
+      website: "https://bot-filled.example",
+    })
+    const accessRequest = accessRequestSchema.safeParse({
+      company: "LedgerLoop",
+      companyStage: "prototype",
+      email: "olivia@cofoundry.dev",
+      name: "Olivia Chen",
+      role: "founder",
+      source: "auth-sign-up",
+      timeline: "30_days",
+      useCase: "I need a structured workspace to evaluate cofounder fit, document proposal terms, and move to agreement.",
+      website: "https://bot-filled.example",
+    })
+
+    expect(contact.success).toBe(true)
+    expect(accessRequest.success).toBe(true)
+  })
+
   it("requires structured onboarding data", () => {
     const result = onboardingSchema.safeParse({
       displayName: "Malik Thompson",

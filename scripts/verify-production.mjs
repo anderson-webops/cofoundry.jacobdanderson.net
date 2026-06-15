@@ -129,6 +129,29 @@ async function fetchJson(path, init = {}) {
   return { body, response }
 }
 
+async function postJson(path, body) {
+  const response = await fetch(`${baseUrl}${path}`, {
+    body: JSON.stringify(body),
+    headers: {
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  })
+  const text = await response.text()
+  let parsedBody = null
+
+  if (text.trim()) {
+    try {
+      parsedBody = JSON.parse(text)
+    }
+    catch {
+      parsedBody = text
+    }
+  }
+
+  return { body: parsedBody, response, text }
+}
+
 function startServer() {
   const child = spawn("node", [serverEntry], {
     cwd: resolve(projectRoot, "front-end"),
@@ -138,6 +161,18 @@ function startServer() {
       COFOUNDRY_ALLOW_LOCAL_PUBLIC_APP_URL: "false",
       COFOUNDRY_DEPLOYED_AT: deployedAt,
       COFOUNDRY_RELEASE: release,
+      CONTACT_BCC_EMAIL: "",
+      CONTACT_FROM_EMAIL: "",
+      CONTACT_FROM_NAME: "",
+      CONTACT_SENDMAIL_PATH: "",
+      CONTACT_SMTP_HOST: "",
+      CONTACT_SMTP_PASS: "",
+      CONTACT_SMTP_PORT: "",
+      CONTACT_SMTP_REQUIRE_TLS: "",
+      CONTACT_SMTP_SECURE: "",
+      CONTACT_SMTP_USER: "",
+      CONTACT_TO_EMAIL: "",
+      CONTACT_USE_SENDMAIL: "",
       HOST: host,
       NODE_ENV: "production",
       NUXT_PUBLIC_APP_URL: configuredPublicAppUrl,
@@ -238,6 +273,62 @@ try {
   assertNoLocalUrlLeak(securityTxt.text, "security.txt")
   assert(securityTxt.text.includes(`Canonical: ${expectedCanonicalOrigin}/.well-known/security.txt`), "security.txt should include canonical production URL")
   assert(securityTxt.text.includes(`Policy: ${expectedCanonicalOrigin}/safety`), "security.txt should include production policy URL")
+
+  const accessHoneypot = await postJson("/api/access-requests", {
+    company: "LedgerLoop",
+    companyStage: "prototype",
+    email: "founder@ledgerloop.co",
+    name: "Olivia Chen",
+    role: "founder",
+    source: "verify-production",
+    timeline: "30_days",
+    useCase: "I need a structured workspace to evaluate cofounder fit, document proposal terms, and move to agreement.",
+    website: "https://bot-filled.example",
+  })
+  assert(accessHoneypot.response.status === 202, "access-request honeypot submissions should be silently accepted")
+
+  const contactHoneypot = await postJson("/api/contact", {
+    company: "LedgerLoop",
+    email: "olivia@ledgerloop.co",
+    message: "I need help evaluating whether CoFoundry can support a founder matching workflow for structured proposals.",
+    name: "Olivia Chen",
+    subject: "Workspace access",
+    website: "https://bot-filled.example",
+  })
+  assert(contactHoneypot.response.status === 202, "contact honeypot submissions should be silently accepted")
+
+  const lowQualityAccessRequest = await postJson("/api/access-requests", {
+    company: "LedgerLoop",
+    companyStage: "prototype",
+    email: "founder@example.com",
+    name: "Founder Example",
+    role: "founder",
+    source: "verify-production",
+    timeline: "30_days",
+    useCase: "I want a founder workspace for a cofounder search with structured proposals and agreement workflow.",
+    website: "",
+  })
+  assert(lowQualityAccessRequest.response.status === 400, "access-request intake quality should reject reserved/test email domains")
+
+  const lowQualityContact = await postJson("/api/contact", {
+    company: "Rank Growth",
+    email: "vendor@rankgrowth.co",
+    message: "We offer guest posts and backlinks at https://a.example https://b.example https://c.example for rank on google.",
+    name: "Rank Growth",
+    subject: "Marketing services",
+    website: "",
+  })
+  assert(lowQualityContact.response.status === 400, "contact intake quality should reject unrelated solicitation spam")
+
+  const unconfiguredContact = await postJson("/api/contact", {
+    company: "LedgerLoop",
+    email: "olivia@ledgerloop.co",
+    message: "I need help evaluating whether CoFoundry can support a founder matching workflow for structured proposals.",
+    name: "Olivia Chen",
+    subject: "Workspace access",
+    website: "",
+  })
+  assert(unconfiguredContact.response.status === 503, "contact should degrade with 503 when mail transport is not configured")
 
   console.log("Production verification passed.")
 }
