@@ -30,6 +30,11 @@ const steps = [
     label: "Check dependency advisories",
   },
   {
+    args: ["run", "verify:install-scripts"],
+    id: "install-script-policy",
+    label: "Verify dependency install-script policy",
+  },
+  {
     args: ["run", "verify:host-env", "--", "--production", "--fail-on-warnings"],
     env: syntheticProductionHostEnv,
     id: "host-env",

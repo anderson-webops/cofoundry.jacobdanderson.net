@@ -52,6 +52,7 @@
     "verify:deployment-identity": "node scripts/verify-deployment-identity-fallback.mjs",
     "verify:github-actions": "node scripts/verify-github-actions-health.mjs",
     "verify:host-env": "npm run -w back-end verify:host-env --",
+    "verify:install-scripts": "node scripts/verify-install-script-policy.mjs",
     "verify:public": "node scripts/verify-public-site.mjs",
     "verify:public:dispatch": "node scripts/dispatch-public-verification.mjs",
     "verify:public:local": "node scripts/verify-public-local.mjs",
@@ -73,5 +74,13 @@
     "puppeteer": "^24.43.1",
     "typescript": "^6.0.3",
     "vue": "3.5.35"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true,
+    "puppeteer@24.43.1": true,
+    "unrs-resolver@1.12.2": true,
+    "@parcel/watcher@2.5.6": true,
+    "fsevents@2.3.3": true,
+    "fsevents@2.3.2": true
   }
 }
