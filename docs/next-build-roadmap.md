@@ -234,22 +234,21 @@ The admin analytics page now reports:
 
 After persistence is stable:
 
-Status: production-safe refresh bridge implemented; provider-backed realtime remains later.
+Status: production-safe refresh bridge and first-party SSE invalidation implemented; provider-backed multi-instance realtime remains later.
 
 The app shell now:
 
 - refreshes the authoritative workspace when a signed-in member returns to a visible tab
 - refreshes when the browser comes back online
-- polls conservatively while visible so inbox, message, proposal, contract, notification, and billing state do not require a full reload
+- subscribes to authenticated `/api/workspace/events` server-sent events for same-process workspace invalidation
+- falls back to conservative visible polling when SSE is unsupported or disconnected so inbox, message, proposal, contract, notification, and billing state do not require a full reload
 - exposes a manual topbar refresh control with last-sync status
 - avoids write amplification by distinguishing authoritative server snapshots from member-authored edits
 
 Remaining work:
 
-- live message updates
-- typing state
-- proposal status updates
-- push-style inbox refresh without polling
+- provider-backed multi-instance fanout for messages, typing, proposal changes, and inbox refresh across horizontally scaled servers
+- dedicated typing-presence transport that does not persist every keystroke-level state change
 
 ### 11. Email and outbound system events
 

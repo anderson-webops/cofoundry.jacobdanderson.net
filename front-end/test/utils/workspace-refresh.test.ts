@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { shouldRunWorkspaceRefresh } from "../../shared/utils/workspace-refresh"
+import { shouldRunWorkspaceRefresh, shouldUseWorkspaceRealtime } from "../../shared/utils/workspace-refresh"
 
 const baseInput = {
   hasSession: true,
@@ -33,5 +33,41 @@ describe("workspace refresh policy", () => {
   it("throttles repeated automatic refresh attempts", () => {
     expect(shouldRunWorkspaceRefresh({ ...baseInput, lastStartedAtMs: 5_000 })).toBe(true)
     expect(shouldRunWorkspaceRefresh({ ...baseInput, lastStartedAtMs: 15_000 })).toBe(false)
+  })
+
+  it("allows realtime invalidation to bypass stale polling throttles", () => {
+    expect(shouldRunWorkspaceRefresh({
+      ...baseInput,
+      isVisible: false,
+      lastStartedAtMs: 19_999,
+      reason: "realtime",
+    })).toBe(true)
+  })
+
+  it("uses realtime only for client sessions with EventSource support", () => {
+    expect(shouldUseWorkspaceRealtime({
+      enabled: true,
+      hasSession: true,
+      isClient: true,
+      supportsEventSource: true,
+    })).toBe(true)
+    expect(shouldUseWorkspaceRealtime({
+      enabled: false,
+      hasSession: true,
+      isClient: true,
+      supportsEventSource: true,
+    })).toBe(false)
+    expect(shouldUseWorkspaceRealtime({
+      enabled: true,
+      hasSession: false,
+      isClient: true,
+      supportsEventSource: true,
+    })).toBe(false)
+    expect(shouldUseWorkspaceRealtime({
+      enabled: true,
+      hasSession: true,
+      isClient: true,
+      supportsEventSource: false,
+    })).toBe(false)
   })
 })

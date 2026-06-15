@@ -41,6 +41,7 @@ import { recordContractSignatureEvent } from "./contract-signatures"
 import { emitLifecycleNotificationEvents } from "./lifecycle-notification-events"
 import { persistServerCollaborationState } from "./member-collaboration"
 import { loadMemberWorkspaceState } from "./member-workspace"
+import { emitWorkspaceRealtimeChange } from "./workspace-realtime"
 
 export type CollaborationMutationPayload
   = | { action: "send_connect_request", payload: ConnectRequestPayload, toUserId: string }
@@ -403,6 +404,12 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
   }
 
   await persistForUsers(event, affectedUsers, nextSeed)
+  await emitWorkspaceRealtimeChange(affectedUsers, {
+    metadata: {
+      action: payload.action,
+    },
+    source: "workspace.collaboration",
+  })
   if (signatureEvent)
     await recordContractSignatureEvent(event, signatureEvent.signature, signatureEvent.typedName)
   if (lifecycleNotifications.length) {
@@ -430,6 +437,13 @@ export async function markInboxNotificationRead(event: H3Event, session: Session
 
   const transition = markNotificationReadTransition(workspace.seed, notificationId, session.id, new Date().toISOString())
   await persistServerCollaborationState(event, session.id, transition.seed)
+  await emitWorkspaceRealtimeChange([session.id], {
+    metadata: {
+      action: "mark_notification_read",
+      notificationId,
+    },
+    source: "workspace.inbox",
+  })
 
   return {
     data: transition.seed,

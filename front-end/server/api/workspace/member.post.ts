@@ -2,6 +2,7 @@ import type { MemberWorkspaceWritePayload } from "~/shared/types/domain"
 import { requireAuthenticatedSession } from "~/server/utils/auth"
 import { persistMemberWorkspaceWritePayload } from "../../utils/member-workspace"
 import { assertRateLimit, buildRateLimitKey } from "../../utils/rate-limit"
+import { emitWorkspaceRealtimeChange } from "../../utils/workspace-realtime"
 
 export default defineEventHandler(async (event) => {
   const session = await requireAuthenticatedSession(event)
@@ -24,6 +25,12 @@ export default defineEventHandler(async (event) => {
     role: session.role,
     subscriptionPlan: session.subscriptionPlan,
   }, body.state)
+  await emitWorkspaceRealtimeChange([session.id], {
+    metadata: {
+      action: "persist_member_workspace",
+    },
+    source: "workspace.member",
+  })
 
   return {
     data: workspace.seed,
