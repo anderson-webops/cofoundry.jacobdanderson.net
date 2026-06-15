@@ -2,6 +2,14 @@
 
 Use this prompt when source validation has passed locally but the public origin or hosted CI is behind the validated release. Keep this separate from provider cutover work: this is only for redeploying the current safe mock/access-request production path and restoring verification signal.
 
+Render a paste-ready prompt for the current release with:
+
+```sh
+npm run server:prompt:live-deploy
+```
+
+Use `--release`, `--commit-sha`, `--deployed-at`, or `--public-origin` when rendering a prompt for a host that differs from the current checkout or default public origin.
+
 ```text
 You are catching CoFoundry's production host up to the latest validated release.
 
@@ -14,7 +22,7 @@ Current intent:
 Validated release:
 - Release tag: <release-tag>
 - Commit SHA: <commit-sha>
-- Public origin: https://cofoundry.jacobdanderson.net
+- Public origin: <public-origin>
 
 Tasks:
 1. Confirm the host checkout or deployment artifact is exactly `<commit-sha>` from `<release-tag>`.
@@ -23,7 +31,7 @@ Tasks:
 4. Confirm the production service starts from the built output with the existing production command. Do not introduce `../.env` loading in production startup.
 5. Confirm host env keeps:
    - `NODE_ENV=production`
-   - `NUXT_PUBLIC_APP_URL=https://cofoundry.jacobdanderson.net`
+   - `NUXT_PUBLIC_APP_URL=<public-origin>`
    - `NUXT_PUBLIC_BACKEND_MODE=mock`
    - `NUXT_PUBLIC_BILLING_MODE=mock`
    - `NUXT_PUBLIC_ENABLE_DEMO_ACCESS=false`
@@ -43,7 +51,7 @@ Tasks:
 11. Verify `/api/health` exposes at least `release=<release-tag>` or `commit=<commit-sha>`.
 12. Run:
 
-   VERIFY_PUBLIC_EXPECT_RELEASE=<release-tag> VERIFY_PUBLIC_EXPECT_COMMIT_SHA=<commit-sha> npm run verify:public
+   VERIFY_PUBLIC_BASE_URL=<public-origin> VERIFY_PUBLIC_EXPECT_RELEASE=<release-tag> VERIFY_PUBLIC_EXPECT_COMMIT_SHA=<commit-sha> npm run verify:public
 
 13. If GitHub Actions is available again, run:
 

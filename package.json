@@ -23,6 +23,7 @@
     "dev": "npm run -w front-end dev",
     "server": "npm run -w back-end server",
     "server:once": "npm run -w back-end server:once",
+    "server:prompt:live-deploy": "node scripts/render-live-deploy-prompt.mjs",
     "serve": "npm run -w front-end serve",
     "preview": "npm run -w front-end preview",
     "generate": "npm run -w front-end generate",
