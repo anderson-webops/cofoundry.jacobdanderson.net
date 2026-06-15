@@ -10,6 +10,10 @@ async function readSystemdTemplate(filename: string) {
   return readFile(join(repoRoot, "deploy", "systemd", filename), "utf8")
 }
 
+async function readRepoFile(...segments: string[]) {
+  return readFile(join(repoRoot, ...segments), "utf8")
+}
+
 test("systemd templates use canonical operations worker scripts", async () => {
   const heartbeat = await readSystemdTemplate("cofoundry-operations-heartbeat.service")
   const alertSmoke = await readSystemdTemplate("cofoundry-operations-alert-smoke.service")
@@ -36,6 +40,17 @@ test("systemd README documents manual smoke service verification", async () => {
   assert.match(readme, /COFOUNDRY_ALERT_WEBHOOK_URL/)
   assert.match(readme, /COFOUNDRY_MAIL_SMOKE_TO_EMAIL/)
   assert.match(readme, /COFOUNDRY_REALTIME_SMOKE_MIN_DELIVERED/)
+})
+
+test("server operations handoff prompt includes realtime smoke setup", async () => {
+  const prompt = await readRepoFile("docs", "server-ai-operations-prompt.md")
+
+  assert.match(prompt, /npm run operations:realtime-smoke/)
+  assert.match(prompt, /COFOUNDRY_REALTIME_SMOKE_USER_ID/)
+  assert.match(prompt, /COFOUNDRY_REALTIME_SMOKE_MIN_DELIVERED=0/)
+  assert.match(prompt, /systemctl start cofoundry-operations-realtime-smoke\.service/)
+  assert.match(prompt, /realtime_fanout_smoke_succeeded/)
+  assert.match(prompt, /realtime-smoke result/)
 })
 
 test("systemd installer defaults to safe timer installation", async () => {
