@@ -51,6 +51,7 @@
     "verify:public:dispatch": "node scripts/dispatch-public-verification.mjs",
     "verify:public:local": "node scripts/verify-public-local.mjs",
     "verify:production": "node scripts/verify-production.mjs",
+    "verify:shared-shims": "node scripts/verify-shared-shims.mjs",
     "clean": "rm -rf node_modules package-lock.json front-end/node_modules front-end/.nuxt front-end/.output front-end/3000 front-end/dist back-end/node_modules back-end/dist .nuxt .output .data",
     "postinstall": "npm run -w front-end prepare",
     "a11y": "node scripts/a11y-smoke.mjs",

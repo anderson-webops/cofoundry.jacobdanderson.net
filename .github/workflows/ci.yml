@@ -162,6 +162,9 @@ jobs:
       - name: Install deps
         run: npm ci
 
+      - name: Shared shim verification
+        run: npm run verify:shared-shims
+
       - name: Public verification dispatch dry run
         run: npm run verify:public:dispatch -- --dry-run --expected-release ci --expected-commit-sha "$GITHUB_SHA"
 

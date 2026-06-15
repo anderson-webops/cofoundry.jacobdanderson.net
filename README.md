@@ -120,6 +120,8 @@ Public workspace access requests are durable in mock/access-request mode. `/auth
 
 Public contact and access-request intake is also screened before mail delivery or durable queue writes. The shared intake policy keeps the existing honeypot and rate-limit behavior, then rejects high-confidence abuse such as reserved or disposable email domains, URL stuffing, repeated filler, test text, and obvious unrelated solicitations.
 
+The canonical shared model and utility source lives under `front-end/shared`. Files under `front-end/src/shared` should stay as Nuxt alias shims unless a documented exception is needed. Run `npm run verify:shared-shims` after adding shared modules so server, Nuxt config, route handlers, pages, and tests keep using the same implementation.
+
 ## Local review accounts
 
 - Founder review account: `olivia@cofoundry.dev` / `founder123`
