@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { collectEnvironmentValidationErrors, readDeploymentMetadata, readPublicEnvironment } from "../../shared/utils/environment"
+import { collectEnvironmentValidationErrors, isLocalDevelopmentEnvironment, readDeploymentMetadata, readPublicEnvironment } from "../../shared/utils/environment"
 
 describe("environment helpers", () => {
   it("keeps localhost defaults only for local mock development", () => {
@@ -33,6 +33,7 @@ describe("environment helpers", () => {
     })
 
     expect(environment.appUrl).toBe("https://cofoundry.example")
+    expect(isLocalDevelopmentEnvironment({ NUXT_PUBLIC_APP_URL: "https://cofoundry.example" })).toBe(false)
     expect(errors).toContain("SESSION_SIGNING_SECRET is required whenever account sessions are enabled in a non-local environment.")
   })
 
@@ -42,6 +43,7 @@ describe("environment helpers", () => {
     })
 
     expect(environment.appUrl).toBe("http://127.0.0.1:3000")
+    expect(isLocalDevelopmentEnvironment({ NUXT_PUBLIC_APP_URL: "http://127.0.0.1:3000" })).toBe(true)
   })
 
   it("reads safe deployment metadata from canonical or deploy-provider env", () => {
