@@ -1,4 +1,5 @@
-import { setResponseStatus } from "h3"
+import { createError, setResponseStatus } from "h3"
+import { evaluatePublicIntakeQuality } from "~/shared/utils/intake-quality"
 import { accessRequestSchema } from "~/shared/utils/validation"
 import { createAccessRequest } from "../utils/access-requests"
 import { isContactMailConfigured, sendContactMessage } from "../utils/contact"
@@ -10,6 +11,31 @@ export default defineEventHandler(async (event) => {
   if (payload.website) {
     setResponseStatus(event, 202)
     return { success: true }
+  }
+
+  const quality = evaluatePublicIntakeQuality({
+    email: payload.email,
+    kind: "access_request",
+    message: [
+      payload.company || "",
+      payload.useCase,
+      payload.role,
+      payload.companyStage,
+      payload.timeline,
+    ].join(" "),
+    name: payload.name,
+    subject: "Workspace access request",
+  })
+
+  if (!quality.accepted) {
+    throw createError({
+      data: {
+        issues: quality.issues.map(issue => issue.code),
+        message: quality.message,
+      },
+      statusCode: 400,
+      statusMessage: "Access request needs more specific details",
+    })
   }
 
   assertRateLimit(event, {
