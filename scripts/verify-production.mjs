@@ -165,6 +165,7 @@ function startServer() {
       COFOUNDRY_COMMIT_SHA: commitSha,
       COFOUNDRY_ALLOW_LOCAL_PUBLIC_APP_URL: "false",
       COFOUNDRY_DEPLOYED_AT: deployedAt,
+      COFOUNDRY_OPERATIONS_TOKEN: "",
       COFOUNDRY_RELEASE: release,
       CONTACT_BCC_EMAIL: "",
       CONTACT_FROM_EMAIL: "",
@@ -263,6 +264,17 @@ try {
   })
   assert(workspaceTyping.response.status === 401, "/api/workspace/typing should fail closed without a member session")
   assertPrivateResponsePolicy(workspaceTyping.response, "/api/workspace/typing unauthorized response")
+
+  const realtimeFanoutIngress = await postJson("/api/operations/realtime-events", {
+    createdAt: new Date().toISOString(),
+    eventType: "workspace-change",
+    idScope: "verify",
+    messages: [],
+    sourceInstanceId: "verify-production",
+    version: 1,
+  })
+  assert(realtimeFanoutIngress.response.status === 503, "/api/operations/realtime-events should fail closed when the worker token is not configured")
+  assertPrivateResponsePolicy(realtimeFanoutIngress.response, "/api/operations/realtime-events unauthorized response")
 
   const readiness = await fetchJson("/api/admin/readiness", {
     headers: { cookie: signedAdminCookieHeader() },

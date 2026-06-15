@@ -186,6 +186,11 @@ describe("production readiness snapshot", () => {
         status: "pass",
       }),
       expect.objectContaining({
+        id: "workspace-realtime-scaling",
+        status: "info",
+        summary: "Single-instance default",
+      }),
+      expect.objectContaining({
         id: "supabase-persistence-cutover",
         status: "info",
         summary: "Not enabled",
@@ -196,6 +201,77 @@ describe("production readiness snapshot", () => {
         summary: "Not enabled",
       }),
     ]))
+  })
+
+  it("warns when multi-instance runtime is expected without realtime fanout", () => {
+    const snapshot = buildProductionReadinessSnapshot({
+      accessRequests: [],
+      adminPosture: healthyAdminPosture,
+      contactMailConfigured: true,
+      environment: environmentSnapshot(),
+      environmentValidationErrors: [],
+      expectsMultiInstanceRuntime: true,
+      generatedAt,
+      hasAlertWebhookConfigured: true,
+      hasDurableLocalDataDir: true,
+      hasOperationsWorkerToken: true,
+      hasSessionSigningSecret: true,
+      hasTrustVerificationProviderConfigured: false,
+      isLocalDevelopment: false,
+      operations: healthyOperations,
+      privacyRequests: [],
+    })
+    const checkById = new Map(snapshot.groups.flatMap(group => group.checks).map(check => [check.id, check]))
+
+    expect(snapshot.overallStatus).toBe("warn")
+    expect(checkById.get("realtime-fanout")).toMatchObject({
+      status: "warn",
+      summary: "Multi-instance expected, fanout missing",
+    })
+    expect(snapshot.provisioningTasks.find(task => task.id === "realtime-fanout-provisioning")).toMatchObject({
+      status: "warn",
+      title: "Workspace realtime fanout",
+    })
+    expect(snapshot.cutoverPhases.find(phase => phase.id === "workspace-realtime-scaling")).toMatchObject({
+      status: "warn",
+      summary: "Multi-instance expected, fanout missing",
+    })
+  })
+
+  it("passes realtime scaling readiness when fanout is configured", () => {
+    const snapshot = buildProductionReadinessSnapshot({
+      accessRequests: [],
+      adminPosture: healthyAdminPosture,
+      contactMailConfigured: true,
+      environment: environmentSnapshot(),
+      environmentValidationErrors: [],
+      expectsMultiInstanceRuntime: true,
+      generatedAt,
+      hasAlertWebhookConfigured: true,
+      hasDurableLocalDataDir: true,
+      hasOperationsWorkerToken: true,
+      hasRealtimeFanoutConfigured: true,
+      hasSessionSigningSecret: true,
+      hasTrustVerificationProviderConfigured: false,
+      isLocalDevelopment: false,
+      operations: healthyOperations,
+      privacyRequests: [],
+    })
+    const checkById = new Map(snapshot.groups.flatMap(group => group.checks).map(check => [check.id, check]))
+
+    expect(snapshot.overallStatus).toBe("pass")
+    expect(checkById.get("realtime-fanout")).toMatchObject({
+      status: "pass",
+      summary: "Fanout URL configured",
+    })
+    expect(snapshot.provisioningTasks.find(task => task.id === "realtime-fanout-provisioning")).toMatchObject({
+      status: "pass",
+      title: "Workspace realtime fanout",
+    })
+    expect(snapshot.cutoverPhases.find(phase => phase.id === "workspace-realtime-scaling")).toMatchObject({
+      status: "pass",
+      summary: "Fanout bridge configured",
+    })
   })
 
   it("warns hosted operators when release or commit metadata is missing", () => {

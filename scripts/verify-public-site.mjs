@@ -433,6 +433,17 @@ const workspaceTyping = await postJson("/api/workspace/typing", {
 assert(workspaceTyping.response.status === 401, "/api/workspace/typing should fail closed without a member session")
 assertPrivateResponsePolicy(workspaceTyping.response, "/api/workspace/typing unauthorized response")
 
+const realtimeFanoutIngress = await postJson("/api/operations/realtime-events", {
+  createdAt: new Date().toISOString(),
+  eventType: "workspace-change",
+  idScope: "verify",
+  messages: [],
+  sourceInstanceId: "verify-public",
+  version: 1,
+})
+assert([401, 503].includes(realtimeFanoutIngress.response.status), "/api/operations/realtime-events should fail closed without worker authorization")
+assertPrivateResponsePolicy(realtimeFanoutIngress.response, "/api/operations/realtime-events unauthorized response")
+
 const signIn = await fetchText("/auth/sign-in")
 assert(signIn.response.status === 200, "/auth/sign-in should exist")
 assert(hasNoindex(signIn.response, signIn.text), "/auth/sign-in should be noindex")

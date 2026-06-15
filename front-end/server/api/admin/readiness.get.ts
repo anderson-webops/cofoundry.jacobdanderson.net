@@ -17,6 +17,15 @@ function hasAnyValue(keys: string[]) {
   return keys.some(key => hasValue(process.env[key]))
 }
 
+function isEnabled(value?: string) {
+  return ["1", "true", "yes", "on"].includes(value?.trim().toLowerCase() || "")
+}
+
+function expectsMultiInstanceRuntime() {
+  const instanceCount = Number.parseInt(process.env.COFOUNDRY_APP_INSTANCE_COUNT || "", 10)
+  return isEnabled(process.env.COFOUNDRY_EXPECT_MULTI_INSTANCE) || (Number.isFinite(instanceCount) && instanceCount > 1)
+}
+
 export default defineEventHandler(async (event) => {
   const session = await requireAdminSession(event)
 
@@ -42,6 +51,7 @@ export default defineEventHandler(async (event) => {
     deploymentMetadata: readDeploymentMetadata(process.env),
     environment: readEnvironmentSnapshot(process.env),
     environmentValidationErrors: collectEnvironmentValidationErrors(process.env),
+    expectsMultiInstanceRuntime: expectsMultiInstanceRuntime(),
     generatedAt: new Date().toISOString(),
     hasAlertWebhookConfigured: hasValue(process.env.COFOUNDRY_ALERT_WEBHOOK_URL),
     hasContractEnvelopeProviderConfigured: hasAnyValue([
@@ -61,6 +71,7 @@ export default defineEventHandler(async (event) => {
       "COFOUNDRY_GITHUB_OAUTH_PROVIDER",
     ]),
     hasOperationsWorkerToken: hasValue(runtimeConfig.operationsWorkerToken) || hasValue(process.env.COFOUNDRY_OPERATIONS_TOKEN) || hasValue(process.env.OPERATIONS_WORKER_TOKEN),
+    hasRealtimeFanoutConfigured: hasValue(process.env.COFOUNDRY_REALTIME_FANOUT_URL),
     hasSessionSigningSecret: hasValue(process.env.NUXT_SESSION_SIGNING_SECRET) || hasValue(process.env.SESSION_SIGNING_SECRET),
     hasTrustVerificationProviderConfigured: hasAnyValue([
       "COFOUNDRY_TRUST_VERIFICATION_PROVIDER",
