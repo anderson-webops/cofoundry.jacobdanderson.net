@@ -148,7 +148,10 @@ npm run typecheck
 npm run test:run
 npm run a11y
 npm run a11y:production
+npm run verify:release:local
 ```
+
+`npm run verify:release:local` is the full local release gate. It runs exact install, dependency audit, lint, typecheck, unit/backend tests, build, deployment identity, shared-shim, analytics, production smoke, local public crawl, accessibility, public-verification dispatch dry-run, diagnostic syntax, and diff whitespace checks.
 
 ## Environment modes
 

@@ -18,8 +18,8 @@ Validated release:
 
 Tasks:
 1. Confirm the host checkout or deployment artifact is exactly `<commit-sha>` from `<release-tag>`.
-2. Install dependencies with the repository-root `npm ci` path. Do not fall back to `npm install` for deploy readiness.
-3. Build from the release source with `npm run build`.
+2. Run `npm run verify:release:local` from the release source. Do not fall back to `npm install` for deploy readiness. If server resources make the full gate impractical, run the individual commands from the release notes and document the omission.
+3. Build from the release source with `npm run build` if the full release gate was not already run on this host.
 4. Confirm the production service starts from the built output with the existing production command. Do not introduce `../.env` loading in production startup.
 5. Confirm host env keeps:
    - `NODE_ENV=production`
