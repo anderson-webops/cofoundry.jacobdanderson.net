@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs"
+import { existsSync, readdirSync, readFileSync } from "node:fs"
 import { resolve } from "node:path"
 import { describe, expect, it } from "vitest"
 import { adminNavigation, appNavigation, marketingNavigation } from "../../shared/constants/app"
@@ -8,6 +8,61 @@ import { workspaceSeed } from "../../shared/data/seed"
 import { getPublicRoutePaths } from "../../shared/utils/directory"
 
 const pagesRoot = resolve(process.cwd(), "src/pages")
+const layoutsRoot = resolve(process.cwd(), "src/layouts")
+
+const publicPageRoutePatterns = new Set<string>([
+  ...publicMarketingRoutes,
+  "/contracts/[slug]",
+  "/industries/[slug]",
+  "/people/[slug]",
+  "/roles/[slug]",
+  "/stage/[slug]",
+  "/startups/[slug]",
+  "/trust/[slug]",
+])
+
+const ignoredPageRoutePatterns = new Set([
+  "/[...all]",
+])
+
+function listVuePageFiles(dir = pagesRoot): string[] {
+  return readdirSync(dir, { withFileTypes: true })
+    .flatMap((entry) => {
+      const entryPath = resolve(dir, entry.name)
+
+      if (entry.isDirectory())
+        return listVuePageFiles(entryPath)
+
+      if (entry.isFile() && entry.name.endsWith(".vue"))
+        return [entryPath]
+
+      return []
+    })
+    .sort()
+}
+
+function pageFileToRoutePattern(filePath: string) {
+  const relativePath = filePath
+    .replace(pagesRoot, "")
+    .replace(/\\/g, "/")
+    .replace(/\.vue$/, "")
+
+  if (relativePath === "/index")
+    return "/"
+
+  if (relativePath.endsWith("/index"))
+    return relativePath.slice(0, -"/index".length)
+
+  return relativePath
+}
+
+function listPageEntries() {
+  return listVuePageFiles().map(filePath => ({
+    filePath,
+    route: pageFileToRoutePattern(filePath),
+    source: () => readFileSync(filePath, "utf8"),
+  }))
+}
 
 function routeToCandidates(route: string) {
   const normalized = route === "/" ? "/index" : route
@@ -28,6 +83,48 @@ function routeFileExists(route: string) {
 }
 
 describe("route surfaces", () => {
+  it("keeps every page file intentionally classified as public, private, or catch-all", () => {
+    for (const entry of listPageEntries()) {
+      if (ignoredPageRoutePatterns.has(entry.route))
+        continue
+
+      if (isPrivateSurfacePath(entry.route))
+        continue
+
+      expect(
+        publicPageRoutePatterns.has(entry.route),
+        `${entry.route} should be added to public route policy or moved behind a private prefix`,
+      ).toBe(true)
+    }
+  })
+
+  it("keeps private layouts covered by noindex robots policy", () => {
+    for (const layout of ["admin", "app", "auth"]) {
+      const source = readFileSync(resolve(layoutsRoot, `${layout}.vue`), "utf8")
+
+      expect(source, `${layout} layout should set noindex`).toContain("noindex, nofollow")
+    }
+  })
+
+  it("keeps private standalone pages covered by noindex robots policy", () => {
+    for (const entry of listPageEntries()) {
+      if (!isPrivateSurfacePath(entry.route))
+        continue
+
+      const source = entry.source()
+      const coveredByPrivateLayout = entry.route.startsWith("/admin")
+        || entry.route.startsWith("/app")
+        || entry.route.startsWith("/auth")
+        || source.includes("layout: \"auth\"")
+        || source.includes("layout: 'auth'")
+
+      expect(
+        coveredByPrivateLayout || source.includes("noindex, nofollow"),
+        `${entry.route} should inherit a private noindex layout or set noindex directly`,
+      ).toBe(true)
+    }
+  })
+
   it("keeps public marketing routes backed by real page files", () => {
     for (const route of publicMarketingRoutes)
       expect(routeFileExists(route), `${route} should resolve to a page file`).toBe(true)
