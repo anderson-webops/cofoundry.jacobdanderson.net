@@ -48,7 +48,7 @@ Current front-end contract:
 
 ### 2. Real persisted workspace state
 
-Status: foundational slice implemented.
+Status: durable mock/access-request and Supabase-ready workspace foundation implemented.
 
 Current persisted slice:
 
@@ -63,12 +63,15 @@ Current persisted slice:
   - saved searches
 - frontend workspace hydration from `/api/workspace`
 - safe member-owned writes through `/api/workspace/member`
+- server-routed collaboration writes for intros, messages, proposals, trials, agreements, relationship decisions, notifications, and inbox read state
+- a dedicated relationship read endpoint at `/api/relationships/[id]`
+- durable local mock/access-request stores for invited-account production mode before Supabase cutover
 
-Still local/mock or partially server-backed for now:
+Still external or host-provisioned for now:
 
-- collaboration writes are server-routed and Supabase-persisted when Supabase mode is active, but the relationship workspace still needs more granular read endpoints and realtime refresh
-- notifications persist with collaboration state, on-demand and scheduled digest delivery are wired, and event-specific lifecycle emails have launch-facing templates plus member workflow-email preference gating
-- moderation enforcement now persists user/report/privacy/admin-action updates in Supabase mode, and privacy-request review/resolution now notifies the requesting user
+- Supabase mode still needs the production host to apply migrations, inject service-role secrets, and run first-admin bootstrap before cutover.
+- Live email, OAuth, Stripe, scanner, backup, and alerting providers still need host/provider smoke evidence before those modes are treated as live.
+- Multi-instance realtime still needs a host-side relay if production scales beyond one Node process.
 
 Backend-owned entities:
 
@@ -92,11 +95,11 @@ Backend-owned entities:
 - admin actions
 - subscriptions
 
-Required result:
+Current result:
 
 - Pinia becomes a client cache, not the source of truth.
 - Refreshing the browser does not lose state.
-- Two different devices can see the same conversation, proposal, and contract status.
+- Two different devices can see the same conversation, proposal, and contract status when they are backed by the same durable local store or Supabase project.
 
 ### 3. Server-enforced roles and admin operations
 
@@ -133,7 +136,7 @@ Keep Stripe guarded until ready, but finish the real path cleanly:
 
 The current product still spreads one live relationship across matches, messages, proposals, and contracts.
 
-Status: implemented as a consolidated route with server-owned reads, cross-links from the related conversation/proposal/contract detail surfaces, a filtered relationship timeline, file/artifact visibility, a decision log derived from relationship notes plus proposal/trial/agreement records, and writable relationship-level decision notes.
+Status: implemented as a consolidated route with server-owned reads, cross-links from the related conversation/proposal/contract detail surfaces, a filtered relationship timeline, file/artifact visibility, upload policy integration, scan-status display, a decision log derived from relationship notes plus proposal/trial/agreement records, and writable relationship-level decision notes.
 
 The user-facing consolidation is:
 
@@ -151,8 +154,8 @@ That route should unify:
 
 Remaining depth:
 
-- realtime refresh
-- richer in-context file upload actions and scanner status recovery
+- run the checked-in scanner worker against real host storage and confirm file scan status recovers from pending to clean/flagged in `/app/relationships/[id]` and `/admin/operations`
+- if production runs multiple app instances, configure the host realtime relay and run `npm run operations:realtime-smoke -- --min-delivered 1` with a cross-instance member SSE stream connected
 
 ### 6. Production-grade onboarding
 
