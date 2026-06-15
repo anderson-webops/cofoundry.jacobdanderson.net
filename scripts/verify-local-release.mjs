@@ -92,6 +92,23 @@ const steps = [
     label: "Verify public workflow dispatch payload",
   },
   {
+    args: [
+      "scripts/render-live-deploy-prompt.mjs",
+      "--check",
+      "--release",
+      "v1.0.0",
+      "--commit-sha",
+      syntheticProductionHostEnv.COFOUNDRY_COMMIT_SHA,
+      "--deployed-at",
+      syntheticProductionHostEnv.COFOUNDRY_DEPLOYED_AT,
+      "--public-origin",
+      "https://cofoundry.example.com",
+    ],
+    command: "node",
+    id: "live-deploy-prompt",
+    label: "Verify live deploy handoff prompt rendering",
+  },
+  {
     args: ["--check", "scripts/verify-github-actions-health.mjs"],
     command: "node",
     id: "github-actions-diagnostic-syntax",

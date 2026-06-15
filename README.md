@@ -152,9 +152,11 @@ npm run verify:host-env -- --production
 npm run verify:release:local
 ```
 
-`npm run verify:release:local` is the full local release gate. It runs exact install, dependency audit, synthetic production host-env verification, lint, typecheck, unit/backend tests, build, deployment identity, shared-shim, analytics, production smoke, local public crawl, accessibility, public-verification dispatch dry-run, diagnostic syntax, and diff whitespace checks.
+`npm run verify:release:local` is the full local release gate. It runs exact install, dependency audit, synthetic production host-env verification, lint, typecheck, unit/backend tests, build, deployment identity, shared-shim, analytics, production smoke, local public crawl, accessibility, public-verification dispatch dry-run, live-deploy handoff prompt rendering, diagnostic syntax, and diff whitespace checks.
 
 The public verifier also guards production-facing metadata and copy. Sitemap-listed public pages must render page-specific title, description, canonical, Open Graph, and Twitter metadata, and public pages plus linked noindex access pages fail verification if they expose mock/demo/sample/placeholder language that would make the live product feel unfinished.
+
+After tagging or moving the current `v1.x` release, generate an exact server handoff prompt with `npm run server:prompt:live-deploy`. It fills in the release tag, commit SHA, deployment timestamp, and public origin for the safe mock/access-request deploy path.
 
 `npm run verify:host-env -- --production` checks the current process environment without loading `.env` files or printing secret values. Use it on the host before restarting production to catch missing deployment identity, unsafe app URLs, demo-access drift, missing session signing secrets, and mode-specific secret requirements.
 
@@ -313,7 +315,7 @@ When Supabase is disabled, these endpoints write durable local telemetry rows to
 
 Access-request rows are separately retained in `access-requests.json` with a default limit of 500. Collaboration workflow rows are retained in `collaboration-state.json` with a default per-collection limit of 1000. Admin audit rows and moderation overlays are retained in `admin-audit.json` with a default limit of 500. Privacy and trust-review requests are retained in `privacy-requests.json` with a default limit of 500. Set `COFOUNDRY_ACCESS_REQUEST_RETENTION_LIMIT`, `COFOUNDRY_COLLABORATION_RETENTION_LIMIT`, `COFOUNDRY_ADMIN_AUDIT_RETENTION_LIMIT`, and `COFOUNDRY_PRIVACY_REQUEST_RETENTION_LIMIT` to tune those queues, and keep `COFOUNDRY_LOCAL_DATA_DIR` on durable host storage if invite-only mock-mode accounts need to survive deployment restarts.
 
-The server-side handoff prompt for wiring these jobs lives at `docs/server-ai-operations-prompt.md`; first-admin provisioning is covered in `docs/server-ai-admin-bootstrap-prompt.md`; live deploy catch-up is covered in `docs/server-ai-live-deploy-prompt.md`; the staged provider cutover prompt lives at `docs/server-ai-production-cutover-prompt.md`; the recurring operator checklist lives at `docs/operations-runbook.md`.
+The server-side handoff prompt for wiring these jobs lives at `docs/server-ai-operations-prompt.md`; first-admin provisioning is covered in `docs/server-ai-admin-bootstrap-prompt.md`; live deploy catch-up is covered in `docs/server-ai-live-deploy-prompt.md` and can be rendered with exact release values through `npm run server:prompt:live-deploy`; the staged provider cutover prompt lives at `docs/server-ai-production-cutover-prompt.md`; the recurring operator checklist lives at `docs/operations-runbook.md`.
 
 ## Billing notes
 
