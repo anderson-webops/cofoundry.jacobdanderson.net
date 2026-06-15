@@ -1,5 +1,6 @@
 import { createError, setResponseStatus } from "h3"
 
+import { evaluatePublicIntakeQuality } from "~/shared/utils/intake-quality"
 import { contactSchema } from "~/shared/utils/validation"
 
 import { isContactMailConfigured, sendContactMessage } from "../utils/contact"
@@ -11,6 +12,29 @@ export default defineEventHandler(async (event) => {
   if (payload.website) {
     setResponseStatus(event, 202)
     return { success: true }
+  }
+
+  const quality = evaluatePublicIntakeQuality({
+    email: payload.email,
+    kind: "contact",
+    message: [
+      payload.company || "",
+      payload.subject,
+      payload.message,
+    ].join(" "),
+    name: payload.name,
+    subject: payload.subject,
+  })
+
+  if (!quality.accepted) {
+    throw createError({
+      data: {
+        issues: quality.issues.map(issue => issue.code),
+        message: quality.message,
+      },
+      statusCode: 400,
+      statusMessage: "Contact submission needs more specific details",
+    })
   }
 
   assertRateLimit(event, {
