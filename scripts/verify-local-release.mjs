@@ -35,6 +35,11 @@ const steps = [
     label: "Verify dependency install-script policy",
   },
   {
+    args: ["run", "verify:standalone-installs"],
+    id: "standalone-installs",
+    label: "Verify standalone workspace install contracts",
+  },
+  {
     args: ["run", "verify:toolchain"],
     id: "toolchain-policy",
     label: "Verify Node/npm toolchain policy",

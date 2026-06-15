@@ -152,9 +152,11 @@ npm run verify:host-env -- --production
 npm run verify:release:local
 ```
 
-`npm run verify:release:local` is the full local release gate. It runs exact install, dependency audit, dependency install-script policy verification, Node/npm toolchain policy verification, synthetic production host-env verification, lint, typecheck, unit/backend tests, build, deployment identity, shared-shim, analytics, production smoke, local public crawl, accessibility, public-verification dispatch dry-run, live-deploy handoff prompt rendering, diagnostic syntax, and diff whitespace checks.
+`npm run verify:release:local` is the full local release gate. It runs exact install, dependency audit, dependency install-script policy verification, standalone workspace install verification, Node/npm toolchain policy verification, synthetic production host-env verification, lint, typecheck, unit/backend tests, build, deployment identity, shared-shim, analytics, production smoke, local public crawl, accessibility, public-verification dispatch dry-run, live-deploy handoff prompt rendering, diagnostic syntax, and diff whitespace checks.
 
 `npm run verify:install-scripts` checks npm's `allowScripts` review state. If a dependency adds or changes an install script, review the package and pin an approval or denial with `npm approve-scripts` or `npm deny-scripts` before shipping the dependency change.
+
+`npm run verify:standalone-installs` checks workspace package-lock files used by standalone deployment paths. It currently validates `back-end/package-lock.json` with a backend-local `npm ci --workspaces=false --dry-run`, rejects unreviewed standalone install-script warnings, and runs the backend audit at high severity or above.
 
 `npm run verify:toolchain` checks that `packageManager`, GitHub Actions, and Docker use the same reviewed npm version, that CI/Docker run on Node 22, and that Docker does not bypass the install-script policy with `--ignore-scripts`.
 

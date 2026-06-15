@@ -17,7 +17,7 @@ function runPendingCheck() {
 }
 
 const output = runPendingCheck().trim()
-const hasPendingInstallScripts = /\bpackages?\s+have\s+install\s+scripts\s+not\s+yet\s+covered\s+by\s+allowScripts\b/i.test(output)
+const hasPendingInstallScripts = /\bpackages?\s+(?:has|have)\s+install\s+scripts\s+not\s+yet\s+covered\s+by\s+allowScripts\b/i.test(output)
 
 if (hasPendingInstallScripts) {
   console.error(output)
