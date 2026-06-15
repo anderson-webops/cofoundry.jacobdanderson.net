@@ -62,6 +62,11 @@ function assertNoLocalUrlLeak(value, label) {
   assert(!value.includes("127.0.0.1"), `${label} should not expose 127.0.0.1 URLs in production verification`)
 }
 
+function assertPrivateResponsePolicy(response, label) {
+  assert(header(response, "cache-control").toLowerCase().includes("no-store"), `${label} should be no-store`)
+  assert(header(response, "x-robots-tag").toLowerCase().includes("noindex"), `${label} should be noindex`)
+}
+
 function extractSitemapUrl(robotsText) {
   const match = robotsText.match(/^Sitemap:\s*(\S+)/m)
   return match?.[1] || ""
@@ -220,6 +225,11 @@ try {
   assert(!JSON.stringify(health).includes("verify-production-session-secret"), "/api/health must not expose session secret")
   assert(header(healthResponse, "cache-control").includes("no-store"), "/api/health should be no-store")
 
+  const healthHead = await fetchText("/api/health", { method: "HEAD" })
+  assert(healthHead.response.status === 200, "/api/health HEAD should return 200")
+  assert(header(healthHead.response, "cache-control").includes("no-store"), "/api/health HEAD should be no-store")
+  assert(healthHead.text === "", "/api/health HEAD should not return a response body")
+
   const home = await fetchText("/")
   assert(home.response.status === 200, "home page should return 200")
   assert(header(home.response, "content-security-policy").includes("default-src 'self'"), "home page should include CSP")
@@ -237,14 +247,17 @@ try {
 
   const adminPage = await fetchText("/admin/readiness", { redirect: "manual" })
   assert([302, 303, 307, 308].includes(adminPage.response.status), "/admin/readiness should redirect unauthenticated users")
+  assertPrivateResponsePolicy(adminPage.response, "/admin/readiness redirect")
 
   const adminApi = await fetchJson("/api/admin/readiness")
   assert(adminApi.response.status === 401, "/api/admin/readiness should fail closed without admin session")
+  assertPrivateResponsePolicy(adminApi.response, "/api/admin/readiness unauthorized response")
 
   const readiness = await fetchJson("/api/admin/readiness", {
     headers: { cookie: signedAdminCookieHeader() },
   })
   assert(readiness.response.status === 200, "authenticated /api/admin/readiness should return 200")
+  assertPrivateResponsePolicy(readiness.response, "authenticated /api/admin/readiness response")
   assert(readiness.body.deployment?.release === release, "readiness should expose deployment release")
   assert(readiness.body.deployment?.commitSha === commitSha, "readiness should expose deployment commit")
   const readinessChecks = Object.fromEntries(readiness.body.groups.flatMap(group => group.checks.map(check => [check.id, check])))
