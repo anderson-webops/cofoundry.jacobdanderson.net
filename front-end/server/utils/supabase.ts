@@ -3,6 +3,7 @@ import { Buffer } from "node:buffer"
 import process from "node:process"
 import { createClient } from "@supabase/supabase-js"
 import { deleteCookie, getCookie, setCookie } from "h3"
+import { isLocalDevelopmentEnvironment } from "../../shared/utils/environment"
 
 const oauthCookiePrefix = "cf_oauth_"
 
@@ -16,7 +17,7 @@ function getCookieOptions() {
     maxAge: 10 * 60,
     path: "/",
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    secure: !isLocalDevelopmentEnvironment(process.env),
   }
 }
 

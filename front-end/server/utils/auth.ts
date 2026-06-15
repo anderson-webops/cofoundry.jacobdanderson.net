@@ -361,14 +361,14 @@ export function writeSession(event: H3Event, session: SessionUser) {
     path: "/",
     sameSite: "lax",
     httpOnly: false,
-    secure: process.env.NODE_ENV === "production",
+    secure: !isLocalDevelopmentEnvironment(process.env),
   })
 
   setCookie(event, sessionSignatureCookieName, signature, {
     path: "/",
     sameSite: "lax",
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: !isLocalDevelopmentEnvironment(process.env),
   })
 }
 
