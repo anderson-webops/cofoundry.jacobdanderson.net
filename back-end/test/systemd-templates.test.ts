@@ -14,12 +14,15 @@ test("systemd templates use canonical operations worker scripts", async () => {
   const heartbeat = await readSystemdTemplate("cofoundry-operations-heartbeat.service")
   const alertSmoke = await readSystemdTemplate("cofoundry-operations-alert-smoke.service")
   const mailSmoke = await readSystemdTemplate("cofoundry-operations-mail-smoke.service")
+  const realtimeSmoke = await readSystemdTemplate("cofoundry-operations-realtime-smoke.service")
 
   assert.match(heartbeat, /npm run operations:heartbeat -- --metadata schedule=hourly/)
   assert.doesNotMatch(heartbeat, /operations_heartbeat/)
   assert.match(alertSmoke, /npm run operations:alert-smoke -- --metadata runbook=systemd-manual/)
   assert.match(mailSmoke, /npm run operations:mail-smoke -- --to-email/)
   assert.match(mailSmoke, /COFOUNDRY_MAIL_SMOKE_TO_EMAIL/)
+  assert.match(realtimeSmoke, /npm run operations:realtime-smoke -- --user-id/)
+  assert.match(realtimeSmoke, /COFOUNDRY_REALTIME_SMOKE_MIN_DELIVERED/)
 })
 
 test("systemd README documents manual smoke service verification", async () => {
@@ -29,8 +32,10 @@ test("systemd README documents manual smoke service verification", async () => {
   assert.match(readme, /--enable-restore-drill/)
   assert.match(readme, /systemctl start cofoundry-operations-alert-smoke\.service/)
   assert.match(readme, /systemctl start cofoundry-operations-mail-smoke\.service/)
+  assert.match(readme, /systemctl start cofoundry-operations-realtime-smoke\.service/)
   assert.match(readme, /COFOUNDRY_ALERT_WEBHOOK_URL/)
   assert.match(readme, /COFOUNDRY_MAIL_SMOKE_TO_EMAIL/)
+  assert.match(readme, /COFOUNDRY_REALTIME_SMOKE_MIN_DELIVERED/)
 })
 
 test("systemd installer defaults to safe timer installation", async () => {

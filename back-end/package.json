@@ -20,6 +20,7 @@
     "operations:event": "node --import tsx scripts/operations-worker.ts event",
     "operations:heartbeat": "node --import tsx scripts/operations-worker.ts heartbeat",
     "operations:mail-smoke": "node --import tsx scripts/operations-worker.ts mail-smoke",
+    "operations:realtime-smoke": "node --import tsx scripts/operations-worker.ts realtime-smoke",
     "operations:restore-drill": "node --import tsx scripts/operations-worker.ts restore-drill",
     "operations:scan": "node --import tsx scripts/operations-worker.ts scan",
     "operations:trust-verification": "node --import tsx scripts/operations-worker.ts trust-verification",

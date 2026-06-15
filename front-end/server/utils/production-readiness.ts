@@ -197,6 +197,16 @@ function isOAuthSignInEvent(row: Record<string, unknown>) {
     && String(row.event_type || "").toLowerCase() === "auth.oauth.signed_in"
 }
 
+function isRealtimeFanoutSmokeEvent(row: Record<string, unknown>) {
+  return String(row.source || "").toLowerCase() === "realtime-smoke-worker"
+    && String(row.target_type || "").toLowerCase() === "realtime_fanout"
+}
+
+function isFailedRealtimeFanoutSmokeEvent(row: Record<string, unknown>) {
+  return isRealtimeFanoutSmokeEvent(row)
+    && (String(row.event_type || "").toLowerCase().includes("failed") || String(row.severity || "").toLowerCase() === "error")
+}
+
 function isCompletedContractEnvelopeEvent(row: Record<string, unknown>) {
   return String(row.status || "").toLowerCase() === "completed"
 }
@@ -419,16 +429,16 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
       checkById.get("realtime-fanout")?.summary || "Single-instance realtime",
       "Process-local SSE is enough for one Node process, but horizontally scaled app servers need a relay so messages, typing, proposal changes, and inbox refresh events reach clients connected to another instance.",
       input.expectsMultiInstanceRuntime || input.hasRealtimeFanoutConfigured
-        ? "Configure a server-side realtime relay URL and have the relay POST signed envelopes back to each instance's operations ingress."
+        ? "Configure a server-side realtime relay URL, have the relay POST signed envelopes back to each instance's operations ingress, then record worker smoke evidence."
         : "Keep this unset until the deployment actually runs more than one app instance.",
-      "COFOUNDRY_EXPECT_MULTI_INSTANCE=true\nCOFOUNDRY_REALTIME_FANOUT_URL=https://<relay-or-internal-router>/cofoundry/realtime\n# Relay posts to each app instance: POST /api/operations/realtime-events with COFOUNDRY_OPERATIONS_TOKEN",
+      "COFOUNDRY_EXPECT_MULTI_INSTANCE=true\nCOFOUNDRY_REALTIME_FANOUT_URL=https://<relay-or-internal-router>/cofoundry/realtime\n# Relay posts to each app instance: POST /api/operations/realtime-events with COFOUNDRY_OPERATIONS_TOKEN\nnpm run operations:realtime-smoke -- --min-delivered 0",
     ),
     task(
       "operations-unit-installer",
       "Operations unit installer",
       operationsUnitStatus,
       operationsUnitStatus === "pass" ? "Worker telemetry current" : "Install or verify worker timers",
-      "The checked-in systemd installer reduces drift across backup, digest, scanner, heartbeat, alert-smoke, mail-smoke, and restore-drill worker units.",
+      "The checked-in systemd installer reduces drift across backup, digest, scanner, heartbeat, alert-smoke, mail-smoke, realtime-smoke, and restore-drill worker units.",
       "Run the installer in dry-run mode first, review the generated commands and env file, then install or tune the units on the host.",
       "sudo deploy/systemd/install-operations-units.sh --dry-run\nsudo deploy/systemd/install-operations-units.sh",
       "deploy/systemd/README.md",
@@ -629,11 +639,11 @@ function buildCutoverPhases(input: ProductionReadinessInput, checkById: Map<stri
       "Workspace realtime scaling",
       realtimeScalingStatus,
       input.hasRealtimeFanoutConfigured
-        ? "Fanout bridge configured"
+        ? checkById.get("realtime-fanout")?.summary || "Fanout bridge configured"
         : input.expectsMultiInstanceRuntime ? "Multi-instance expected, fanout missing" : "Single-instance default",
       "The in-app realtime layer is process-local unless a server-side relay is configured. Multi-instance production should not rely on sticky clients seeing only same-process events.",
       input.expectsMultiInstanceRuntime || input.hasRealtimeFanoutConfigured
-        ? "Wire the relay to receive CoFoundry envelopes and POST them to every app instance's `/api/operations/realtime-events` endpoint with the worker token."
+        ? "Wire the relay to receive CoFoundry envelopes, POST them to every app instance's `/api/operations/realtime-events` endpoint with the worker token, then run the realtime smoke worker."
         : "No action is required while the production app runs as a single Node process.",
       "docs/operations-runbook.md",
     ),
@@ -763,6 +773,9 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
   const latestOAuthSignInEvent = latestMatchingEvent(input.operations.operationalEvents, isOAuthSignInEvent)
   const latestOAuthSignInTime = newestTime(latestOAuthSignInEvent ? [latestOAuthSignInEvent] : [], ["created_at"])
   const oauthSignInDaysOld = daysSince(latestOAuthSignInTime, nowTime)
+  const latestRealtimeFanoutSmoke = latestMatchingEvent(input.operations.operationalEvents, isRealtimeFanoutSmokeEvent)
+  const latestRealtimeFanoutSmokeTime = newestTime(latestRealtimeFanoutSmoke ? [latestRealtimeFanoutSmoke] : [], ["created_at"])
+  const realtimeFanoutSmokeDaysOld = daysSince(latestRealtimeFanoutSmokeTime, nowTime)
   const attentionEvents = input.operations.operationalEvents.filter(row => !isAlertSmokeEvent(row))
   const errorEvents = countRows(attentionEvents, "severity", ["error"])
   const warningEvents = countRows(attentionEvents, "severity", ["warning"])
@@ -842,19 +855,30 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
       ? "OAuth provider env markers are present while the deployment remains in mock/access-request mode, so users should not see or rely on live provider sign-in."
       : "OAuth provider env markers are present. Readiness expects a recent successful callback because provider app configuration, callback URLs, account linking, and role rehydration can only be proven by a smoke sign-in."
     : "CoFoundry keeps live OAuth disabled until a deliberate provider cutover. Email/password, invited local accounts, and operator-mediated access remain the supported production path until then."
-  const realtimeFanoutStatus: ProductionReadinessStatus = input.hasRealtimeFanoutConfigured
-    ? "pass"
-    : input.expectsMultiInstanceRuntime ? "warn" : "info"
+  let realtimeFanoutStatus: ProductionReadinessStatus = "info"
+  if (input.expectsMultiInstanceRuntime || input.hasRealtimeFanoutConfigured) {
+    realtimeFanoutStatus = !input.hasRealtimeFanoutConfigured
+      ? "warn"
+      : latestRealtimeFanoutSmoke && isFailedRealtimeFanoutSmokeEvent(latestRealtimeFanoutSmoke)
+        ? "fail"
+        : !latestRealtimeFanoutSmoke || (realtimeFanoutSmokeDaysOld !== null && realtimeFanoutSmokeDaysOld > 30)
+            ? "warn"
+            : "pass"
+  }
   const realtimeFanoutSummary = input.hasRealtimeFanoutConfigured
-    ? "Fanout URL configured"
+    ? latestRealtimeFanoutSmoke
+      ? `${String(latestRealtimeFanoutSmoke.event_type || "realtime smoke recorded")}${realtimeFanoutSmokeDaysOld === null ? "" : `, ${realtimeFanoutSmokeDaysOld} day${realtimeFanoutSmokeDaysOld === 1 ? "" : "s"} old`}`
+      : "Fanout configured, no smoke event"
     : input.expectsMultiInstanceRuntime ? "Multi-instance expected, fanout missing" : "Process-local SSE"
   const realtimeFanoutDetail = input.hasRealtimeFanoutConfigured
-    ? "Workspace invalidation and typing envelopes can be published to a server-side relay for delivery across app instances."
+    ? latestRealtimeFanoutSmoke
+      ? "Workspace realtime fanout has worker-reported smoke evidence. For full multi-instance proof, run the smoke with a member SSE stream connected to another app instance and require at least one delivery."
+      : "Workspace invalidation and typing envelopes can be published to a server-side relay, but readiness still needs a worker-reported smoke event."
     : input.expectsMultiInstanceRuntime
       ? "This deployment declares more than one app instance, but realtime events remain process-local. Connected clients on other instances may wait for polling fallback instead of receiving push updates."
       : "Single-process deployments can use process-local SSE plus polling fallback without an external relay."
   const realtimeFanoutAction = input.hasRealtimeFanoutConfigured
-    ? "Run a relay smoke that POSTs a signed envelope into `/api/operations/realtime-events` on each instance, then confirm a connected workspace client receives it."
+    ? "Run `systemctl start cofoundry-operations-realtime-smoke.service`, or `npm run operations:realtime-smoke -- --min-delivered 0` before unit templates are installed. For full relay proof with a connected cross-instance SSE stream, set `--min-delivered 1` or higher."
     : input.expectsMultiInstanceRuntime
       ? "Set COFOUNDRY_REALTIME_FANOUT_URL to a server-side relay and have that relay POST signed envelopes to each app instance."
       : "Set COFOUNDRY_EXPECT_MULTI_INSTANCE=true only when the host actually runs multiple app instances."

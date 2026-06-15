@@ -51,8 +51,8 @@ Stage 3b: realtime scaling, only if the app runs multiple instances
 2. If the host runs more than one app instance, set `COFOUNDRY_EXPECT_MULTI_INSTANCE=true`, `COFOUNDRY_APP_INSTANCE_COUNT=<count>`, and a stable `COFOUNDRY_INSTANCE_ID` for each instance.
 3. Configure `COFOUNDRY_REALTIME_FANOUT_URL` to an internal relay endpoint. Do not expose relay credentials to the client.
 4. Configure the relay to POST each realtime envelope to every app instance at `/api/operations/realtime-events` using `Authorization: Bearer <COFOUNDRY_OPERATIONS_TOKEN>`.
-5. Restart the app instances and confirm `/admin/readiness` shows the workspace realtime fanout check passing.
-6. Run a smoke with two instances: connect a member SSE stream to instance B, trigger a message/proposal/typing event through instance A, and confirm instance B receives the pushed event without waiting for polling fallback.
+5. Restart the app instances, run `npm run operations:realtime-smoke -- --min-delivered 0`, and confirm `/admin/readiness` shows recent realtime fanout smoke evidence.
+6. Run a smoke with two instances: connect a member SSE stream to instance B, trigger a message/proposal/typing event through instance A, then run `npm run operations:realtime-smoke -- --min-delivered 1` or higher and confirm instance B receives the pushed event without waiting for polling fallback.
 
 Stage 4: Supabase persistence cutover
 1. Apply all SQL migrations in `back-end/supabase/migrations/` to a staging Supabase project first.

@@ -234,7 +234,7 @@ The admin analytics page now reports:
 
 After persistence is stable:
 
-Status: production-safe refresh bridge, first-party SSE invalidation, non-persistent typing presence, and a guarded operations-authenticated fanout ingress are implemented. External relay setup remains host/provider work.
+Status: production-safe refresh bridge, first-party SSE invalidation, non-persistent typing presence, guarded operations-authenticated fanout ingress, and worker-reported fanout smoke evidence are implemented. External relay setup remains host/provider work.
 
 The app shell now:
 
@@ -243,6 +243,7 @@ The app shell now:
 - subscribes to authenticated `/api/workspace/events` server-sent events for same-process workspace invalidation
 - publishes authenticated, non-persistent typing presence without writing keystroke-level state to workspace storage
 - can publish signed realtime envelopes to a server-side relay when `COFOUNDRY_REALTIME_FANOUT_URL` is configured, and can receive relay envelopes through `/api/operations/realtime-events`
+- can record fanout smoke evidence with `npm run operations:realtime-smoke -- --min-delivered 0`, or require delivered SSE evidence with `--min-delivered 1` or higher when a cross-instance member stream is connected
 - falls back to conservative visible polling when SSE is unsupported or disconnected so inbox, message, proposal, contract, notification, and billing state do not require a full reload
 - exposes a manual topbar refresh control with last-sync status
 - avoids write amplification by distinguishing authoritative server snapshots from member-authored edits
@@ -250,7 +251,7 @@ The app shell now:
 Remaining work:
 
 - configure the host-side relay if production scales beyond one Node process
-- run a relay smoke against every app instance with `COFOUNDRY_EXPECT_MULTI_INSTANCE=true` and `COFOUNDRY_REALTIME_FANOUT_URL` set
+- run the checked-in realtime smoke worker against every app instance with `COFOUNDRY_EXPECT_MULTI_INSTANCE=true` and `COFOUNDRY_REALTIME_FANOUT_URL` set
 - provider-level presence semantics if production needs richer online/offline state beyond typing presence
 
 ### 11. Email and outbound system events

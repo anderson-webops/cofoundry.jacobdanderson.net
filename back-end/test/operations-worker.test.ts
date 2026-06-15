@@ -454,6 +454,115 @@ test("operations alert smoke worker emits readiness-recognized alert events", as
   })
 })
 
+test("operations realtime smoke worker emits readiness-recognized fanout evidence", async () => {
+  const { fetchImpl, requests } = createJsonFetch(request => request.url.endsWith("/api/operations/realtime-events")
+    ? { delivered: 1, ok: true }
+    : { id: "event_realtime_smoke", mode: "mock" })
+
+  await runOperationsWorker([
+    "realtime-smoke",
+    "--id",
+    "realtime-smoke-test",
+    "--user-id",
+    "user_ava",
+    "--min-delivered",
+    "1",
+    "--metadata",
+    "runbook=test",
+  ], {
+    env: workerEnv,
+    fetch: fetchImpl,
+    log: () => {},
+    now: () => new Date("2026-06-13T12:15:00.000Z"),
+  })
+
+  assert.equal(requests.length, 2)
+  assert.equal(requests[0].url, "https://cofoundry.example.com/api/operations/realtime-events")
+  assert.equal(requests[0].headers.get("authorization"), "Bearer test-worker-token")
+  assert.deepEqual(requests[0].body, {
+    createdAt: "2026-06-13T12:15:00.000Z",
+    eventType: "workspace-change",
+    idScope: "operations.realtime_smoke:realtime-smoke-test",
+    messages: [{
+      message: {
+        data: JSON.stringify({
+          createdAt: "2026-06-13T12:15:00.000Z",
+          metadata: {
+            purpose: "realtime-fanout-smoke",
+            runbook: "test",
+          },
+          source: "operations.realtime_smoke",
+          userId: "user_ava",
+        }),
+        event: "workspace-change",
+        id: "2026-06-13T12:15:00.000Z:user_ava:operations.realtime_smoke:realtime-smoke-test",
+        retry: 5000,
+      },
+      userId: "user_ava",
+    }],
+    sourceInstanceId: "operations-worker",
+    version: 1,
+  })
+  assert.equal(requests[1].url, "https://cofoundry.example.com/api/operations/events")
+  assert.deepEqual(requests[1].body, {
+    eventType: "realtime_fanout_smoke_succeeded",
+    metadata: {
+      delivered: 1,
+      minDelivered: 1,
+      purpose: "realtime-fanout-smoke",
+      runbook: "test",
+      sourceInstanceId: "operations-worker",
+      userId: "user_ava",
+    },
+    severity: "info",
+    source: "realtime-smoke-worker",
+    targetId: "realtime-smoke-test",
+    targetType: "realtime_fanout",
+  })
+})
+
+test("operations realtime smoke worker fails when delivery count is below threshold", async () => {
+  const { fetchImpl, requests } = createJsonFetch(request => request.url.endsWith("/api/operations/realtime-events")
+    ? { delivered: 0, ok: true }
+    : { id: "event_realtime_smoke_failed", mode: "mock" })
+
+  await assert.rejects(
+    () => runOperationsWorker([
+      "realtime-smoke",
+      "--id",
+      "realtime-smoke-test",
+      "--user-id",
+      "user_ava",
+      "--min-delivered",
+      "1",
+    ], {
+      env: workerEnv,
+      fetch: fetchImpl,
+      log: () => {},
+      now: () => new Date("2026-06-13T12:16:00.000Z"),
+    }),
+    /Realtime smoke delivered 0; expected at least 1/,
+  )
+
+  assert.equal(requests.length, 2)
+  assert.equal(requests[0].url, "https://cofoundry.example.com/api/operations/realtime-events")
+  assert.equal(requests[1].url, "https://cofoundry.example.com/api/operations/events")
+  assert.deepEqual(requests[1].body, {
+    eventType: "realtime_fanout_smoke_failed",
+    metadata: {
+      delivered: 0,
+      minDelivered: 1,
+      purpose: "realtime-fanout-smoke",
+      sourceInstanceId: "operations-worker",
+      userId: "user_ava",
+    },
+    severity: "error",
+    source: "realtime-smoke-worker",
+    targetId: "realtime-smoke-test",
+    targetType: "realtime_fanout",
+  })
+})
+
 test("operations alert webhooks are non-blocking when delivery fails", async () => {
   const logs: string[] = []
   const { fetchImpl, requests } = createJsonFetch(request => request.url === "https://alerts.example.com/cofoundry"
