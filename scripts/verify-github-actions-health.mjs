@@ -146,15 +146,17 @@ for (const workflow of workflows) {
   failures.push(`${workflow}: latest run is ${run.status}/${run.conclusion || "pending"}. Inspect ${run.html_url}`)
 }
 
-console.log("GitHub Actions health summary:")
+const output = ["GitHub Actions health summary:"]
 for (const summary of summaries)
-  console.log(`- ${summary}`)
+  output.push(`- ${summary}`)
 
 if (failures.length > 0) {
-  console.error("\nGitHub Actions health failed:")
+  output.push("", "GitHub Actions health failed:")
   for (const failure of failures)
-    console.error(`- ${failure}`)
+    output.push(`- ${failure}`)
+  console.log(output.join("\n"))
   process.exit(1)
 }
 
+console.log(output.join("\n"))
 console.log("GitHub Actions health passed.")
