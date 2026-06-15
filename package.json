@@ -50,6 +50,7 @@
     "verify:analytics": "npm run -w front-end verify:analytics",
     "verify:deployment-identity": "node scripts/verify-deployment-identity-fallback.mjs",
     "verify:github-actions": "node scripts/verify-github-actions-health.mjs",
+    "verify:host-env": "npm run -w back-end verify:host-env --",
     "verify:public": "node scripts/verify-public-site.mjs",
     "verify:public:dispatch": "node scripts/dispatch-public-verification.mjs",
     "verify:public:local": "node scripts/verify-public-local.mjs",

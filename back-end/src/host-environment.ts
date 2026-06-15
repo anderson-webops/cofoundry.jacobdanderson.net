@@ -1,0 +1,327 @@
+import {
+  collectEnvironmentValidationErrors,
+  isLocalDevelopmentEnvironment,
+  readDeploymentMetadata,
+  readPublicEnvironment,
+  readSecretEnvironment,
+} from "./environment.js"
+
+export type HostEnvironmentCheckStatus = "fail" | "pass" | "warn"
+
+export interface HostEnvironmentCheck {
+  detail: string
+  id: string
+  remediation?: string
+  status: HostEnvironmentCheckStatus
+  title: string
+}
+
+export interface HostEnvironmentReport {
+  checks: HostEnvironmentCheck[]
+  deployment: {
+    commitSha: string
+    deployedAt: string
+    release: string
+  }
+  failCount: number
+  mode: {
+    appUrl: string
+    backend: string
+    billing: string
+    demoAccessEnabled: boolean
+    localDevelopment: boolean
+    nodeEnv: string
+    productionExpected: boolean
+  }
+  ok: boolean
+  warningCount: number
+}
+
+type EnvironmentSource = Record<string, string | undefined>
+
+export interface HostEnvironmentOptions {
+  failOnWarnings?: boolean
+  production?: boolean
+}
+
+const localHostnames = new Set(["::1", "127.0.0.1", "localhost"])
+
+function readValue(env: EnvironmentSource, key: string) {
+  return env[key]?.trim() || ""
+}
+
+function hasValue(env: EnvironmentSource, key: string) {
+  return Boolean(readValue(env, key))
+}
+
+function isLocalUrl(value: string) {
+  try {
+    const url = new URL(value)
+    return localHostnames.has(url.hostname)
+  }
+  catch {
+    return false
+  }
+}
+
+function addCheck(
+  checks: HostEnvironmentCheck[],
+  status: HostEnvironmentCheckStatus,
+  id: string,
+  title: string,
+  detail: string,
+  remediation?: string,
+) {
+  checks.push({ detail, id, remediation, status, title })
+}
+
+function summarizeSecretPresence(isPresent: boolean, label: string) {
+  return isPresent ? `${label} is present.` : `${label} is missing.`
+}
+
+export function buildHostEnvironmentReport(
+  env: EnvironmentSource,
+  options: HostEnvironmentOptions = {},
+): HostEnvironmentReport {
+  const publicEnvironment = readPublicEnvironment(env)
+  const secretEnvironment = readSecretEnvironment(env)
+  const deployment = readDeploymentMetadata(env)
+  const validationErrors = collectEnvironmentValidationErrors(env)
+  const localDevelopment = isLocalDevelopmentEnvironment(env)
+  const productionExpected = options.production || readValue(env, "NODE_ENV") === "production" || !localDevelopment
+  const checks: HostEnvironmentCheck[] = []
+
+  if (validationErrors.length > 0) {
+    addCheck(
+      checks,
+      "fail",
+      "env-contract",
+      "Mode-specific environment contract",
+      validationErrors.join(" "),
+      "Resolve the listed configuration errors or switch the affected mode back to mock.",
+    )
+  }
+  else {
+    addCheck(
+      checks,
+      "pass",
+      "env-contract",
+      "Mode-specific environment contract",
+      "Public and server-only environment values satisfy the active backend and billing modes.",
+    )
+  }
+
+  if (productionExpected) {
+    if (readValue(env, "NODE_ENV") === "production") {
+      addCheck(checks, "pass", "node-env", "Production Node environment", "NODE_ENV is production.")
+    }
+    else {
+      addCheck(
+        checks,
+        "fail",
+        "node-env",
+        "Production Node environment",
+        "NODE_ENV is not production.",
+        "Set NODE_ENV=production in the host-managed app service environment.",
+      )
+    }
+  }
+  else {
+    addCheck(checks, "pass", "node-env", "Local Node environment", "This environment is being treated as local development.")
+  }
+
+  if (productionExpected) {
+    if (!publicEnvironment.appUrl) {
+      addCheck(
+        checks,
+        "fail",
+        "app-url",
+        "Canonical public app URL",
+        "NUXT_PUBLIC_APP_URL is missing.",
+        "Set NUXT_PUBLIC_APP_URL to the deployed HTTPS origin.",
+      )
+    }
+    else if (isLocalUrl(publicEnvironment.appUrl) && readValue(env, "COFOUNDRY_ALLOW_LOCAL_PUBLIC_APP_URL") !== "true") {
+      addCheck(
+        checks,
+        "fail",
+        "app-url",
+        "Canonical public app URL",
+        `NUXT_PUBLIC_APP_URL points at a local origin: ${publicEnvironment.appUrl}.`,
+        "Set NUXT_PUBLIC_APP_URL to the deployed HTTPS origin. Use COFOUNDRY_ALLOW_LOCAL_PUBLIC_APP_URL=true only for local smoke tests.",
+      )
+    }
+    else if (!publicEnvironment.appUrl.startsWith("https://")) {
+      addCheck(
+        checks,
+        "fail",
+        "app-url",
+        "Canonical public app URL",
+        `NUXT_PUBLIC_APP_URL is not HTTPS: ${publicEnvironment.appUrl}.`,
+        "Use the public HTTPS origin for hosted production.",
+      )
+    }
+    else {
+      addCheck(checks, "pass", "app-url", "Canonical public app URL", `Using ${publicEnvironment.appUrl}.`)
+    }
+  }
+  else {
+    addCheck(checks, "pass", "app-url", "Local app URL", `Using ${publicEnvironment.appUrl || "local default"}.`)
+  }
+
+  if (productionExpected && publicEnvironment.enableDemoAccess) {
+    addCheck(
+      checks,
+      "fail",
+      "demo-access",
+      "Demo access flag",
+      "NUXT_PUBLIC_ENABLE_DEMO_ACCESS is enabled in a production-expected environment.",
+      "Set NUXT_PUBLIC_ENABLE_DEMO_ACCESS=false for production-facing hosts.",
+    )
+  }
+  else {
+    addCheck(
+      checks,
+      "pass",
+      "demo-access",
+      "Demo access flag",
+      publicEnvironment.enableDemoAccess ? "Demo access is enabled for local/staging use." : "Demo access is disabled.",
+    )
+  }
+
+  if (productionExpected && !secretEnvironment.sessionSigningSecret) {
+    addCheck(
+      checks,
+      "fail",
+      "session-secret",
+      "Session signing secret",
+      "SESSION_SIGNING_SECRET is missing.",
+      "Inject SESSION_SIGNING_SECRET from the host secret store so invited-account sessions survive deploys.",
+    )
+  }
+  else if (secretEnvironment.sessionSigningSecret && secretEnvironment.sessionSigningSecret.length < 32) {
+    addCheck(
+      checks,
+      productionExpected ? "fail" : "warn",
+      "session-secret",
+      "Session signing secret",
+      "SESSION_SIGNING_SECRET is present but shorter than 32 characters.",
+      "Use a long random secret from the host secret store.",
+    )
+  }
+  else {
+    addCheck(
+      checks,
+      "pass",
+      "session-secret",
+      "Session signing secret",
+      summarizeSecretPresence(Boolean(secretEnvironment.sessionSigningSecret), "SESSION_SIGNING_SECRET"),
+    )
+  }
+
+  if (productionExpected && !deployment.release && !deployment.commitSha) {
+    addCheck(
+      checks,
+      "fail",
+      "deployment-identity",
+      "Deployment identity",
+      "Neither COFOUNDRY_RELEASE nor COFOUNDRY_COMMIT_SHA is set in host env.",
+      "Set at least one non-secret deployment identity value before restarting the production service.",
+    )
+  }
+  else {
+    const identity = [
+      deployment.release ? `release=${deployment.release}` : null,
+      deployment.commitSha ? `commit=${deployment.commitSha.slice(0, 12)}` : null,
+      deployment.deployedAt ? `deployedAt=${deployment.deployedAt}` : null,
+    ].filter(Boolean).join(", ")
+
+    addCheck(
+      checks,
+      deployment.release || deployment.commitSha ? "pass" : "warn",
+      "deployment-identity",
+      "Deployment identity",
+      identity || "No release or commit identity is set. This is acceptable only for local development.",
+    )
+  }
+
+  if (productionExpected && publicEnvironment.backendMode === "mock" && !hasValue(env, "COFOUNDRY_LOCAL_DATA_DIR")) {
+    addCheck(
+      checks,
+      "warn",
+      "local-data-dir",
+      "Durable local data directory",
+      "COFOUNDRY_LOCAL_DATA_DIR is not set while mock/access-request mode is active.",
+      "Set COFOUNDRY_LOCAL_DATA_DIR to a durable, backed-up host path before relying on invited local accounts or access-request persistence.",
+    )
+  }
+  else {
+    addCheck(
+      checks,
+      "pass",
+      "local-data-dir",
+      "Durable local data directory",
+      hasValue(env, "COFOUNDRY_LOCAL_DATA_DIR")
+        ? `Using COFOUNDRY_LOCAL_DATA_DIR=${readValue(env, "COFOUNDRY_LOCAL_DATA_DIR")}.`
+        : "No durable local data directory is required for this mode.",
+    )
+  }
+
+  addCheck(
+    checks,
+    secretEnvironment.operationsWorkerToken ? "pass" : "warn",
+    "operations-token",
+    "Operations worker token",
+    summarizeSecretPresence(Boolean(secretEnvironment.operationsWorkerToken), "COFOUNDRY_OPERATIONS_TOKEN"),
+    secretEnvironment.operationsWorkerToken
+      ? undefined
+      : "Set COFOUNDRY_OPERATIONS_TOKEN before enabling worker-authenticated operations timers.",
+  )
+
+  const oauthMarkers = [
+    "COFOUNDRY_OAUTH_PROVIDER",
+    "COFOUNDRY_GOOGLE_OAUTH_PROVIDER",
+    "COFOUNDRY_GITHUB_OAUTH_PROVIDER",
+  ].filter(key => hasValue(env, key))
+
+  if (productionExpected && publicEnvironment.backendMode !== "supabase" && oauthMarkers.length > 0) {
+    addCheck(
+      checks,
+      "warn",
+      "oauth-markers",
+      "OAuth provider markers",
+      `OAuth provider marker(s) are set while backend mode is ${publicEnvironment.backendMode}: ${oauthMarkers.join(", ")}.`,
+      "Unset OAuth provider markers until Supabase mode and provider callback smoke tests are complete.",
+    )
+  }
+  else {
+    addCheck(
+      checks,
+      "pass",
+      "oauth-markers",
+      "OAuth provider markers",
+      oauthMarkers.length > 0 ? `Configured marker(s): ${oauthMarkers.join(", ")}.` : "No OAuth provider markers are set.",
+    )
+  }
+
+  const failCount = checks.filter(check => check.status === "fail").length
+  const warningCount = checks.filter(check => check.status === "warn").length
+  const ok = failCount === 0 && (!options.failOnWarnings || warningCount === 0)
+
+  return {
+    checks,
+    deployment,
+    failCount,
+    mode: {
+      appUrl: publicEnvironment.appUrl,
+      backend: publicEnvironment.backendMode,
+      billing: publicEnvironment.billingMode,
+      demoAccessEnabled: publicEnvironment.enableDemoAccess,
+      localDevelopment,
+      nodeEnv: readValue(env, "NODE_ENV") || "(unset)",
+      productionExpected,
+    },
+    ok,
+    warningCount,
+  }
+}
