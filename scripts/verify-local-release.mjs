@@ -1,6 +1,23 @@
 import { spawn } from "node:child_process"
 import process from "node:process"
 
+const syntheticProductionHostEnv = {
+  COFOUNDRY_COMMIT_SHA: "0000000000000000000000000000000000000000",
+  COFOUNDRY_DEPLOYED_AT: "2026-01-01T00:00:00.000Z",
+  COFOUNDRY_GITHUB_OAUTH_PROVIDER: "",
+  COFOUNDRY_GOOGLE_OAUTH_PROVIDER: "",
+  COFOUNDRY_LOCAL_DATA_DIR: "/var/lib/cofoundry",
+  COFOUNDRY_OAUTH_PROVIDER: "",
+  COFOUNDRY_OPERATIONS_TOKEN: "synthetic-release-worker-token",
+  COFOUNDRY_RELEASE: "local-release",
+  NODE_ENV: "production",
+  NUXT_PUBLIC_APP_URL: "https://cofoundry.example.com",
+  NUXT_PUBLIC_BACKEND_MODE: "mock",
+  NUXT_PUBLIC_BILLING_MODE: "mock",
+  NUXT_PUBLIC_ENABLE_DEMO_ACCESS: "false",
+  SESSION_SIGNING_SECRET: "synthetic-release-session-signing-secret",
+}
+
 const steps = [
   {
     args: ["ci"],
@@ -11,6 +28,12 @@ const steps = [
     args: ["run", "audit"],
     id: "audit",
     label: "Check dependency advisories",
+  },
+  {
+    args: ["run", "verify:host-env", "--", "--production", "--fail-on-warnings"],
+    env: syntheticProductionHostEnv,
+    id: "host-env",
+    label: "Verify production host environment contract",
   },
   {
     args: ["run", "lint"],
