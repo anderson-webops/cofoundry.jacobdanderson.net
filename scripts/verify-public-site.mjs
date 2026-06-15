@@ -53,6 +53,7 @@ const ignoredLinkedPathPrefixes = [
 ]
 const publicNavigationBlocklistPrefixes = ["/admin", "/app", "/api", "/email", "/onboarding"]
 const allowedNoindexLinkedRoutePrefixes = ["/auth"]
+const localUrlNeedles = ["localhost", "127.0.0.1", "[::1]"]
 
 function fail(message) {
   throw new Error(message)
@@ -87,6 +88,10 @@ function header(response, name) {
 
 function includesNone(value, needles) {
   return needles.every(needle => !value.includes(needle))
+}
+
+function firstMatchingLine(value, needles) {
+  return value.split(/\r?\n/).find(line => needles.some(needle => line.includes(needle)))?.trim()
 }
 
 function decodeXml(value) {
@@ -144,6 +149,15 @@ function canonicalUrlForRoute(route) {
   return new URL(route, `${expectedCanonicalOrigin}/`).toString()
 }
 
+function assertNoPublicLocalUrlLeak(text, label) {
+  if (isLocalVerificationTarget)
+    return
+
+  const leakedLine = firstMatchingLine(text, localUrlNeedles)
+
+  assert(!leakedLine, `${label} must not expose local URLs in public verification${leakedLine ? ` (found: ${leakedLine})` : ""}`)
+}
+
 function extractAnchorHrefs(html) {
   const matches = html.matchAll(/<a\b[^>]*\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi)
 
@@ -196,7 +210,7 @@ function assertPublicPageMetadata(text, route) {
   if (isLocalVerificationTarget)
     return
 
-  assert(!text.includes("localhost"), `${route} should not expose localhost in public page metadata or payload`)
+  assertNoPublicLocalUrlLeak(text, `${route} public page metadata or payload`)
   assert(text.includes(canonicalUrlForRoute(route)), `${route} should include canonical public URL ${canonicalUrlForRoute(route)}`)
 }
 
@@ -275,6 +289,46 @@ async function fetchJson(path, init = {}) {
   return { body, response }
 }
 
+function errorMessage(error) {
+  return error instanceof Error ? error.message : String(error)
+}
+
+function failureHints(message) {
+  const hints = []
+
+  if (message.includes("local URLs") || message.includes("localhost") || message.includes("127.0.0.1"))
+    hints.push(`Set NUXT_PUBLIC_APP_URL=${expectedCanonicalOrigin} on the host, rebuild/redeploy, and restart the service. A local URL in robots, sitemap, security.txt, or page metadata usually means the public server is stale or missing the canonical app URL env.`)
+
+  if (message.includes("release") || message.includes("commitSha") || message.includes("deployment identity"))
+    hints.push("Verify COFOUNDRY_RELEASE and COFOUNDRY_COMMIT_SHA are exported to the running service, then confirm systemd is running the newly deployed build.")
+
+  if (message.includes("private route") || message.includes("noindex") || message.includes("auth/admin"))
+    hints.push("Check public navigation and legal/footer links. Public sitemap routes should not link directly to app, admin, API, onboarding, or email-management surfaces; auth entry pages must stay noindex.")
+
+  if (message.includes("listed in sitemap") || message.includes("should return 200") || message.includes("sitemap should include"))
+    hints.push("Regenerate or update the public route inventory so every linked public route resolves with 200 and appears in sitemap.xml.")
+
+  if (message.includes("CSP") || message.includes("HSTS") || message.includes("security") || message.includes("nosniff"))
+    hints.push("Confirm the Nuxt security-header middleware is active on the deployed server and that HTTPS requests terminate with HSTS enabled.")
+
+  if (!hints.length)
+    hints.push("Run npm run build && npm run verify:public:local first. If that passes, deploy the exact validated commit/tag and rerun this live verifier with VERIFY_PUBLIC_EXPECT_RELEASE and VERIFY_PUBLIC_EXPECT_COMMIT_SHA.")
+
+  return hints
+}
+
+function reportFailure(error) {
+  const message = errorMessage(error)
+
+  console.error(`Public site verification failed for ${baseUrl}.`)
+  console.error(`Reason: ${message}`)
+  console.error("")
+  console.error("Next checks:")
+  for (const hint of failureHints(message))
+    console.error(`- ${hint}`)
+}
+
+try {
 const { body: health, response: healthResponse } = await fetchJson("/api/health")
 assert(healthResponse.status === 200, "/api/health should return 200")
 assert(health.status === "ok", "/api/health should report ok")
@@ -288,14 +342,14 @@ assert(robots.response.status === 200, "/robots.txt should return 200")
 assert(robots.text.includes("Disallow: /admin"), "robots.txt should disallow admin routes")
 assert(robots.text.includes("Disallow: /app"), "robots.txt should disallow app routes")
 assert(robots.text.includes("Disallow: /auth"), "robots.txt should disallow auth routes")
-assert(!robots.text.includes("localhost"), "robots.txt must not expose localhost URLs in public verification")
+assertNoPublicLocalUrlLeak(robots.text, "robots.txt")
 const sitemapUrl = extractSitemapUrl(robots.text)
 assert(sitemapUrl, "robots.txt should advertise sitemap")
 assert(new URL(sitemapUrl).origin === expectedCanonicalOrigin, `robots sitemap should use ${expectedCanonicalOrigin}`)
 
 const sitemap = await fetchText("/sitemap.xml")
 assert(sitemap.response.status === 200, "/sitemap.xml should return 200")
-assert(!sitemap.text.includes("localhost"), "sitemap must not expose localhost URLs in public verification")
+assertNoPublicLocalUrlLeak(sitemap.text, "sitemap.xml")
 assert(includesNone(sitemap.text, privateSitemapNeedles), "sitemap should not include private/auth/admin routes")
 
 const publicRoutes = extractSitemapLocs(sitemap.text).map(routePathFromSitemapLoc)
@@ -346,3 +400,8 @@ assert(securityTxt.text.includes("Contact:"), "security.txt should include Conta
 assert(securityTxt.text.includes(`Canonical: ${expectedCanonicalOrigin}/.well-known/security.txt`), "security.txt should include canonical production URL")
 
 console.log(`Public site verification passed for ${baseUrl} across ${publicRoutes.length} sitemap routes and ${internalLinkSources.size} internal links.`)
+}
+catch (error) {
+  reportFailure(error)
+  process.exitCode = 1
+}
