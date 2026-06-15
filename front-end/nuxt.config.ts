@@ -1,14 +1,33 @@
+import { execFileSync } from "node:child_process"
 import process from "node:process"
 import { buildSecurityHeaders } from "./server/utils/security-headers"
 import { appDescription, appName } from "./shared/constants/app"
 import { privateApiRoutePrefixes, privateWorkspaceRoutePrefixes } from "./shared/constants/route-surfaces"
 import { workspaceSeed } from "./shared/data/seed"
 import { getPublicRoutePaths } from "./shared/utils/directory"
-import { assertEnvironmentIsValid, readEnvironmentSnapshot } from "./shared/utils/environment"
+import { assertEnvironmentIsValid, readDeploymentMetadata, readEnvironmentSnapshot } from "./shared/utils/environment"
 import { isPublicSiteUrl } from "./shared/utils/seo"
 import { defaultThemeSchemeDefinition } from "./shared/utils/theme"
 
+function readGitMetadata(args: string[]) {
+  try {
+    return execFileSync("git", args, {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim()
+  }
+  catch {
+    return ""
+  }
+}
+
 const environment = readEnvironmentSnapshot(process.env)
+const explicitDeploymentMetadata = readDeploymentMetadata(process.env)
+const buildDeploymentMetadata = {
+  commitSha: explicitDeploymentMetadata.commitSha || readGitMetadata(["rev-parse", "HEAD"]),
+  deployedAt: explicitDeploymentMetadata.deployedAt,
+  release: explicitDeploymentMetadata.release || readGitMetadata(["describe", "--tags", "--exact-match", "HEAD"]),
+}
 const publicRoutes = getPublicRoutePaths(workspaceSeed)
 const prerenderPublicRoutes = isPublicSiteUrl(environment.public.appUrl) ? publicRoutes : []
 const securityHeaders = buildSecurityHeaders({
@@ -81,6 +100,9 @@ export default defineNuxtConfig({
     classSuffix: "",
   },
   runtimeConfig: {
+    deploymentCommitSha: buildDeploymentMetadata.commitSha,
+    deploymentDeployedAt: buildDeploymentMetadata.deployedAt,
+    deploymentRelease: buildDeploymentMetadata.release,
     operationsWorkerToken: environment.secret.operationsWorkerToken,
     stripeSecretKey: environment.secret.stripeSecretKey,
     stripeWebhookSecret: environment.secret.stripeWebhookSecret,

@@ -45,6 +45,8 @@ test("systemd README documents manual smoke service verification", async () => {
 test("server operations handoff prompt includes realtime smoke setup", async () => {
   const prompt = await readRepoFile("docs", "server-ai-operations-prompt.md")
 
+  assert.match(prompt, /COFOUNDRY_COMMIT_SHA/)
+  assert.match(prompt, /Nuxt build fallback/)
   assert.match(prompt, /npm run operations:realtime-smoke/)
   assert.match(prompt, /COFOUNDRY_REALTIME_SMOKE_USER_ID/)
   assert.match(prompt, /COFOUNDRY_REALTIME_SMOKE_MIN_DELIVERED=0/)

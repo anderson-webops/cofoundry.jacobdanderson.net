@@ -1,10 +1,11 @@
 import process from "node:process"
-import { collectEnvironmentValidationErrors, isLocalDevelopmentEnvironment, readDeploymentMetadata, readEnvironmentSnapshot } from "~/shared/utils/environment"
+import { collectEnvironmentValidationErrors, isLocalDevelopmentEnvironment, readEnvironmentSnapshot } from "~/shared/utils/environment"
 import { listAccessRequests } from "../../utils/access-requests"
 import { requireAdminSession } from "../../utils/admin"
 import { readAdminOperationsRows } from "../../utils/admin-operations"
 import { readAdminPosture } from "../../utils/admin-posture"
 import { isContactMailConfigured } from "../../utils/contact"
+import { readServerDeploymentMetadata } from "../../utils/deployment-metadata"
 import { listPrivacyRequests } from "../../utils/privacy-requests"
 import { buildProductionReadinessSnapshot } from "../../utils/production-readiness"
 import { assertRateLimit, buildRateLimitKey } from "../../utils/rate-limit"
@@ -48,7 +49,7 @@ export default defineEventHandler(async (event) => {
     accessRequests,
     adminPosture,
     contactMailConfigured: isContactMailConfigured(),
-    deploymentMetadata: readDeploymentMetadata(process.env),
+    deploymentMetadata: readServerDeploymentMetadata(event),
     environment: readEnvironmentSnapshot(process.env),
     environmentValidationErrors: collectEnvironmentValidationErrors(process.env),
     expectsMultiInstanceRuntime: expectsMultiInstanceRuntime(),

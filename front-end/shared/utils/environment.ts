@@ -127,11 +127,11 @@ export function readSecretEnvironment(env: EnvironmentSource): SecretEnvironment
   }
 }
 
-export function readDeploymentMetadata(env: EnvironmentSource): DeploymentMetadata {
+export function readDeploymentMetadata(env: EnvironmentSource, fallback: Partial<DeploymentMetadata> = {}): DeploymentMetadata {
   return {
-    commitSha: readFirstValue(env, ["COFOUNDRY_COMMIT_SHA", "GIT_COMMIT", "COMMIT_SHA", "SOURCE_VERSION", "VERCEL_GIT_COMMIT_SHA"]),
-    deployedAt: readFirstValue(env, ["COFOUNDRY_DEPLOYED_AT", "DEPLOYED_AT", "BUILD_TIMESTAMP"]),
-    release: readFirstValue(env, ["COFOUNDRY_RELEASE", "RELEASE_VERSION", "APP_VERSION"]),
+    commitSha: readFirstValue(env, ["COFOUNDRY_COMMIT_SHA", "GIT_COMMIT", "COMMIT_SHA", "SOURCE_VERSION", "VERCEL_GIT_COMMIT_SHA"]) || fallback.commitSha?.trim() || "",
+    deployedAt: readFirstValue(env, ["COFOUNDRY_DEPLOYED_AT", "DEPLOYED_AT", "BUILD_TIMESTAMP"]) || fallback.deployedAt?.trim() || "",
+    release: readFirstValue(env, ["COFOUNDRY_RELEASE", "RELEASE_VERSION", "APP_VERSION"]) || fallback.release?.trim() || "",
   }
 }
 
