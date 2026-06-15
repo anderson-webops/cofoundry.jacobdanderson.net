@@ -22,6 +22,7 @@ For a paste-ready host catch-up prompt after source validation passes but the pu
 ## Daily Checks
 
 - Visit `/admin/readiness` and resolve any fail or warning checks before treating the deployment as production-ready.
+- Before restarting a production service after env changes, run `npm run verify:host-env -- --production` from the host environment that will launch the app. It reads process env only, does not load `.env`, and reports secret presence without printing secret values.
 - Use `/admin/readiness`'s production cutover phases as the quick-read for which provider stages are active, intentionally disabled, blocked, or complete.
 - Use `/admin/readiness`'s server provisioning checklist as the canonical handoff for host-level secrets, durable storage, mail, worker timers, restore drills, monitoring, first-admin bootstrap, and Stripe cutover preparation.
 - After every release build, run `npm run verify:release:local` from the checked-out source. It executes the full local release gate: exact install, dependency audit, lint, typecheck, unit/backend tests, build, deployment-identity fallback verification, shared-shim verification, analytics build-output verification, production smoke checks, local public-route crawl, production accessibility smoke, public-verification dispatch dry-run, GitHub Actions diagnostic syntax check, and diff whitespace check. If you need to reuse an already-verified install during iteration, `npm run verify:release:local -- --skip-install` skips only `npm ci`; do not use the skip path as the final pre-deploy gate.

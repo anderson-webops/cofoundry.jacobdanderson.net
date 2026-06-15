@@ -27,7 +27,8 @@
     "operations:worker": "node --import tsx scripts/operations-worker.ts",
     "seed": "node --env-file-if-exists=../.env --import tsx scripts/seed.ts",
     "test": "node --test --import tsx test/**/*.test.ts",
-    "test:run": "node --test --import tsx test/**/*.test.ts"
+    "test:run": "node --test --import tsx test/**/*.test.ts",
+    "verify:host-env": "node --import tsx scripts/verify-host-env.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.103.3"

@@ -31,25 +31,26 @@ Tasks:
    - `COFOUNDRY_RELEASE=<release-tag>`
    - `COFOUNDRY_COMMIT_SHA=<commit-sha>`
    - `COFOUNDRY_DEPLOYED_AT=<current ISO timestamp>`
-7. Keep these unset unless a later explicit provider cutover is authorized:
+7. Run `npm run verify:host-env -- --production` from the same host environment that will launch the app. Resolve any failed checks before restart.
+8. Keep these unset unless a later explicit provider cutover is authorized:
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `STRIPE_SECRET_KEY`
    - `STRIPE_WEBHOOK_SECRET`
    - OAuth provider markers
    - mail provider credentials
-8. Restart the production app service.
-9. Verify production logs do not mention loading `../.env`.
-10. Verify `/api/health` exposes at least `release=<release-tag>` or `commit=<commit-sha>`.
-11. Run:
+9. Restart the production app service.
+10. Verify production logs do not mention loading `../.env`.
+11. Verify `/api/health` exposes at least `release=<release-tag>` or `commit=<commit-sha>`.
+12. Run:
 
    VERIFY_PUBLIC_EXPECT_RELEASE=<release-tag> VERIFY_PUBLIC_EXPECT_COMMIT_SHA=<commit-sha> npm run verify:public
 
-12. If GitHub Actions is available again, run:
+13. If GitHub Actions is available again, run:
 
    npm run verify:github-actions
 
    If it fails with runner-start failures and no job steps, fix GitHub account billing, Actions spending limits, Actions enablement, or runner availability rather than changing application source.
-13. If a GitHub token is available after deploy, trigger the live-origin verification workflow:
+14. If a GitHub token is available after deploy, trigger the live-origin verification workflow:
 
    npm run verify:public:dispatch -- --dry-run --expected-release <release-tag> --expected-commit-sha <commit-sha>
    GITHUB_TOKEN=<token> npm run verify:public:dispatch -- --expected-release <release-tag> --expected-commit-sha <commit-sha>
