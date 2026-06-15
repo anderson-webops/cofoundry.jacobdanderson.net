@@ -1,9 +1,18 @@
 import { randomUUID } from "node:crypto"
 
+export type WorkspaceRealtimeEventType = "typing" | "workspace-change"
+
 export interface WorkspaceRealtimePayload {
   createdAt: string
   metadata?: Record<string, string | null | undefined>
   source: string
+  userId: string
+}
+
+export interface WorkspaceTypingRealtimePayload {
+  conversationId: string
+  createdAt: string
+  isTyping: boolean
   userId: string
 }
 
@@ -49,8 +58,36 @@ export async function emitWorkspaceRealtimeChange(
   userIds: string[],
   payload: Omit<WorkspaceRealtimePayload, "createdAt" | "userId"> & { createdAt?: string },
 ) {
-  const normalizedUserIds = normalizeUserIds(userIds)
   const createdAt = payload.createdAt || new Date().toISOString()
+  return emitWorkspaceRealtimeEvent(userIds, "workspace-change", userId => ({
+    createdAt,
+    metadata: payload.metadata || {},
+    source: payload.source,
+    userId,
+  } satisfies WorkspaceRealtimePayload), payload.source, createdAt)
+}
+
+export async function emitWorkspaceTypingPresence(
+  userIds: string[],
+  payload: Omit<WorkspaceTypingRealtimePayload, "createdAt"> & { createdAt?: string },
+) {
+  const createdAt = payload.createdAt || new Date().toISOString()
+  return emitWorkspaceRealtimeEvent(userIds, "typing", () => ({
+    conversationId: payload.conversationId,
+    createdAt,
+    isTyping: payload.isTyping,
+    userId: payload.userId,
+  } satisfies WorkspaceTypingRealtimePayload), `typing:${payload.conversationId}:${payload.userId}`, createdAt)
+}
+
+async function emitWorkspaceRealtimeEvent(
+  userIds: string[],
+  eventType: WorkspaceRealtimeEventType,
+  buildPayload: (userId: string) => WorkspaceRealtimePayload | WorkspaceTypingRealtimePayload,
+  idScope: string,
+  createdAt: string,
+) {
+  const normalizedUserIds = normalizeUserIds(userIds)
   let delivered = 0
 
   for (const userId of normalizedUserIds) {
@@ -59,14 +96,9 @@ export async function emitWorkspaceRealtimeChange(
       continue
 
     const message = {
-      data: JSON.stringify({
-        createdAt,
-        metadata: payload.metadata || {},
-        source: payload.source,
-        userId,
-      } satisfies WorkspaceRealtimePayload),
-      event: "workspace-change",
-      id: `${createdAt}:${userId}:${payload.source}`,
+      data: JSON.stringify(buildPayload(userId)),
+      event: eventType,
+      id: `${createdAt}:${userId}:${idScope}`,
       retry: 5000,
     }
 

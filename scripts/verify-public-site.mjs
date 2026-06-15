@@ -294,6 +294,29 @@ async function fetchJson(path, init = {}) {
   return { body, response }
 }
 
+async function postJson(path, body) {
+  const response = await fetch(`${baseUrl}${path}`, {
+    body: JSON.stringify(body),
+    headers: {
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  })
+  const text = await response.text()
+  let parsedBody = null
+
+  if (text.trim()) {
+    try {
+      parsedBody = JSON.parse(text)
+    }
+    catch {
+      parsedBody = text
+    }
+  }
+
+  return { body: parsedBody, response, text }
+}
+
 function errorMessage(error) {
   return error instanceof Error ? error.message : String(error)
 }
@@ -402,6 +425,13 @@ assertPrivateResponsePolicy(adminApi.response, "/api/admin/readiness unauthorize
 const workspaceEvents = await fetchJson("/api/workspace/events")
 assert(workspaceEvents.response.status === 401, "/api/workspace/events should fail closed without a member session")
 assertPrivateResponsePolicy(workspaceEvents.response, "/api/workspace/events unauthorized response")
+
+const workspaceTyping = await postJson("/api/workspace/typing", {
+  conversationId: "conversation_verify",
+  isTyping: true,
+})
+assert(workspaceTyping.response.status === 401, "/api/workspace/typing should fail closed without a member session")
+assertPrivateResponsePolicy(workspaceTyping.response, "/api/workspace/typing unauthorized response")
 
 const signIn = await fetchText("/auth/sign-in")
 assert(signIn.response.status === 200, "/auth/sign-in should exist")

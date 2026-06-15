@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest"
 import {
   clearWorkspaceRealtimeSubscribersForTests,
   emitWorkspaceRealtimeChange,
+  emitWorkspaceTypingPresence,
   getWorkspaceRealtimeSubscriberCount,
   subscribeWorkspaceRealtime,
 } from "../../server/utils/workspace-realtime"
@@ -61,5 +62,31 @@ describe("workspace realtime hub", () => {
 
     expect(delivered).toBe(0)
     expect(getWorkspaceRealtimeSubscriberCount("user_one")).toBe(0)
+  })
+
+  it("delivers typing presence without persisting workspace state", async () => {
+    const messages: Array<{ data: string, event: string }> = []
+    subscribeWorkspaceRealtime("user_recipient", {
+      push: (message) => {
+        messages.push(message)
+      },
+    })
+
+    const delivered = await emitWorkspaceTypingPresence(["user_recipient"], {
+      conversationId: "conversation_1",
+      isTyping: true,
+      userId: "user_sender",
+    })
+
+    expect(delivered).toBe(1)
+    expect(messages).toHaveLength(1)
+    expect(messages[0]).toMatchObject({
+      event: "typing",
+    })
+    expect(JSON.parse(messages[0]!.data)).toMatchObject({
+      conversationId: "conversation_1",
+      isTyping: true,
+      userId: "user_sender",
+    })
   })
 })

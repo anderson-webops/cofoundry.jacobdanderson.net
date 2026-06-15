@@ -151,6 +151,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   const loadedUserId = ref("")
   const lastAuthoritativeWriteSignature = ref<string | null>(null)
   const serverBackedWorkspace = computed(() => Boolean(session.value))
+  const typingPresenceSignatures = new Map<string, boolean>()
 
   function createWriteSignature(userId: string) {
     const payload = buildMemberWorkspaceWritePayload(data.value, userId)
@@ -202,6 +203,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     loadedUserId.value = ""
     lastSyncedAt.value = null
     lastAuthoritativeWriteSignature.value = null
+    typingPresenceSignatures.clear()
     persistError.value = ""
   }
 
@@ -679,6 +681,34 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       current.delete(userId)
 
     conversation.typingByUserIds = Array.from(current)
+  }
+
+  async function syncTypingPresence(conversationId: string, userId: string, isTyping: boolean) {
+    setTyping(conversationId, userId, isTyping)
+
+    if (!serverBackedWorkspace.value || !session.value)
+      return
+
+    const signatureKey = `${conversationId}:${userId}`
+    if (typingPresenceSignatures.get(signatureKey) === isTyping)
+      return
+
+    typingPresenceSignatures.set(signatureKey, isTyping)
+
+    try {
+      const headers = import.meta.server ? useRequestHeaders(["cookie"]) : undefined
+      await $fetch("/api/workspace/typing", {
+        body: {
+          conversationId,
+          isTyping,
+        },
+        headers,
+        method: "POST",
+      })
+    }
+    catch {
+      typingPresenceSignatures.delete(signatureKey)
+    }
   }
 
   async function createProposal(
@@ -1391,6 +1421,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     sendConnectRequest,
     sendMessage,
     setTyping,
+    syncTypingPresence,
     signContract,
     startTrialCollaboration,
     suspendUser,
