@@ -152,9 +152,11 @@ npm run verify:host-env -- --production
 npm run verify:release:local
 ```
 
-`npm run verify:release:local` is the full local release gate. It runs exact install, dependency audit, dependency install-script policy verification, synthetic production host-env verification, lint, typecheck, unit/backend tests, build, deployment identity, shared-shim, analytics, production smoke, local public crawl, accessibility, public-verification dispatch dry-run, live-deploy handoff prompt rendering, diagnostic syntax, and diff whitespace checks.
+`npm run verify:release:local` is the full local release gate. It runs exact install, dependency audit, dependency install-script policy verification, Node/npm toolchain policy verification, synthetic production host-env verification, lint, typecheck, unit/backend tests, build, deployment identity, shared-shim, analytics, production smoke, local public crawl, accessibility, public-verification dispatch dry-run, live-deploy handoff prompt rendering, diagnostic syntax, and diff whitespace checks.
 
 `npm run verify:install-scripts` checks npm's `allowScripts` review state. If a dependency adds or changes an install script, review the package and pin an approval or denial with `npm approve-scripts` or `npm deny-scripts` before shipping the dependency change.
+
+`npm run verify:toolchain` checks that `packageManager`, GitHub Actions, and Docker use the same reviewed npm version, that CI/Docker run on Node 22, and that Docker does not bypass the install-script policy with `--ignore-scripts`.
 
 The public verifier also guards production-facing metadata and copy. Sitemap-listed public pages must render page-specific title, description, canonical, Open Graph, and Twitter metadata, and public pages plus linked noindex access pages fail verification if they expose mock/demo/sample/placeholder language that would make the live product feel unfinished.
 

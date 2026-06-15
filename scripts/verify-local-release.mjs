@@ -35,6 +35,11 @@ const steps = [
     label: "Verify dependency install-script policy",
   },
   {
+    args: ["run", "verify:toolchain"],
+    id: "toolchain-policy",
+    label: "Verify Node/npm toolchain policy",
+  },
+  {
     args: ["run", "verify:host-env", "--", "--production", "--fail-on-warnings"],
     env: syntheticProductionHostEnv,
     id: "host-env",

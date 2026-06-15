@@ -23,7 +23,7 @@ jobs:
 
       - name: Pin npm version
         run: |
-          npm i -g npm@11.12.1
+          npm i -g npm@11.16.0
           npm -v
 
       - name: Install deps
@@ -44,7 +44,7 @@ jobs:
 
       - name: Pin npm version
         run: |
-          npm i -g npm@11.12.1
+          npm i -g npm@11.16.0
           npm -v
 
       - name: Install deps
@@ -65,11 +65,14 @@ jobs:
 
       - name: Pin npm version
         run: |
-          npm i -g npm@11.12.1
+          npm i -g npm@11.16.0
           npm -v
 
       - name: Install deps
         run: npm ci
+
+      - name: Install script policy
+        run: npm run verify:install-scripts
 
       - name: Dependency audit
         run: npm run audit
@@ -87,7 +90,7 @@ jobs:
 
       - name: Pin npm version
         run: |
-          npm i -g npm@11.12.1
+          npm i -g npm@11.16.0
           npm -v
 
       - name: Install deps
@@ -109,7 +112,7 @@ jobs:
 
       - name: Pin npm version
         run: |
-          npm i -g npm@11.12.1
+          npm i -g npm@11.16.0
           npm -v
 
       - name: Install deps
@@ -133,7 +136,7 @@ jobs:
 
       - name: Pin npm version
         run: |
-          npm i -g npm@11.12.1
+          npm i -g npm@11.16.0
           npm -v
 
       - name: Install deps
@@ -154,11 +157,14 @@ jobs:
 
       - name: Pin npm version
         run: |
-          npm i -g npm@11.12.1
+          npm i -g npm@11.16.0
           npm -v
 
       - name: Install deps
         run: npm ci
+
+      - name: Install script policy
+        run: npm run verify:install-scripts
 
       - name: Shared shim verification
         run: npm run verify:shared-shims

@@ -49,11 +49,14 @@ jobs:
 
       - name: Pin npm version
         run: |
-          npm i -g npm@11.12.1
+          npm i -g npm@11.16.0
           npm -v
 
       - name: Install deps
         run: npm ci
+
+      - name: Install script policy
+        run: npm run verify:install-scripts
 
       - name: Verify deployed public origin
         run: npm run verify:public
