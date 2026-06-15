@@ -152,7 +152,7 @@ npm run verify:host-env -- --production
 npm run verify:release:local
 ```
 
-`npm run verify:release:local` is the full local release gate. It runs exact install, dependency audit, lint, typecheck, unit/backend tests, build, deployment identity, shared-shim, analytics, production smoke, local public crawl, accessibility, public-verification dispatch dry-run, diagnostic syntax, and diff whitespace checks.
+`npm run verify:release:local` is the full local release gate. It runs exact install, dependency audit, synthetic production host-env verification, lint, typecheck, unit/backend tests, build, deployment identity, shared-shim, analytics, production smoke, local public crawl, accessibility, public-verification dispatch dry-run, diagnostic syntax, and diff whitespace checks.
 
 `npm run verify:host-env -- --production` checks the current process environment without loading `.env` files or printing secret values. Use it on the host before restarting production to catch missing deployment identity, unsafe app URLs, demo-access drift, missing session signing secrets, and mode-specific secret requirements.
 

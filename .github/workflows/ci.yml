@@ -166,6 +166,21 @@ jobs:
       - name: Public verification dispatch dry run
         run: npm run verify:public:dispatch -- --dry-run --expected-release ci --expected-commit-sha "$GITHUB_SHA"
 
+      - name: Production host environment contract
+        env:
+          COFOUNDRY_COMMIT_SHA: ${{ github.sha }}
+          COFOUNDRY_DEPLOYED_AT: "2026-01-01T00:00:00.000Z"
+          COFOUNDRY_LOCAL_DATA_DIR: /var/lib/cofoundry
+          COFOUNDRY_OPERATIONS_TOKEN: synthetic-ci-worker-token
+          COFOUNDRY_RELEASE: ci
+          NODE_ENV: production
+          NUXT_PUBLIC_APP_URL: https://cofoundry.example.com
+          NUXT_PUBLIC_BACKEND_MODE: mock
+          NUXT_PUBLIC_BILLING_MODE: mock
+          NUXT_PUBLIC_ENABLE_DEMO_ACCESS: "false"
+          SESSION_SIGNING_SECRET: synthetic-ci-session-signing-secret
+        run: npm run verify:host-env -- --production --fail-on-warnings
+
       - name: Build
         run: npm run build
 
