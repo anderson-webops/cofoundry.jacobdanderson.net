@@ -54,6 +54,16 @@ const ignoredLinkedPathPrefixes = [
 const publicNavigationBlocklistPrefixes = ["/admin", "/app", "/api", "/email", "/onboarding"]
 const allowedNoindexLinkedRoutePrefixes = ["/auth"]
 const localUrlNeedles = ["localhost", "127.0.0.1", "[::1]"]
+const forbiddenPublicCopyPatterns = [
+  { label: "mock", pattern: /\bmock\b/i },
+  { label: "demo", pattern: /\bdemo\b/i },
+  { label: "sample", pattern: /\bsample\b/i },
+  { label: "placeholder", pattern: /\bplaceholder\b/i },
+  { label: "dummy", pattern: /\bdummy\b/i },
+  { label: "fake", pattern: /\bfake\b/i },
+  { label: "lorem ipsum", pattern: /\blorem\s+ipsum\b/i },
+  { label: "coming soon", pattern: /\bcoming\s+soon\b/i },
+]
 
 function fail(message) {
   throw new Error(message)
@@ -101,6 +111,16 @@ function decodeXml(value) {
     .replaceAll("&gt;", ">")
     .replaceAll("&lt;", "<")
     .replaceAll("&amp;", "&")
+}
+
+function stripHtmlToText(html) {
+  return decodeXml(html)
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
 }
 
 function extractSitemapUrl(robotsText) {
@@ -219,6 +239,23 @@ function assertPublicPageMetadata(text, route) {
   assert(text.includes(canonicalUrlForRoute(route)), `${route} should include canonical public URL ${canonicalUrlForRoute(route)}`)
 }
 
+function assertPublicCopyQuality(html, route) {
+  const visibleText = stripHtmlToText(html)
+
+  for (const { label, pattern } of forbiddenPublicCopyPatterns) {
+    const match = visibleText.match(pattern)
+    if (!match)
+      continue
+
+    const index = match.index || 0
+    const contextStart = Math.max(0, index - 70)
+    const contextEnd = Math.min(visibleText.length, index + match[0].length + 70)
+    const context = visibleText.slice(contextStart, contextEnd)
+
+    fail(`${route} public copy should not expose ${label} language: "${context}"`)
+  }
+}
+
 function assertDeploymentIdentity(health) {
   const deployment = health.deployment || {}
 
@@ -264,6 +301,7 @@ async function assertPublicInternalLinks(linkSources, publicRouteSet) {
     if (routeMatchesAnyPrefix(linkedPath, allowedNoindexLinkedRoutePrefixes)) {
       assert(page.response.status === 200, `allowed noindex link ${linkedRoute} from ${sourceLabel} should return 200`)
       assert(hasNoindex(page.response, page.text), `allowed noindex link ${linkedRoute} from ${sourceLabel} should be noindex`)
+      assertPublicCopyQuality(page.text, linkedRoute)
       continue
     }
 
@@ -272,6 +310,7 @@ async function assertPublicInternalLinks(linkSources, publicRouteSet) {
     assert(!hasNoindex(page.response, page.text), `public link ${linkedRoute} from ${sourceLabel} should not be noindex`)
     assert(publicRouteSet.has(linkedPath), `public link ${linkedRoute} from ${sourceLabel} should be listed in sitemap.xml`)
     assertPublicPageMetadata(page.text, linkedPath)
+    assertPublicCopyQuality(page.text, linkedRoute)
   }
 }
 
@@ -339,6 +378,9 @@ function failureHints(message) {
   if (message.includes("CSP") || message.includes("HSTS") || message.includes("security") || message.includes("nosniff"))
     hints.push("Confirm the Nuxt security-header middleware is active on the deployed server and that HTTPS requests terminate with HSTS enabled.")
 
+  if (message.includes("public copy should not expose"))
+    hints.push("Review the named public route for demo/mock/sample/placeholder language. Public marketing and access pages should read like a launched product, while operational mode details should stay in docs, admin readiness, or noindex private surfaces.")
+
   if (!hints.length)
     hints.push("Run npm run build && npm run verify:public:local first. If that passes, deploy the exact validated commit/tag and rerun this live verifier with VERIFY_PUBLIC_EXPECT_RELEASE and VERIFY_PUBLIC_EXPECT_COMMIT_SHA.")
 
@@ -397,6 +439,7 @@ for (const route of publicRoutes) {
   assertSecurityHeaders(page.response, route)
   assert(!header(page.response, "x-robots-tag").toLowerCase().includes("noindex"), `${route} should not send noindex headers`)
   assertPublicPageMetadata(page.text, route)
+  assertPublicCopyQuality(page.text, route)
 
   for (const href of extractAnchorHrefs(page.text)) {
     const linkedRoute = routePathFromInternalHref(href, route)
@@ -448,6 +491,7 @@ const signIn = await fetchText("/auth/sign-in")
 assert(signIn.response.status === 200, "/auth/sign-in should exist")
 assert(hasNoindex(signIn.response, signIn.text), "/auth/sign-in should be noindex")
 assertPrivateResponsePolicy(signIn.response, "/auth/sign-in")
+assertPublicCopyQuality(signIn.text, "/auth/sign-in")
 
 const missing = await fetchText("/definitely-not-a-cofoundry-page")
 assert(missing.response.status === 404, "unknown frontend routes should return 404")
