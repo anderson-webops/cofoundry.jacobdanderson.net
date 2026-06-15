@@ -25,9 +25,17 @@ Source/runtime context:
 
 Tasks:
 1. Pull and deploy the latest `main` commit or the current `v1.x` release tag.
-2. After deploy, run the live-origin verifier locally and publish the result through GitHub Actions if the CLI/token is available:
+2. After deploy, run the live-origin verifier locally and publish the result through GitHub Actions if a GitHub token or CLI is available:
 
    VERIFY_PUBLIC_EXPECT_RELEASE=<release> VERIFY_PUBLIC_EXPECT_COMMIT_SHA=<commit> npm run verify:public
+
+   npm run verify:public:dispatch -- --dry-run --expected-release <release> --expected-commit-sha <commit>
+
+   GITHUB_TOKEN=<token-with-actions-or-repo-dispatch-access> npm run verify:public:dispatch -- \
+     --expected-release <release> \
+     --expected-commit-sha <commit>
+
+   If the GitHub CLI is already installed, the equivalent manual trigger is:
 
    gh workflow run public-site-verification.yml \
      -R anderson-webops/cofoundry.jacobdanderson.net \
@@ -36,7 +44,7 @@ Tasks:
      -f expected_commit_sha=<commit> \
      -f require_deployment_identity=true
 
-   If deploy automation uses repository dispatch instead, send event type `cofoundry-deployed` with `client_payload.base_url`, `client_payload.expected_release`, `client_payload.expected_commit_sha`, and `client_payload.require_deployment_identity`.
+   The checked-in dispatcher sends event type `cofoundry-deployed` with `client_payload.base_url`, `client_payload.expected_release`, `client_payload.expected_commit_sha`, and `client_payload.require_deployment_identity`.
 3. Generate a long random `COFOUNDRY_OPERATIONS_TOKEN` and add it to the Vault/host env file consumed by the Nuxt server process only.
 4. Ensure the app process can write to `.data/operations-telemetry.json` and `.data/local-file-uploads/`, or set `COFOUNDRY_LOCAL_DATA_DIR` to a durable writable host path and optionally set `COFOUNDRY_OPERATIONS_RETENTION_LIMIT`.
 5. Restart the app and verify production logs do not mention loading `../.env`.
