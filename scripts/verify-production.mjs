@@ -257,6 +257,13 @@ try {
   assert(workspaceEvents.response.status === 401, "/api/workspace/events should fail closed without a member session")
   assertPrivateResponsePolicy(workspaceEvents.response, "/api/workspace/events unauthorized response")
 
+  const workspaceTyping = await postJson("/api/workspace/typing", {
+    conversationId: "conversation_verify",
+    isTyping: true,
+  })
+  assert(workspaceTyping.response.status === 401, "/api/workspace/typing should fail closed without a member session")
+  assertPrivateResponsePolicy(workspaceTyping.response, "/api/workspace/typing unauthorized response")
+
   const readiness = await fetchJson("/api/admin/readiness", {
     headers: { cookie: signedAdminCookieHeader() },
   })

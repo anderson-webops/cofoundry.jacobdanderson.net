@@ -9,6 +9,12 @@ interface WorkspaceRealtimeRefreshOptions {
 
 type WorkspaceRealtimeStatus = "closed" | "connecting" | "fallback" | "open" | "unsupported"
 
+interface WorkspaceTypingRealtimePayload {
+  conversationId: string
+  isTyping: boolean
+  userId: string
+}
+
 export function useWorkspaceRealtimeRefresh(options: WorkspaceRealtimeRefreshOptions = {}) {
   const workspaceStore = useWorkspaceStore()
   const { session } = useSessionState()
@@ -23,6 +29,7 @@ export function useWorkspaceRealtimeRefresh(options: WorkspaceRealtimeRefreshOpt
   let intervalId: number | null = null
   let lastStartedAtMs: number | null = null
   let eventSource: EventSource | null = null
+  const typingTimers = new Map<string, number>()
 
   function isVisible() {
     return typeof document === "undefined" || document.visibilityState === "visible"
@@ -90,6 +97,46 @@ export function useWorkspaceRealtimeRefresh(options: WorkspaceRealtimeRefreshOpt
     }
   }
 
+  function clearTypingTimer(timerKey: string) {
+    const timer = typingTimers.get(timerKey)
+    if (timer)
+      window.clearTimeout(timer)
+
+    typingTimers.delete(timerKey)
+  }
+
+  function clearTypingTimers() {
+    for (const timer of typingTimers.values())
+      window.clearTimeout(timer)
+
+    typingTimers.clear()
+  }
+
+  function handleTypingEvent(event: MessageEvent) {
+    let payload: WorkspaceTypingRealtimePayload | null = null
+
+    try {
+      payload = JSON.parse(event.data) as WorkspaceTypingRealtimePayload
+    }
+    catch {
+      return
+    }
+
+    if (!payload?.conversationId || !payload.userId || payload.userId === session.value?.id)
+      return
+
+    const timerKey = `${payload.conversationId}:${payload.userId}`
+    clearTypingTimer(timerKey)
+    workspaceStore.setTyping(payload.conversationId, payload.userId, payload.isTyping === true)
+
+    if (payload.isTyping) {
+      typingTimers.set(timerKey, window.setTimeout(() => {
+        workspaceStore.setTyping(payload.conversationId, payload.userId, false)
+        typingTimers.delete(timerKey)
+      }, 7000))
+    }
+  }
+
   function connectRealtime() {
     if (!shouldUseWorkspaceRealtime({
       enabled: enableRealtime,
@@ -115,6 +162,7 @@ export function useWorkspaceRealtimeRefresh(options: WorkspaceRealtimeRefreshOpt
     eventSource.addEventListener("workspace-change", () => {
       void refreshWorkspace("realtime")
     })
+    eventSource.addEventListener("typing", event => handleTypingEvent(event as MessageEvent))
     eventSource.addEventListener("error", () => {
       realtimeStatus.value = "fallback"
       closeRealtime()
@@ -151,11 +199,13 @@ export function useWorkspaceRealtimeRefresh(options: WorkspaceRealtimeRefreshOpt
     onBeforeUnmount(() => {
       stopIntervalFallback()
       closeRealtime()
+      clearTypingTimers()
       document.removeEventListener("visibilitychange", handleVisibilityChange)
       window.removeEventListener("online", handleOnline)
     })
 
     watch(() => session.value?.id || "", () => {
+      clearTypingTimers()
       reconnectRealtime()
     })
   }

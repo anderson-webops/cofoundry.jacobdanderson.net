@@ -50,7 +50,7 @@ watch(draftMessage, (value) => {
   if (!authStore.currentUser || !conversation.value)
     return
 
-  workspaceStore.setTyping(conversation.value.id, authStore.currentUser.id, Boolean(value))
+  void workspaceStore.syncTypingPresence(conversation.value.id, authStore.currentUser.id, Boolean(value))
 })
 
 function captureFiles(event: Event) {
@@ -69,7 +69,7 @@ async function sendMessage() {
     return
 
   await workspaceStore.sendMessage(conversation.value.id, authStore.currentUser.id, draftMessage.value.trim(), attachments.value)
-  workspaceStore.setTyping(conversation.value.id, authStore.currentUser.id, false)
+  await workspaceStore.syncTypingPresence(conversation.value.id, authStore.currentUser.id, false)
   draftMessage.value = ""
   attachments.value = []
 }
