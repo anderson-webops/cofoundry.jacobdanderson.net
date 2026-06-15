@@ -41,7 +41,7 @@ const structuredData = {
   },
 }
 
-usePageSeo(profile.displayName, profile.headline, {
+usePageSeo(`${profile.displayName} founder profile`, profile.headline, {
   canonicalPath: `/people/${entry.slug}`,
   structuredData,
 })

@@ -104,6 +104,10 @@ function firstMatchingLine(value, needles) {
   return value.split(/\r?\n/).find(line => needles.some(needle => line.includes(needle)))?.trim()
 }
 
+function normalizeWhitespace(value) {
+  return value.replace(/\s+/g, " ").trim()
+}
+
 function decodeXml(value) {
   return value
     .replaceAll("&apos;", "'")
@@ -121,6 +125,52 @@ function stripHtmlToText(html) {
     .replace(/<[^>]+>/g, " ")
     .replace(/\s+/g, " ")
     .trim()
+}
+
+function extractTitle(html) {
+  const match = html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)
+  return normalizeWhitespace(decodeXml(match?.[1] || ""))
+}
+
+function extractTagAttributes(tag) {
+  const attributes = new Map()
+  const matches = tag.matchAll(/([:\w-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/g)
+
+  for (const match of matches)
+    attributes.set(match[1].toLowerCase(), decodeXml(match[2] || match[3] || match[4] || ""))
+
+  return attributes
+}
+
+function extractTags(html, tagName) {
+  const pattern = new RegExp(`<${tagName}\\b[^>]*>`, "gi")
+  return Array.from(html.matchAll(pattern), match => match[0])
+}
+
+function findMetaContent(html, key, value) {
+  const targetValue = value.toLowerCase()
+
+  for (const tag of extractTags(html, "meta")) {
+    const attributes = extractTagAttributes(tag)
+    const tagValue = attributes.get(key)?.toLowerCase()
+
+    if (tagValue === targetValue)
+      return normalizeWhitespace(attributes.get("content") || "")
+  }
+
+  return ""
+}
+
+function findCanonicalHref(html) {
+  for (const tag of extractTags(html, "link")) {
+    const attributes = extractTagAttributes(tag)
+    const rel = (attributes.get("rel") || "").toLowerCase().split(/\s+/)
+
+    if (rel.includes("canonical"))
+      return attributes.get("href") || ""
+  }
+
+  return ""
 }
 
 function extractSitemapUrl(robotsText) {
@@ -256,6 +306,48 @@ function assertPublicCopyQuality(html, route) {
   }
 }
 
+function assertTextLength(value, route, field, minLength, maxLength) {
+  assert(value.length >= minLength, `${route} ${field} should be at least ${minLength} characters`)
+  assert(value.length <= maxLength, `${route} ${field} should be ${maxLength} characters or less`)
+  assert(!/\b(undefined|null)\b/i.test(value), `${route} ${field} should not include undefined/null`)
+}
+
+function assertPublicSeoMetadata(html, route) {
+  const canonicalUrl = canonicalUrlForRoute(route)
+  const title = extractTitle(html)
+  const description = findMetaContent(html, "name", "description")
+  const canonicalHref = findCanonicalHref(html)
+  const ogTitle = findMetaContent(html, "property", "og:title")
+  const ogDescription = findMetaContent(html, "property", "og:description")
+  const ogImage = findMetaContent(html, "property", "og:image")
+  const ogSiteName = findMetaContent(html, "property", "og:site_name")
+  const ogType = findMetaContent(html, "property", "og:type")
+  const ogUrl = findMetaContent(html, "property", "og:url")
+  const twitterCard = findMetaContent(html, "name", "twitter:card")
+  const twitterTitle = findMetaContent(html, "name", "twitter:title")
+  const twitterDescription = findMetaContent(html, "name", "twitter:description")
+  const twitterImage = findMetaContent(html, "name", "twitter:image")
+
+  assertTextLength(title, route, "title", 20, 100)
+  assert(title.includes("CoFoundry"), `${route} title should include CoFoundry`)
+  assert(title !== "CoFoundry", `${route} title should be page-specific`)
+
+  assertTextLength(description, route, "description", 35, 240)
+  assert(canonicalHref === canonicalUrl, `${route} canonical link should be ${canonicalUrl}`)
+
+  assert(ogTitle.includes("CoFoundry"), `${route} og:title should include CoFoundry`)
+  assert(ogDescription === description, `${route} og:description should match meta description`)
+  assert(ogSiteName === "CoFoundry", `${route} og:site_name should be CoFoundry`)
+  assert(["article", "profile", "website"].includes(ogType), `${route} og:type should be article, profile, or website`)
+  assert(ogUrl === canonicalUrl, `${route} og:url should be ${canonicalUrl}`)
+  assert(ogImage.startsWith(`${expectedCanonicalOrigin}/`), `${route} og:image should use ${expectedCanonicalOrigin}`)
+
+  assert(twitterCard === "summary_large_image", `${route} twitter:card should be summary_large_image`)
+  assert(twitterTitle.includes("CoFoundry"), `${route} twitter:title should include CoFoundry`)
+  assert(twitterDescription === description, `${route} twitter:description should match meta description`)
+  assert(twitterImage === ogImage, `${route} twitter:image should match og:image`)
+}
+
 function assertDeploymentIdentity(health) {
   const deployment = health.deployment || {}
 
@@ -311,6 +403,7 @@ async function assertPublicInternalLinks(linkSources, publicRouteSet) {
     assert(publicRouteSet.has(linkedPath), `public link ${linkedRoute} from ${sourceLabel} should be listed in sitemap.xml`)
     assertPublicPageMetadata(page.text, linkedPath)
     assertPublicCopyQuality(page.text, linkedRoute)
+    assertPublicSeoMetadata(page.text, linkedPath)
   }
 }
 
@@ -381,6 +474,9 @@ function failureHints(message) {
   if (message.includes("public copy should not expose"))
     hints.push("Review the named public route for demo/mock/sample/placeholder language. Public marketing and access pages should read like a launched product, while operational mode details should stay in docs, admin readiness, or noindex private surfaces.")
 
+  if (message.includes("title") || message.includes("description") || message.includes("canonical") || message.includes("og:") || message.includes("twitter:"))
+    hints.push("Review the named route's `usePageSeo` call and canonical path. Public pages need page-specific title, description, canonical, Open Graph, and Twitter metadata.")
+
   if (!hints.length)
     hints.push("Run npm run build && npm run verify:public:local first. If that passes, deploy the exact validated commit/tag and rerun this live verifier with VERIFY_PUBLIC_EXPECT_RELEASE and VERIFY_PUBLIC_EXPECT_COMMIT_SHA.")
 
@@ -440,6 +536,7 @@ for (const route of publicRoutes) {
   assert(!header(page.response, "x-robots-tag").toLowerCase().includes("noindex"), `${route} should not send noindex headers`)
   assertPublicPageMetadata(page.text, route)
   assertPublicCopyQuality(page.text, route)
+  assertPublicSeoMetadata(page.text, route)
 
   for (const href of extractAnchorHrefs(page.text)) {
     const linkedRoute = routePathFromInternalHref(href, route)
