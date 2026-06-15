@@ -1,0 +1,15 @@
+[Unit]
+Description=CoFoundry realtime fanout smoke test
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=cofoundry
+Group=cofoundry
+WorkingDirectory=/srv/cofoundry/current
+EnvironmentFile=/etc/cofoundry/operations.env
+ExecStart=/usr/bin/env bash -lc 'npm run operations:realtime-smoke -- --user-id "$${COFOUNDRY_REALTIME_SMOKE_USER_ID:-cofoundry-realtime-smoke-user}" --min-delivered "$${COFOUNDRY_REALTIME_SMOKE_MIN_DELIVERED:-0}" --metadata runbook=systemd-manual'
+SyslogIdentifier=cofoundry-operations-realtime-smoke
+NoNewPrivileges=true
+PrivateTmp=true

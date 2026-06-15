@@ -238,7 +238,7 @@ describe("production readiness snapshot", () => {
     })
   })
 
-  it("passes realtime scaling readiness when fanout is configured", () => {
+  it("warns realtime scaling readiness when fanout is configured without smoke evidence", () => {
     const snapshot = buildProductionReadinessSnapshot({
       accessRequests: [],
       adminPosture: healthyAdminPosture,
@@ -259,10 +259,60 @@ describe("production readiness snapshot", () => {
     })
     const checkById = new Map(snapshot.groups.flatMap(group => group.checks).map(check => [check.id, check]))
 
+    expect(snapshot.overallStatus).toBe("warn")
+    expect(checkById.get("realtime-fanout")).toMatchObject({
+      status: "warn",
+      summary: "Fanout configured, no smoke event",
+    })
+    expect(snapshot.provisioningTasks.find(task => task.id === "realtime-fanout-provisioning")).toMatchObject({
+      status: "warn",
+      title: "Workspace realtime fanout",
+    })
+    expect(snapshot.cutoverPhases.find(phase => phase.id === "workspace-realtime-scaling")).toMatchObject({
+      status: "warn",
+      summary: "Fanout configured, no smoke event",
+    })
+  })
+
+  it("passes realtime scaling readiness when fanout has worker smoke evidence", () => {
+    const snapshot = buildProductionReadinessSnapshot({
+      accessRequests: [],
+      adminPosture: healthyAdminPosture,
+      contactMailConfigured: true,
+      environment: environmentSnapshot(),
+      environmentValidationErrors: [],
+      expectsMultiInstanceRuntime: true,
+      generatedAt,
+      hasAlertWebhookConfigured: true,
+      hasDurableLocalDataDir: true,
+      hasOperationsWorkerToken: true,
+      hasRealtimeFanoutConfigured: true,
+      hasSessionSigningSecret: true,
+      hasTrustVerificationProviderConfigured: false,
+      isLocalDevelopment: false,
+      operations: {
+        ...healthyOperations,
+        operationalEvents: [
+          ...healthyOperations.operationalEvents,
+          {
+            created_at: generatedAt,
+            event_type: "realtime_fanout_smoke_succeeded",
+            id: "event_realtime_smoke",
+            severity: "info",
+            source: "realtime-smoke-worker",
+            target_id: "realtime-smoke-2026-06-12",
+            target_type: "realtime_fanout",
+          },
+        ],
+      },
+      privacyRequests: [],
+    })
+    const checkById = new Map(snapshot.groups.flatMap(group => group.checks).map(check => [check.id, check]))
+
     expect(snapshot.overallStatus).toBe("pass")
     expect(checkById.get("realtime-fanout")).toMatchObject({
       status: "pass",
-      summary: "Fanout URL configured",
+      summary: "realtime_fanout_smoke_succeeded, 0 days old",
     })
     expect(snapshot.provisioningTasks.find(task => task.id === "realtime-fanout-provisioning")).toMatchObject({
       status: "pass",
@@ -270,7 +320,49 @@ describe("production readiness snapshot", () => {
     })
     expect(snapshot.cutoverPhases.find(phase => phase.id === "workspace-realtime-scaling")).toMatchObject({
       status: "pass",
-      summary: "Fanout bridge configured",
+      summary: "realtime_fanout_smoke_succeeded, 0 days old",
+    })
+  })
+
+  it("fails realtime scaling readiness when the latest fanout smoke failed", () => {
+    const snapshot = buildProductionReadinessSnapshot({
+      accessRequests: [],
+      adminPosture: healthyAdminPosture,
+      contactMailConfigured: true,
+      environment: environmentSnapshot(),
+      environmentValidationErrors: [],
+      expectsMultiInstanceRuntime: true,
+      generatedAt,
+      hasAlertWebhookConfigured: true,
+      hasDurableLocalDataDir: true,
+      hasOperationsWorkerToken: true,
+      hasRealtimeFanoutConfigured: true,
+      hasSessionSigningSecret: true,
+      hasTrustVerificationProviderConfigured: false,
+      isLocalDevelopment: false,
+      operations: {
+        ...healthyOperations,
+        operationalEvents: [
+          ...healthyOperations.operationalEvents,
+          {
+            created_at: generatedAt,
+            event_type: "realtime_fanout_smoke_failed",
+            id: "event_realtime_smoke_failed",
+            severity: "error",
+            source: "realtime-smoke-worker",
+            target_id: "realtime-smoke-2026-06-12",
+            target_type: "realtime_fanout",
+          },
+        ],
+      },
+      privacyRequests: [],
+    })
+    const checkById = new Map(snapshot.groups.flatMap(group => group.checks).map(check => [check.id, check]))
+
+    expect(snapshot.overallStatus).toBe("fail")
+    expect(checkById.get("realtime-fanout")).toMatchObject({
+      status: "fail",
+      summary: "realtime_fanout_smoke_failed, 0 days old",
     })
   })
 

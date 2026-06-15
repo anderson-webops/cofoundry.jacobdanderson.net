@@ -54,6 +54,11 @@ interface OperationsResponse<T> {
   [key: string]: T | PendingFileScan[] | string | undefined
 }
 
+interface RealtimeIngressResponse {
+  delivered?: number
+  ok?: boolean
+}
+
 const defaultTimeoutMs = 60_000
 const defaultAlertTimeoutMs = 10_000
 const defaultAlertSeverities = new Set<OperationsAlertSeverity>(["error", "warning"])
@@ -81,6 +86,11 @@ function parseBooleanFlag(value: string | undefined) {
 function parsePositiveInteger(value: string | undefined, fallback: number) {
   const parsed = Number.parseInt(value || "", 10)
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
+}
+
+function parseNonNegativeInteger(value: string | undefined, fallback: number) {
+  const parsed = Number.parseInt(value || "", 10)
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback
 }
 
 function parseArgs(argv: string[]): ParsedArgs {
@@ -723,6 +733,94 @@ async function runScan(parsed: ParsedArgs, options: Required<WorkerCommandOption
   options.log(JSON.stringify({ clean, failed, flagged, pending: pendingScans.length, skipped }, null, 2))
 }
 
+async function runRealtimeSmoke(parsed: ParsedArgs, options: Required<WorkerCommandOptions>) {
+  const environment = resolveOperationsWorkerEnvironment(options.env)
+  const now = options.now()
+  const createdAt = now.toISOString()
+  const id = flagValue(parsed.flags, "id", `realtime-smoke-${timestampForId(now)}`)
+  const metadata = {
+    purpose: "realtime-fanout-smoke",
+    ...parseMetadata(parsed.flags),
+  }
+  const userId = flagValue(parsed.flags, "user-id", "cofoundry-realtime-smoke-user")
+  const sourceInstanceId = flagValue(parsed.flags, "source-instance-id", readValue(options.env, "COFOUNDRY_INSTANCE_ID") || "operations-worker")
+  const minDelivered = parseNonNegativeInteger(flagValue(parsed.flags, "min-delivered"), 0)
+  const envelope = {
+    createdAt,
+    eventType: "workspace-change",
+    idScope: `operations.realtime_smoke:${id}`,
+    messages: [{
+      message: {
+        data: JSON.stringify({
+          createdAt,
+          metadata,
+          source: "operations.realtime_smoke",
+          userId,
+        }),
+        event: "workspace-change",
+        id: `${createdAt}:${userId}:operations.realtime_smoke:${id}`,
+        retry: 5000,
+      },
+      userId,
+    }],
+    sourceInstanceId,
+    version: 1,
+  }
+  let failureReported = false
+
+  try {
+    const response = await requestJson<RealtimeIngressResponse>(environment, "/api/operations/realtime-events", {
+      body: envelope,
+      fetchImpl: options.fetch,
+    })
+    const delivered = typeof response.delivered === "number" ? response.delivered : 0
+    const passed = delivered >= minDelivered
+
+    await reportOperationalEvent(environment, {
+      eventType: passed ? "realtime_fanout_smoke_succeeded" : "realtime_fanout_smoke_failed",
+      metadata: {
+        ...metadata,
+        delivered,
+        minDelivered,
+        sourceInstanceId,
+        userId,
+      },
+      severity: passed ? "info" : "error",
+      source: "realtime-smoke-worker",
+      targetId: id,
+      targetType: "realtime_fanout",
+    }, options)
+
+    if (!passed) {
+      failureReported = true
+      throw new Error(`Realtime smoke delivered ${delivered}; expected at least ${minDelivered}.`)
+    }
+
+    options.log(JSON.stringify({ delivered, id, minDelivered, ok: true }, null, 2))
+  }
+  catch (error) {
+    if (failureReported)
+      throw error
+
+    await reportOperationalEvent(environment, {
+      eventType: "realtime_fanout_smoke_failed",
+      metadata: {
+        ...metadata,
+        error: error instanceof Error ? error.message : "Unknown realtime smoke failure.",
+        minDelivered,
+        sourceInstanceId,
+        userId,
+      },
+      severity: "error",
+      source: "realtime-smoke-worker",
+      targetId: id,
+      targetType: "realtime_fanout",
+    }, options)
+
+    throw error
+  }
+}
+
 async function runEvent(parsed: ParsedArgs, options: Required<WorkerCommandOptions>) {
   const environment = resolveOperationsWorkerEnvironment(options.env)
   const source = flagValue(parsed.flags, "source", "operations-worker")
@@ -840,6 +938,8 @@ export async function runOperationsWorker(argv: string[], options: WorkerCommand
       return runLifecycleNotification(parsed, resolvedOptions)
     case "mail-smoke":
       return runMailSmoke(parsed, resolvedOptions)
+    case "realtime-smoke":
+      return runRealtimeSmoke(parsed, resolvedOptions)
     case "restore-drill":
       return runRestoreDrill(parsed, resolvedOptions)
     case "scan":
@@ -849,7 +949,7 @@ export async function runOperationsWorker(argv: string[], options: WorkerCommand
     default:
       throw new Error([
         "Unknown operations worker command.",
-        "Use one of: alert-smoke, backup, contract-envelope, digest, email-suppression, event, heartbeat, lifecycle-notification, mail-smoke, restore-drill, scan, trust-verification.",
+        "Use one of: alert-smoke, backup, contract-envelope, digest, email-suppression, event, heartbeat, lifecycle-notification, mail-smoke, realtime-smoke, restore-drill, scan, trust-verification.",
       ].join(" "))
   }
 }
