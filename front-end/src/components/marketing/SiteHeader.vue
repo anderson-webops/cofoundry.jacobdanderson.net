@@ -72,14 +72,24 @@ onBeforeUnmount(() => {
           {{ primaryAccessCta.label }}
         </BaseButton>
       </div>
-      <button class="p-2 border border-[var(--line)] rounded-full lg:hidden" @click="menuOpen = !menuOpen">
-        <span class="i-carbon-menu" />
+      <button
+        type="button"
+        class="text-[var(--text)] p-2 border border-[var(--line)] rounded-full bg-[var(--panel-strong)] inline-flex items-center justify-center lg:hidden"
+        aria-controls="marketing-mobile-navigation"
+        :aria-expanded="menuOpen"
+        aria-label="Toggle site navigation"
+        @click="menuOpen = !menuOpen"
+      >
+        <span class="text-lg" :class="menuOpen ? 'i-carbon-close' : 'i-carbon-menu'" aria-hidden="true" />
       </button>
     </div>
-    <div v-if="menuOpen" class="page-shell pb-4 gap-3 grid lg:hidden">
+    <div v-if="menuOpen" id="marketing-mobile-navigation" class="page-shell pb-4 gap-3 grid lg:hidden">
       <NuxtLink v-for="item in marketingNavigation" :key="item.to" :to="item.to" class="px-3 py-2 rounded-2xl hover:bg-[var(--accent-soft)]" @click="menuOpen = false">
         {{ item.label }}
       </NuxtLink>
+      <div class="px-3">
+        <ThemeToggle />
+      </div>
       <div class="flex gap-3">
         <BaseButton variant="ghost" :to="secondaryAccessCta.to" block>
           {{ secondaryAccessCta.label }}
