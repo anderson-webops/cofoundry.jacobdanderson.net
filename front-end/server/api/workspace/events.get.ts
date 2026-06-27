@@ -1,28 +1,33 @@
 import { createEventStream } from "h3"
 import { requireAuthenticatedSession } from "~/server/utils/auth"
-import { subscribeWorkspaceRealtime } from "../../utils/workspace-realtime"
+import { safePushWorkspaceRealtimeSink, subscribeWorkspaceRealtime } from "../../utils/workspace-realtime"
 
 export default defineEventHandler(async (event) => {
   const session = await requireAuthenticatedSession(event)
   const stream = createEventStream(event)
+  const streamState = { closed: false }
   const unsubscribe = subscribeWorkspaceRealtime(session.id, stream)
   const heartbeat = setInterval(() => {
-    void stream.push({
+    void safePushWorkspaceRealtimeSink(stream, {
       data: JSON.stringify({
         createdAt: new Date().toISOString(),
         userId: session.id,
       }),
       event: "heartbeat",
-    })
+    }, streamState)
   }, 30_000)
 
   stream.onClosed(async () => {
+    streamState.closed = true
     clearInterval(heartbeat)
     unsubscribe()
-    await stream.close()
+    try {
+      await stream.close()
+    }
+    catch {}
   })
 
-  await stream.push({
+  await safePushWorkspaceRealtimeSink(stream, {
     data: JSON.stringify({
       createdAt: new Date().toISOString(),
       source: "workspace.realtime.connected",
@@ -30,7 +35,7 @@ export default defineEventHandler(async (event) => {
     }),
     event: "connected",
     retry: 5000,
-  })
+  }, streamState)
 
   return stream.send()
 })

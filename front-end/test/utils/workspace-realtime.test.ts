@@ -5,6 +5,7 @@ import {
   emitWorkspaceRealtimeChange,
   emitWorkspaceTypingPresence,
   getWorkspaceRealtimeSubscriberCount,
+  safePushWorkspaceRealtimeSink,
   subscribeWorkspaceRealtime,
 } from "../../server/utils/workspace-realtime"
 
@@ -63,6 +64,34 @@ describe("workspace realtime hub", () => {
 
     expect(delivered).toBe(0)
     expect(getWorkspaceRealtimeSubscriberCount("user_one")).toBe(0)
+  })
+
+  it("marks closed stream sinks without surfacing write failures", async () => {
+    const state = { closed: false }
+    const failed = await safePushWorkspaceRealtimeSink({
+      push: async () => {
+        throw new Error("WritableStream is closed")
+      },
+    }, {
+      data: JSON.stringify({ userId: "user_one" }),
+      event: "heartbeat",
+    }, state)
+
+    expect(failed).toBe(false)
+    expect(state.closed).toBe(true)
+
+    let writeCount = 0
+    const skipped = await safePushWorkspaceRealtimeSink({
+      push: () => {
+        writeCount += 1
+      },
+    }, {
+      data: JSON.stringify({ userId: "user_one" }),
+      event: "heartbeat",
+    }, state)
+
+    expect(skipped).toBe(false)
+    expect(writeCount).toBe(0)
   })
 
   it("delivers typing presence without persisting workspace state", async () => {

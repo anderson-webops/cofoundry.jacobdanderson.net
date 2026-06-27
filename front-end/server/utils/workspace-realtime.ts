@@ -18,7 +18,18 @@ export interface WorkspaceTypingRealtimePayload {
 }
 
 export interface WorkspaceRealtimeSink {
-  push: (message: { data: string, event: string, id?: string, retry?: number }) => Promise<void> | void
+  push: (message: WorkspaceRealtimePushMessage) => Promise<void> | void
+}
+
+export interface WorkspaceRealtimeSinkState {
+  closed: boolean
+}
+
+export interface WorkspaceRealtimePushMessage {
+  data: string
+  event: string
+  id?: string
+  retry?: number
 }
 
 export interface WorkspaceRealtimeMessage {
@@ -178,6 +189,26 @@ export function subscribeWorkspaceRealtime(userId: string, sink: WorkspaceRealti
   }
 }
 
+export async function safePushWorkspaceRealtimeSink(
+  sink: WorkspaceRealtimeSink,
+  message: WorkspaceRealtimePushMessage,
+  state?: WorkspaceRealtimeSinkState,
+) {
+  if (state?.closed)
+    return false
+
+  try {
+    await sink.push(message)
+    return true
+  }
+  catch {
+    if (state)
+      state.closed = true
+
+    return false
+  }
+}
+
 export function getWorkspaceRealtimeFanoutStatus(): WorkspaceRealtimeFanoutStatus {
   const fanoutUrl = readFanoutUrl()
 
@@ -273,13 +304,12 @@ export async function deliverWorkspaceRealtimeEnvelope(value: unknown) {
       continue
 
     for (const [subscriptionId, sink] of group.entries()) {
-      try {
-        await sink.push(message)
+      if (await safePushWorkspaceRealtimeSink(sink, message)) {
         delivered += 1
+        continue
       }
-      catch {
-        group.delete(subscriptionId)
-      }
+
+      group.delete(subscriptionId)
     }
 
     if (!group.size)
