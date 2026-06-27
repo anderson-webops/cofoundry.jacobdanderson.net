@@ -169,7 +169,7 @@ function rowContainsAny(row: Record<string, unknown>, fields: string[], values: 
   return values.some(value => haystack.includes(value))
 }
 
-function latestMatchingEvent(rows: Array<Record<string, unknown>>, matcher: (row: Record<string, unknown>) => boolean) {
+function latestMatchingEvent(rows: Array<Record<string, unknown>>, matcher: (_row: Record<string, unknown>) => boolean) {
   return latestRow(rows.filter(matcher), ["created_at"])
 }
 

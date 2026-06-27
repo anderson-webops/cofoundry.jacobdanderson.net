@@ -5,7 +5,7 @@ defineProps<{
   helper?: string
 }>()
 
-const model = defineModel<string[]>({ default: [] })
+const model = defineModel<string[]>({ default: () => [] })
 
 function toggle(value: string) {
   if (model.value.includes(value))

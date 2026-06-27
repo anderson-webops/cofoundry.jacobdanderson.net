@@ -12,7 +12,7 @@ type FetchLike = typeof fetch
 interface WorkerCommandOptions {
   env?: EnvironmentSource
   fetch?: FetchLike
-  log?: (message: string) => void
+  log?: (_message: string) => void
   now?: () => Date
   runShellCommand?: typeof runShellCommand
 }

@@ -18,7 +18,7 @@ export interface WorkspaceTypingRealtimePayload {
 }
 
 export interface WorkspaceRealtimeSink {
-  push: (message: WorkspaceRealtimePushMessage) => Promise<void> | void
+  push: (_message: WorkspaceRealtimePushMessage) => Promise<void> | void
 }
 
 export interface WorkspaceRealtimeSinkState {
@@ -250,7 +250,7 @@ export async function emitWorkspaceTypingPresence(
 async function emitWorkspaceRealtimeEvent(
   userIds: string[],
   eventType: WorkspaceRealtimeEventType,
-  buildPayload: (userId: string) => WorkspaceRealtimePayload | WorkspaceTypingRealtimePayload,
+  buildPayload: (_userId: string) => WorkspaceRealtimePayload | WorkspaceTypingRealtimePayload,
   idScope: string,
   createdAt: string,
 ) {

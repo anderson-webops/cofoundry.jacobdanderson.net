@@ -122,7 +122,7 @@ async function writeStore(store: LocalAccessRequestStore) {
   cachedStorePath = path
 }
 
-async function updateStore<T>(updater: (store: LocalAccessRequestStore) => T | Promise<T>) {
+async function updateStore<T>(updater: (_store: LocalAccessRequestStore) => T | Promise<T>) {
   const run = writeQueue.then(async () => {
     const store = await readStore()
     const result = await updater(store)

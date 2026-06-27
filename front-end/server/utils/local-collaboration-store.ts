@@ -154,7 +154,7 @@ async function writeStore(store: LocalCollaborationStore) {
   await writeFile(storePath(), `${JSON.stringify(pruneStore(store), null, 2)}\n`, "utf-8")
 }
 
-async function updateStore<T>(updater: (store: LocalCollaborationStore) => T | Promise<T>) {
+async function updateStore<T>(updater: (_store: LocalCollaborationStore) => T | Promise<T>) {
   const run = writeQueue.then(async () => {
     const store = await readStore()
     const result = await updater(store)
