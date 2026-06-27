@@ -56,6 +56,15 @@ function readFirstValue(env: EnvironmentSource, keys: string[]) {
   return ""
 }
 
+export function releaseTagFromPackageVersion(version: string) {
+  const normalizedVersion = version.trim()
+
+  if (!/^\d+\.\d+\.\d+(?:[-+][0-9a-z.-]+)?$/i.test(normalizedVersion))
+    return ""
+
+  return `v${normalizedVersion}`
+}
+
 function stripTrailingSlash(value: string) {
   return value.replace(trailingSlashPattern, "")
 }

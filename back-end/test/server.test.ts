@@ -2,7 +2,7 @@ import type { AddressInfo } from "node:net"
 import assert from "node:assert/strict"
 import test from "node:test"
 import { resolveBootstrapAdminEnvironment, resolveBootstrapAdminInput } from "../src/bootstrap-admin"
-import { collectEnvironmentValidationErrors, isLocalDevelopmentEnvironment, readDeploymentMetadata, readPublicEnvironment, readSecretEnvironment } from "../src/environment"
+import { collectEnvironmentValidationErrors, isLocalDevelopmentEnvironment, readBackendDeploymentMetadata, readDeploymentMetadata, readPublicEnvironment, readSecretEnvironment, releaseTagFromPackageVersion } from "../src/environment"
 import { createBackendServer } from "../src/server"
 
 function restoreEnvValue(key: string, value: string | undefined) {
@@ -46,7 +46,7 @@ test("health endpoint reports service status", async () => {
     assert.equal(response.status, 200)
     assert.equal(body.status, "ok")
     assert.equal(body.service, "cofoundry-back-end")
-    assert.deepEqual(body.deployment, readDeploymentMetadata(process.env))
+    assert.deepEqual(body.deployment, readBackendDeploymentMetadata(process.env))
     assert.equal(typeof body.now, "string")
   })
 })
@@ -156,6 +156,18 @@ test("backend environment reads safe deployment metadata from deploy env", () =>
     deployedAt: "2026-06-12T11:55:00.000Z",
     release: "v1.1.78",
   })
+})
+
+test("backend deployment metadata falls back to package release without overriding env", () => {
+  assert.equal(releaseTagFromPackageVersion("1.1.105"), "v1.1.105")
+  assert.equal(releaseTagFromPackageVersion("local-release"), "")
+  assert.deepEqual(readDeploymentMetadata({}, { release: "v1.1.105" }), {
+    commitSha: "",
+    deployedAt: "",
+    release: "v1.1.105",
+  })
+  assert.equal(readBackendDeploymentMetadata({}).release, "v1.1.105")
+  assert.equal(readBackendDeploymentMetadata({ COFOUNDRY_RELEASE: "v1.1.106" }).release, "v1.1.106")
 })
 
 test("unknown routes return a 404 payload", async () => {

@@ -1,7 +1,7 @@
 {
   "name": "cofoundry-monorepo",
   "type": "module",
-  "version": "1.0.0",
+  "version": "1.1.105",
   "private": true,
   "packageManager": "npm@11.16.0",
   "description": "Monorepo for the CoFoundry founder matching platform",

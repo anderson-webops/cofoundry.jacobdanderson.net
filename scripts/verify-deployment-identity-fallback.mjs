@@ -1,5 +1,5 @@
 import { execFileSync, spawn } from "node:child_process"
-import { existsSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 import { createServer } from "node:net"
 import { join } from "node:path"
 import process from "node:process"
@@ -31,6 +31,19 @@ function readCurrentGitCommit() {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"],
   }).trim()
+}
+
+function releaseTagFromPackageVersion(version) {
+  const normalizedVersion = String(version || "").trim()
+
+  assert(/^\d+\.\d+\.\d+(?:[-+][0-9a-z.-]+)?$/i.test(normalizedVersion), `front-end package version must be semver, received: ${normalizedVersion || "<empty>"}.`)
+
+  return `v${normalizedVersion}`
+}
+
+function readFrontendPackageRelease() {
+  const packageJson = JSON.parse(readFileSync(join(repoRoot, "front-end", "package.json"), "utf8"))
+  return releaseTagFromPackageVersion(packageJson.version)
 }
 
 async function getFreePort() {
@@ -81,6 +94,7 @@ async function main() {
   assert(existsSync(serverEntry), "Built Nitro server not found. Run `npm run build` before `npm run verify:deployment-identity`.")
 
   const expectedCommit = readCurrentGitCommit()
+  const expectedRelease = readFrontendPackageRelease()
   const port = await getFreePort()
   const env = {
     ...process.env,
@@ -108,9 +122,11 @@ async function main() {
   try {
     const body = await waitForHealth(`http://127.0.0.1:${port}`, child, output)
     const commitSha = body?.deployment?.commitSha
+    const release = body?.deployment?.release
 
     assert(commitSha === expectedCommit, `/api/health should expose baked commit fallback ${expectedCommit}; received ${commitSha || "<empty>"}.`)
-    console.log(`Deployment identity fallback verified: ${commitSha}`)
+    assert(release === expectedRelease, `/api/health should expose package release fallback ${expectedRelease}; received ${release || "<empty>"}.`)
+    console.log(`Deployment identity fallback verified: ${expectedRelease} (${commitSha})`)
   }
   finally {
     if (child.exitCode === null) {

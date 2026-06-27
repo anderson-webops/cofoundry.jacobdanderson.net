@@ -1,8 +1,13 @@
+import { readFileSync } from "node:fs"
+import { dirname, resolve } from "node:path"
+import { fileURLToPath } from "node:url"
+
 const backendModes = ["mock", "supabase"] as const
 const billingModes = ["mock", "stripe"] as const
 const localDevelopmentAppUrl = "http://localhost:3000"
 const defaultSupportEmail = "support@cofoundry.dev"
 const trailingSlashPattern = /\/+$/
+const backendPackagePath = resolve(dirname(fileURLToPath(import.meta.url)), "../package.json")
 
 type EnvironmentSource = Record<string, string | undefined>
 
@@ -49,6 +54,25 @@ function readFirstValue(env: EnvironmentSource, keys: string[]) {
   }
 
   return ""
+}
+
+export function releaseTagFromPackageVersion(version: string) {
+  const normalizedVersion = version.trim()
+
+  if (!/^\d+\.\d+\.\d+(?:[-+][0-9a-z.-]+)?$/i.test(normalizedVersion))
+    return ""
+
+  return `v${normalizedVersion}`
+}
+
+function readBackendPackageVersion() {
+  try {
+    const packageJson = JSON.parse(readFileSync(backendPackagePath, "utf8")) as { version?: unknown }
+    return typeof packageJson.version === "string" ? packageJson.version : ""
+  }
+  catch {
+    return ""
+  }
 }
 
 function stripTrailingSlash(value: string) {
@@ -122,12 +146,18 @@ export function readSecretEnvironment(env: EnvironmentSource): SecretEnvironment
   }
 }
 
-export function readDeploymentMetadata(env: EnvironmentSource): DeploymentMetadata {
+export function readDeploymentMetadata(env: EnvironmentSource, fallback: Partial<DeploymentMetadata> = {}): DeploymentMetadata {
   return {
-    commitSha: readFirstValue(env, ["COFOUNDRY_COMMIT_SHA", "GIT_COMMIT", "COMMIT_SHA", "SOURCE_VERSION", "VERCEL_GIT_COMMIT_SHA"]),
-    deployedAt: readFirstValue(env, ["COFOUNDRY_DEPLOYED_AT", "DEPLOYED_AT", "BUILD_TIMESTAMP"]),
-    release: readFirstValue(env, ["COFOUNDRY_RELEASE", "RELEASE_VERSION", "APP_VERSION"]),
+    commitSha: readFirstValue(env, ["COFOUNDRY_COMMIT_SHA", "GIT_COMMIT", "COMMIT_SHA", "SOURCE_VERSION", "VERCEL_GIT_COMMIT_SHA"]) || fallback.commitSha?.trim() || "",
+    deployedAt: readFirstValue(env, ["COFOUNDRY_DEPLOYED_AT", "DEPLOYED_AT", "BUILD_TIMESTAMP"]) || fallback.deployedAt?.trim() || "",
+    release: readFirstValue(env, ["COFOUNDRY_RELEASE", "RELEASE_VERSION", "APP_VERSION"]) || fallback.release?.trim() || "",
   }
+}
+
+export function readBackendDeploymentMetadata(env: EnvironmentSource) {
+  return readDeploymentMetadata(env, {
+    release: releaseTagFromPackageVersion(readBackendPackageVersion()),
+  })
 }
 
 export function collectEnvironmentValidationErrors(env: EnvironmentSource) {
