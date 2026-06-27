@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { adminNavigation } from "../../shared/constants/app"
 import { resolveWorkspaceRouteContext } from "../../shared/utils/workspace-navigation"
 
 describe("workspace route context", () => {
@@ -24,5 +25,31 @@ describe("workspace route context", () => {
 
     expect(context.areaLabel).toBe("Admin workspace")
     expect(context.title).toBe("Reports")
+  })
+
+  it("keeps every admin navigation route out of the generic fallback context", () => {
+    const expectedTitles: Record<string, string> = {
+      "/admin": "Overview",
+      "/admin/access-requests": "Access requests",
+      "/admin/analytics": "Analytics",
+      "/admin/audit": "Audit log",
+      "/admin/billing": "Billing",
+      "/admin/evidence": "Evidence",
+      "/admin/operations": "Operations",
+      "/admin/privacy": "Privacy",
+      "/admin/queue": "Command queue",
+      "/admin/readiness": "Launch readiness",
+      "/admin/reports": "Reports",
+      "/admin/users": "Users",
+    }
+
+    expect(Object.keys(expectedTitles).sort()).toEqual(adminNavigation.map(item => item.to).sort())
+
+    for (const item of adminNavigation) {
+      const context = resolveWorkspaceRouteContext(item.to)
+
+      expect(context.areaLabel).toBe("Admin workspace")
+      expect(context.title).toBe(expectedTitles[item.to])
+    }
   })
 })

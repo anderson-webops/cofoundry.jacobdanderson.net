@@ -10,6 +10,12 @@ interface WorkspaceRouteMatcher extends WorkspaceRouteContext {
 
 const workspaceRouteMatchers: WorkspaceRouteMatcher[] = [
   {
+    prefix: "/admin/queue",
+    areaLabel: "Admin workspace",
+    title: "Command queue",
+    description: "Route escalations, assign review work, and keep moderation or verification cases moving.",
+  },
+  {
     prefix: "/admin/readiness",
     areaLabel: "Admin workspace",
     title: "Launch readiness",
@@ -32,6 +38,24 @@ const workspaceRouteMatchers: WorkspaceRouteMatcher[] = [
     areaLabel: "Admin workspace",
     title: "Reports",
     description: "Review flagged profiles, conversations, and trust issues before they harm the network.",
+  },
+  {
+    prefix: "/admin/privacy",
+    areaLabel: "Admin workspace",
+    title: "Privacy",
+    description: "Review privacy and trust-review requests with the audit trail needed for operator follow-through.",
+  },
+  {
+    prefix: "/admin/evidence",
+    areaLabel: "Admin workspace",
+    title: "Evidence",
+    description: "Review uploaded trust evidence, scan status, and opportunity ownership signals before verification decisions.",
+  },
+  {
+    prefix: "/admin/billing",
+    areaLabel: "Admin workspace",
+    title: "Billing",
+    description: "Review subscription state, billing mode, and payment-provider evidence without changing guarded billing behavior.",
   },
   {
     prefix: "/admin/users",
