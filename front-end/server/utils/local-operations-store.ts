@@ -289,7 +289,7 @@ async function writeStore(store: LocalOperationsStore) {
   await writeFile(storePath(), `${JSON.stringify(pruneStore(store), null, 2)}\n`, "utf-8")
 }
 
-async function updateStore<T>(updater: (store: LocalOperationsStore) => T | Promise<T>) {
+async function updateStore<T>(updater: (_store: LocalOperationsStore) => T | Promise<T>) {
   const run = writeQueue.then(async () => {
     const store = await readStore()
     const result = await updater(store)

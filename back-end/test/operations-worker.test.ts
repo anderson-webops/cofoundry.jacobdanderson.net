@@ -10,7 +10,7 @@ interface CapturedRequest {
   url: string
 }
 
-function createJsonFetch(handler?: (request: CapturedRequest) => unknown | Response) {
+function createJsonFetch(handler?: (_request: CapturedRequest) => unknown | Response) {
   const requests: CapturedRequest[] = []
   const fetchImpl: typeof fetch = async (input, init = {}) => {
     const request: CapturedRequest = {

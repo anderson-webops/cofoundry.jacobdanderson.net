@@ -12,7 +12,7 @@ function restoreEnvValue(key: string, value: string | undefined) {
     process.env[key] = value
 }
 
-async function withServer(run: (baseUrl: string) => Promise<void>) {
+async function withServer(run: (_baseUrl: string) => Promise<void>) {
   const server = createBackendServer()
 
   await new Promise<void>((resolve, reject) => {

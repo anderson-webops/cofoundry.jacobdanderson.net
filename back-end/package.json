@@ -31,10 +31,10 @@
     "verify:host-env": "node --import tsx scripts/verify-host-env.ts"
   },
   "dependencies": {
-    "@supabase/supabase-js": "2.103.3"
+    "@supabase/supabase-js": "2.108.2"
   },
   "devDependencies": {
-    "@types/node": "25.6.0",
+    "@types/node": "22.20.0",
     "tsx": "4.22.4",
     "typescript": "^6.0.3"
   },

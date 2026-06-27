@@ -42,7 +42,7 @@ function buildSlug(value: string) {
   return value.toLowerCase().replaceAll(slugPattern, "-").replaceAll(trimHyphenPattern, "") || "general"
 }
 
-function uniqueBySlug(values: string[], filter?: (value: string) => boolean) {
+function uniqueBySlug(values: string[], filter?: (_value: string) => boolean) {
   const seen = new Set<string>()
   const entries: { label: string, slug: string }[] = []
 
@@ -99,7 +99,7 @@ function buildHubEntries(
   labels: { label: string, slug: string }[],
   profiles: PublicProfileEntry[],
   opportunities: PublicOpportunityEntry[],
-  descriptionBuilder: (label: string) => string,
+  descriptionBuilder: (_label: string) => string,
   selector: "roleSlugs" | "industrySlugs" | "stageSlugs",
 ) {
   return labels

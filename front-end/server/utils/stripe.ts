@@ -20,6 +20,6 @@ export function createStripeClient(event?: H3Event) {
   }
 
   return new Stripe(runtimeConfig.stripeSecretKey, {
-    apiVersion: "2026-03-25.dahlia",
+    apiVersion: "2026-06-24.dahlia",
   })
 }
