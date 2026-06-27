@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { collectEnvironmentValidationErrors, isLocalDevelopmentEnvironment, readDeploymentMetadata, readPublicEnvironment } from "../../shared/utils/environment"
+import { collectEnvironmentValidationErrors, isLocalDevelopmentEnvironment, readDeploymentMetadata, readPublicEnvironment, releaseTagFromPackageVersion } from "../../shared/utils/environment"
 
 describe("environment helpers", () => {
   it("keeps localhost defaults only for local mock development", () => {
@@ -92,6 +92,12 @@ describe("environment helpers", () => {
       deployedAt: "2026-06-12T12:30:00.000Z",
       release: "v1.1.81",
     })
+  })
+
+  it("normalizes package versions into release-tag fallbacks", () => {
+    expect(releaseTagFromPackageVersion("1.1.105")).toBe("v1.1.105")
+    expect(releaseTagFromPackageVersion(" 1.1.106-beta.1 ")).toBe("v1.1.106-beta.1")
+    expect(releaseTagFromPackageVersion("local-release")).toBe("")
   })
 
   it("requires public and secret supabase values when supabase mode is enabled", () => {

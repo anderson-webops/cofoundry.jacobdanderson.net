@@ -1,11 +1,12 @@
 import { execFileSync } from "node:child_process"
+import { readFileSync } from "node:fs"
 import process from "node:process"
 import { buildSecurityHeaders } from "./server/utils/security-headers"
 import { appDescription, appName } from "./shared/constants/app"
 import { privateApiRoutePrefixes, privateWorkspaceRoutePrefixes } from "./shared/constants/route-surfaces"
 import { workspaceSeed } from "./shared/data/seed"
 import { getPublicRoutePaths } from "./shared/utils/directory"
-import { assertEnvironmentIsValid, readDeploymentMetadata, readEnvironmentSnapshot } from "./shared/utils/environment"
+import { assertEnvironmentIsValid, readDeploymentMetadata, readEnvironmentSnapshot, releaseTagFromPackageVersion } from "./shared/utils/environment"
 import { isPublicSiteUrl } from "./shared/utils/seo"
 import { defaultThemeSchemeDefinition } from "./shared/utils/theme"
 
@@ -21,12 +22,22 @@ function readGitMetadata(args: string[]) {
   }
 }
 
+function readFrontendPackageVersion() {
+  try {
+    const packageJson = JSON.parse(readFileSync(new URL("package.json", import.meta.url), "utf8")) as { version?: unknown }
+    return typeof packageJson.version === "string" ? packageJson.version : ""
+  }
+  catch {
+    return ""
+  }
+}
+
 const environment = readEnvironmentSnapshot(process.env)
 const explicitDeploymentMetadata = readDeploymentMetadata(process.env)
 const buildDeploymentMetadata = {
   commitSha: explicitDeploymentMetadata.commitSha || readGitMetadata(["rev-parse", "HEAD"]),
   deployedAt: explicitDeploymentMetadata.deployedAt,
-  release: explicitDeploymentMetadata.release || readGitMetadata(["describe", "--tags", "--exact-match", "HEAD"]),
+  release: explicitDeploymentMetadata.release || readGitMetadata(["describe", "--tags", "--exact-match", "HEAD"]) || releaseTagFromPackageVersion(readFrontendPackageVersion()),
 }
 const publicRoutes = getPublicRoutePaths(workspaceSeed)
 const prerenderPublicRoutes = isPublicSiteUrl(environment.public.appUrl) ? publicRoutes : []

@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process"
+import { readFileSync } from "node:fs"
 import process from "node:process"
 
 const syntheticProductionHostEnv = {
@@ -17,6 +18,22 @@ const syntheticProductionHostEnv = {
   NUXT_PUBLIC_ENABLE_DEMO_ACCESS: "false",
   SESSION_SIGNING_SECRET: "synthetic-release-session-signing-secret",
 }
+
+function releaseTagFromPackageVersion(version) {
+  const normalizedVersion = String(version || "").trim()
+
+  if (!/^\d+\.\d+\.\d+(?:[-+][0-9a-z.-]+)?$/i.test(normalizedVersion))
+    throw new Error(`package.json version must be semver for release prompt verification. Received: ${normalizedVersion || "<empty>"}`)
+
+  return `v${normalizedVersion}`
+}
+
+function readPackageReleaseTag() {
+  const packageJson = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"))
+  return releaseTagFromPackageVersion(packageJson.version)
+}
+
+const packageReleaseTag = readPackageReleaseTag()
 
 const steps = [
   {
@@ -111,7 +128,7 @@ const steps = [
       "scripts/render-live-deploy-prompt.mjs",
       "--check",
       "--release",
-      "v1.0.0",
+      packageReleaseTag,
       "--commit-sha",
       syntheticProductionHostEnv.COFOUNDRY_COMMIT_SHA,
       "--deployed-at",
