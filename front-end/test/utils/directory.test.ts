@@ -13,6 +13,24 @@ import {
   getStageHubs,
 } from "../../shared/utils/directory"
 
+const reservedPublicHostnames = new Set(["example.com", "example.net", "example.org"])
+
+function isReservedPublicUrl(value: string) {
+  try {
+    const hostname = new URL(value).hostname.toLowerCase()
+
+    return reservedPublicHostnames.has(hostname)
+      || hostname === "example"
+      || hostname.endsWith(".example")
+      || hostname.endsWith(".invalid")
+      || hostname.endsWith(".localhost")
+      || hostname.endsWith(".test")
+  }
+  catch {
+    return false
+  }
+}
+
 describe("public directory utilities", () => {
   it("only exposes opt-in public profiles and searchable public startup searches", () => {
     const profiles = getPublicProfiles(workspaceSeed)
@@ -56,5 +74,19 @@ describe("public directory utilities", () => {
     expect(paths).toContain(`/contracts/${contractGuidePages[0]!.slug}`)
     expect(paths.some(path => path.startsWith("/people/"))).toBe(true)
     expect(paths.some(path => path.startsWith("/startups/"))).toBe(true)
+  })
+
+  it("keeps public seed links off reserved test domains", () => {
+    const publicProfileUrls = getPublicProfiles(workspaceSeed).flatMap(({ profile }) => [
+      profile.links.linkedin,
+      profile.links.github,
+      profile.links.portfolio,
+      profile.links.website,
+      ...profile.trustSignals.builderProofs.map(artifact => artifact.url),
+    ])
+    const publicOpportunityUrls = getPublicOpportunities(workspaceSeed).map(({ opportunity }) => opportunity.officialWebsite)
+    const publicUrls = [...publicProfileUrls, ...publicOpportunityUrls].filter(Boolean)
+
+    expect(publicUrls.filter(isReservedPublicUrl)).toEqual([])
   })
 })

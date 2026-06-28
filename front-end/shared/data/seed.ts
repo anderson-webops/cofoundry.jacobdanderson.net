@@ -272,7 +272,7 @@ export const workspaceSeed: WorkspaceSeed = {
         true,
         true,
         [
-          proof("proof_olivia_1", "Fintech workflow case study", "Detailed write-up of the compliance operations system Olivia shipped and the buyer constraints it solved.", "https://clearwire.example/case-study", "Cut KYB review time by 38% across 2,100 SMB teams."),
+          proof("proof_olivia_1", "Fintech workflow case study", "Detailed write-up of the compliance operations system Olivia shipped and the buyer constraints it solved.", "https://ledgerloop.co/case-studies/clearwire-treasury", "Cut KYB review time by 38% across 2,100 SMB teams."),
           proof("proof_olivia_2", "Founder memo", "Concise founder memo on the LedgerLoop wedge, customer pull, and what the first 90 days should prove.", "https://ledgerloop.co/memo", "Used in founder and design-partner conversations."),
         ],
         { phoneVerified: true, linkedInVerified: true, githubVerified: true, workDomainVerified: true, websiteVerified: true, governmentIdVerified: true },
@@ -283,7 +283,7 @@ export const workspaceSeed: WorkspaceSeed = {
           id: "portfolio_olivia_1",
           name: "Clearwire Treasury",
           summary: "Designed onboarding and compliance flows used by 2,100 SMB finance teams.",
-          url: "https://clearwire.example/case-study",
+          url: "https://ledgerloop.co/case-studies/clearwire-treasury",
           role: "Product Lead",
           outcome: "Cut KYB review time by 38%.",
         },
