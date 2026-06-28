@@ -21,6 +21,7 @@ usePageSeo("Public startup searches", "Browse public startup opportunity pages o
       <OpportunityCard
         v-for="entry in opportunities"
         :key="entry.slug"
+        :heading-level="2"
         :opportunity="entry.opportunity"
       >
         <BaseButton variant="secondary" :to="`/startups/${entry.slug}`">

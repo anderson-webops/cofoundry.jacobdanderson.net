@@ -1,20 +1,26 @@
 <script setup lang="ts">
 import type { StartupOpportunity } from "~/shared/types/domain"
+import { computed } from "vue"
 import { formatCommitment, formatCompensation, formatOpportunityVerificationStatus, formatRemotePreference, formatStage } from "~/shared/utils/format"
 import { getOpportunityVerificationTone } from "~/shared/utils/formation"
 
-defineProps<{
+const props = withDefaults(defineProps<{
   opportunity: StartupOpportunity
-}>()
+  headingLevel?: 2 | 3
+}>(), {
+  headingLevel: 3,
+})
+
+const headingTag = computed(() => `h${props.headingLevel}`)
 </script>
 
 <template>
   <article class="panel p-5 flex flex-col gap-4 h-full">
     <div class="flex gap-4 items-start justify-between">
       <div>
-        <h3 class="text-lg font-semibold">
+        <component :is="headingTag" class="text-lg font-semibold">
           {{ opportunity.startupName }}
-        </h3>
+        </component>
         <p class="muted text-sm mt-1">
           {{ opportunity.oneLinePitch }}
         </p>
