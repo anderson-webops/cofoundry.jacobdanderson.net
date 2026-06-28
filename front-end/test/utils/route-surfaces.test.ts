@@ -186,7 +186,11 @@ describe("route surfaces", () => {
     for (const route of ["/admin/readiness", "/app/inbox", "/auth/sign-in", "/auth/recover", "/onboarding", "/api/admin/readiness", "/api/operations/events", "/api/operations/mail-smoke", "/api/operations/realtime-events", "/api/workspace"])
       expect(isPrivateSurfacePath(route), `${route} should be private`).toBe(true)
 
-    for (const route of ["/", "/find-cofounder", "/people/ava-morgan", "/sitemap.xml", "/robots.txt", "/api/health"])
+    const publicProfileRoute = getPublicRoutePaths(workspaceSeed).find(route => route.startsWith("/people/"))
+
+    expect(publicProfileRoute, "seed should expose at least one generated public profile route").toBeDefined()
+
+    for (const route of ["/", "/find-cofounder", publicProfileRoute!, "/sitemap.xml", "/robots.txt", "/api/health"])
       expect(isPrivateSurfacePath(route), `${route} should remain public`).toBe(false)
   })
 

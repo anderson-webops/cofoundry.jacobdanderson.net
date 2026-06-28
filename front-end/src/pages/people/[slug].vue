@@ -164,7 +164,7 @@ usePageSeo(`${profile.displayName} founder profile`, profile.headline, {
         </div>
 
         <details v-if="publicLinks.length || profile.ventures.length" class="surface-row">
-          <summary class="text-lg font-semibold cursor-pointer">
+          <summary class="disclosure-summary text-lg font-semibold cursor-pointer">
             External proof links
           </summary>
           <p class="muted text-sm leading-6 mt-3">

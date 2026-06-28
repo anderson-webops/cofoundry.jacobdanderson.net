@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { buildResponsePolicyHeaders, isPrivateSurfacePath } from "../../server/utils/response-policies"
+import { workspaceSeed } from "../../shared/data/seed"
+import { getPublicRoutePaths } from "../../shared/utils/directory"
 
 describe("response policies", () => {
   it("marks private app and admin surfaces as no-store and noindex", () => {
@@ -25,7 +27,11 @@ describe("response policies", () => {
   })
 
   it("leaves public marketing, sitemap, and health surfaces cache/index eligible", () => {
-    for (const path of ["/", "/find-cofounder", "/people/ava-morgan", "/sitemap.xml", "/api/health"]) {
+    const publicProfilePath = getPublicRoutePaths(workspaceSeed).find(path => path.startsWith("/people/"))
+
+    expect(publicProfilePath, "seed should expose at least one generated public profile route").toBeDefined()
+
+    for (const path of ["/", "/find-cofounder", publicProfilePath!, "/sitemap.xml", "/api/health"]) {
       expect(isPrivateSurfacePath(path), `${path} should not be treated as private`).toBe(false)
       expect(buildResponsePolicyHeaders(path)).toEqual({})
     }

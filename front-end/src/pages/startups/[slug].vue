@@ -100,7 +100,7 @@ usePageSeo(`${opportunity.startupName} startup search`, opportunity.oneLinePitch
             <TrustSignalStrip :profile="ownerProfile" />
           </div>
           <div class="mt-4 flex flex-wrap gap-4">
-            <NuxtLink :to="`/people/${buildPublicProfileSlug(ownerProfile)}`" class="text-sm text-[var(--accent)] inline-flex">
+            <NuxtLink :to="`/people/${buildPublicProfileSlug(ownerProfile)}`" class="public-action-link text-sm">
               View public founder profile
             </NuxtLink>
             <a
@@ -108,7 +108,7 @@ usePageSeo(`${opportunity.startupName} startup search`, opportunity.oneLinePitch
               :href="opportunity.officialWebsite"
               target="_blank"
               rel="ugc nofollow noopener noreferrer"
-              class="text-sm text-[var(--accent)] inline-flex"
+              class="public-action-link text-sm"
             >
               Official website
             </a>

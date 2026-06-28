@@ -344,6 +344,7 @@ select {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
+  min-height: 2.75rem;
   padding: 0.5rem 0.78rem;
   border-radius: 999px;
   border: 1px solid var(--line);
@@ -361,6 +362,33 @@ select {
   background: var(--accent-soft);
   border-color: color-mix(in srgb, var(--accent) 35%, transparent);
   color: var(--accent-strong);
+}
+
+.disclosure-summary {
+  min-height: 2.75rem;
+  padding-block: 0.5rem;
+  border-radius: 0.75rem;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+.disclosure-summary:hover {
+  color: var(--text);
+  background: var(--accent-soft);
+}
+
+.public-action-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding-inline: 0.75rem;
+  border-radius: 0.75rem;
+  color: var(--accent);
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+.public-action-link:hover {
+  color: var(--accent-strong);
+  background: var(--accent-soft);
 }
 
 .grid-soft {
