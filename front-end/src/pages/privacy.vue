@@ -131,7 +131,7 @@ usePageSeo("Privacy Policy", "Product-specific privacy disclosures for CoFoundry
             v-for="section in privacySections"
             :key="section.id"
             :href="`#${section.id}`"
-            class="muted text-sm leading-6 transition hover:text-[var(--text)]"
+            class="legal-toc-link muted text-sm leading-6"
           >
             {{ section.title }}
           </a>

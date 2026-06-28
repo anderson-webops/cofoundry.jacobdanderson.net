@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs"
+import { resolve } from "node:path"
 import { describe, expect, it } from "vitest"
 import {
   privacyDataCategories,
@@ -10,6 +12,13 @@ import {
   termsLastUpdated,
   termsSections,
 } from "../../shared/data/legal"
+
+const pagesRoot = resolve(process.cwd(), "src/pages")
+const stylesRoot = resolve(process.cwd(), "src/assets/styles")
+
+function readPageSource(page: "privacy" | "terms") {
+  return readFileSync(resolve(pagesRoot, `${page}.vue`), "utf8")
+}
 
 describe("legal content", () => {
   it("defines a current terms update date and key platform notes", () => {
@@ -47,5 +56,14 @@ describe("legal content", () => {
     expect(sectionIds).toContain("international-transfers")
     expect(sectionIds).toContain("investment-features")
     expect(privacySections).toHaveLength(16)
+  })
+
+  it("keeps legal table-of-contents links at touch-friendly targets", () => {
+    const styles = readFileSync(resolve(stylesRoot, "main.css"), "utf8")
+
+    expect(styles).toContain(".legal-toc-link")
+    expect(styles).toContain("min-height: 2.75rem")
+    expect(readPageSource("terms")).toContain("class=\"legal-toc-link muted text-sm leading-6\"")
+    expect(readPageSource("privacy")).toContain("class=\"legal-toc-link muted text-sm leading-6\"")
   })
 })

@@ -58,7 +58,7 @@ usePageSeo("Terms of Service", "Product-specific terms for CoFoundry's founder m
             v-for="section in termsSections"
             :key="section.id"
             :href="`#${section.id}`"
-            class="muted text-sm leading-6 transition hover:text-[var(--text)]"
+            class="legal-toc-link muted text-sm leading-6"
           >
             {{ section.title }}
           </a>
