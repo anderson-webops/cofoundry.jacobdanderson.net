@@ -135,6 +135,24 @@ export function buildPublicProfileSlug(profile: Profile) {
   return `${buildSlug(profile.displayName)}-${profile.userId.replace(userPrefixPattern, "")}`
 }
 
+export function formatPublicDirectoryCount(count: number, singular: string, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`
+}
+
+export function formatHubInventoryLabel(hub: Pick<PublicHubEntry, "profileCount" | "opportunityCount">) {
+  return [
+    formatPublicDirectoryCount(hub.profileCount, "profile"),
+    formatPublicDirectoryCount(hub.opportunityCount, "search", "searches"),
+  ].join(" · ")
+}
+
+export function formatPublicHubInventoryLabel(hub: Pick<PublicHubEntry, "profileCount" | "opportunityCount">) {
+  return [
+    formatPublicDirectoryCount(hub.profileCount, "public profile"),
+    formatPublicDirectoryCount(hub.opportunityCount, "public startup search", "public startup searches"),
+  ].join(" · ")
+}
+
 export function getPublicProfiles(seed: WorkspaceSeed) {
   return seed.profiles
     .filter((profile) => {

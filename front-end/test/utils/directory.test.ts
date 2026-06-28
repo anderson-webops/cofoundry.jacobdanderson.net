@@ -3,6 +3,8 @@ import { contractGuidePages, trustCenterPages } from "../../shared/data/public-c
 import { workspaceSeed } from "../../shared/data/seed"
 import {
   buildPublicProfileSlug,
+  formatHubInventoryLabel,
+  formatPublicHubInventoryLabel,
   getIndustryHubs,
   getPublicOpportunities,
   getPublicProfiles,
@@ -36,6 +38,14 @@ describe("public directory utilities", () => {
     expect(roleHubs.some(entry => entry.slug === "technical-co-founder")).toBe(true)
     expect(industryHubs.some(entry => entry.slug === "fintech")).toBe(true)
     expect(stageHubs.some(entry => entry.slug === "idea")).toBe(true)
+  })
+
+  it("formats public hub inventory labels with singular and plural nouns", () => {
+    expect(formatHubInventoryLabel({ profileCount: 1, opportunityCount: 1 })).toBe("1 profile · 1 search")
+    expect(formatHubInventoryLabel({ profileCount: 2, opportunityCount: 3 })).toBe("2 profiles · 3 searches")
+
+    expect(formatPublicHubInventoryLabel({ profileCount: 1, opportunityCount: 1 })).toBe("1 public profile · 1 public startup search")
+    expect(formatPublicHubInventoryLabel({ profileCount: 2, opportunityCount: 3 })).toBe("2 public profiles · 3 public startup searches")
   })
 
   it("includes new public pages in the sitemap route list", () => {

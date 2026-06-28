@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { workspaceSeed } from "~/shared/data/seed"
-import { getIndustryHubs, getPublicOpportunities, getPublicProfiles, getRoleHubs, getStageHubs } from "~/shared/utils/directory"
+import {
+  formatHubInventoryLabel,
+  getIndustryHubs,
+  getPublicOpportunities,
+  getPublicProfiles,
+  getRoleHubs,
+  getStageHubs,
+} from "~/shared/utils/directory"
 
 const publicProfiles = getPublicProfiles(workspaceSeed)
 const publicOpportunities = getPublicOpportunities(workspaceSeed)
@@ -109,7 +116,7 @@ usePageSeo(
                 class="plain-link-item"
               >
                 <span class="font-semibold">{{ hub.label }}</span>
-                <span class="muted text-sm">{{ hub.profileCount }} profiles · {{ hub.opportunityCount }} searches</span>
+                <span class="muted text-sm">{{ formatHubInventoryLabel(hub) }}</span>
               </NuxtLink>
             </div>
           </div>
@@ -126,7 +133,7 @@ usePageSeo(
                 class="plain-link-item"
               >
                 <span class="font-semibold">{{ hub.label }}</span>
-                <span class="muted text-sm">{{ hub.profileCount }} profiles · {{ hub.opportunityCount }} searches</span>
+                <span class="muted text-sm">{{ formatHubInventoryLabel(hub) }}</span>
               </NuxtLink>
             </div>
           </div>
@@ -143,7 +150,7 @@ usePageSeo(
                 class="plain-link-item"
               >
                 <span class="font-semibold">{{ hub.label }}</span>
-                <span class="muted text-sm">{{ hub.profileCount }} profiles · {{ hub.opportunityCount }} searches</span>
+                <span class="muted text-sm">{{ formatHubInventoryLabel(hub) }}</span>
               </NuxtLink>
             </div>
           </div>
