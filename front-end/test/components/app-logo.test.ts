@@ -17,6 +17,8 @@ describe("appLogo", () => {
 
     expect(wrapper.text()).toContain("CoFoundry")
     expect(wrapper.html()).toContain("href=\"/\"")
+    expect(wrapper.html()).toContain("min-h-11")
+    expect(wrapper.html()).toContain("h-11 w-11")
     expect(wrapper.text()).not.toContain("Stakes")
   })
 })

@@ -59,7 +59,7 @@ onBeforeUnmount(() => {
     <div class="page-shell py-4 flex items-center justify-between">
       <AppLogo />
       <nav class="text-sm text-[var(--muted)] gap-8 hidden items-center lg:flex">
-        <NuxtLink v-for="item in marketingNavigation" :key="item.to" :to="item.to" class="transition hover:text-[var(--text)]">
+        <NuxtLink v-for="item in marketingNavigation" :key="item.to" :to="item.to" class="inline-flex min-h-11 transition items-center hover:text-[var(--text)]">
           {{ item.label }}
         </NuxtLink>
       </nav>
@@ -74,7 +74,7 @@ onBeforeUnmount(() => {
       </div>
       <button
         type="button"
-        class="text-[var(--text)] p-2 border border-[var(--line)] rounded-full bg-[var(--panel-strong)] inline-flex items-center justify-center lg:hidden"
+        class="text-[var(--text)] border border-[var(--line)] rounded-full bg-[var(--panel-strong)] inline-flex h-11 w-11 items-center justify-center lg:hidden"
         aria-controls="marketing-mobile-navigation"
         :aria-expanded="menuOpen"
         aria-label="Toggle site navigation"
@@ -84,7 +84,7 @@ onBeforeUnmount(() => {
       </button>
     </div>
     <div v-if="menuOpen" id="marketing-mobile-navigation" class="page-shell pb-4 gap-3 grid lg:hidden">
-      <NuxtLink v-for="item in marketingNavigation" :key="item.to" :to="item.to" class="px-3 py-2 rounded-2xl hover:bg-[var(--accent-soft)]" @click="menuOpen = false">
+      <NuxtLink v-for="item in marketingNavigation" :key="item.to" :to="item.to" class="px-3 py-2 rounded-2xl inline-flex min-h-11 items-center hover:bg-[var(--accent-soft)]" @click="menuOpen = false">
         {{ item.label }}
       </NuxtLink>
       <div class="px-3">

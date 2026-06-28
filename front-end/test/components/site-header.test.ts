@@ -16,7 +16,9 @@ describe("siteHeader", () => {
     expect(source).toContain("id=\"marketing-mobile-navigation\"")
     expect(source).toContain("menuOpen ? 'i-carbon-close' : 'i-carbon-menu'")
     expect(source).toContain("aria-hidden=\"true\"")
-    expect(source).toContain("inline-flex items-center justify-center")
+    expect(source).toMatch(/class="[^"]*min-h-11[^"]*hover:text-\[var\(--text\)\][^"]*"/)
+    expect(source).toContain("h-11 w-11")
+    expect(source).toMatch(/class="[^"]*min-h-11[^"]*hover:bg-\[var\(--accent-soft\)\][^"]*"/)
   })
 
   it("keeps theme switching available in the mobile menu", () => {

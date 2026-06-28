@@ -20,7 +20,7 @@ function toggleTheme() {
   <button
     type="button"
     :aria-pressed="displayedIsDark"
-    class="text-sm px-3 py-2 border border-[var(--line)] rounded-full bg-[var(--panel-strong)] inline-flex gap-2 items-center"
+    class="text-sm px-3 py-2 border border-[var(--line)] rounded-full bg-[var(--panel-strong)] inline-flex gap-2 min-h-11 items-center"
     @click="toggleTheme"
   >
     <span :class="displayedIsDark ? 'i-carbon-moon' : 'i-carbon-sun'" />
