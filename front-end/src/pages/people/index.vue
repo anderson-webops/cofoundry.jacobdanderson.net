@@ -21,6 +21,7 @@ usePageSeo("Public founder profiles", "Browse opt-in public founder and collabor
       <ProfileCard
         v-for="entry in profiles"
         :key="entry.slug"
+        :heading-level="2"
         :profile="entry.profile"
         :skills="entry.skillLabels"
       >

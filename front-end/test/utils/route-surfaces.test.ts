@@ -155,6 +155,22 @@ describe("route surfaces", () => {
     }
   })
 
+  it("keeps standalone public card indexes from skipping h2 headings", () => {
+    const cardIndexExpectations = [
+      { card: "ProfileCard", route: "/people" },
+      { card: "OpportunityCard", route: "/startups" },
+    ]
+
+    for (const expectation of cardIndexExpectations) {
+      const entry = listPageEntries().find(page => page.route === expectation.route)
+
+      expect(entry, `${expectation.route} should resolve to a page entry`).toBeDefined()
+      expect(entry!.source(), `${expectation.route} should render ${expectation.card} cards as h2`).toMatch(
+        new RegExp(`<${expectation.card}[\\s\\S]*:heading-level=["']2["']`),
+      )
+    }
+  })
+
   it("keeps generated public routes sitemap-safe and backed by page patterns", () => {
     const publicRoutes = getPublicRoutePaths(workspaceSeed)
 

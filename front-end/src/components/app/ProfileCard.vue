@@ -1,15 +1,21 @@
 <script setup lang="ts">
 import type { Profile } from "~/shared/types/domain"
+import { computed } from "vue"
 import { formatCommitment, formatRemotePreference } from "~/shared/utils/format"
 import { buildProfileReadiness } from "~/shared/utils/formation"
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   profile: Profile
   skills: string[]
-}>()
+  headingLevel?: 2 | 3
+}>(), {
+  headingLevel: 3,
+})
 
 const readiness = computed(() => buildProfileReadiness(props.profile))
 const leadProof = computed(() => props.profile.trustSignals.builderProofs[0] || null)
+const headingTag = computed(() => `h${props.headingLevel}`)
+const proofHeadingTag = computed(() => `h${props.headingLevel + 1}`)
 
 const profileRoleLabel = computed(() => {
   if (props.profile.hasIdea && props.profile.wantsToJoinIdea)
@@ -25,9 +31,9 @@ const profileRoleLabel = computed(() => {
       <div class="flex gap-4 items-start">
         <ProfileAvatar :display-name="profile.displayName" :photo-url="profile.photoUrl" size="md" />
         <div>
-          <h3 class="text-lg font-semibold">
+          <component :is="headingTag" class="text-lg font-semibold">
             {{ profile.displayName }}
-          </h3>
+          </component>
           <p class="muted text-sm mt-1">
             {{ profile.headline }}
           </p>
@@ -52,9 +58,9 @@ const profileRoleLabel = computed(() => {
       <p class="section-kicker">
         Featured proof
       </p>
-      <h3 class="text-base font-semibold mt-2">
+      <component :is="proofHeadingTag" class="text-base font-semibold mt-2">
         {{ leadProof.title }}
-      </h3>
+      </component>
       <p class="text-sm mt-3">
         {{ leadProof.outcome }}
       </p>
