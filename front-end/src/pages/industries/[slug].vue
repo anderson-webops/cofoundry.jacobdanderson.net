@@ -36,6 +36,7 @@ usePageSeo(`${hub.label} founder searches`, hub.description, {
     <section class="mt-10">
       <PageIntro
         eyebrow="Profiles"
+        :heading-level="2"
         :title="`${hub.label} people`"
         description="Public profiles who already operate in this market and opted into public discovery."
       />
@@ -56,6 +57,7 @@ usePageSeo(`${hub.label} founder searches`, hub.description, {
     <section class="mt-14">
       <PageIntro
         eyebrow="Startup searches"
+        :heading-level="2"
         :title="`${hub.label} startup opportunities`"
         description="Founders in this market using CoFoundry to fill real ownership gaps."
       />

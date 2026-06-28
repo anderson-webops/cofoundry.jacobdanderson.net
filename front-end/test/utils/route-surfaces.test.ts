@@ -82,6 +82,20 @@ function routeFileExists(route: string) {
   return routeToCandidates(route).some(candidate => existsSync(candidate))
 }
 
+function countManualH1Elements(source: string) {
+  return Array.from(source.matchAll(/<h1(?:\s|>)/g)).length
+}
+
+function countPageIntroH1Elements(source: string) {
+  return Array.from(source.matchAll(/<PageIntro\b[^>]*>/g))
+    .filter(([tag]) => !/:heading-level=["']2["']/.test(tag))
+    .length
+}
+
+function countSourceLevelH1Elements(source: string) {
+  return countManualH1Elements(source) + countPageIntroH1Elements(source)
+}
+
 describe("route surfaces", () => {
   it("keeps every page file intentionally classified as public, private, or catch-all", () => {
     for (const entry of listPageEntries()) {
@@ -128,6 +142,17 @@ describe("route surfaces", () => {
   it("keeps public marketing routes backed by real page files", () => {
     for (const route of publicMarketingRoutes)
       expect(routeFileExists(route), `${route} should resolve to a page file`).toBe(true)
+  })
+
+  it("keeps public page files to one source-level h1 producer", () => {
+    const publicPageEntries = listPageEntries()
+      .filter(entry => publicPageRoutePatterns.has(entry.route))
+
+    for (const entry of publicPageEntries) {
+      const sourceLevelH1Count = countSourceLevelH1Elements(entry.source())
+
+      expect(sourceLevelH1Count, `${entry.route} should have exactly one h1 source`).toBe(1)
+    }
   })
 
   it("keeps generated public routes sitemap-safe and backed by page patterns", () => {

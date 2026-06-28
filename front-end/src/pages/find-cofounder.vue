@@ -85,6 +85,7 @@ usePageSeo(
       <div class="page-shell">
         <PageIntro
           eyebrow="Directory shortcuts"
+          :heading-level="2"
           title="Narrow by role, market, or stage."
           description="Use these shortcuts to jump into the part of the network that is most relevant to your search."
         >
