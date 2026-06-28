@@ -59,7 +59,7 @@ onBeforeUnmount(() => {
     <div class="page-shell py-4 flex items-center justify-between">
       <AppLogo />
       <nav class="text-sm text-[var(--muted)] gap-8 hidden items-center lg:flex">
-        <NuxtLink v-for="item in marketingNavigation" :key="item.to" :to="item.to" class="inline-flex min-h-11 transition items-center hover:text-[var(--text)]">
+        <NuxtLink v-for="item in marketingNavigation" :key="item.to" :to="item.to" class="inline-flex min-h-11 min-w-11 transition items-center justify-center hover:text-[var(--text)]">
           {{ item.label }}
         </NuxtLink>
       </nav>
