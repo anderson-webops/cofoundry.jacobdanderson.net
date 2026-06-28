@@ -210,6 +210,14 @@ select {
   border-color: var(--line-strong);
 }
 
+@media (max-width: 520px) {
+  .plain-link-item {
+    align-items: start;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+}
+
 .process-list {
   display: grid;
   border-top: 1px solid var(--line);

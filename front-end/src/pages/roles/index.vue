@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { workspaceSeed } from "~/shared/data/seed"
-import { getRoleHubs } from "~/shared/utils/directory"
+import { formatPublicHubInventoryLabel, getRoleHubs } from "~/shared/utils/directory"
 
 const roleHubs = getRoleHubs(workspaceSeed)
 
@@ -38,7 +38,7 @@ usePageSeo("Role hubs", "Browse public founder and collaborator searches organiz
           </BaseBadge>
         </div>
         <p class="muted text-sm mt-4">
-          {{ hub.profileCount }} public profiles · {{ hub.opportunityCount }} public startup searches
+          {{ formatPublicHubInventoryLabel(hub) }}
         </p>
       </NuxtLink>
     </div>
