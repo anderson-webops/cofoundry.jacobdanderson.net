@@ -229,6 +229,7 @@ async function declineConnectRequest(requestId: string, reason: "timing" | "doma
         <div v-if="!hasActiveWork" class="gap-5 grid order-1">
           <PageIntro
             :eyebrow="showProfileRecommendations ? 'Recommended collaborators' : 'Recommended opportunities'"
+            :heading-level="2"
             title="Best next conversations"
             :description="showProfileRecommendations
               ? 'These people are ranked for fit, commitment, and likely reply.'

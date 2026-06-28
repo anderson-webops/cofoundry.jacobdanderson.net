@@ -1,9 +1,16 @@
 <script setup lang="ts">
-defineProps<{
+import { computed } from "vue"
+
+const props = withDefaults(defineProps<{
   eyebrow?: string
   title: string
   description?: string
-}>()
+  headingLevel?: 1 | 2
+}>(), {
+  headingLevel: 1,
+})
+
+const headingTag = computed(() => `h${props.headingLevel}`)
 </script>
 
 <template>
@@ -12,9 +19,9 @@ defineProps<{
       <p v-if="eyebrow" class="section-kicker">
         {{ eyebrow }}
       </p>
-      <h1 class="text-3xl tracking-tight font-semibold mt-2 max-w-[36rem] md:text-4xl">
+      <component :is="headingTag" class="text-3xl tracking-tight font-semibold mt-2 max-w-[36rem] md:text-4xl">
         {{ title }}
-      </h1>
+      </component>
       <p v-if="description" class="muted text-[0.98rem] leading-7 mt-4 max-w-[42rem]">
         {{ description }}
       </p>

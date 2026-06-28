@@ -35,6 +35,7 @@ usePageSeo(`${hub.label} startup searches`, hub.description, {
     <section class="mt-10">
       <PageIntro
         eyebrow="Profiles"
+        :heading-level="2"
         :title="`${hub.label} collaborators and founders`"
         description="People who explicitly opted into public discovery for this stage of company-building."
       />
@@ -55,6 +56,7 @@ usePageSeo(`${hub.label} startup searches`, hub.description, {
     <section class="mt-14">
       <PageIntro
         eyebrow="Startup searches"
+        :heading-level="2"
         :title="`${hub.label} startup opportunities`"
         description="Public startup searches at this stage, with enough structure to evaluate whether the company shape is worth a call."
       />

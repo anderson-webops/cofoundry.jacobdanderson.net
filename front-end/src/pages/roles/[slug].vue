@@ -43,6 +43,7 @@ usePageSeo(`${hub.label} searches`, hub.description, {
     <section class="mt-10">
       <PageIntro
         eyebrow="Profiles"
+        :heading-level="2"
         :title="`Public ${hub.label} profiles`"
         description="These members opted into public discovery. Direct contact still stays inside CoFoundry."
       />
@@ -63,6 +64,7 @@ usePageSeo(`${hub.label} searches`, hub.description, {
     <section class="mt-14">
       <PageIntro
         eyebrow="Startup searches"
+        :heading-level="2"
         :title="`${hub.label} startup opportunities`"
         description="Role pages are only useful if they show real founder demand, not just generic content."
       />

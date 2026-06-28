@@ -90,6 +90,7 @@ usePageSeo("Build startup teams with more structure", appDescription, {
       <div class="page-shell">
         <PageIntro
           eyebrow="How CoFoundry works"
+          :heading-level="2"
           title="From first signal to written terms."
           description="Profiles, intros, trial sprints, proposals, and agreements follow one clear sequence."
         />
