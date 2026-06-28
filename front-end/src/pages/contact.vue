@@ -109,9 +109,14 @@ async function submitForm() {
     />
 
     <div class="mt-10 max-w-3xl">
-      <p class="muted text-sm leading-6 mb-5">
-        Use the form below, or email <a :href="`mailto:${runtimeConfig.public.supportEmail}`" class="text-[var(--text)] underline underline-offset-4">{{ runtimeConfig.public.supportEmail }}</a>. We reply through the address you provide.
-      </p>
+      <div class="muted text-sm leading-6 mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p class="max-w-xl">
+          Use the form below, or email the team directly. We reply through the address you provide.
+        </p>
+        <BaseButton variant="secondary" :href="`mailto:${runtimeConfig.public.supportEmail}`">
+          {{ runtimeConfig.public.supportEmail }}
+        </BaseButton>
+      </div>
       <form class="panel p-6 gap-5 grid" @submit.prevent="submitForm">
         <TextInput v-model="form.name" label="Name" :error="errors.name" />
         <TextInput v-model="form.email" label="Email" type="email" :error="errors.email" />

@@ -37,6 +37,14 @@ describe("public touch targets", () => {
     expect(startupDetailSource.match(/class="public-action-link text-sm"/g)?.length).toBe(2)
   })
 
+  it("keeps the public contact email fallback touch-friendly", () => {
+    const contactSource = readPageSource("contact.vue")
+    const supportEmailBinding = "`mailto:" + "$" + "{runtimeConfig.public.supportEmail}`"
+
+    expect(contactSource).toContain(`<BaseButton variant="secondary" :href="${supportEmailBinding}">`)
+    expect(contactSource).not.toContain(`email <a :href="${supportEmailBinding}"`)
+  })
+
   it("keeps short desktop header links touch-friendly", () => {
     const headerSource = readComponentSource("marketing/SiteHeader.vue")
 
