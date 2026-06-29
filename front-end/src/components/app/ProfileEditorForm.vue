@@ -207,11 +207,11 @@ function submitForm() {
         <SelectInput v-model="form.primaryRole" label="Primary role" :options="roleOptions.map(role => ({ label: role, value: role }))" :error="errors.primaryRole" />
         <TextInput v-model="form.yearsExperience" label="Years of experience" type="number" :error="errors.yearsExperience" />
       </div>
-      <PillPicker v-model="form.roles" label="Role coverage" :options="roleOptions" helper="Pick the other roles you can credibly own in the first year." />
+      <PillPicker v-model="form.roles" label="Role coverage" :options="roleOptions" helper="Pick the other roles you can credibly own in the first year." :error="errors.roles" />
     </section>
 
     <section v-show="!stepped || step === 1" class="gap-4 grid">
-      <PillPicker v-model="form.industries" label="Industries" :options="industryOptions" />
+      <PillPicker v-model="form.industries" label="Industries" :options="industryOptions" :error="errors.industries" />
       <div>
         <span class="field-label">Startup stage preference</span>
         <div class="flex flex-wrap gap-2">
@@ -273,12 +273,14 @@ function submitForm() {
         label="Company preferences"
         :options="companyPreferenceOptions"
         helper="These preferences improve ranking and help other members decide whether the fit is real."
+        :error="errors.companyPreferences"
       />
       <PillPicker
         v-model="form.nonNegotiables"
         label="Non-negotiables"
         :options="nonNegotiableOptions"
         helper="State the conditions that should be explicit before anyone reaches for a proposal."
+        :error="errors.nonNegotiables"
       />
     </section>
 
@@ -369,8 +371,8 @@ function submitForm() {
     </section>
 
     <section v-show="!stepped || step === 4" class="gap-4 grid">
-      <PillPicker v-model="form.values" label="Values" :options="valueOptions" />
-      <PillPicker v-model="form.workStylePreferences" label="Work-style preferences" :options="workStyleOptions" />
+      <PillPicker v-model="form.values" label="Values" :options="valueOptions" :error="errors.values" />
+      <PillPicker v-model="form.workStylePreferences" label="Work-style preferences" :options="workStyleOptions" :error="errors.workStylePreferences" />
       <SelectInput
         v-model="form.profileVisibility"
         label="Profile privacy"

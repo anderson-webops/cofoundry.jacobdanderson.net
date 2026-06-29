@@ -3,6 +3,7 @@ defineProps<{
   label: string
   options: string[]
   helper?: string
+  error?: string
 }>()
 
 const model = defineModel<string[]>({ default: () => [] })
@@ -32,7 +33,10 @@ function toggle(value: string) {
         {{ option }}
       </button>
     </div>
-    <p v-if="helper" class="field-helper">
+    <p v-if="error" class="field-error">
+      {{ error }}
+    </p>
+    <p v-else-if="helper" class="field-helper">
       {{ helper }}
     </p>
   </div>
