@@ -19,6 +19,7 @@ describe("public touch targets", () => {
     const styles = readFileSync(resolve(stylesRoot, "main.css"), "utf8")
 
     expect(styles).toMatch(/\.pill\s*\{[\s\S]*min-height:\s*2\.75rem/)
+    expect(styles).toMatch(/\.pill\s*\{[\s\S]*min-width:\s*2\.75rem/)
   })
 
   it("keeps public disclosure summaries touch-friendly", () => {
