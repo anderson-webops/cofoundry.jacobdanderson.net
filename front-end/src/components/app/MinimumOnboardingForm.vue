@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { reactive, ref } from "vue"
 import { commitmentOptions, companyPreferenceOptions, equityPhilosophyOptions, industryOptions, remoteOptions, roleOptions, runwayBucketOptions, startTimelineOptions } from "~/shared/constants/options"
 import { minimumOnboardingSchema } from "~/shared/utils/validation"
 
@@ -63,6 +64,12 @@ const steps = [
   { title: "Fit", description: "Add enough context to preview the right people." },
 ]
 
+const fieldsByStep = [
+  ["intentMode", "displayName", "photoUrl", "location", "profileVisibility"],
+  ["headline", "bio", "primaryRole", "roles", "timeCommitment", "weeklyAvailabilityHours", "startTimeline", "fullTimeBy", "runwayBucket", "equityPhilosophy", "remotePreference"],
+  ["industries", "companyPreferences"],
+]
+
 const intentOptions = [
   {
     value: "start",
@@ -81,15 +88,43 @@ const intentOptions = [
   },
 ] as const
 
-function validateForSubmit() {
-  const parsed = minimumOnboardingSchema.safeParse({
+function parseForm() {
+  return minimumOnboardingSchema.safeParse({
     ...form,
     roles: Array.from(new Set([form.primaryRole, ...form.roles].filter(Boolean))),
     weeklyAvailabilityHours: Number(form.weeklyAvailabilityHours),
   })
+}
 
+function fieldErrorsFor(issues: { path: PropertyKey[], message: string }[]) {
+  return Object.fromEntries(issues.map(issue => [issue.path[0] as string, issue.message]))
+}
+
+function stepForField(field: string) {
+  const stepIndex = fieldsByStep.findIndex(fields => fields.includes(field))
+  return stepIndex >= 0 ? stepIndex : 0
+}
+
+function validateCurrentStep() {
+  const parsed = parseForm()
+  if (parsed.success) {
+    errors.value = {}
+    return true
+  }
+
+  const currentFields = new Set(fieldsByStep[step.value])
+  const currentIssues = parsed.error.issues.filter(issue => currentFields.has(issue.path[0] as string))
+  errors.value = fieldErrorsFor(currentIssues)
+
+  return currentIssues.length === 0
+}
+
+function validateForSubmit() {
+  const parsed = parseForm()
   if (!parsed.success) {
-    errors.value = Object.fromEntries(parsed.error.issues.map(issue => [issue.path[0] as string, issue.message]))
+    const firstField = parsed.error.issues[0]?.path[0]
+    errors.value = fieldErrorsFor(parsed.error.issues)
+    step.value = typeof firstField === "string" ? stepForField(firstField) : 0
     return null
   }
 
@@ -98,6 +133,9 @@ function validateForSubmit() {
 }
 
 function nextStep() {
+  if (!validateCurrentStep())
+    return
+
   step.value = Math.min(step.value + 1, steps.length - 1)
 }
 
@@ -106,6 +144,11 @@ function previousStep() {
 }
 
 function submitForm() {
+  if (step.value < steps.length - 1) {
+    nextStep()
+    return
+  }
+
   const parsed = validateForSubmit()
   if (!parsed)
     return
@@ -192,7 +235,7 @@ function submitForm() {
       />
       <div class="gap-4 grid md:grid-cols-2">
         <SelectInput v-model="form.primaryRole" label="Primary role" :options="roleOptions.map(role => ({ label: role, value: role }))" :error="errors.primaryRole" />
-        <PillPicker v-model="form.roles" label="Role coverage" :options="roleOptions" helper="Choose the other roles you can realistically own in the first year." />
+        <PillPicker v-model="form.roles" label="Role coverage" :options="roleOptions" helper="Choose the other roles you can realistically own in the first year." :error="errors.roles" />
       </div>
       <div class="gap-4 grid md:grid-cols-3">
         <SelectInput v-model="form.timeCommitment" label="Commitment" :options="commitmentOptions" :error="errors.timeCommitment" />
@@ -219,12 +262,14 @@ function submitForm() {
         label="Industries"
         :options="industryOptions"
         helper="These tags drive your first match preview."
+        :error="errors.industries"
       />
       <PillPicker
         v-model="form.companyPreferences"
         label="Company preferences"
         :options="companyPreferenceOptions"
         helper="Choose the company shapes you are actually open to right now."
+        :error="errors.companyPreferences"
       />
       <div class="panel-inset p-5">
         <p class="text-sm font-semibold">
@@ -245,7 +290,7 @@ function submitForm() {
           Next
         </BaseButton>
       </div>
-      <BaseButton type="submit">
+      <BaseButton v-if="step === steps.length - 1" type="submit">
         {{ submitLabel }}
       </BaseButton>
     </div>

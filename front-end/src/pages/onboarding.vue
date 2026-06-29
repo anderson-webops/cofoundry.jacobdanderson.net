@@ -138,7 +138,7 @@ async function submitProfile(payload: any) {
         </div>
       </div>
 
-      <div v-if="shouldShowProfilePreview && profilePreview.length" class="gap-4 grid lg:grid-cols-3">
+      <div v-if="shouldShowProfilePreview && profilePreview.length" class="gap-4 grid 2xl:grid-cols-3 lg:grid-cols-2">
         <ProfileCard
           v-for="item in profilePreview"
           :key="item.profile.id"
@@ -154,7 +154,7 @@ async function submitProfile(payload: any) {
         </ProfileCard>
       </div>
 
-      <div v-else-if="opportunityPreview.length" class="gap-4 grid lg:grid-cols-3">
+      <div v-else-if="opportunityPreview.length" class="gap-4 grid 2xl:grid-cols-3 lg:grid-cols-2">
         <OpportunityCard
           v-for="item in opportunityPreview"
           :key="item.opportunity.id"

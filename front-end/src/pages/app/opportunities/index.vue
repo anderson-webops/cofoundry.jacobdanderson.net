@@ -121,8 +121,8 @@ async function createOpportunityPost() {
           <SelectInput v-model="form.expectedCommitment" label="Expected commitment" :options="commitmentOptions" :error="errors.expectedCommitment" />
         </div>
         <TextareaInput v-model="form.traction" label="Traction" :error="errors.traction" :rows="3" />
-        <PillPicker v-model="form.rolesNeeded" label="Roles needed" :options="roleOptions" />
-        <PillPicker v-model="form.industries" label="Industries" :options="industryOptions" />
+        <PillPicker v-model="form.rolesNeeded" label="Roles needed" :options="roleOptions" :error="errors.rolesNeeded" />
+        <PillPicker v-model="form.industries" label="Industries" :options="industryOptions" :error="errors.industries" />
         <div class="gap-4 grid md:grid-cols-2">
           <TextInput v-model="form.equityRange" label="Equity range" :error="errors.equityRange" />
           <TextInput v-model="form.location" label="Location" :error="errors.location" />
