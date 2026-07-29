@@ -53,7 +53,7 @@ for (const workflowFile of workflowFiles) {
   assertNpmPinsMatch(workflowFile, contents, expectedNpmSpecifier)
 
   if (contents.includes("npm ci"))
-    assert(contents.includes("node-version: 22.x"), `${workflowFile} should run npm ci on Node 22.x`)
+    assert(contents.includes("node-version: 24.18.0"), `${workflowFile} should run npm ci on Node 24.18.0`)
 }
 
 const ciWorkflow = readRepoFile(".github/workflows/ci.yml")
@@ -64,10 +64,10 @@ assert(publicVerificationWorkflow.includes("npm run verify:install-scripts"), "P
 
 const dockerfile = readRepoFile("Dockerfile")
 assertNpmPinsMatch("Dockerfile", dockerfile, expectedNpmSpecifier)
-assert(dockerfile.includes("FROM node:22-alpine AS build-stage"), "Docker build stage should use Node 22 Alpine.")
-assert(dockerfile.includes("FROM node:22-alpine AS production-stage"), "Docker production stage should use Node 22 Alpine.")
+assert(dockerfile.includes("FROM node:24.18.0-alpine AS build-stage"), "Docker build stage should use Node 24.18.0 Alpine.")
+assert(dockerfile.includes("FROM node:24.18.0-alpine AS production-stage"), "Docker production stage should use Node 24.18.0 Alpine.")
 assert(dockerfile.includes("RUN npm ci"), "Docker build should use npm ci.")
 assert(!dockerfile.includes("--ignore-scripts"), "Docker build should not bypass the reviewed install-script policy with --ignore-scripts.")
 assert(dockerfile.includes("RUN npm run verify:install-scripts"), "Docker build should verify dependency install-script policy.")
 
-console.log(`Toolchain policy verified for ${basename(process.cwd())}: ${expectedNpmSpecifier}, Node 22 CI/Docker, reviewed install scripts.`)
+console.log(`Toolchain policy verified for ${basename(process.cwd())}: ${expectedNpmSpecifier}, Node 24.18.0 CI/Docker, reviewed install scripts.`)
