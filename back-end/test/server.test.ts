@@ -166,7 +166,7 @@ test("backend deployment metadata falls back to package release without overridi
     deployedAt: "",
     release: "v1.1.105",
   })
-  assert.equal(readBackendDeploymentMetadata({}).release, "v1.1.105")
+  assert.equal(readBackendDeploymentMetadata({}).release, "v1.1.106")
   assert.equal(readBackendDeploymentMetadata({ COFOUNDRY_RELEASE: "v1.1.106" }).release, "v1.1.106")
 })
 
