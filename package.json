@@ -1,7 +1,7 @@
 {
   "name": "cofoundry-monorepo",
   "type": "module",
-  "version": "1.1.105",
+  "version": "1.1.106",
   "private": true,
   "packageManager": "npm@11.16.0",
   "engines": {
