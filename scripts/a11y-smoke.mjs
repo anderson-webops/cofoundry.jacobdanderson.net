@@ -191,9 +191,11 @@ function startFrontend() {
         NUXT_PUBLIC_BILLING_MODE: "mock",
         NUXT_PUBLIC_ENABLE_DEMO_ACCESS: "false",
         NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE: "false",
+        NUXT_DEVTOOLS_ENABLED: "false",
         PORT: String(frontendPort),
         SESSION_SIGNING_SECRET: "a11y-production-session-secret",
       },
+      detached: process.platform !== "win32",
       stdio: ["ignore", "pipe", "pipe"]
     })
     child.stdout.on("data", data => writeServerLine("nitro", data))
@@ -212,6 +214,7 @@ function startFrontend() {
       ...process.env,
       BROWSER: "none",
       DISABLE_ANALYTICS: "true",
+      NUXT_DEVTOOLS_ENABLED: "false",
       NUXT_TELEMETRY_DISABLED: "1",
       NUXT_PUBLIC_APP_URL: baseUrl,
       NUXT_PUBLIC_SITE_URL: baseUrl,
@@ -239,6 +242,7 @@ function startFrontend() {
       VITE_PUBLIC_SITE_ORIGIN: baseUrl,
       VITE_SHOW_AD_SLOTS: "false"
     },
+    detached: process.platform !== "win32",
     stdio: ["ignore", "pipe", "pipe"]
   })
   child.stdout.on("data", data => writeServerLine(isNuxt ? "nuxt" : "vite", data))
@@ -251,23 +255,37 @@ function closeServer(server) {
 }
 
 async function stopProcess(child) {
-  if (!child || child.exitCode !== null)
+  if (!child?.pid || child.exitCode !== null || child.signalCode !== null)
     return
 
-  child.kill("SIGTERM")
-  await new Promise((resolveStop) => {
-    const timeout = setTimeout(() => {
-      if (child.exitCode === null)
-        child.kill("SIGKILL")
+  const target = process.platform === "win32" ? child.pid : -child.pid
+  try {
+    process.kill(target, "SIGTERM")
+  }
+  catch (error) {
+    if (error?.code !== "ESRCH")
+      console.warn(`Could not stop frontend process: ${error.message}`)
+    return
+  }
 
-      resolveStop()
-    }, 5_000)
+  const exited = await new Promise((resolveStop) => {
+    const timeout = setTimeout(() => resolveStop(false), 5_000)
 
     child.once("exit", () => {
       clearTimeout(timeout)
-      resolveStop()
+      resolveStop(true)
     })
   })
+  if (exited)
+    return
+
+  try {
+    process.kill(target, "SIGKILL")
+  }
+  catch (error) {
+    if (error?.code !== "ESRCH")
+      console.warn(`Could not force stop frontend process: ${error.message}`)
+  }
 }
 
 async function analyzePage(browser, route, scheme) {
