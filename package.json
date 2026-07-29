@@ -13,8 +13,18 @@
   ],
   "overrides": {
     "vite": {
+      ".": "8.1.5",
       "esbuild": "0.28.1"
-    }
+    },
+    "brace-expansion": "$brace-expansion",
+    "fast-uri": "3.1.4",
+    "js-beautify": "$js-beautify",
+    "js-yaml": "4.3.0",
+    "postcss": "8.5.24",
+    "shell-quote": "1.10.0",
+    "svgo": "4.0.2",
+    "tar": "7.5.22",
+    "valibot": "1.4.2"
   },
   "scripts": {
     "audit": "npm audit --workspaces",
@@ -70,12 +80,14 @@
     "@antfu/eslint-config": "^8.3.0",
     "@unocss/eslint-plugin": "66.7.3",
     "axe-core": "^4.12.1",
+    "brace-expansion": "5.0.8",
     "eslint": "10.6.0",
     "eslint-plugin-format": "2.0.1",
     "globals": "^17.7.0",
+    "js-beautify": "2.0.3",
     "puppeteer": "^24.43.1",
     "typescript": "^6.0.3",
-    "vue": "3.5.39"
+    "vue": "3.5.40"
   },
   "allowScripts": {
     "esbuild@0.28.1": true,

@@ -48,7 +48,7 @@ useHead(() => ({
     ...(siteUrl.value
       ? [
           {
-            rel: "canonical",
+            rel: "canonical" as const,
             href: siteUrl.value,
           },
         ]
@@ -59,7 +59,7 @@ useHead(() => ({
     ...structuredData.value.map((entry, index) => ({
       innerHTML: JSON.stringify(entry),
       key: `structured-data-${index}`,
-      type: "application/ld+json",
+      type: "application/ld+json" as const,
     })),
   ],
   style: [
