@@ -1,4 +1,4 @@
-FROM node:22-alpine AS build-stage
+FROM node:24.18.0-alpine AS build-stage
 
 WORKDIR /app
 ENV PUPPETEER_SKIP_DOWNLOAD=true
@@ -14,7 +14,7 @@ COPY . .
 RUN npm run -w front-end prepare
 RUN npm run build
 
-FROM node:22-alpine AS production-stage
+FROM node:24.18.0-alpine AS production-stage
 
 WORKDIR /app
 ENV NODE_ENV=production

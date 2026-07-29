@@ -4,6 +4,10 @@
   "version": "1.1.105",
   "private": true,
   "packageManager": "npm@11.16.0",
+  "engines": {
+    "node": ">=24.18.0 <25",
+    "npm": ">=11.16.0 <12"
+  },
   "description": "Monorepo for the CoFoundry founder matching platform",
   "author": "Jacob Anderson",
   "license": "ISC",
@@ -78,10 +82,10 @@
   },
   "devDependencies": {
     "@antfu/eslint-config": "^8.3.0",
-    "@unocss/eslint-plugin": "66.7.3",
+    "@unocss/eslint-plugin": "66.7.5",
     "axe-core": "^4.12.1",
     "brace-expansion": "5.0.8",
-    "eslint": "10.6.0",
+    "eslint": "10.8.0",
     "eslint-plugin-format": "2.0.1",
     "globals": "^17.7.0",
     "js-beautify": "2.0.3",
