@@ -16,4 +16,18 @@ describe("security.txt", () => {
     expect(body).toContain("Policy: https://cofoundry.example/safety")
     expect(body.endsWith("\n")).toBe(true)
   })
+
+  it("rejects support-address and canonical-origin injection", () => {
+    expect(() => buildSecurityTxt({
+      appUrl: "https://cofoundry.example/",
+      expiresAt: new Date("2026-12-31T00:00:00.000Z"),
+      supportEmail: "security@cofoundry.dev\nPolicy: https://attacker.example",
+    })).toThrow(/valid single support email address/)
+
+    expect(() => buildSecurityTxt({
+      appUrl: "https://user:password@cofoundry.example/",
+      expiresAt: new Date("2026-12-31T00:00:00.000Z"),
+      supportEmail: "security@cofoundry.dev",
+    })).toThrow(/valid public HTTP\(S\) app origin/)
+  })
 })

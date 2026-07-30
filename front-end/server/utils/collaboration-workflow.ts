@@ -2,23 +2,23 @@ import type { H3Event } from "h3"
 import type {
   ConnectDeclineReason,
   ConnectRequestPayload,
-  ConnectRequestStatus,
-  MessageAttachment,
   ProposalPayload,
   ProposalSectionKey,
-  ProposalStatus,
   RelationshipDecisionRecordStatus,
   SessionUser,
   Signature,
 } from "../../shared/types/domain"
 import type { SubscriptionGateAction } from "../../shared/utils/billing"
 import type { LifecycleNotificationRequest } from "../../shared/utils/lifecycle-notifications"
+import { createError } from "h3"
 import { checkSubscriptionGate } from "../../shared/utils/billing"
 import {
   acknowledgeTrialCollaborationTransition,
   addProposalCommentTransition,
   addRelationshipDecisionTransition,
+  canUserCounterProposal,
   canUserRespondToConnectRequest,
+  canUserUpdateProposalStatus,
   createConnectRequestTransition,
   createContractFromProposalTransition,
   createProposalCounterVersionTransition,
@@ -36,8 +36,10 @@ import {
   startTrialCollaborationTransition,
   updateProposalStatusTransition,
 } from "../../shared/utils/collaboration"
-import { getContractById, getCurrentProposalVersion, getProposalById, getSubscriptionByUserId } from "../../shared/utils/workspace"
-import { recordContractSignatureEvent } from "./contract-signatures"
+import { buildProfileReadiness } from "../../shared/utils/formation"
+import { getContractById, getCurrentProposalVersion, getProfileByUserId, getProposalById, getSubscriptionByUserId } from "../../shared/utils/workspace"
+import { projectWorkspaceForSession } from "../../shared/utils/workspace-authorization"
+import { buildContractSignatureEvent } from "./contract-signatures"
 import { emitLifecycleNotificationEvents } from "./lifecycle-notification-events"
 import { persistServerCollaborationState } from "./member-collaboration"
 import { loadMemberWorkspaceState } from "./member-workspace"
@@ -45,11 +47,11 @@ import { emitWorkspaceRealtimeChange } from "./workspace-realtime"
 
 export type CollaborationMutationPayload
   = | { action: "send_connect_request", payload: ConnectRequestPayload, toUserId: string }
-    | { action: "respond_connect_request", declineReason?: ConnectDeclineReason | null, requestId: string, status: ConnectRequestStatus }
-    | { action: "send_message", attachments?: MessageAttachment[], body: string, conversationId: string, type?: "system" | "user" }
+    | { action: "respond_connect_request", declineReason?: ConnectDeclineReason | null, requestId: string, status: "accepted" | "declined" }
+    | { action: "send_message", attachments?: never[], body: string, conversationId: string }
     | { action: "mark_conversation_read", conversationId: string }
     | { action: "create_proposal", conversationId: string, opportunityId: string | null, payload: ProposalPayload, recipientUserId: string, title: string }
-    | { action: "update_proposal_status", proposalId: string, status: ProposalStatus }
+    | { action: "update_proposal_status", proposalId: string, status: "accepted" | "rejected" | "viewed" }
     | { action: "create_proposal_counter_version", payload: ProposalPayload, proposalId: string }
     | { action: "add_proposal_comment", body: string, proposalId: string, proposalVersionId: string, section: ProposalSectionKey }
     | { action: "create_contract_from_proposal", proposalId: string }
@@ -69,11 +71,15 @@ function buildIdentity(session: SessionUser) {
   }
 }
 
-async function persistForUsers(event: H3Event, userIds: string[], seed: Awaited<ReturnType<typeof loadMemberWorkspaceState>>["seed"]) {
+async function persistForUsers(
+  event: H3Event,
+  userIds: string[],
+  seed: Awaited<ReturnType<typeof loadMemberWorkspaceState>>["seed"],
+  expectedSeed: Awaited<ReturnType<typeof loadMemberWorkspaceState>>["seed"],
+  signatureEvents: ReturnType<typeof buildContractSignatureEvent>[] = [],
+) {
   const uniqueIds = Array.from(new Set(userIds.filter(Boolean)))
-
-  for (const userId of uniqueIds)
-    await persistServerCollaborationState(event, userId, seed)
+  await persistServerCollaborationState(event, uniqueIds, seed, { expectedSeed, signatureEvents })
 }
 
 function assertSubscriptionGate(seed: Awaited<ReturnType<typeof loadMemberWorkspaceState>>["seed"], userId: string, action: SubscriptionGateAction) {
@@ -100,6 +106,24 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
     case "send_connect_request": {
       if (payload.toUserId === session.id)
         throw createError({ statusCode: 400, statusMessage: "You cannot send a connect request to yourself." })
+
+      const senderProfile = getProfileByUserId(nextSeed, session.id)
+      if (!senderProfile || !buildProfileReadiness(senderProfile).readyForOutreach)
+        throw createError({ statusCode: 403, statusMessage: "Complete the required trust and intent profile fields before sending an intro." })
+
+      const visibleWorkspace = projectWorkspaceForSession(nextSeed, workspace.session)
+      const targetProfile = getProfileByUserId(visibleWorkspace, payload.toUserId)
+      const targetUser = visibleWorkspace.users.find(user => user.id === payload.toUserId)
+      if (!targetProfile || !targetUser || targetUser.suspendedAt)
+        throw createError({ statusCode: 404, statusMessage: "The requested member is not available for introductions." })
+
+      const duplicateRequest = nextSeed.connectRequests.some(request =>
+        request.status === "pending"
+        && request.fromUserId === session.id
+        && request.toUserId === payload.toUserId,
+      )
+      if (duplicateRequest)
+        throw createError({ statusCode: 409, statusMessage: "A pending intro already exists for this member." })
 
       assertSubscriptionGate(nextSeed, session.id, "send_intro")
       const transition = createConnectRequestTransition(nextSeed, session.id, payload.toUserId, payload.payload, actedAt)
@@ -152,11 +176,11 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
       if (!isConversationParticipant(conversation, session.id))
         throw createError({ statusCode: 403, statusMessage: "You are not part of this conversation." })
 
-      const transition = sendMessageTransition(nextSeed, payload.conversationId, session.id, payload.body, payload.attachments || [], actedAt, payload.type || "user")
+      const transition = sendMessageTransition(nextSeed, payload.conversationId, session.id, payload.body, [], actedAt, "user")
       nextSeed = transition.seed
       affectedUsers = [...conversation.participantIds]
       result = { messageId: transition.message?.id || null }
-      if (transition.message && (payload.type || "user") === "user") {
+      if (transition.message) {
         conversation.participantIds
           .filter(userId => userId !== session.id)
           .forEach((userId) => {
@@ -193,6 +217,18 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
         throw createError({ statusCode: 404, statusMessage: "Conversation not found." })
       if (!isConversationParticipant(conversation, session.id) || !conversation.participantIds.includes(payload.recipientUserId))
         throw createError({ statusCode: 403, statusMessage: "Proposal participants must match the conversation." })
+      if (payload.recipientUserId === session.id)
+        throw createError({ statusCode: 400, statusMessage: "A proposal recipient must be the other conversation participant." })
+      if (nextSeed.proposals.some(proposal =>
+        proposal.conversationId === payload.conversationId && !["accepted", "rejected"].includes(proposal.status),
+      )) {
+        throw createError({ statusCode: 409, statusMessage: "This conversation already has an active proposal." })
+      }
+      if (payload.opportunityId) {
+        const opportunity = nextSeed.opportunities.find(item => item.id === payload.opportunityId)
+        if (!opportunity || !conversation.participantIds.includes(opportunity.ownerUserId))
+          throw createError({ statusCode: 400, statusMessage: "The proposal opportunity must belong to a conversation participant." })
+      }
 
       assertSubscriptionGate(nextSeed, session.id, "create_proposal")
       const transition = createProposalTransition(nextSeed, session.id, payload.recipientUserId, payload.conversationId, payload.opportunityId, payload.title, payload.payload, actedAt)
@@ -219,6 +255,8 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
         throw createError({ statusCode: 404, statusMessage: "Proposal not found." })
       if (!isProposalParticipant(proposal, session.id))
         throw createError({ statusCode: 403, statusMessage: "You are not part of this proposal." })
+      if (!canUserUpdateProposalStatus(nextSeed, proposal, session.id, payload.status))
+        throw createError({ statusCode: 409, statusMessage: "Only the counterparty to the active proposal version can make this status change." })
 
       nextSeed = updateProposalStatusTransition(nextSeed, payload.proposalId, payload.status, session.id, actedAt)
       affectedUsers = [proposal.createdByUserId, proposal.recipientUserId]
@@ -243,6 +281,8 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
         throw createError({ statusCode: 404, statusMessage: "Proposal not found." })
       if (!isProposalParticipant(proposal, session.id))
         throw createError({ statusCode: 403, statusMessage: "You are not part of this proposal." })
+      if (!canUserCounterProposal(nextSeed, proposal, session.id))
+        throw createError({ statusCode: 409, statusMessage: "Only the counterparty to the active proposal version can counter it." })
 
       assertSubscriptionGate(nextSeed, session.id, "create_proposal")
       const transition = createProposalCounterVersionTransition(nextSeed, payload.proposalId, session.id, payload.payload, actedAt)
@@ -269,6 +309,8 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
         throw createError({ statusCode: 404, statusMessage: "Proposal not found." })
       if (!isProposalParticipant(proposal, session.id))
         throw createError({ statusCode: 403, statusMessage: "You are not part of this proposal." })
+      if (["accepted", "rejected"].includes(proposal.status))
+        throw createError({ statusCode: 409, statusMessage: "Comments cannot be added after a proposal is accepted or rejected." })
 
       const currentVersion = getCurrentProposalVersion(nextSeed, proposal)
       if (!currentVersion || currentVersion.id !== payload.proposalVersionId)
@@ -299,6 +341,8 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
         throw createError({ statusCode: 404, statusMessage: "Proposal not found." })
       if (!isProposalParticipant(proposal, session.id))
         throw createError({ statusCode: 403, statusMessage: "You are not part of this proposal." })
+      if (proposal.status !== "accepted")
+        throw createError({ statusCode: 409, statusMessage: "A contract can only be generated from an accepted proposal." })
 
       assertSubscriptionGate(nextSeed, session.id, "create_contract")
       const transition = createContractFromProposalTransition(nextSeed, payload.proposalId, actedAt)
@@ -329,6 +373,15 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
         throw createError({ statusCode: 404, statusMessage: "Contract not found." })
       if (!isContractParticipant(nextSeed, contract, session.id))
         throw createError({ statusCode: 403, statusMessage: "You are not part of this contract." })
+      if (contract.status !== "pending_signature")
+        throw createError({ statusCode: 409, statusMessage: "This contract is not awaiting signatures." })
+      if (nextSeed.signatures.some(signature =>
+        signature.contractId === contract.id
+        && signature.contractVersionId === contract.currentVersionId
+        && signature.userId === session.id,
+      )) {
+        throw createError({ statusCode: 409, statusMessage: "You have already signed the current contract version." })
+      }
 
       assertSubscriptionGate(nextSeed, session.id, "sign_contract")
       const existingSignatureIds = new Set(nextSeed.signatures.map(signature => signature.id))
@@ -403,15 +456,16 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
     }
   }
 
-  await persistForUsers(event, affectedUsers, nextSeed)
+  const signatureEvents = signatureEvent
+    ? [buildContractSignatureEvent(event, signatureEvent.signature, signatureEvent.typedName)]
+    : []
+  await persistForUsers(event, affectedUsers, nextSeed, workspace.seed, signatureEvents)
   await emitWorkspaceRealtimeChange(affectedUsers, {
     metadata: {
       action: payload.action,
     },
     source: "workspace.collaboration",
   })
-  if (signatureEvent)
-    await recordContractSignatureEvent(event, signatureEvent.signature, signatureEvent.typedName)
   if (lifecycleNotifications.length) {
     await emitLifecycleNotificationEvents(event, nextSeed, lifecycleNotifications, {
       source: "workspace.collaboration",
@@ -419,7 +473,7 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
   }
 
   return {
-    data: nextSeed,
+    data: projectWorkspaceForSession(nextSeed, workspace.session),
     result,
     session: workspace.session,
   }
@@ -436,7 +490,9 @@ export async function markInboxNotificationRead(event: H3Event, session: Session
     throw createError({ statusCode: 403, statusMessage: "You can only mark your own notifications as read." })
 
   const transition = markNotificationReadTransition(workspace.seed, notificationId, session.id, new Date().toISOString())
-  await persistServerCollaborationState(event, session.id, transition.seed)
+  await persistServerCollaborationState(event, session.id, transition.seed, {
+    expectedSeed: workspace.seed,
+  })
   await emitWorkspaceRealtimeChange([session.id], {
     metadata: {
       action: "mark_notification_read",
@@ -446,7 +502,7 @@ export async function markInboxNotificationRead(event: H3Event, session: Session
   })
 
   return {
-    data: transition.seed,
+    data: projectWorkspaceForSession(transition.seed, workspace.session),
     session: workspace.session,
   }
 }

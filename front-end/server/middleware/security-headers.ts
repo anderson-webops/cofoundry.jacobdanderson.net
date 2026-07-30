@@ -1,8 +1,8 @@
 import process from "node:process"
-import { setResponseHeader } from "h3"
+import { getRequestURL, setResponseHeader } from "h3"
 import { isLocalDevelopmentEnvironment } from "../../shared/utils/environment"
 import { resolveServerAppUrl } from "../utils/app-url"
-import { buildSecurityHeaders } from "../utils/security-headers"
+import { buildSecurityHeaders, shouldDefaultApiResponseToNoStore } from "../utils/security-headers"
 
 export default defineEventHandler((event) => {
   const runtimeConfig = useRuntimeConfig(event)
@@ -11,6 +11,7 @@ export default defineEventHandler((event) => {
     appUrl,
     backendMode: runtimeConfig.public.backendMode,
     billingMode: runtimeConfig.public.billingMode,
+    includeContentSecurityPolicy: false,
     isProduction: !isLocalDevelopmentEnvironment(process.env),
     stripePublishableKey: runtimeConfig.public.stripePublishableKey,
     supabaseUrl: runtimeConfig.public.supabaseUrl,
@@ -18,4 +19,7 @@ export default defineEventHandler((event) => {
 
   for (const [name, value] of Object.entries(headers))
     setResponseHeader(event, name, value)
+
+  if (shouldDefaultApiResponseToNoStore(getRequestURL(event).pathname))
+    setResponseHeader(event, "Cache-Control", "no-store")
 })

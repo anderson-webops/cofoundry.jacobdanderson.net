@@ -1,7 +1,30 @@
 import { describe, expect, it } from "vitest"
-import { collectEnvironmentValidationErrors, isLocalDevelopmentEnvironment, readDeploymentMetadata, readPublicEnvironment, releaseTagFromPackageVersion } from "../../shared/utils/environment"
+import { collectEnvironmentValidationErrors, isLocalDevelopmentEnvironment, isLoopbackBackendHost, readDeploymentMetadata, readPublicEnvironment, releaseTagFromPackageVersion } from "../../shared/utils/environment"
 
 describe("environment helpers", () => {
+  it("recognizes only explicit loopback backend hosts", () => {
+    expect(isLoopbackBackendHost("LOCALHOST")).toBe(true)
+    expect(isLoopbackBackendHost("127.0.0.1")).toBe(true)
+    expect(isLoopbackBackendHost("0.0.0.0")).toBe(false)
+  })
+
+  it("requires a strong operations token for a non-loopback backend bind", () => {
+    const errors = collectEnvironmentValidationErrors({
+      BACKEND_HOST: "0.0.0.0",
+      COFOUNDRY_ALLOW_PUBLIC_BACKEND_BIND: "true",
+    })
+
+    expect(errors).toContain("A strong COFOUNDRY_OPERATIONS_TOKEN is required whenever BACKEND_HOST uses a non-loopback address.")
+  })
+
+  it("rejects malformed public support addresses", () => {
+    const errors = collectEnvironmentValidationErrors({
+      NUXT_PUBLIC_SUPPORT_EMAIL: "security@cofoundry.dev\nPolicy: https://attacker.example",
+    })
+
+    expect(errors).toContain("NUXT_PUBLIC_SUPPORT_EMAIL must be a valid single email address.")
+  })
+
   it("keeps localhost defaults only for local mock development", () => {
     const environment = readPublicEnvironment({
       NODE_ENV: "development",
@@ -110,6 +133,7 @@ describe("environment helpers", () => {
     expect(errors).toContain("NUXT_PUBLIC_SUPABASE_ANON_KEY is required when NUXT_PUBLIC_BACKEND_MODE=\"supabase\".")
     expect(errors).toContain("SUPABASE_SERVICE_ROLE_KEY is required when NUXT_PUBLIC_BACKEND_MODE=\"supabase\".")
     expect(errors).toContain("SESSION_SIGNING_SECRET is required whenever account sessions are enabled in a non-local environment.")
+    expect(errors).toContain("COFOUNDRY_OPERATIONS_TOKEN is required in a non-local environment.")
   })
 
   it("requires public and secret stripe values when stripe billing mode is enabled", () => {
@@ -122,6 +146,25 @@ describe("environment helpers", () => {
     expect(errors).toContain("NUXT_PUBLIC_STRIPE_PRICE_TEAM_MONTHLY is required when NUXT_PUBLIC_BILLING_MODE=\"stripe\".")
     expect(errors).toContain("STRIPE_SECRET_KEY is required when NUXT_PUBLIC_BILLING_MODE=\"stripe\".")
     expect(errors).toContain("STRIPE_WEBHOOK_SECRET is required when NUXT_PUBLIC_BILLING_MODE=\"stripe\".")
+    expect(errors).toContain("NUXT_PUBLIC_BILLING_MODE=\"stripe\" requires NUXT_PUBLIC_BACKEND_MODE=\"supabase\" for durable subscription reconciliation.")
+  })
+
+  it("requires distinct Stripe prices and credentials", () => {
+    const errors = collectEnvironmentValidationErrors({
+      NUXT_PUBLIC_BACKEND_MODE: "supabase",
+      NUXT_PUBLIC_BILLING_MODE: "stripe",
+      NUXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY: "price_shared",
+      NUXT_PUBLIC_STRIPE_PRICE_TEAM_MONTHLY: "price_shared",
+      NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: "stripe-shared-credential",
+      NUXT_PUBLIC_SUPABASE_ANON_KEY: "anon-key",
+      NUXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
+      STRIPE_SECRET_KEY: "stripe-shared-credential",
+      STRIPE_WEBHOOK_SECRET: "stripe-shared-credential",
+      SUPABASE_SERVICE_ROLE_KEY: "service-key",
+    })
+
+    expect(errors).toContain("The Stripe Pro and Team price IDs must be different.")
+    expect(errors).toContain("Stripe publishable, secret, and webhook credentials must be different.")
   })
 
   it("requires a session signing secret when staged review access is enabled outside local development", () => {
@@ -131,5 +174,101 @@ describe("environment helpers", () => {
     })
 
     expect(errors).toContain("SESSION_SIGNING_SECRET is required whenever account sessions are enabled in a non-local environment.")
+    expect(errors).toContain("NUXT_PUBLIC_ENABLE_DEMO_ACCESS must be false outside local development.")
+  })
+
+  it("requires a canonical HTTPS URL and strong session secret in production", () => {
+    const errors = collectEnvironmentValidationErrors({
+      NODE_ENV: "production",
+      NUXT_PUBLIC_APP_URL: "http://localhost:3000",
+      SESSION_SIGNING_SECRET: "short",
+    })
+
+    expect(errors).toContain("NUXT_PUBLIC_APP_URL must not use a local origin in production.")
+    expect(errors).toContain("NUXT_PUBLIC_APP_URL must use HTTPS in production.")
+    expect(errors).toContain("SESSION_SIGNING_SECRET must be at least 32 characters in a non-local environment.")
+  })
+
+  it("requires an explicit direct-proxy allowlist before trusting forwarded headers", () => {
+    const errors = collectEnvironmentValidationErrors({
+      COFOUNDRY_TRUST_PROXY_HEADERS: "true",
+    })
+
+    expect(errors).toContain("COFOUNDRY_TRUSTED_PROXY_IPS is required when COFOUNDRY_TRUST_PROXY_HEADERS=true.")
+  })
+
+  it("rejects broad or malformed trusted-proxy ranges", () => {
+    const errors = collectEnvironmentValidationErrors({
+      COFOUNDRY_TRUSTED_PROXY_IPS: "0.0.0.0/0",
+      COFOUNDRY_TRUST_PROXY_HEADERS: "true",
+      NODE_ENV: "production",
+      NUXT_PUBLIC_APP_URL: "https://cofoundry.example",
+      NUXT_PUBLIC_BACKEND_MODE: "mock",
+      NUXT_PUBLIC_BILLING_MODE: "mock",
+      SESSION_SIGNING_SECRET: "a".repeat(32),
+    })
+
+    expect(errors).toContain("COFOUNDRY_TRUSTED_PROXY_IPS must contain only exact proxy host addresses (/32 or /128), not broad or malformed ranges.")
+  })
+
+  it("rejects weak operations worker tokens", () => {
+    const errors = collectEnvironmentValidationErrors({
+      COFOUNDRY_OPERATIONS_TOKEN: "short-token",
+    })
+
+    expect(errors).toContain("COFOUNDRY_OPERATIONS_TOKEN must be at least 32 characters when it is configured.")
+  })
+
+  it("requires canonical origins and distinct deployment credentials", () => {
+    const errors = collectEnvironmentValidationErrors({
+      COFOUNDRY_OPERATIONS_TOKEN: "same-secret-value-at-least-32-characters",
+      NODE_ENV: "production",
+      NUXT_PUBLIC_APP_URL: "https://cofoundry.example/admin?from=host",
+      NUXT_PUBLIC_BACKEND_MODE: "supabase",
+      NUXT_PUBLIC_SUPABASE_ANON_KEY: "shared-supabase-key",
+      NUXT_PUBLIC_SUPABASE_URL: "http://supabase.example/auth",
+      SESSION_SIGNING_SECRET: "same-secret-value-at-least-32-characters",
+      SUPABASE_SERVICE_ROLE_KEY: "shared-supabase-key",
+    })
+
+    expect(errors).toContain("NUXT_PUBLIC_APP_URL must be an origin without credentials, a path, query parameters, or a fragment.")
+    expect(errors).toContain("NUXT_PUBLIC_SUPABASE_URL must be an origin without credentials, a path, query parameters, or a fragment.")
+    expect(errors).toContain("NUXT_PUBLIC_SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY must be different credentials.")
+    expect(errors).toContain("COFOUNDRY_OPERATIONS_TOKEN and SESSION_SIGNING_SECRET must be different secrets.")
+  })
+
+  it("rejects multi-instance hosted operation until rate limits are shared", () => {
+    const errors = collectEnvironmentValidationErrors({
+      COFOUNDRY_APP_INSTANCE_COUNT: "2",
+      COFOUNDRY_EXPECT_MULTI_INSTANCE: "true",
+      NUXT_PUBLIC_APP_URL: "https://cofoundry.example",
+      SESSION_SIGNING_SECRET: "a-secure-session-signing-secret-32",
+    })
+
+    expect(errors).toContain("Multi-instance production is unsupported until CoFoundry has a shared atomic rate limiter; run exactly one app process.")
+  })
+
+  it("keeps realtime fanout off production and isolates cross-origin relay credentials", () => {
+    const errors = collectEnvironmentValidationErrors({
+      COFOUNDRY_OPERATIONS_TOKEN: "operations-token-value-at-least-32-chars",
+      COFOUNDRY_REALTIME_FANOUT_TOKEN: "operations-token-value-at-least-32-chars",
+      COFOUNDRY_REALTIME_FANOUT_URL: "https://relay.example/events",
+      NODE_ENV: "production",
+      NUXT_PUBLIC_APP_URL: "https://cofoundry.example",
+      SESSION_SIGNING_SECRET: "a-distinct-session-signing-secret-value",
+    })
+
+    expect(errors).toContain("COFOUNDRY_REALTIME_FANOUT_URL must be unset in production until shared rate limiting is implemented.")
+    expect(errors).toContain("COFOUNDRY_REALTIME_FANOUT_TOKEN must be different from operations and session secrets.")
+  })
+
+  it("validates multi-instance topology markers", () => {
+    const errors = collectEnvironmentValidationErrors({
+      COFOUNDRY_APP_INSTANCE_COUNT: "many",
+      COFOUNDRY_EXPECT_MULTI_INSTANCE: "sometimes",
+    })
+
+    expect(errors).toContain("COFOUNDRY_EXPECT_MULTI_INSTANCE must be true or false when it is set.")
+    expect(errors).toContain("COFOUNDRY_APP_INSTANCE_COUNT must be a positive integer when it is set.")
   })
 })

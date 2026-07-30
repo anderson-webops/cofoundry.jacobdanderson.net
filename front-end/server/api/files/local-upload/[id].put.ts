@@ -1,17 +1,13 @@
 import type { H3Event } from "h3"
 import { Buffer } from "node:buffer"
-import { getHeader, getQuery, getRouterParam, readRawBody } from "h3"
-import { writeLocalFileUploadContent } from "../../../utils/local-operations-store"
+import { getHeader, getRouterParam, readRawBody } from "h3"
+import { assertLocalFileUploadToken, writeLocalFileUploadContent } from "../../../utils/local-operations-store"
 import { assertRateLimit, buildRateLimitKey } from "../../../utils/rate-limit"
 import { isSupabaseEnabled } from "../../../utils/supabase"
 
 const maxLocalUploadBytes = 10 * 1024 * 1024
 
 function readUploadToken(event: H3Event) {
-  const queryToken = getQuery(event).token
-  if (typeof queryToken === "string")
-    return queryToken
-
   return getHeader(event, "x-cofoundry-upload-token") || ""
 }
 
@@ -28,21 +24,44 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: "Upload id is required." })
 
   assertRateLimit(event, {
+    limit: 60,
+    scope: "files:local-upload:ip",
+    windowMs: 60 * 60 * 1000,
+  })
+  assertRateLimit(event, {
     key: buildRateLimitKey(event, uploadId),
-    limit: 30,
-    scope: "files:local-upload",
+    limit: 5,
+    scope: "files:local-upload:policy",
     windowMs: 60 * 60 * 1000,
   })
 
-  const contentLength = Number.parseInt(getHeader(event, "content-length") || "", 10)
-  if (!Number.isNaN(contentLength) && contentLength > maxLocalUploadBytes)
+  const token = readUploadToken(event)
+  if (!token || token.length > 200)
+    throw createError({ statusCode: 401, statusMessage: "A valid upload token is required." })
+
+  let policy: Awaited<ReturnType<typeof assertLocalFileUploadToken>>
+  try {
+    policy = await assertLocalFileUploadToken(uploadId, token)
+  }
+  catch {
+    throw createError({ statusCode: 401, statusMessage: "Local upload token is invalid or expired." })
+  }
+
+  const contentLengthHeader = getHeader(event, "content-length") || ""
+  if (!contentLengthHeader)
+    throw createError({ statusCode: 411, statusMessage: "Uploads must declare their exact Content-Length." })
+
+  const contentLength = Number.parseInt(contentLengthHeader, 10)
+  if (contentLength > maxLocalUploadBytes)
     throw createError({ statusCode: 413, statusMessage: "Uploaded file exceeds the local file size limit." })
+  if (contentLength !== policy.sizeBytes)
+    throw createError({ statusCode: 400, statusMessage: "Uploaded file size does not match the requested upload policy." })
 
   const rawBody = await readRawBody(event, false)
   const bytes = Buffer.isBuffer(rawBody) ? rawBody : Buffer.from(rawBody || "")
 
   try {
-    const upload = await writeLocalFileUploadContent(uploadId, readUploadToken(event), bytes)
+    const upload = await writeLocalFileUploadContent(uploadId, token, bytes)
 
     return {
       upload: {
@@ -54,9 +73,13 @@ export default defineEventHandler(async (event) => {
     }
   }
   catch (error) {
+    console.warn("[files] Local upload write failed.", {
+      error,
+      uploadId,
+    })
     throw createError({
       statusCode: 400,
-      statusMessage: error instanceof Error ? error.message : "Local upload failed.",
+      statusMessage: "Local upload could not be completed.",
     })
   }
 })

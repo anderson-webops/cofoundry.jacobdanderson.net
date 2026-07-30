@@ -105,6 +105,34 @@ export interface ProductionReadinessPayload {
 }
 
 const dayMs = 24 * 60 * 60 * 1000
+export const productionReadinessCheckIds: ReadonlySet<string> = new Set([
+  "access-request-queue",
+  "active-admin-access",
+  "admin-bootstrap-audit",
+  "alert-webhook-destination",
+  "backup-recency",
+  "contract-envelope-evidence",
+  "deployment-identity",
+  "email-suppression-evidence",
+  "environment-validation",
+  "external-auth-provider",
+  "file-scanning",
+  "launch-mode",
+  "local-durable-store",
+  "mail-transport",
+  "monitoring-heartbeat",
+  "notification-digests",
+  "operational-events",
+  "operations-worker-token",
+  "privacy-request-queue",
+  "public-app-url",
+  "realtime-fanout",
+  "restore-drill",
+  "session-signing-secret",
+  "shared-rate-limiter",
+  "stripe-webhook-evidence",
+  "trust-verification-evidence",
+])
 const statusWeight: Record<ProductionReadinessStatus, number> = {
   fail: 0,
   info: 1,
@@ -427,11 +455,22 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
       "Workspace realtime fanout",
       checkById.get("realtime-fanout")?.status || "info",
       checkById.get("realtime-fanout")?.summary || "Single-instance realtime",
-      "Process-local SSE is enough for one Node process, but horizontally scaled app servers need a relay so messages, typing, proposal changes, and inbox refresh events reach clients connected to another instance.",
+      "Process-local SSE is enough for one Node process. The relay code can distribute messages across instances, but it does not make horizontal scaling safe while abuse-control limits remain process-local.",
       input.expectsMultiInstanceRuntime || input.hasRealtimeFanoutConfigured
-        ? "Configure a server-side realtime relay URL, have the relay POST signed envelopes back to each instance's operations ingress, then record worker smoke evidence."
+        ? "Return production to one app process. Treat relay configuration as experimental until a shared atomic rate limiter is implemented and validated."
         : "Keep this unset until the deployment actually runs more than one app instance.",
-      "COFOUNDRY_EXPECT_MULTI_INSTANCE=true\nCOFOUNDRY_REALTIME_FANOUT_URL=https://<relay-or-internal-router>/cofoundry/realtime\n# Relay posts to each app instance: POST /api/operations/realtime-events with COFOUNDRY_OPERATIONS_TOKEN\nnpm run operations:realtime-smoke -- --min-delivered 0",
+      "COFOUNDRY_EXPECT_MULTI_INSTANCE=false\nCOFOUNDRY_APP_INSTANCE_COUNT=1",
+    ),
+    task(
+      "rate-limit-topology-provisioning",
+      "Abuse-control topology",
+      checkById.get("shared-rate-limiter")?.status || "pass",
+      checkById.get("shared-rate-limiter")?.summary || "Single app process",
+      "Login, signup, intake, worker, and upload limits use bounded in-process buckets. Multiple app processes would multiply those limits and weaken the security boundary.",
+      input.expectsMultiInstanceRuntime
+        ? "Run exactly one production app process until a shared atomic rate-limiter store and cross-instance tests are implemented."
+        : "Keep the production app process count at one.",
+      "COFOUNDRY_EXPECT_MULTI_INSTANCE=false\nCOFOUNDRY_APP_INSTANCE_COUNT=1",
     ),
     task(
       "operations-unit-installer",
@@ -566,7 +605,10 @@ function buildCutoverPhases(input: ProductionReadinessInput, checkById: Map<stri
     checkById.get("alert-webhook-destination"),
   ])
   const realtimeScalingStatus = input.expectsMultiInstanceRuntime || input.hasRealtimeFanoutConfigured
-    ? checkById.get("realtime-fanout")?.status || "warn"
+    ? aggregateStatus([
+        checkById.get("shared-rate-limiter"),
+        checkById.get("realtime-fanout"),
+      ])
     : "info"
   const supabaseCutoverStatus = publicEnvironment.backendMode === "supabase"
     ? aggregateStatus([
@@ -604,6 +646,7 @@ function buildCutoverPhases(input: ProductionReadinessInput, checkById: Map<stri
             checkById.get("session-signing-secret"),
             checkById.get("local-durable-store"),
             checkById.get("operations-worker-token"),
+            checkById.get("shared-rate-limiter"),
             checkById.get("realtime-fanout"),
             checkById.get("active-admin-access"),
           ])
@@ -638,12 +681,14 @@ function buildCutoverPhases(input: ProductionReadinessInput, checkById: Map<stri
       "workspace-realtime-scaling",
       "Workspace realtime scaling",
       realtimeScalingStatus,
-      input.hasRealtimeFanoutConfigured
-        ? checkById.get("realtime-fanout")?.summary || "Fanout bridge configured"
-        : input.expectsMultiInstanceRuntime ? "Multi-instance expected, fanout missing" : "Single-instance default",
-      "The in-app realtime layer is process-local unless a server-side relay is configured. Multi-instance production should not rely on sticky clients seeing only same-process events.",
+      input.expectsMultiInstanceRuntime
+        ? "Blocked: shared rate limiter missing"
+        : input.hasRealtimeFanoutConfigured
+          ? checkById.get("realtime-fanout")?.summary || "Fanout bridge configured"
+          : "Single-instance default",
+      "The in-app realtime layer and abuse-control counters are process-local. A relay can distribute workspace events, but only a shared atomic limiter can preserve security limits across app instances.",
       input.expectsMultiInstanceRuntime || input.hasRealtimeFanoutConfigured
-        ? "Wire the relay to receive CoFoundry envelopes, POST them to every app instance's `/api/operations/realtime-events` endpoint with the worker token, then run the realtime smoke worker."
+        ? "Run one production app process. Implement and validate a shared atomic rate limiter before re-enabling horizontal scaling or relying on the realtime relay."
         : "No action is required while the production app runs as a single Node process.",
       "docs/operations-runbook.md",
     ),
@@ -652,7 +697,7 @@ function buildCutoverPhases(input: ProductionReadinessInput, checkById: Map<stri
       "Supabase persistence cutover",
       supabaseCutoverStatus,
       publicEnvironment.backendMode === "supabase" ? "Supabase mode active" : "Not enabled",
-      "Live persistence should wait for migrations, Vault-injected Supabase secrets, ownership/RLS checks, and first-admin bootstrap evidence.",
+      "Live persistence should wait for migrations, Vault-supplied server credentials, ownership and RLS checks, and first-admin bootstrap evidence.",
       publicEnvironment.backendMode === "supabase"
         ? "Resolve any Supabase-mode readiness warnings before relying on live persisted accounts."
         : "Keep `NUXT_PUBLIC_BACKEND_MODE=mock` until staging proves Supabase migrations, auth, admin bootstrap, and rollback.",
@@ -872,16 +917,16 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
     : input.expectsMultiInstanceRuntime ? "Multi-instance expected, fanout missing" : "Process-local SSE"
   const realtimeFanoutDetail = input.hasRealtimeFanoutConfigured
     ? latestRealtimeFanoutSmoke
-      ? "Workspace realtime fanout has worker-reported smoke evidence. For full multi-instance proof, run the smoke with a member SSE stream connected to another app instance and require at least one delivery."
-      : "Workspace invalidation and typing envelopes can be published to a server-side relay, but readiness still needs a worker-reported smoke event."
+      ? "The experimental workspace realtime fanout has worker-reported staging evidence. This does not make multi-instance production safe while abuse-control limits remain process-local."
+      : "Workspace invalidation and typing envelopes can be published to an experimental server-side relay, but production must remain single-process."
     : input.expectsMultiInstanceRuntime
-      ? "This deployment declares more than one app instance, but realtime events remain process-local. Connected clients on other instances may wait for polling fallback instead of receiving push updates."
+      ? "This deployment declares more than one app instance. Realtime delivery and abuse-control limits remain process-local, so the production topology is unsupported."
       : "Single-process deployments can use process-local SSE plus polling fallback without an external relay."
   const realtimeFanoutAction = input.hasRealtimeFanoutConfigured
-    ? "Run `systemctl start cofoundry-operations-realtime-smoke.service`, or `npm run operations:realtime-smoke -- --min-delivered 0` before unit templates are installed. For full relay proof with a connected cross-instance SSE stream, set `--min-delivered 1` or higher."
+    ? "Unset COFOUNDRY_REALTIME_FANOUT_URL in production. Use the smoke worker only in isolated staging while developing a shared limiter and relay."
     : input.expectsMultiInstanceRuntime
-      ? "Set COFOUNDRY_REALTIME_FANOUT_URL to a server-side relay and have that relay POST signed envelopes to each app instance."
-      : "Set COFOUNDRY_EXPECT_MULTI_INSTANCE=true only when the host actually runs multiple app instances."
+      ? "Set COFOUNDRY_EXPECT_MULTI_INSTANCE=false and COFOUNDRY_APP_INSTANCE_COUNT=1."
+      : "Keep COFOUNDRY_EXPECT_MULTI_INSTANCE=false and the relay URL unset."
 
   const deploymentChecks = [
     check(
@@ -945,10 +990,10 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
       "active-admin-access",
       "Active admin access",
       input.adminPosture.activeAdminCount > 0 ? "pass" : "fail",
-      `${input.adminPosture.activeAdminCount} active admin${input.adminPosture.activeAdminCount === 1 ? "" : "s"}`,
+      `${input.adminPosture.activeAdminCount} active full admin${input.adminPosture.activeAdminCount === 1 ? "" : "s"}`,
       input.adminPosture.activeAdminCount > 0
-        ? `${input.adminPosture.activeInvestorAdminCount} active investor-admin account${input.adminPosture.activeInvestorAdminCount === 1 ? "" : "s"} included in the operator role set.`
-        : "No active admin or investor-admin account is available. Operators could be locked out of production control surfaces.",
+        ? `${input.adminPosture.activeInvestorAdminCount} active investor-admin account${input.adminPosture.activeInvestorAdminCount === 1 ? "" : "s"} can assist with bounded moderation but cannot replace a full admin.`
+        : "No active full admin account is available. Investor-admin accounts cannot perform security-sensitive promotion, demotion, or verification actions.",
       "Create or reinstate a persisted operator account, then run the first-admin bootstrap path before Supabase cutover.",
     ),
     check(
@@ -970,6 +1015,18 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
   ]
 
   const securityChecks = [
+    check(
+      "shared-rate-limiter",
+      "Shared abuse-control boundary",
+      input.expectsMultiInstanceRuntime ? "fail" : "pass",
+      input.expectsMultiInstanceRuntime ? "Unsupported multi-instance topology" : "Single app process",
+      input.expectsMultiInstanceRuntime
+        ? "Authentication, intake, worker, and upload rate limits are process-local, so each extra app instance would multiply an attacker's permitted request volume."
+        : "A single app process preserves the configured abuse-control ceilings.",
+      input.expectsMultiInstanceRuntime
+        ? "Set COFOUNDRY_EXPECT_MULTI_INSTANCE=false and COFOUNDRY_APP_INSTANCE_COUNT=1 until a shared atomic limiter is implemented."
+        : "Keep the production app process count at one.",
+    ),
     check(
       "session-signing-secret",
       "Session signing secret",

@@ -1,13 +1,35 @@
 import type { IncomingMessage, ServerResponse } from "node:http"
+import { Buffer } from "node:buffer"
+import { timingSafeEqual } from "node:crypto"
 import { createServer } from "node:http"
 import { resolve } from "node:path"
 import process from "node:process"
 import { fileURLToPath } from "node:url"
-import { assertEnvironmentIsValid, readBackendDeploymentMetadata, readPublicEnvironment } from "./environment.js"
+import { assertEnvironmentIsValid, isLocalDevelopmentEnvironment, isLoopbackBackendHost, readBackendDeploymentMetadata, readPublicEnvironment, readSecretEnvironment } from "./environment.js"
 
 export function resolveBackendPort() {
   const configuredPort = Number(process.env.BACKEND_PORT)
-  return Number.isFinite(configuredPort) && configuredPort > 0 ? configuredPort : 3008
+  return Number.isInteger(configuredPort) && configuredPort > 0 && configuredPort <= 65_535 ? configuredPort : 3008
+}
+
+export function resolveBackendHost(env: Record<string, string | undefined> = process.env) {
+  const host = env.BACKEND_HOST?.trim() || "127.0.0.1"
+  const nonLoopbackBind = !isLoopbackBackendHost(host)
+
+  if (nonLoopbackBind && env.COFOUNDRY_ALLOW_PUBLIC_BACKEND_BIND?.trim().toLowerCase() !== "true") {
+    throw new Error(
+      "Refusing a public backend bind. Set BACKEND_HOST=127.0.0.1 or explicitly set COFOUNDRY_ALLOW_PUBLIC_BACKEND_BIND=true.",
+    )
+  }
+
+  const operationsToken = readSecretEnvironment(env).operationsWorkerToken
+  if (nonLoopbackBind && operationsToken.length < 32) {
+    throw new Error(
+      "Refusing a public backend bind without a distinct COFOUNDRY_OPERATIONS_TOKEN of at least 32 characters.",
+    )
+  }
+
+  return host
 }
 
 export function buildMetadataPayload() {
@@ -25,25 +47,86 @@ export function buildMetadataPayload() {
   }
 }
 
+function tokensMatch(providedValue: string, expectedValue: string) {
+  const provided = Buffer.from(providedValue)
+  const expected = Buffer.from(expectedValue)
+
+  return provided.length > 0
+    && provided.length === expected.length
+    && timingSafeEqual(provided, expected)
+}
+
+function readMetadataToken(request: IncomingMessage) {
+  const authorization = request.headers.authorization?.trim() || ""
+  const bearerPrefix = "Bearer "
+  if (authorization.startsWith(bearerPrefix))
+    return authorization.slice(bearerPrefix.length).trim()
+
+  const alternateHeader = request.headers["x-cofoundry-operations-token"]
+  return (Array.isArray(alternateHeader) ? alternateHeader[0] : alternateHeader)?.trim() || ""
+}
+
+function isMetadataAuthorized(request: IncomingMessage) {
+  const configuredToken = readSecretEnvironment(process.env).operationsWorkerToken
+  const backendHost = process.env.BACKEND_HOST?.trim() || "127.0.0.1"
+  const authorizationRequired = Boolean(configuredToken)
+    || !isLocalDevelopmentEnvironment(process.env)
+    || !isLoopbackBackendHost(backendHost)
+
+  if (!authorizationRequired)
+    return true
+
+  return configuredToken.length >= 32 && tokensMatch(readMetadataToken(request), configuredToken)
+}
+
 export function handleRequest(request: IncomingMessage, response: ServerResponse) {
   const headers = {
+    "cache-control": "no-store",
+    "content-security-policy": "default-src 'none'; frame-ancestors 'none'",
     "content-type": "application/json; charset=utf-8",
+    "cross-origin-resource-policy": "same-origin",
+    "permissions-policy": "camera=(), geolocation=(), microphone=()",
+    "referrer-policy": "no-referrer",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+  }
+  const method = request.method || "GET"
+  const pathname = new URL(request.url || "/", "http://127.0.0.1").pathname
+  const knownPath = pathname === "/health" || pathname === "/metadata"
+
+  if (knownPath && method !== "GET" && method !== "HEAD") {
+    response.writeHead(405, {
+      ...headers,
+      allow: "GET, HEAD",
+    })
+    response.end(JSON.stringify({ error: "Method not allowed" }))
+    return
   }
 
-  if (request.url === "/health") {
+  if (pathname === "/health") {
     response.writeHead(200, headers)
-    response.end(JSON.stringify({
+    const body = JSON.stringify({
       status: "ok",
       service: "cofoundry-back-end",
       deployment: readBackendDeploymentMetadata(process.env),
       now: new Date().toISOString(),
-    }))
+    })
+    response.end(method === "HEAD" ? undefined : body)
     return
   }
 
-  if (request.url === "/metadata") {
+  if (pathname === "/metadata") {
+    if (!isMetadataAuthorized(request)) {
+      response.writeHead(401, {
+        ...headers,
+        "www-authenticate": "Bearer",
+      })
+      response.end(method === "HEAD" ? undefined : JSON.stringify({ error: "Unauthorized" }))
+      return
+    }
+
     response.writeHead(200, headers)
-    response.end(JSON.stringify(buildMetadataPayload()))
+    response.end(method === "HEAD" ? undefined : JSON.stringify(buildMetadataPayload()))
     return
   }
 
@@ -55,16 +138,23 @@ export function handleRequest(request: IncomingMessage, response: ServerResponse
 
 export function createBackendServer() {
   assertEnvironmentIsValid(process.env, "back-end server startup")
-  return createServer(handleRequest)
+  const server = createServer({
+    headersTimeout: 5_000,
+    keepAliveTimeout: 5_000,
+    requestTimeout: 10_000,
+  }, handleRequest)
+  server.maxHeadersCount = 100
+  server.maxRequestsPerSocket = 1_000
+  return server
 }
 
-export async function startBackendServer(port = resolveBackendPort()) {
+export async function startBackendServer(port = resolveBackendPort(), host = resolveBackendHost()) {
   const server = createBackendServer()
 
   await new Promise<void>((resolvePromise, rejectPromise) => {
     server.once("error", rejectPromise)
-    server.listen(port, () => {
-      console.log(`CoFoundry backend workspace listening on http://localhost:${port}`)
+    server.listen(port, host, () => {
+      console.log(`CoFoundry backend workspace listening on http://${host}:${port}`)
       resolvePromise()
     })
   })

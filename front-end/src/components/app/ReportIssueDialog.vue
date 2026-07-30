@@ -19,6 +19,7 @@ const authStore = useAuthStore()
 const workspaceStore = useWorkspaceStore()
 const isOpen = defineModel<boolean>({ default: false })
 const errors = ref<Record<string, string>>({})
+const pending = ref(false)
 const form = reactive({
   reason: "spam" as ReportReason,
   details: "",
@@ -29,7 +30,7 @@ watch(isOpen, (open) => {
     errors.value = {}
 })
 
-function submitReport() {
+async function submitReport() {
   errors.value = {}
   const parsed = reportSchema.safeParse(form)
   if (!parsed.success) {
@@ -40,17 +41,25 @@ function submitReport() {
   if (!authStore.currentUser)
     return
 
-  workspaceStore.createReport(
-    authStore.currentUser.id,
-    props.targetType,
-    props.targetId,
-    parsed.data.reason,
-    `${props.subjectLabel}: ${parsed.data.details}`,
-  )
-  emit("created", parsed.data.reason)
-  form.reason = "spam"
-  form.details = ""
-  isOpen.value = false
+  pending.value = true
+  try {
+    await workspaceStore.createReport(
+      props.targetType,
+      props.targetId,
+      parsed.data.reason,
+      `${props.subjectLabel}: ${parsed.data.details}`,
+    )
+    emit("created", parsed.data.reason)
+    form.reason = "spam"
+    form.details = ""
+    isOpen.value = false
+  }
+  catch (caughtError) {
+    errors.value.form = caughtError instanceof Error ? caughtError.message : "The report could not be submitted."
+  }
+  finally {
+    pending.value = false
+  }
 }
 </script>
 
@@ -71,9 +80,12 @@ function submitReport() {
         helper="Include what happened, where it happened, and why it felt unsafe or misleading."
         :error="errors.details"
       />
+      <p v-if="errors.form" class="field-error">
+        {{ errors.form }}
+      </p>
       <div class="flex justify-end">
-        <BaseButton type="submit">
-          Submit report
+        <BaseButton type="submit" :disabled="pending">
+          {{ pending ? "Submitting..." : "Submit report" }}
         </BaseButton>
       </div>
     </form>

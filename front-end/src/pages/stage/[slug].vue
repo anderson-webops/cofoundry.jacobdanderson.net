@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { workspaceSeed } from "~/shared/data/seed"
-import { getPublicOpportunitiesForStage, getPublicProfilesForStage, getRoleHubs, getStageHubs, pickRelatedHubEntries } from "~/shared/utils/directory"
+import { pickRelatedHubEntries } from "~/shared/utils/directory"
 
 const route = useRoute()
 const slug = String(route.params.slug)
-const hub = getStageHubs(workspaceSeed).find(entry => entry.slug === slug)
+const directory = await usePublicDirectory()
+const hub = directory.stageHubs.find(entry => entry.slug === slug)
 
 if (!hub)
   throw createError({ statusCode: 404, statusMessage: "Stage hub not found" })
 
-const profiles = getPublicProfilesForStage(workspaceSeed, slug)
-const opportunities = getPublicOpportunitiesForStage(workspaceSeed, slug)
-const relatedRoles = pickRelatedHubEntries(getRoleHubs(workspaceSeed), "", 4)
+const profiles = directory.profiles.filter(entry => entry.stageSlugs.includes(slug))
+const opportunities = directory.opportunities.filter(entry => entry.stageSlugs.includes(slug))
+const relatedRoles = pickRelatedHubEntries(directory.roleHubs, "", 4)
 
 usePageSeo(`${hub.label} startup searches`, hub.description, {
   canonicalPath: `/stage/${hub.slug}`,
@@ -45,6 +45,7 @@ usePageSeo(`${hub.label} startup searches`, hub.description, {
           :key="entry.slug"
           :profile="entry.profile"
           :skills="entry.skillLabels"
+          :trust-summary="entry.trustSummary"
         >
           <BaseButton variant="secondary" :to="`/people/${entry.slug}`">
             View public profile

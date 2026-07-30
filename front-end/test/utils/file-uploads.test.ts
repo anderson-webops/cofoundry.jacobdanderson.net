@@ -5,8 +5,9 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import process from "node:process"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { createFileUploadPolicy } from "../../server/utils/file-uploads"
+import { assertFileUploadAuthorization, createFileUploadPolicy } from "../../server/utils/file-uploads"
 import { clearLocalOperationsStoreForTests } from "../../server/utils/local-operations-store"
+import { workspaceSeed } from "../../shared/data/seed"
 
 let dataDirectory: string
 
@@ -52,6 +53,43 @@ describe("file upload policies", () => {
     expect(policy.objectPath).toMatch(/^user_uploads_test\/\d{4}-\d{2}-\d{2}\//)
     expect(policy.objectPath).toContain("-trust-evidence.txt")
     expect(policy.signedUploadUrl).toContain("https://cofoundry.example/api/files/local-upload/")
+    expect(policy.signedUploadUrl).not.toContain("?token=")
     expect(policy.uploadToken).toEqual(expect.any(String))
+  })
+
+  it("rejects attachment targets the member does not own or participate in", () => {
+    expect(() => assertFileUploadAuthorization(workspaceSeed, {
+      email: "emma@cofoundry.dev",
+      id: "user_emma",
+      name: "Emma",
+      onboardingCompleted: true,
+      role: "founder",
+      subscriptionPlan: "free",
+    }, {
+      filename: "private.pdf",
+      mimeType: "application/pdf",
+      purpose: "trust_evidence",
+      relatedId: "profile_user_olivia",
+      relatedType: "profile",
+      sizeBytes: 32,
+    })).toThrow("You cannot attach files to that workspace record.")
+  })
+
+  it("rejects mismatched upload purposes and related record types", () => {
+    expect(() => assertFileUploadAuthorization(workspaceSeed, {
+      email: "emma@cofoundry.dev",
+      id: "user_emma",
+      name: "Emma",
+      onboardingCompleted: true,
+      role: "founder",
+      subscriptionPlan: "free",
+    }, {
+      filename: "identity.pdf",
+      mimeType: "application/pdf",
+      purpose: "trust_evidence",
+      relatedId: "conversation_emma_sofia",
+      relatedType: "message",
+      sizeBytes: 32,
+    })).toThrow("The upload purpose does not match the selected workspace record.")
   })
 })

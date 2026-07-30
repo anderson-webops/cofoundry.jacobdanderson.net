@@ -22,18 +22,23 @@ export async function recordEmailSuppression(event: H3Event, payload: Operations
     throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
 
   const now = new Date().toISOString()
+  const provider = normalizedPayload.provider.trim().toLowerCase()
+  const sourceEventId = normalizedPayload.sourceEventId || null
   const { data, error } = await adminClient
     .from("email_suppressions")
-    .insert({
+    .upsert({
       category: normalizedPayload.category,
       created_at: now,
       email: normalizedPayload.email,
       id: randomUUID(),
       metadata: normalizedPayload.metadata,
-      provider: normalizedPayload.provider,
+      provider,
       reason: normalizedPayload.reason,
-      source_event_id: normalizedPayload.sourceEventId || null,
+      source_event_id: sourceEventId,
       suppressed_at: normalizedPayload.suppressedAt || now,
+    }, {
+      ignoreDuplicates: true,
+      onConflict: "provider,source_event_id",
     })
     .select()
     .maybeSingle()
@@ -41,7 +46,20 @@ export async function recordEmailSuppression(event: H3Event, payload: Operations
   if (error)
     throw error
 
-  return data
+  if (data || !sourceEventId)
+    return data
+
+  const { data: existing, error: existingError } = await adminClient
+    .from("email_suppressions")
+    .select("*")
+    .eq("provider", provider)
+    .eq("source_event_id", sourceEventId)
+    .maybeSingle()
+
+  if (existingError)
+    throw existingError
+
+  return existing
 }
 
 export async function findEmailSuppression(event: H3Event, email: string, category: Exclude<EmailSuppressionCategory, "all">) {

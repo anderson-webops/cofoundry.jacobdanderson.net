@@ -1,12 +1,12 @@
 import { execFileSync } from "node:child_process"
 import { readFileSync } from "node:fs"
 import process from "node:process"
-import { buildSecurityHeaders } from "./server/utils/security-headers"
+import { buildContentSecurityPolicyDirectives, buildSecurityHeaders } from "./server/utils/security-headers"
 import { appDescription, appName } from "./shared/constants/app"
 import { privateApiRoutePrefixes, privateWorkspaceRoutePrefixes } from "./shared/constants/route-surfaces"
 import { workspaceSeed } from "./shared/data/seed"
 import { getPublicRoutePaths } from "./shared/utils/directory"
-import { assertEnvironmentIsValid, readDeploymentMetadata, readEnvironmentSnapshot, releaseTagFromPackageVersion } from "./shared/utils/environment"
+import { assertEnvironmentIsValid, isLocalDevelopmentEnvironment, readDeploymentMetadata, readEnvironmentSnapshot, releaseTagFromPackageVersion } from "./shared/utils/environment"
 import { isPublicSiteUrl } from "./shared/utils/seo"
 import { defaultThemeSchemeDefinition } from "./shared/utils/theme"
 
@@ -33,11 +33,13 @@ function readFrontendPackageVersion() {
 }
 
 const environment = readEnvironmentSnapshot(process.env)
+const isProductionLike = process.env.NODE_ENV === "production" || !isLocalDevelopmentEnvironment(process.env)
 const explicitDeploymentMetadata = readDeploymentMetadata(process.env)
+const packageRelease = releaseTagFromPackageVersion(readFrontendPackageVersion())
 const buildDeploymentMetadata = {
   commitSha: explicitDeploymentMetadata.commitSha || readGitMetadata(["rev-parse", "HEAD"]),
   deployedAt: explicitDeploymentMetadata.deployedAt,
-  release: explicitDeploymentMetadata.release || readGitMetadata(["describe", "--tags", "--exact-match", "HEAD"]) || releaseTagFromPackageVersion(readFrontendPackageVersion()),
+  release: explicitDeploymentMetadata.release || packageRelease || readGitMetadata(["describe", "--tags", "--exact-match", "HEAD"]),
 }
 const publicRoutes = getPublicRoutePaths(workspaceSeed)
 const prerenderPublicRoutes = isPublicSiteUrl(environment.public.appUrl) ? publicRoutes : []
@@ -45,7 +47,8 @@ const securityHeaders = buildSecurityHeaders({
   appUrl: environment.public.appUrl,
   backendMode: environment.public.backendMode,
   billingMode: environment.public.billingMode,
-  isProduction: process.env.NODE_ENV === "production",
+  includeContentSecurityPolicy: false,
+  isProduction: isProductionLike,
   stripePublishableKey: environment.public.stripePublishableKey,
   supabaseUrl: environment.public.supabaseUrl,
 })
@@ -60,11 +63,24 @@ const privateRouteRules = Object.fromEntries(
       [`${prefix}/**`, { headers: privateRouteHeaders }] as const,
     ]),
 )
+const isNuxtAnalysisCommand = process.argv
+  .slice(2)
+  .some(argument => ["prepare", "typecheck"].includes(argument))
+const contentSecurityPolicy = buildContentSecurityPolicyDirectives({
+  appUrl: environment.public.appUrl,
+  backendMode: environment.public.backendMode,
+  billingMode: environment.public.billingMode,
+  isProduction: process.env.NODE_ENV === "production",
+  stripePublishableKey: environment.public.stripePublishableKey,
+  supabaseUrl: environment.public.supabaseUrl,
+})
 
-assertEnvironmentIsValid(process.env, "Nuxt configuration")
+if (!isNuxtAnalysisCommand)
+  assertEnvironmentIsValid(process.env, "Nuxt configuration")
 
 export default defineNuxtConfig({
   modules: [
+    "nuxt-security",
     "@vueuse/nuxt",
     "@unocss/nuxt",
     "@pinia/nuxt",
@@ -80,7 +96,7 @@ export default defineNuxtConfig({
   ],
 
   devtools: {
-    enabled: true,
+    enabled: !isProductionLike,
   },
 
   app: {
@@ -114,10 +130,10 @@ export default defineNuxtConfig({
     deploymentCommitSha: buildDeploymentMetadata.commitSha,
     deploymentDeployedAt: buildDeploymentMetadata.deployedAt,
     deploymentRelease: buildDeploymentMetadata.release,
-    operationsWorkerToken: environment.secret.operationsWorkerToken,
-    stripeSecretKey: environment.secret.stripeSecretKey,
-    stripeWebhookSecret: environment.secret.stripeWebhookSecret,
-    supabaseServiceRoleKey: environment.secret.supabaseServiceRoleKey,
+    operationsWorkerToken: "",
+    stripeSecretKey: "",
+    stripeWebhookSecret: "",
+    supabaseServiceRoleKey: "",
     public: {
       appName,
       appUrl: environment.public.appUrl,
@@ -149,6 +165,7 @@ export default defineNuxtConfig({
   compatibilityDate: "2024-08-14",
 
   nitro: {
+    errorHandler: "./server/error-handler.ts",
     esbuild: {
       options: {
         target: "esnext",
@@ -179,5 +196,48 @@ export default defineNuxtConfig({
         sortConfigKeys: true,
       },
     },
+  },
+  security: {
+    allowedMethodsRestricter: false,
+    basicAuth: false,
+    contentSecurityPolicyReportOnly: false,
+    corsHandler: false,
+    csrf: false,
+    enabled: true,
+    headers: {
+      contentSecurityPolicy: isProductionLike
+        ? contentSecurityPolicy
+        : false,
+      crossOriginEmbedderPolicy: false,
+      crossOriginOpenerPolicy: false,
+      crossOriginResourcePolicy: false,
+      originAgentCluster: false,
+      permissionsPolicy: false,
+      referrerPolicy: false,
+      strictTransportSecurity: false,
+      xContentTypeOptions: false,
+      xDNSPrefetchControl: false,
+      xDownloadOptions: false,
+      xFrameOptions: false,
+      xPermittedCrossDomainPolicies: false,
+      xXSSProtection: false,
+    },
+    hidePoweredBy: true,
+    nonce: isProductionLike,
+    rateLimiter: false,
+    removeLoggers: false,
+    requestSizeLimiter: false,
+    sri: isProductionLike,
+    ssg: isProductionLike
+      ? {
+          exportToPresets: true,
+          hashScripts: true,
+          hashStyles: false,
+          meta: true,
+          nitroHeaders: true,
+        }
+      : false,
+    strict: false,
+    xssValidator: false,
   },
 })

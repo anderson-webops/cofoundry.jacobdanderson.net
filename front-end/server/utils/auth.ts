@@ -1,9 +1,8 @@
 import type { User as SupabaseAuthUser } from "@supabase/supabase-js"
 import type { H3Event } from "h3"
-import type { AuthAccount, AuthProvider, SessionUser } from "~/shared/types/domain"
+import type { AuthProvider, SessionUser } from "~/shared/types/domain"
 import type { SupportedOAuthProvider } from "~/shared/utils/oauth-providers"
-import { Buffer } from "node:buffer"
-import { createHmac, timingSafeEqual } from "node:crypto"
+import { randomBytes } from "node:crypto"
 import process from "node:process"
 import { workspaceSeed } from "~/shared/data/seed"
 import { isLocalDevelopmentEnvironment, readPublicEnvironment } from "~/shared/utils/environment"
@@ -14,15 +13,22 @@ import { resolveActiveSessionFromSeed } from "~/shared/utils/session-authority"
 import { signInSchema, signUpSchema } from "~/shared/utils/validation"
 import { buildSessionUser } from "~/shared/utils/workspace"
 import { buildDraftMemberWorkspaceState, buildMemberWorkspaceState, resolveSessionUserFromWorkspace } from "~/shared/utils/workspace-persistence"
-import { markAccessInviteAccepted, validateAccessInvite } from "./access-requests"
+import { demoAuthAccounts } from "../data/demo-auth-accounts"
+import { hashAccessInviteToken, validateAccessInvite } from "./access-requests"
 import { resolveServerAppUrl } from "./app-url"
-import { createLocalAuthAccount, findLocalAuthSessionByEmail, findLocalAuthSessionById, updateLocalAuthOnboarding, verifyLocalAuthCredentials } from "./local-auth-store"
+import { markLocalAccessInviteAccepted } from "./local-access-requests"
+import { createLocalAuthAccount, deleteLocalAuthAccount, findLocalAuthSessionByEmail, findLocalAuthSessionById, updateLocalAuthOnboarding, verifyLocalAuthCredentials } from "./local-auth-store"
+import { deleteLocalMemberWorkspaceState } from "./local-member-workspace"
 import { loadMemberWorkspaceState, persistWholeMemberWorkspaceState } from "./member-workspace"
 import { recordOperationalEvent } from "./operations-persistence"
+import { createTimedSessionSignature, sessionCookieMaxAgeSeconds, verifyTimedSessionSignature } from "./session-signature"
 import { createSupabaseAdminClient, createSupabaseOAuthClient, createSupabaseServerClient, isSupabaseEnabled } from "./supabase"
 
-interface RegisteredAccount extends AuthAccount {
+interface RegisteredAccount {
+  email: string
   name: string
+  providers: AuthProvider[]
+  userId: string
 }
 
 interface SupabaseSessionUserRow {
@@ -36,7 +42,7 @@ interface SupabaseSessionUserRow {
 
 const registeredAccounts = new Map<string, RegisteredAccount>()
 const registeredSessions = new Map<string, SessionUser>()
-const localSessionSigningSecret = "cofoundry-local-session-signing-secret"
+const localSessionSigningSecret = randomBytes(32).toString("base64url")
 
 function formatOAuthCallbackUrl(event: H3Event, provider: SupportedOAuthProvider) {
   const callbackUrl = new URL("/api/auth/oauth/callback", resolveServerAppUrl(event))
@@ -66,12 +72,12 @@ function isSupabaseEmailVerified(user: SupabaseAuthUser) {
   return Boolean(user.email_confirmed_at || user.confirmed_at)
 }
 
-function inferSupabaseOAuthProvider(user: SupabaseAuthUser, fallbackProvider?: SupportedOAuthProvider | null) {
+export function inferSupabaseOAuthProvider(user: SupabaseAuthUser, fallbackProvider?: SupportedOAuthProvider | null) {
   const candidates = [
-    fallbackProvider,
     user.app_metadata?.provider,
     ...(Array.isArray(user.app_metadata?.providers) ? user.app_metadata.providers : []),
     ...(Array.isArray(user.identities) ? user.identities.map(identity => identity.provider) : []),
+    fallbackProvider,
   ]
 
   for (const candidate of candidates) {
@@ -81,6 +87,36 @@ function inferSupabaseOAuthProvider(user: SupabaseAuthUser, fallbackProvider?: S
   }
 
   return null
+}
+
+export function validateSupabaseOAuthRedirectUrl(
+  value: string,
+  configuredSupabaseUrl: string,
+  provider: SupportedOAuthProvider,
+) {
+  try {
+    const redirectUrl = new URL(value)
+    const supabaseUrl = new URL(configuredSupabaseUrl)
+    const localSupabase = ["localhost", "127.0.0.1", "::1"].includes(supabaseUrl.hostname)
+    const expectedPath = `${supabaseUrl.pathname.replace(/\/+$/, "")}/auth/v1/authorize`
+
+    if (
+      redirectUrl.origin !== supabaseUrl.origin
+      || redirectUrl.pathname !== expectedPath
+      || redirectUrl.searchParams.get("provider") !== provider
+      || redirectUrl.username
+      || redirectUrl.password
+      || redirectUrl.hash
+      || (!localSupabase && redirectUrl.protocol !== "https:")
+    ) {
+      return null
+    }
+
+    return redirectUrl.toString()
+  }
+  catch {
+    return null
+  }
 }
 
 function readConfiguredSessionSignatureSecret() {
@@ -109,13 +145,11 @@ function getSessionSignatureSecretForVerify() {
   return isLocalDevelopmentEnvironment(process.env) ? localSessionSigningSecret : ""
 }
 
-function createSessionSignature(session: Pick<SessionUser, "id" | "email">, secret = getSessionSignatureSecretForWrite()) {
-  return createHmac("sha256", secret)
-    .update(`${session.id}:${session.email.toLowerCase()}`)
-    .digest("base64url")
+function createSessionSignature(encodedSession: string, secret = getSessionSignatureSecretForWrite()) {
+  return createTimedSessionSignature(encodedSession, secret)
 }
 
-function verifySessionSignature(session: Pick<SessionUser, "id" | "email">, signature?: string | null) {
+function verifySessionSignature(encodedSession: string, signature?: string | null) {
   if (!signature)
     return false
 
@@ -123,14 +157,7 @@ function verifySessionSignature(session: Pick<SessionUser, "id" | "email">, sign
   if (!secret)
     return false
 
-  const expected = createSessionSignature(session, secret)
-  const left = Buffer.from(signature)
-  const right = Buffer.from(expected)
-
-  if (left.length !== right.length)
-    return false
-
-  return timingSafeEqual(left, right)
+  return verifyTimedSessionSignature(encodedSession, signature, secret)
 }
 
 function getMockSessionBySeedUserId(userId: string) {
@@ -209,15 +236,28 @@ async function createSessionFromSupabaseAuthUser(event: H3Event, user: SupabaseA
   }
 
   const verifiedEmail = isSupabaseEmailVerified(user)
-  const { seed, session, state } = await loadMemberWorkspaceState(event, {
-    id: user.id,
-    email: normalizedEmail,
-    name: getSupabaseOAuthDisplayName(user, normalizedEmail),
-    onboardingCompleted: false,
-    role: "founder",
-    subscriptionPlan: "free",
-    verifiedEmail,
-  })
+  if (!verifiedEmail) {
+    throw createError({
+      statusCode: 403,
+      statusMessage: "Confirm your email address before signing in.",
+    })
+  }
+
+  const { seed, session, state } = await loadMemberWorkspaceState(
+    event,
+    {
+      id: user.id,
+      email: normalizedEmail,
+      name: getSupabaseOAuthDisplayName(user, normalizedEmail),
+      onboardingCompleted: false,
+      role: "founder",
+      subscriptionPlan: "free",
+      verifiedEmail,
+    },
+    {
+      allowUserBootstrap: areAccountsEnabledForCurrentEnvironment(),
+    },
+  )
   const activeSession = resolveActiveSessionFromSeed(seed, session)
 
   if (!activeSession) {
@@ -301,13 +341,13 @@ export async function assertAccountAccessEnabled(event: H3Event, inviteToken?: s
 }
 
 export function readSession(event: H3Event) {
-  const decodedSession = decodeSessionUser(getCookie(event, sessionCookieName))
+  const encodedSession = getCookie(event, sessionCookieName)
   const signature = getCookie(event, sessionSignatureCookieName)
 
-  if (!decodedSession || !verifySessionSignature(decodedSession, signature))
+  if (!encodedSession || !verifySessionSignature(encodedSession, signature))
     return null
 
-  return decodedSession
+  return decodeSessionUser(encodedSession)
 }
 
 export async function readAuthoritativeSession(event: H3Event) {
@@ -355,16 +395,19 @@ export async function requireAuthenticatedSession(event: H3Event) {
 }
 
 export function writeSession(event: H3Event, session: SessionUser) {
-  const signature = createSessionSignature(session)
+  const encodedSession = encodeSessionUser(session)
+  const signature = createSessionSignature(encodedSession)
 
-  setCookie(event, sessionCookieName, encodeSessionUser(session), {
+  setCookie(event, sessionCookieName, encodedSession, {
+    maxAge: sessionCookieMaxAgeSeconds,
     path: "/",
     sameSite: "lax",
-    httpOnly: false,
+    httpOnly: true,
     secure: !isLocalDevelopmentEnvironment(process.env),
   })
 
   setCookie(event, sessionSignatureCookieName, signature, {
+    maxAge: sessionCookieMaxAgeSeconds,
     path: "/",
     sameSite: "lax",
     httpOnly: true,
@@ -384,7 +427,7 @@ export function getMockSessionByUserId(userId: string) {
 export function getSessionForEmail(email: string) {
   const normalizedEmail = email.trim().toLowerCase()
 
-  const seededAccount = workspaceSeed.authAccounts.find(account => account.email === normalizedEmail)
+  const seededAccount = demoAuthAccounts.find(account => account.email === normalizedEmail)
   if (seededAccount)
     return getMockSessionBySeedUserId(seededAccount.userId)
 
@@ -432,11 +475,24 @@ export async function beginSupabaseOAuthSignIn(event: H3Event, provider: Support
   if (result.error || !result.data.url) {
     throw createError({
       statusCode: 400,
-      statusMessage: result.error?.message || "Unable to start OAuth sign-in.",
+      statusMessage: "Unable to start OAuth sign-in.",
     })
   }
 
-  return result.data.url
+  const runtimeConfig = useRuntimeConfig(event)
+  const redirectUrl = validateSupabaseOAuthRedirectUrl(
+    result.data.url,
+    String(runtimeConfig.public.supabaseUrl || ""),
+    provider,
+  )
+  if (!redirectUrl) {
+    throw createError({
+      statusCode: 502,
+      statusMessage: "The OAuth provider returned an invalid authorization URL.",
+    })
+  }
+
+  return redirectUrl
 }
 
 export async function completeSupabaseOAuthCallback(event: H3Event, code: string, providerHint?: SupportedOAuthProvider | null) {
@@ -473,6 +529,16 @@ export async function completeSupabaseOAuthCallback(event: H3Event, code: string
 
     return getOAuthErrorRedirect(event, statusCode === 403 ? "account_inactive" : "oauth_failed")
   }
+  finally {
+    try {
+      const signOutResult = await client.auth.signOut({ scope: "local" })
+      if (signOutResult.error)
+        console.warn("[auth] Supabase OAuth session cookies could not be cleared after callback.", signOutResult.error)
+    }
+    catch (error) {
+      console.warn("[auth] Supabase OAuth session cleanup failed after callback.", error)
+    }
+  }
 }
 
 export async function verifyCredentials(event: H3Event, email: string, password: string) {
@@ -488,7 +554,7 @@ export async function verifyCredentials(event: H3Event, email: string, password:
     if (result?.error || !result?.data.user) {
       throw createError({
         statusCode: 401,
-        statusMessage: result?.error?.message || "Incorrect email or password.",
+        statusMessage: "Incorrect email or password.",
       })
     }
 
@@ -496,16 +562,9 @@ export async function verifyCredentials(event: H3Event, email: string, password:
   }
 
   if (areSeededReviewCredentialsEnabledForCurrentEnvironment()) {
-    const seededAccount = workspaceSeed.authAccounts.find(account => account.email === normalizedEmail)
+    const seededAccount = demoAuthAccounts.find(account => account.email === normalizedEmail)
     if (seededAccount && seededAccount.password === password) {
       const session = getMockSessionBySeedUserId(seededAccount.userId)
-      if (session)
-        return requireActiveSessionFromWorkspace(event, session)
-    }
-
-    const registeredAccount = registeredAccounts.get(normalizedEmail)
-    if (registeredAccount && registeredAccount.password === password) {
-      const session = registeredSessions.get(registeredAccount.userId)
       if (session)
         return requireActiveSessionFromWorkspace(event, session)
     }
@@ -525,31 +584,49 @@ export async function createMockAccount(event: H3Event, payload: { email: string
   const normalizedEmail = payload.email.trim().toLowerCase()
   const existing = getSessionForEmail(normalizedEmail)
   if (existing)
-    throw createError({ statusCode: 409, statusMessage: "An account with that email already exists." })
+    throw createError({ statusCode: 400, statusMessage: "Unable to create the account. Sign in or use account recovery if this email is already registered." })
 
   if (await findLocalAuthSessionByEmail(normalizedEmail))
-    throw createError({ statusCode: 409, statusMessage: "An account with that email already exists." })
+    throw createError({ statusCode: 400, statusMessage: "Unable to create the account. Sign in or use account recovery if this email is already registered." })
 
   const acceptedInvite = payload.inviteToken
     ? await validateAccessInvite(event, payload.inviteToken, normalizedEmail)
     : null
+  if (payload.inviteToken && !acceptedInvite) {
+    throw createError({
+      statusCode: 403,
+      statusMessage: "The access invite is invalid or no longer available.",
+    })
+  }
   const verifiedEmail = Boolean(acceptedInvite)
 
   if (isSupabaseEnabled(event)) {
     const adminClient = createSupabaseAdminClient(event)
-    const result = await adminClient?.auth.admin.createUser({
-      email: normalizedEmail,
-      password: payload.password,
-      email_confirm: verifiedEmail,
-      user_metadata: { name: payload.name },
-    })
+    const result = verifiedEmail
+      ? await adminClient?.auth.admin.createUser({
+          email: normalizedEmail,
+          password: payload.password,
+          email_confirm: true,
+          user_metadata: { name: payload.name },
+        })
+      : await createSupabaseServerClient(event)?.auth.signUp({
+          email: normalizedEmail,
+          password: payload.password,
+          options: {
+            data: { name: payload.name },
+            emailRedirectTo: new URL("/auth/sign-in?confirmed=1", resolveServerAppUrl(event)).toString(),
+          },
+        })
 
     if (result?.error || !result?.data.user) {
       throw createError({
         statusCode: 400,
-        statusMessage: result?.error?.message || "Unable to create the account.",
+        statusMessage: "Unable to create the account. Sign in or use account recovery if this email is already registered.",
       })
     }
+
+    if (!isSupabaseEmailVerified(result.data.user))
+      return null
 
     const fallbackSession = resolveSessionUserFromWorkspace(workspaceSeed, {
       id: result.data.user.id,
@@ -560,33 +637,77 @@ export async function createMockAccount(event: H3Event, payload: { email: string
       subscriptionPlan: "free",
     })
     const bootstrapState = buildMemberWorkspaceState(workspaceSeed, fallbackSession.id) || buildDraftMemberWorkspaceState(fallbackSession, undefined, { verifiedEmail })
-    await persistWholeMemberWorkspaceState(event, bootstrapState)
+    try {
+      await persistWholeMemberWorkspaceState(event, bootstrapState, acceptedInvite && payload.inviteToken
+        ? {
+            accessInvite: {
+              acceptedAt: new Date().toISOString(),
+              email: normalizedEmail,
+              tokenHash: hashAccessInviteToken(payload.inviteToken),
+            },
+          }
+        : {})
+    }
+    catch (error) {
+      try {
+        await adminClient?.auth.admin.deleteUser(result.data.user.id)
+      }
+      catch (cleanupError) {
+        console.warn("[auth] Account provisioning failed and the Supabase Auth user could not be cleaned up.", cleanupError)
+      }
+
+      if (acceptedInvite) {
+        throw createError({
+          statusCode: 409,
+          statusMessage: "The access invite is invalid or no longer available.",
+        })
+      }
+      console.error("[auth] Account workspace provisioning failed.", error)
+      throw createError({
+        statusCode: 500,
+        statusMessage: "Unable to finish account setup. Please try again.",
+      })
+    }
 
     const { session } = await loadMemberWorkspaceState(event, buildIdentityInput(fallbackSession))
-    if (payload.inviteToken)
-      await markAccessInviteAccepted(event, payload.inviteToken)
-
     writeSession(event, session)
     return session
   }
 
   const session = await createLocalAuthAccount(payload)
   if (!session)
-    throw createError({ statusCode: 409, statusMessage: "An account with that email already exists." })
+    throw createError({ statusCode: 400, statusMessage: "Unable to create the account. Sign in or use account recovery if this email is already registered." })
 
   registeredAccounts.set(normalizedEmail, {
     email: normalizedEmail,
-    password: payload.password,
     providers: ["email"],
     userId: session.id,
     name: payload.name,
   })
   registeredSessions.set(session.id, session)
 
-  if (payload.inviteToken)
-    await markAccessInviteAccepted(event, payload.inviteToken)
+  try {
+    await persistWholeMemberWorkspaceState(event, buildDraftMemberWorkspaceState(session, undefined, { verifiedEmail }))
+    if (payload.inviteToken && !await markLocalAccessInviteAccepted(payload.inviteToken, normalizedEmail)) {
+      throw createError({
+        statusCode: 409,
+        statusMessage: "The access invite is invalid or no longer available.",
+      })
+    }
+  }
+  catch (error) {
+    registeredAccounts.delete(normalizedEmail)
+    registeredSessions.delete(session.id)
+    try {
+      await deleteLocalAuthAccount(session.id)
+      await deleteLocalMemberWorkspaceState(session.id)
+    }
+    catch (cleanupError) {
+      console.warn("[auth] Account provisioning failed and local account state could not be cleaned up.", cleanupError)
+    }
+    throw error
+  }
 
-  await persistWholeMemberWorkspaceState(event, buildDraftMemberWorkspaceState(session, undefined, { verifiedEmail }))
   const { session: authoritativeSession } = await loadMemberWorkspaceState(event, buildIdentityInput(session))
 
   writeSession(event, authoritativeSession)
@@ -594,19 +715,27 @@ export async function createMockAccount(event: H3Event, payload: { email: string
   return authoritativeSession
 }
 
-export async function completeOnboarding(event: H3Event, nextSession: SessionUser) {
-  const updatedSession = {
-    ...nextSession,
+export async function completeOnboarding(event: H3Event, currentSession: SessionUser) {
+  const current = await loadMemberWorkspaceState(event, buildIdentityInput(currentSession))
+  const memberRole = current.state.profile.hasIdea ? "founder" : "collaborator"
+  const role = ["admin", "investor_admin"].includes(current.state.user.role)
+    ? current.state.user.role
+    : memberRole
+  const updatedSession: SessionUser = {
+    ...currentSession,
+    name: current.state.profile.displayName.trim() || currentSession.name,
     onboardingCompleted: true,
+    role,
+    subscriptionPlan: current.state.subscription.plan,
   }
 
   if (isSupabaseEnabled(event)) {
-    const current = await loadMemberWorkspaceState(event, buildIdentityInput(updatedSession))
     await persistWholeMemberWorkspaceState(event, {
       ...current.state,
       user: {
         ...current.state.user,
         onboardingCompleted: true,
+        role,
       },
     })
     const { session } = await loadMemberWorkspaceState(event, buildIdentityInput(updatedSession))
@@ -616,12 +745,12 @@ export async function completeOnboarding(event: H3Event, nextSession: SessionUse
 
   registeredSessions.set(updatedSession.id, updatedSession)
   await updateLocalAuthOnboarding(updatedSession)
-  const current = await loadMemberWorkspaceState(event, buildIdentityInput(updatedSession))
   await persistWholeMemberWorkspaceState(event, {
     ...current.state,
     user: {
       ...current.state.user,
       onboardingCompleted: true,
+      role,
     },
   })
   const { session } = await loadMemberWorkspaceState(event, buildIdentityInput(updatedSession))

@@ -5,7 +5,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import process from "node:process"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { persistOpportunityVerification } from "../../server/utils/admin-persistence"
+import { listAdminSecurityUsers, persistAdminUserSecurityAction, persistOpportunityVerificationAction } from "../../server/utils/admin-persistence"
 import { persistMockCheckoutSubscription, updateMockSubscriptionRenewal } from "../../server/utils/billing-persistence"
 import { applyCollaborationMutation } from "../../server/utils/collaboration-workflow"
 import { clearLocalAdminAuditStoreForTests } from "../../server/utils/local-admin-audit"
@@ -74,13 +74,69 @@ describe("local member workspace persistence", () => {
 
     expect(saved.session).toMatchObject({
       id: identity.id,
-      onboardingCompleted: true,
+      onboardingCompleted: false,
     })
     expect(reloaded.state.profile).toMatchObject({
       headline: "Server-persisted local member profile",
     })
     expect(reloaded.state.user.notificationPreferences.unreadDigestEmail).toBe(true)
     expect(reloaded.state.user.notificationPreferences.workflowEmail).toBe(true)
+  })
+
+  it("does not bootstrap an unprovisioned member when bootstrap is disabled", async () => {
+    await expect(loadMemberWorkspaceState(event, {
+      ...identity,
+      email: "direct-auth-signup@example.com",
+      id: "user_direct_auth_signup",
+    }, {
+      allowUserBootstrap: false,
+    })).rejects.toMatchObject({
+      statusCode: 403,
+    })
+  })
+
+  it("allows atomic admin security actions on dynamically provisioned local members", async () => {
+    const initial = await loadMemberWorkspaceState(event, identity)
+    await persistMemberWorkspaceWritePayload(event, identity, {
+      bookmarks: [],
+      notificationPreferences: initial.state.user.notificationPreferences,
+      onboardingCompleted: false,
+      opportunities: [],
+      profile: initial.state.profile,
+      savedSearches: [],
+    })
+
+    expect(await listAdminSecurityUsers(event)).toContainEqual(expect.objectContaining({
+      id: identity.id,
+      role: "founder",
+      suspendedAt: null,
+    }))
+
+    const createdAt = "2026-07-29T20:00:00.000Z"
+    await persistAdminUserSecurityAction(event, {
+      action: {
+        adminUserId: "user_ava",
+        createdAt,
+        id: "admin_action_suspend_dynamic_member",
+        metadata: {
+          nextSuspendedAt: createdAt,
+          previousSuspendedAt: null,
+        },
+        notes: "Suspended after reviewing the dynamic member security case.",
+        targetId: identity.id,
+        targetType: "user",
+        type: "suspend_user",
+      },
+      mutation: {
+        action: "suspend",
+        kind: "change_status",
+      },
+    })
+
+    expect(await listAdminSecurityUsers(event)).toContainEqual(expect.objectContaining({
+      id: identity.id,
+      suspendedAt: createdAt,
+    }))
   })
 
   it("lists all local member opportunities for admin review", async () => {
@@ -124,12 +180,16 @@ describe("local member workspace persistence", () => {
     })
 
     let slice = await listAdminOpportunityWorkspaceSlice(event)
-    const pendingOpportunity = slice.opportunities.find(item => item.id === opportunity.id)
+    const pendingOpportunity = slice.opportunities.find(item =>
+      item.ownerUserId === ownerIdentity.id
+      && item.startupName === opportunity.startupName,
+    )
 
     expect(pendingOpportunity).toMatchObject({
       ownerUserId: ownerIdentity.id,
       verificationStatus: "manual_review",
     })
+    expect(pendingOpportunity?.id).not.toBe(opportunity.id)
     expect(slice.users.find(user => user.id === ownerIdentity.id)).toMatchObject({
       email: ownerIdentity.email,
     })
@@ -137,17 +197,23 @@ describe("local member workspace persistence", () => {
       displayName: "Casey Founder",
     })
 
-    await persistOpportunityVerification(event, {
-      adminUserId: "user_ava",
-      notes: "Verified CaseyOps domain evidence from the admin queue.",
-      opportunityId: opportunity.id,
+    await persistOpportunityVerificationAction(event, {
+      action: {
+        adminUserId: "user_ava",
+        createdAt: "2026-06-13T12:30:00.000Z",
+        id: "admin_action_caseyops_verification",
+        notes: "Verified CaseyOps domain evidence from the admin queue.",
+        targetId: pendingOpportunity!.id,
+        targetType: "opportunity",
+        type: "review_evidence",
+      },
+      expectedUpdatedAt: pendingOpportunity!.updatedAt,
       status: "domain_verified",
-      timestamp: "2026-06-13T12:30:00.000Z",
     })
 
     slice = await listAdminOpportunityWorkspaceSlice(event)
 
-    expect(slice.opportunities.find(item => item.id === opportunity.id)).toMatchObject({
+    expect(slice.opportunities.find(item => item.id === pendingOpportunity!.id)).toMatchObject({
       updatedAt: "2026-06-13T12:30:00.000Z",
       verificationStatus: "domain_verified",
     })
@@ -180,6 +246,28 @@ describe("local member workspace persistence", () => {
     })
 
     expect(reloaded.seed.conversations.find(item => item.id === conversation.id)?.unreadCountByUser[session.id]).toBe(0)
+  })
+
+  it("keeps proposal comments open during negotiation and contracts gated on acceptance", async () => {
+    const emma = buildSessionUser(workspaceSeed, "user_emma")!
+    const sofia = buildSessionUser(workspaceSeed, "user_sofia")!
+
+    await expect(applyCollaborationMutation(event, emma, {
+      action: "create_contract_from_proposal",
+      proposalId: "proposal_trialwire_design",
+    })).rejects.toMatchObject({
+      statusCode: 409,
+    })
+
+    const response = await applyCollaborationMutation(event, sofia, {
+      action: "add_proposal_comment",
+      body: "Please make the customer-research decision boundary explicit before acceptance.",
+      proposalId: "proposal_trialwire_design",
+      proposalVersionId: "proposal_version_trialwire_2",
+      section: "decision_rights",
+    })
+
+    expect(response.result.commentId).toEqual(expect.any(String))
   })
 
   it("persists mock billing checkout and renewal changes", async () => {

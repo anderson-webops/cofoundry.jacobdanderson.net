@@ -1,7 +1,7 @@
 import type { ProductionReadinessInput } from "../../server/utils/production-readiness"
 import type { EnvironmentSnapshot } from "../../shared/utils/environment"
 import { describe, expect, it } from "vitest"
-import { buildProductionReadinessSnapshot as buildProductionReadinessSnapshotBase } from "../../server/utils/production-readiness"
+import { buildProductionReadinessSnapshot as buildProductionReadinessSnapshotBase, productionReadinessCheckIds } from "../../server/utils/production-readiness"
 
 const generatedAt = "2026-06-12T12:00:00.000Z"
 const healthyDeploymentMetadata = {
@@ -140,6 +140,7 @@ describe("production readiness snapshot", () => {
     expect(snapshot.score).toBe(100)
     expect(snapshot.counts.failedChecks).toBe(0)
     expect(snapshot.counts.warningChecks).toBe(0)
+    expect(new Set(snapshot.groups.flatMap(group => group.checks.map(check => check.id)))).toEqual(productionReadinessCheckIds)
     expect(snapshot.groups.flatMap(group => group.checks).find(check => check.id === "deployment-identity")).toMatchObject({
       status: "pass",
       summary: "v1.1.78",
@@ -203,7 +204,7 @@ describe("production readiness snapshot", () => {
     ]))
   })
 
-  it("warns when multi-instance runtime is expected without realtime fanout", () => {
+  it("fails closed when multi-instance runtime is expected without a shared limiter", () => {
     const snapshot = buildProductionReadinessSnapshot({
       accessRequests: [],
       adminPosture: healthyAdminPosture,
@@ -223,7 +224,11 @@ describe("production readiness snapshot", () => {
     })
     const checkById = new Map(snapshot.groups.flatMap(group => group.checks).map(check => [check.id, check]))
 
-    expect(snapshot.overallStatus).toBe("warn")
+    expect(snapshot.overallStatus).toBe("fail")
+    expect(checkById.get("shared-rate-limiter")).toMatchObject({
+      status: "fail",
+      summary: "Unsupported multi-instance topology",
+    })
     expect(checkById.get("realtime-fanout")).toMatchObject({
       status: "warn",
       summary: "Multi-instance expected, fanout missing",
@@ -233,8 +238,8 @@ describe("production readiness snapshot", () => {
       title: "Workspace realtime fanout",
     })
     expect(snapshot.cutoverPhases.find(phase => phase.id === "workspace-realtime-scaling")).toMatchObject({
-      status: "warn",
-      summary: "Multi-instance expected, fanout missing",
+      status: "fail",
+      summary: "Blocked: shared rate limiter missing",
     })
   })
 
@@ -259,7 +264,7 @@ describe("production readiness snapshot", () => {
     })
     const checkById = new Map(snapshot.groups.flatMap(group => group.checks).map(check => [check.id, check]))
 
-    expect(snapshot.overallStatus).toBe("warn")
+    expect(snapshot.overallStatus).toBe("fail")
     expect(checkById.get("realtime-fanout")).toMatchObject({
       status: "warn",
       summary: "Fanout configured, no smoke event",
@@ -269,12 +274,12 @@ describe("production readiness snapshot", () => {
       title: "Workspace realtime fanout",
     })
     expect(snapshot.cutoverPhases.find(phase => phase.id === "workspace-realtime-scaling")).toMatchObject({
-      status: "warn",
-      summary: "Fanout configured, no smoke event",
+      status: "fail",
+      summary: "Blocked: shared rate limiter missing",
     })
   })
 
-  it("passes realtime scaling readiness when fanout has worker smoke evidence", () => {
+  it("keeps multi-instance scaling blocked even when fanout has smoke evidence", () => {
     const snapshot = buildProductionReadinessSnapshot({
       accessRequests: [],
       adminPosture: healthyAdminPosture,
@@ -309,7 +314,7 @@ describe("production readiness snapshot", () => {
     })
     const checkById = new Map(snapshot.groups.flatMap(group => group.checks).map(check => [check.id, check]))
 
-    expect(snapshot.overallStatus).toBe("pass")
+    expect(snapshot.overallStatus).toBe("fail")
     expect(checkById.get("realtime-fanout")).toMatchObject({
       status: "pass",
       summary: "realtime_fanout_smoke_succeeded, 0 days old",
@@ -319,8 +324,8 @@ describe("production readiness snapshot", () => {
       title: "Workspace realtime fanout",
     })
     expect(snapshot.cutoverPhases.find(phase => phase.id === "workspace-realtime-scaling")).toMatchObject({
-      status: "pass",
-      summary: "realtime_fanout_smoke_succeeded, 0 days old",
+      status: "fail",
+      summary: "Blocked: shared rate limiter missing",
     })
   })
 

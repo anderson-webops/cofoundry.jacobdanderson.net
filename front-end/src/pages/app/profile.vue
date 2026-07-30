@@ -80,6 +80,7 @@ const profileLinks = computed(() => {
               :key="artifact.id"
               :href="artifact.url"
               target="_blank"
+              rel="ugc nofollow noopener noreferrer"
               class="panel-inset p-4"
             >
               <p class="font-semibold">

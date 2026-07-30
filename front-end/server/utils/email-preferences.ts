@@ -1,7 +1,7 @@
 import type { H3Event } from "h3"
 import type { NotificationPreferences } from "../../shared/types/domain"
 import { Buffer } from "node:buffer"
-import { createHmac, timingSafeEqual } from "node:crypto"
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto"
 import process from "node:process"
 import { createError } from "h3"
 import { isLocalDevelopmentEnvironment } from "../../shared/utils/environment"
@@ -38,9 +38,10 @@ interface ApplyEmailPreferenceResult {
 }
 
 const defaultPreferenceTokenDays = 180
-const emailPreferenceLocalSigningSecret = "cofoundry-local-email-preference-signing-secret"
+const emailPreferenceLocalSigningSecret = randomBytes(32).toString("base64url")
 const tokenSeparator = "."
 const trailingSlashPattern = /\/+$/
+const tokenSigningContext = "cofoundry:email-preference:v1"
 
 function stripTrailingSlash(value?: string) {
   return value?.replace(trailingSlashPattern, "") || ""
@@ -58,7 +59,7 @@ function readEmailPreferenceSigningSecret() {
 
 function signEncodedPayload(encodedPayload: string, secret: string) {
   return createHmac("sha256", secret)
-    .update(encodedPayload)
+    .update(`${tokenSigningContext}\0${encodedPayload}`)
     .digest("base64url")
 }
 
@@ -185,14 +186,20 @@ export async function applyEmailPreferenceToken(event: H3Event, token: string): 
   if (!verified.ok)
     throw verificationError(verified.reason, "statusCode" in verified ? verified.statusCode : 400)
 
-  const workspace = await loadMemberWorkspaceState(event, {
-    email: verified.payload.email,
-    id: verified.payload.userId,
-    name: displayNameForEmail(verified.payload.email),
-    onboardingCompleted: true,
-    role: "founder",
-    subscriptionPlan: "free",
-  })
+  const workspace = await loadMemberWorkspaceState(
+    event,
+    {
+      email: verified.payload.email,
+      id: verified.payload.userId,
+      name: displayNameForEmail(verified.payload.email),
+      onboardingCompleted: true,
+      role: "founder",
+      subscriptionPlan: "free",
+    },
+    {
+      allowUserBootstrap: false,
+    },
+  )
 
   if (workspace.state.user.id !== verified.payload.userId || normalizeEmail(workspace.state.user.email) !== verified.payload.email) {
     throw verificationError("Email preference link does not match an active member record.", 403)

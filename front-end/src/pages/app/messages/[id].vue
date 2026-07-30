@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { MessageAttachment } from "~/shared/types/domain"
 import { buildSubscriptionUsage, getSubscriptionEntitlements } from "~/shared/utils/billing"
 import { formatContactRevealStage, formatDate, formatProposalRelationshipType, formatProposalStatus } from "~/shared/utils/format"
 import { buildConversationRiskFlags, buildMessageRiskFlags, canOpenProposalWorkflow } from "~/shared/utils/formation"
@@ -34,7 +33,6 @@ const latestIncomingMessage = computed(() => incomingMessages.value.at(-1))
 const conversationFlags = computed(() => buildConversationRiskFlags(incomingMessages.value))
 
 const draftMessage = ref("")
-const attachments = ref<MessageAttachment[]>([])
 const proposalDialogOpen = ref(false)
 const profileReportDialogOpen = ref(false)
 const messageReportDialogOpen = ref(false)
@@ -53,25 +51,13 @@ watch(draftMessage, (value) => {
   void workspaceStore.syncTypingPresence(conversation.value.id, authStore.currentUser.id, Boolean(value))
 })
 
-function captureFiles(event: Event) {
-  const target = event.target as HTMLInputElement
-  const files = Array.from(target.files || [])
-  attachments.value = files.map(file => ({
-    id: crypto.randomUUID(),
-    name: file.name,
-    url: "#",
-    sizeLabel: `${Math.max(1, Math.round(file.size / 1024))} KB`,
-  }))
-}
-
 async function sendMessage() {
   if (!conversation.value || !authStore.currentUser || !draftMessage.value.trim())
     return
 
-  await workspaceStore.sendMessage(conversation.value.id, authStore.currentUser.id, draftMessage.value.trim(), attachments.value)
+  await workspaceStore.sendMessage(conversation.value.id, authStore.currentUser.id, draftMessage.value.trim())
   await workspaceStore.syncTypingPresence(conversation.value.id, authStore.currentUser.id, false)
   draftMessage.value = ""
-  attachments.value = []
 }
 
 async function createProposal(payload: any) {
@@ -336,12 +322,11 @@ function openProposalWorkflow() {
       </div>
 
       <div class="p-5 border-t border-[var(--line)]">
-        <TextareaInput v-model="draftMessage" label="Message" helper="Attach context files when they help clarify the next step." :rows="4" />
+        <TextareaInput v-model="draftMessage" label="Message" helper="Keep confidential evidence in the relationship workspace's scanned upload flow." :rows="4" />
         <div class="mt-4">
           <SafetyFlagsPanel :flags="draftFlags" title="Draft warning" />
         </div>
         <div class="mt-5 flex flex-wrap gap-3 items-center justify-between">
-          <input type="file" multiple class="muted text-sm" @change="captureFiles">
           <div class="flex gap-3">
             <BaseButton v-if="latestIncomingMessage" variant="ghost" @click="messageReportDialogOpen = true">
               Report message

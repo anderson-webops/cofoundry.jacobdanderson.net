@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { buildSecurityHeaders } from "../../server/utils/security-headers"
+import { buildSecurityHeaders, shouldDefaultApiResponseToNoStore } from "../../server/utils/security-headers"
 
 describe("security headers", () => {
   it("sets production-safe browser security headers", () => {
@@ -21,6 +21,13 @@ describe("security headers", () => {
     expect(headers["Permissions-Policy"]).toContain("geolocation=()")
     expect(headers["Content-Security-Policy"]).toContain("object-src 'none'")
     expect(headers["Content-Security-Policy"]).toContain("frame-ancestors 'none'")
+    expect(headers["Content-Security-Policy"]).toContain("script-src-attr 'none'")
+    expect(headers["Content-Security-Policy"]).toContain("'strict-dynamic'")
+    expect(headers["Content-Security-Policy"]).toContain("'nonce-{{nonce}}'")
+    const scriptDirective = headers["Content-Security-Policy"]
+      ?.split("; ")
+      .find(value => value.startsWith("script-src "))
+    expect(scriptDirective).not.toContain("'unsafe-inline'")
     expect(headers["Content-Security-Policy"]).toContain("https://analytics.cofoundry.jacobdanderson.net")
     expect(headers["Content-Security-Policy"]).toContain("https://analytics.jacobdanderson.net")
   })
@@ -56,5 +63,12 @@ describe("security headers", () => {
     expect(liveHeaders["Content-Security-Policy"]).toContain("https://project.supabase.co")
     expect(liveHeaders["Content-Security-Policy"]).toContain("https://js.stripe.com")
     expect(liveHeaders["Content-Security-Policy"]).toContain("https://checkout.stripe.com")
+  })
+
+  it("defaults private API responses to no-store without disabling public directory caching", () => {
+    expect(shouldDefaultApiResponseToNoStore("/api/auth/session")).toBe(true)
+    expect(shouldDefaultApiResponseToNoStore("/api/account/export")).toBe(true)
+    expect(shouldDefaultApiResponseToNoStore("/api/public/directory")).toBe(false)
+    expect(shouldDefaultApiResponseToNoStore("/auth/sign-in")).toBe(false)
   })
 })

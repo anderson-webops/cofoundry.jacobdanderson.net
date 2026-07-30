@@ -22,7 +22,7 @@ export type BillingCycle = "monthly" | "annual"
 export type ReportReason = "spam" | "misrepresentation" | "harassment" | "off_platform_solicitation" | "scam_fraud" | "impersonation" | "data_harvesting" | "privacy_violation"
 export type ReportStatus = "open" | "reviewed" | "resolved"
 export type ReportPriority = "standard" | "high"
-export type AdminActionType = "assign_case" | "escalate_case" | "reinstate_user" | "change_user_role" | "review_evidence" | "verify_email" | "warn_user" | "remove_content" | "review_report" | "resolve_report" | "review_privacy_request" | "resolve_privacy_request" | "suspend_user"
+export type AdminActionType = "assign_case" | "escalate_case" | "reinstate_user" | "change_user_role" | "issue_access_invite" | "record_file_scan" | "review_evidence" | "verify_email" | "warn_user" | "remove_content" | "review_report" | "resolve_report" | "review_privacy_request" | "resolve_privacy_request" | "suspend_user" | "update_access_request"
 export type AdminActionTargetType = "access_request" | "readiness_check" | "file_upload" | "user" | "report" | "privacy_request" | "profile" | "message" | "opportunity"
 export type AdminEscalationQueue = "trust_safety" | "operations" | "founder_success" | "billing"
 export type InvestmentApplicationStatus = "draft" | "submitted" | "under_review" | "accepted" | "declined"
@@ -66,13 +66,6 @@ export interface SessionUser {
   role: AppRole
   onboardingCompleted: boolean
   subscriptionPlan: SubscriptionPlan
-}
-
-export interface AuthAccount {
-  email: string
-  password: string
-  providers: AuthProvider[]
-  userId: string
 }
 
 export interface AccessRequest {
@@ -547,6 +540,16 @@ export interface AdminAction {
     assignedAdminUserId?: string
     escalationQueue?: AdminEscalationQueue
     verificationStatus?: OpportunityVerificationStatus
+    previousRole?: AppRole
+    nextRole?: AppRole
+    previousSuspendedAt?: string | null
+    nextSuspendedAt?: string | null
+    previousVerifiedEmail?: boolean
+    nextVerifiedEmail?: boolean
+    completionConfirmed?: boolean
+    previousStatus?: string
+    nextStatus?: string
+    scanStatus?: FileScanStatus
   }
 }
 
@@ -679,7 +682,6 @@ export interface WorkspaceSeed {
   notifications: Notification[]
   fileUploads: FileUpload[]
   savedSearches: SavedSearch[]
-  authAccounts: AuthAccount[]
 }
 
 export interface PricingTier {

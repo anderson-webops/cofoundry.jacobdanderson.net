@@ -39,6 +39,10 @@ const routes = [
   "/contact",
   "/auth/sign-in"
 ]
+const isolatedExternalScriptUrls = new Set([
+  "https://analytics.cofoundry.jacobdanderson.net/script.js",
+  "https://analytics.jacobdanderson.net/script.js",
+])
 const colorSchemes = (process.env.A11Y_COLOR_SCHEMES || "light,dark")
   .split(",")
   .map(scheme => scheme.trim())
@@ -182,6 +186,7 @@ function startFrontend() {
         COFOUNDRY_ALLOW_LOCAL_PUBLIC_APP_URL: "true",
         COFOUNDRY_COMMIT_SHA: process.env.COFOUNDRY_COMMIT_SHA || "a11y-production-commit",
         COFOUNDRY_DEPLOYED_AT: process.env.COFOUNDRY_DEPLOYED_AT || "2026-06-14T00:00:00.000Z",
+        COFOUNDRY_OPERATIONS_TOKEN: "a11y-production-operations-token-000001",
         COFOUNDRY_RELEASE: process.env.COFOUNDRY_RELEASE || "a11y-production",
         DISABLE_ANALYTICS: "true",
         HOST: "127.0.0.1",
@@ -193,7 +198,7 @@ function startFrontend() {
         NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE: "false",
         NUXT_DEVTOOLS_ENABLED: "false",
         PORT: String(frontendPort),
-        SESSION_SIGNING_SECRET: "a11y-production-session-secret",
+        SESSION_SIGNING_SECRET: "a11y-production-session-secret-000001",
       },
       detached: process.platform !== "win32",
       stdio: ["ignore", "pipe", "pipe"]
@@ -290,30 +295,60 @@ async function stopProcess(child) {
 
 async function analyzePage(browser, route, scheme) {
   const url = `${baseUrl}${route}`
-  const page = await browser.newPage()
-  page.setDefaultTimeout(30_000)
-  await page.setViewport({ width: 1280, height: 1000, deviceScaleFactor: 1 })
-  if (scheme === "dark" || scheme === "light") {
-    await page.emulateMediaFeatures([{ name: "prefers-color-scheme", value: scheme }])
-  }
-  await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 })
-  await page.waitForNetworkIdle({ idleTime: 500, timeout: 8_000 }).catch(() => {})
-  await page.addScriptTag({ path: axeSourcePath })
-  const result = await page.evaluate(async () => {
-    return await globalThis.axe.run(document, {
-      resultTypes: ["violations"],
-      runOnly: {
-        type: "tag",
-        values: ["wcag2a", "wcag2aa"]
+  let lastError
+
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    const page = await browser.newPage()
+    try {
+      page.setDefaultTimeout(30_000)
+      await page.setRequestInterception(true)
+      page.on("request", (request) => {
+        const action = isolatedExternalScriptUrls.has(request.url())
+          ? request.respond({
+              body: "",
+              contentType: "application/javascript",
+              status: 200,
+            })
+          : request.continue()
+
+        action.catch(() => {})
+      })
+      await page.setViewport({ width: 1280, height: 1000, deviceScaleFactor: 1 })
+      if (scheme === "dark" || scheme === "light") {
+        await page.emulateMediaFeatures([{ name: "prefers-color-scheme", value: scheme }])
       }
-    })
-  })
-  await page.close()
-  return {
-    url,
-    scheme,
-    violations: result.violations.filter(violation => violation.id !== "frame-tested")
+      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 })
+      await page.waitForNetworkIdle({ idleTime: 500, timeout: 8_000 }).catch(() => {})
+      await page.addScriptTag({ path: axeSourcePath })
+      const result = await page.evaluate(async () => {
+        return await globalThis.axe.run(document, {
+          resultTypes: ["violations"],
+          runOnly: {
+            type: "tag",
+            values: ["wcag2a", "wcag2aa"]
+          }
+        })
+      })
+
+      return {
+        url,
+        scheme,
+        violations: result.violations.filter(violation => violation.id !== "frame-tested")
+      }
+    }
+    catch (error) {
+      lastError = error
+      if (attempt < 2)
+        console.warn(`Retrying accessibility navigation for ${url} [${scheme}] after: ${error instanceof Error ? error.message : String(error)}`)
+    }
+    finally {
+      await page.close().catch(() => {})
+    }
   }
+
+  throw new Error(`Accessibility navigation failed for ${url} [${scheme}]: ${lastError instanceof Error ? lastError.message : String(lastError)}`, {
+    cause: lastError,
+  })
 }
 
 const apiServer = createMockApiServer()

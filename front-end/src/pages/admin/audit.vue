@@ -28,6 +28,9 @@ const actionTypeOptions = [
   { label: "Resolved report", value: "resolve_report" },
   { label: "Reviewed privacy request", value: "review_privacy_request" },
   { label: "Resolved privacy request", value: "resolve_privacy_request" },
+  { label: "Updated access request", value: "update_access_request" },
+  { label: "Issued access invite", value: "issue_access_invite" },
+  { label: "Recorded file scan", value: "record_file_scan" },
   { label: "Reviewed evidence", value: "review_evidence" },
   { label: "Assigned case", value: "assign_case" },
   { label: "Escalated case", value: "escalate_case" },
@@ -42,7 +45,7 @@ const actionTypeOptions = [
 const actorOptions = computed(() => [
   { label: "All admins", value: "all" },
   ...workspaceStore.data.users
-    .filter(user => ["admin", "investor_admin"].includes(user.role))
+    .filter(user => user.role === "admin")
     .map((user) => {
       const profile = workspaceStore.data.profiles.find(item => item.userId === user.id)
       return {

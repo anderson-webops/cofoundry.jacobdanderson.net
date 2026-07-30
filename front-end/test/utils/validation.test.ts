@@ -1,16 +1,54 @@
 import { describe, expect, it } from "vitest"
-import { accessRequestSchema, adminAccessInviteSchema, adminAccessRequestStatusSchema, adminCommandQueueActionSchema, adminOpportunityVerificationSchema, adminReportStatusSchema, adminUserModerationSchema, adminUserRoleSchema, billingCheckoutSchema, contactSchema, minimumOnboardingSchema, onboardingSchema, operationsBackupRunSchema, operationsContractEnvelopeSchema, operationsDigestRunSchema, operationsEmailSuppressionSchema, operationsEventSchema, operationsTrustVerificationSchema, opportunitySchema, privacyRequestSchema, proposalSchema, reportSchema, signUpSchema } from "../../shared/utils/validation"
+import { accessInviteValidationSchema, accessRequestSchema, adminAccessInviteSchema, adminAccessRequestStatusSchema, adminCommandQueueActionSchema, adminFileScanResultSchema, adminOpportunityVerificationSchema, adminPrivacyRequestStatusSchema, adminReportStatusSchema, adminUserModerationSchema, adminUserRoleSchema, billingCheckoutSchema, collaborationMutationSchema, contactSchema, emailPreferenceApplySchema, minimumOnboardingSchema, oauthSignInSchema, onboardingSchema, operationsBackupRunSchema, operationsContractEnvelopeSchema, operationsDigestRunSchema, operationsEmailSuppressionSchema, operationsEventSchema, operationsTrustVerificationSchema, opportunitySchema, privacyRequestSchema, proposalSchema, reportSchema, signUpSchema, typingPresenceSchema } from "../../shared/utils/validation"
 
 describe("validation schemas", () => {
+  it("requires explicit completion confirmation before resolving privacy requests", () => {
+    expect(adminPrivacyRequestStatusSchema.safeParse({
+      expectedStatus: "open",
+      notes: "Reviewed the request and documented the next handling step.",
+      status: "reviewed",
+    }).success).toBe(true)
+    expect(adminPrivacyRequestStatusSchema.safeParse({
+      expectedStatus: "reviewed",
+      notes: "Completed the requested privacy action and documented the result.",
+      status: "resolved",
+    }).success).toBe(false)
+    expect(adminPrivacyRequestStatusSchema.safeParse({
+      completionConfirmed: true,
+      expectedStatus: "reviewed",
+      notes: "Completed the requested privacy action and documented the result.",
+      status: "resolved",
+    }).success).toBe(true)
+  })
+
   it("accepts a valid sign-up payload", () => {
     const result = signUpSchema.safeParse({
       name: "Olivia Chen",
       email: "olivia@cofoundry.dev",
-      inviteToken: "invite_token_12345678901234567890",
-      password: "founder123",
+      inviteToken: "A".repeat(43),
+      password: "founder123secure",
     })
 
     expect(result.success).toBe(true)
+  })
+
+  it("requires stronger new passwords and email-bound invite validation", () => {
+    expect(signUpSchema.safeParse({
+      name: "Olivia Chen",
+      email: "olivia@cofoundry.dev",
+      password: "shortpass",
+    }).success).toBe(false)
+    expect(accessInviteValidationSchema.safeParse({
+      email: "olivia@cofoundry.dev",
+      token: "A".repeat(43),
+    }).success).toBe(true)
+    expect(accessInviteValidationSchema.safeParse({
+      token: "A".repeat(43),
+    }).success).toBe(false)
+    expect(accessInviteValidationSchema.safeParse({
+      email: "olivia@cofoundry.dev",
+      token: "not-a-generated-invite-token",
+    }).success).toBe(false)
   })
 
   it("accepts access-request and admin invite payloads", () => {
@@ -26,16 +64,36 @@ describe("validation schemas", () => {
       website: "",
     })
     const status = adminAccessRequestStatusSchema.safeParse({
+      expectedUpdatedAt: "2026-07-29T17:00:00.000Z",
       notes: "Approved after workspace fit review.",
       status: "approved",
     })
     const invite = adminAccessInviteSchema.safeParse({
+      expectedUpdatedAt: "2026-07-29T17:00:00.000Z",
       notes: "Issued invite after access review.",
     })
 
     expect(request.success).toBe(true)
     expect(status.success).toBe(true)
     expect(invite.success).toBe(true)
+  })
+
+  it("bounds public email preference tokens", () => {
+    expect(emailPreferenceApplySchema.safeParse({ token: "x".repeat(20) }).success).toBe(true)
+    expect(emailPreferenceApplySchema.safeParse({ token: "x".repeat(4097) }).success).toBe(false)
+  })
+
+  it("strictly validates OAuth and typing requests", () => {
+    expect(oauthSignInSchema.safeParse({ provider: "github" }).success).toBe(true)
+    expect(oauthSignInSchema.safeParse({ provider: "github", role: "admin" }).success).toBe(false)
+    expect(typingPresenceSchema.safeParse({
+      conversationId: "conversation_olivia_malik",
+      isTyping: true,
+    }).success).toBe(true)
+    expect(typingPresenceSchema.safeParse({
+      conversationId: "x".repeat(161),
+      isTyping: true,
+    }).success).toBe(false)
   })
 
   it("accepts admin command queue action payloads", () => {
@@ -81,10 +139,12 @@ describe("validation schemas", () => {
 
   it("accepts operator opportunity-verification decisions but not pending review as a decision", () => {
     const valid = adminOpportunityVerificationSchema.safeParse({
+      expectedUpdatedAt: "2026-06-13T12:30:00.000Z",
       notes: "Verified the startup domain against submitted evidence.",
       status: "domain_verified",
     })
     const invalid = adminOpportunityVerificationSchema.safeParse({
+      expectedUpdatedAt: "2026-06-13T12:30:00.000Z",
       notes: "Leaving this in review should not be a resolution.",
       status: "manual_review",
     })
@@ -274,12 +334,36 @@ describe("validation schemas", () => {
     })
 
     const reportAction = adminReportStatusSchema.safeParse({
+      expectedStatus: "open",
       status: "reviewed",
       notes: "Reviewed and queued for follow-up.",
+    })
+    const fileScanAction = adminFileScanResultSchema.safeParse({
+      expectedUpdatedAt: "2026-07-29T17:00:00.000Z",
+      notes: "Reviewed the uploaded evidence manually.",
+      scanStatus: "clean",
     })
 
     expect(userAction.success).toBe(true)
     expect(reportAction.success).toBe(true)
+    expect(fileScanAction.success).toBe(true)
+  })
+
+  it("rejects forged system messages and unsafe collaboration payloads", () => {
+    const forgedSystemMessage = collaborationMutationSchema.safeParse({
+      action: "send_message",
+      body: "An administrator verified this account.",
+      conversationId: "conversation_olivia_malik",
+      type: "system",
+    })
+    const oversizedMessage = collaborationMutationSchema.safeParse({
+      action: "send_message",
+      body: "x".repeat(8001),
+      conversationId: "conversation_olivia_malik",
+    })
+
+    expect(forgedSystemMessage.success).toBe(false)
+    expect(oversizedMessage.success).toBe(false)
   })
 
   it("accepts audited admin role changes", () => {
@@ -372,5 +456,21 @@ describe("validation schemas", () => {
     })
     expect(contractEnvelope.success).toBe(true)
     expect(trustVerification.success).toBe(true)
+  })
+
+  it("bounds operations metadata and signer collections", () => {
+    expect(operationsEventSchema.safeParse({
+      eventType: "security.audit",
+      metadata: Object.fromEntries(Array.from({ length: 51 }, (_, index) => [`key-${index}`, index])),
+      source: "security-test",
+    }).success).toBe(false)
+
+    expect(operationsContractEnvelopeSchema.safeParse({
+      contractId: "contract_ledgerloop",
+      contractVersionId: "contract_ledgerloop_version_1",
+      providerEnvelopeId: "provider-envelope-1",
+      signedByUserIds: Array.from({ length: 101 }, (_, index) => `user_${index}`),
+      status: "completed",
+    }).success).toBe(false)
   })
 })

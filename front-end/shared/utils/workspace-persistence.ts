@@ -10,7 +10,6 @@ import type {
   SubscriptionPlan,
   WorkspaceSeed,
 } from "../types/domain"
-import { workspaceSeed } from "../data/seed"
 import { cloneValue } from "./clone"
 import { normalizeNotificationPreferences } from "./notification-preferences"
 import { buildSessionUser, getProfileByUserId, getSubscriptionByUserId, getUserById } from "./workspace"
@@ -43,14 +42,9 @@ export function normalizeWorkspaceEmail(email: string) {
   return email.trim().toLowerCase()
 }
 
-export function createInitialWorkspaceDocument() {
-  return cloneValue(workspaceSeed)
-}
-
 export function findWorkspaceUserIdByEmail(seed: WorkspaceSeed, email: string) {
   const normalizedEmail = normalizeWorkspaceEmail(email)
   return seed.users.find(user => normalizeWorkspaceEmail(user.email) === normalizedEmail)?.id
-    || seed.authAccounts.find(account => normalizeWorkspaceEmail(account.email) === normalizedEmail)?.userId
     || null
 }
 

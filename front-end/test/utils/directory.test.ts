@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import { contractGuidePages, trustCenterPages } from "../../shared/data/public-content"
 import { workspaceSeed } from "../../shared/data/seed"
 import {
+  buildPublicDirectorySnapshot,
   buildPublicProfileSlug,
   formatHubInventoryLabel,
   formatPublicHubInventoryLabel,
@@ -11,6 +12,8 @@ import {
   getPublicRoutePaths,
   getRoleHubs,
   getStageHubs,
+  projectOpportunityForPublicDirectory,
+  projectProfileForPublicDirectory,
 } from "../../shared/utils/directory"
 
 const reservedPublicHostnames = new Set(["example.com", "example.net", "example.org"])
@@ -46,6 +49,61 @@ describe("public directory utilities", () => {
     const olivia = workspaceSeed.profiles.find(profile => profile.userId === "user_olivia")
     expect(olivia).toBeDefined()
     expect(buildPublicProfileSlug(olivia!)).toBe("olivia-chen-olivia")
+  })
+
+  it("removes relationship-gated links and private onboarding fields from public profiles", () => {
+    const source = structuredClone(workspaceSeed.profiles.find(profile => profile.userId === "user_olivia")!)
+    source.privacy.contactDetailsVisibleToMatchesOnly = true
+    source.privacy.portfolioVisibility = "private"
+    source.links.website = "https://private.example"
+    source.portfolio = [{
+      id: "private-project",
+      name: "Private project",
+      outcome: "Private",
+      role: "Founder",
+      summary: "Private",
+      url: "https://private.example/project",
+    }]
+    source.ipReadiness.existingAssetsNotes = "Confidential ownership notes"
+    source.intent.nonNegotiables = ["Confidential constraint"]
+
+    const projected = projectProfileForPublicDirectory(source)
+
+    expect(projected.links).toEqual({
+      github: "",
+      linkedin: "",
+      portfolio: "",
+      website: "",
+    })
+    expect(projected.portfolio).toEqual([])
+    expect(projected.ipReadiness.existingAssetsNotes).toBe("")
+    expect(projected.intent.nonNegotiables).toEqual([])
+    expect(projected.commitmentProfile.runwayBucket).toBe("undisclosed")
+    expect(projected.photoUrl).toBe("")
+    expect(projected.id).toBe("")
+  })
+
+  it("allowlists public opportunity fields and removes moderation metadata", () => {
+    const source = structuredClone(workspaceSeed.opportunities[0]!)
+    source.riskFlags = ["internal-review-note"]
+    source.verificationMethod = "work_email"
+
+    const projected = projectOpportunityForPublicDirectory(source)
+
+    expect(projected.id).toBe("")
+    expect(projected.ownerUserId).toBe("")
+    expect(projected.riskFlags).toEqual([])
+    expect(projected.verificationMethod).toBe("none")
+  })
+
+  it("builds a public snapshot without account, moderation, contract, or billing records", () => {
+    const serialized = JSON.stringify(buildPublicDirectorySnapshot(workspaceSeed))
+
+    expect(serialized).not.toContain("olivia@cofoundry.dev")
+    expect(serialized).not.toContain("reviewedByUserId")
+    expect(serialized).not.toContain("stripeCustomerId")
+    expect(serialized).not.toContain("contract_ledgerloop")
+    expect(serialized).not.toContain("linkedin-verification-summary.pdf")
   })
 
   it("creates role, industry, and stage hubs from live seed inventory", () => {

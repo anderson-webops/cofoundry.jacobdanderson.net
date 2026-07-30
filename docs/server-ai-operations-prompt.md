@@ -20,7 +20,7 @@ Source/runtime context:
 - Email-suppression provider readiness is optional. Leave `COFOUNDRY_EMAIL_SUPPRESSION_PROVIDER` and `COFOUNDRY_MAIL_SUPPRESSION_PROVIDER` unset until the outbound mail provider's bounce, complaint, unsubscribe, and manual-suppression callbacks are mapped. Once either marker is set, `/admin/readiness` expects recent suppression evidence.
 - Trust-provider readiness is optional. Leave `COFOUNDRY_TRUST_VERIFICATION_PROVIDER`, `COFOUNDRY_IDENTITY_VERIFICATION_PROVIDER`, `COFOUNDRY_DOMAIN_VERIFICATION_PROVIDER`, and `COFOUNDRY_SOCIAL_VERIFICATION_PROVIDER` unset until the operator chooses the corresponding provider. Once any marker is set, `/admin/readiness` expects recent trust-verification evidence.
 - Contract-envelope provider readiness is optional. Leave `COFOUNDRY_CONTRACT_ENVELOPE_PROVIDER`, `COFOUNDRY_ESIGNATURE_PROVIDER`, and `COFOUNDRY_PDF_PROVIDER` unset unless a dedicated e-signature/PDF provider is selected. Once any marker is set, `/admin/readiness` expects recent completed envelope evidence.
-- The source includes schedulable worker commands: `npm run operations:backup`, `npm run operations:digest`, `npm run operations:scan`, `npm run operations:heartbeat`, `npm run operations:alert-smoke`, `npm run operations:event`, `npm run operations:mail-smoke`, `npm run operations:realtime-smoke`, `npm run operations:worker -- lifecycle-notification`, `npm run operations:worker -- email-suppression`, `npm run operations:worker -- contract-envelope`, `npm run operations:trust-verification`, and `npm run operations:restore-drill`.
+- The source includes schedulable worker commands: `npm run operations:backup`, `npm run operations:digest`, `npm run operations:scan`, `npm run operations:heartbeat`, `npm run operations:alert-smoke`, `npm run operations:event`, `npm run operations:mail-smoke`, `npm run operations:worker -- lifecycle-notification`, `npm run operations:worker -- email-suppression`, `npm run operations:worker -- contract-envelope`, `npm run operations:trust-verification`, and `npm run operations:restore-drill`. The realtime smoke worker is isolated-staging-only until a shared atomic limiter exists.
 - The source includes systemd templates and a dry-run capable installer in `deploy/systemd/`. Prefer `sudo deploy/systemd/install-operations-units.sh --dry-run` followed by a reviewed install instead of hand-writing timer units from scratch.
 - In mock/access-request mode, operations telemetry persists to `.data/operations-telemetry.json` and local uploaded scan artifacts persist under `.data/local-file-uploads/` unless `COFOUNDRY_LOCAL_DATA_DIR` points at another durable writable directory.
 
@@ -57,7 +57,7 @@ Tasks:
    sudo deploy/systemd/install-operations-units.sh --dry-run
    sudo deploy/systemd/install-operations-units.sh
 
-   The installer creates `/etc/cofoundry/operations.env` from the example only when it does not already exist, enables heartbeat/digest/scan/backup timers by default, and leaves the restore-drill timer disabled unless `--enable-restore-drill` is passed. Fill in host values from Vault-managed env, and adjust `User=`, `Group=`, and `WorkingDirectory=` in the templates before installation if needed. If an alerting destination exists, add `COFOUNDRY_ALERT_WEBHOOK_URL`, optional `COFOUNDRY_ALERT_WEBHOOK_TOKEN`, optional `COFOUNDRY_ALERT_SEVERITIES=error,warning`, and optional `COFOUNDRY_ALERT_TIMEOUT_MS=10000` to the same server-only worker env file. If mail smoke checks are expected, add `COFOUNDRY_MAIL_SMOKE_TO_EMAIL=<monitored-inbox>`. If the host uses more than one app instance or a realtime relay, add `COFOUNDRY_REALTIME_SMOKE_USER_ID=<test-user-id>` and keep `COFOUNDRY_REALTIME_SMOKE_MIN_DELIVERED=0` for ingress-only smoke until a cross-instance member SSE stream is intentionally connected.
+   The installer creates `/etc/cofoundry/operations.env` from the example only when it does not already exist, enables heartbeat/digest/scan/backup timers by default, and leaves the restore-drill timer disabled unless `--enable-restore-drill` is passed. Fill in host values from Vault-managed env, and adjust `User=`, `Group=`, and `WorkingDirectory=` in the templates before installation if needed. If an alerting destination exists, add `COFOUNDRY_ALERT_WEBHOOK_URL`, optional `COFOUNDRY_ALERT_WEBHOOK_TOKEN`, optional `COFOUNDRY_ALERT_SEVERITIES=error,warning`, and optional `COFOUNDRY_ALERT_TIMEOUT_MS=10000` to the same server-only worker env file. If mail smoke checks are expected, add `COFOUNDRY_MAIL_SMOKE_TO_EMAIL=<monitored-inbox>`. Keep realtime relay and smoke settings unset in production.
 10. Create a systemd timer or equivalent cron for unread digests. First run dry-run mode with the checked-in worker:
 
    npm run operations:digest -- --dry-run --max-users 100
@@ -235,19 +235,7 @@ Tasks:
    npm run operations:alert-smoke -- \
      --metadata runbook=manual
 
-18. If `COFOUNDRY_REALTIME_FANOUT_URL` is configured or `COFOUNDRY_EXPECT_MULTI_INSTANCE=true`, verify realtime fanout ingress and telemetry:
-
-   If the checked-in systemd templates are installed:
-
-   systemctl start cofoundry-operations-realtime-smoke.service
-
-   Otherwise run the worker directly:
-
-   npm run operations:realtime-smoke -- \
-     --min-delivered 0 \
-     --metadata runbook=manual
-
-   Confirm `/admin/operations` shows the `realtime_fanout_smoke_succeeded` row and `/admin/readiness` shows recent workspace realtime fanout evidence. For full cross-instance proof, connect a member `/api/workspace/events` SSE stream to another app instance and rerun with `--min-delivered 1` or higher.
+18. Confirm production runs exactly one app process with `COFOUNDRY_EXPECT_MULTI_INSTANCE=false`, `COFOUNDRY_APP_INSTANCE_COUNT=1`, and no `COFOUNDRY_REALTIME_FANOUT_URL`. Multi-instance production is blocked until a shared atomic limiter and cross-instance abuse tests exist. Use the realtime smoke worker only in isolated staging while developing that future boundary.
 
 19. Wire a restore drill timer or manual runbook command. `/admin/readiness` should continue to warn until a successful `restore_drill_succeeded` event appears:
 
@@ -256,6 +244,6 @@ Tasks:
      --metadata environment=staging \
      -- ./scripts/verify-restored-cofoundry.sh
 
-20. Verify `/admin/operations` shows backup runs, operational events, file uploads, trust verifications, contract envelopes, email suppressions, realtime fanout smoke, and notification deliveries when logged in as an admin.
-21. Document timer names, log paths, backup artifact location, scanner command, restore test procedure, local telemetry path, retention limit, mail-smoke result, realtime-smoke result, provider suppression mapping, trust-verification mapping, contract-envelope mapping, lifecycle trigger wiring, and rollback command in the server runbook.
+20. Verify `/admin/operations` shows backup runs, operational events, file uploads, trust verifications, contract envelopes, email suppressions, and notification deliveries when logged in as an admin.
+21. Document timer names, log paths, backup artifact location, scanner command, restore test procedure, local telemetry path, retention limit, mail-smoke result, provider suppression mapping, trust-verification mapping, contract-envelope mapping, lifecycle trigger wiring, single-process app topology, and rollback command in the server runbook.
 ```

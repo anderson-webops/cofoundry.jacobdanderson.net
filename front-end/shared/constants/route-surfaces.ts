@@ -26,15 +26,19 @@ export const privateWorkspaceRoutePrefixes = [
 ] as const
 
 export const privateApiRoutePrefixes = [
+  "/api/access-requests",
   "/api/account",
   "/api/admin",
   "/api/auth",
   "/api/billing",
+  "/api/contracts",
   "/api/files",
   "/api/inbox",
+  "/api/investment-applications",
   "/api/notifications",
   "/api/operations",
   "/api/relationships",
+  "/api/reports",
   "/api/workspace",
 ] as const
 

@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { workspaceSeed } from "~/shared/data/seed"
-import { getIndustryHubs, getPublicOpportunitiesForRole, getPublicProfilesForRole, getRoleHubs, getStageHubs, pickRelatedHubEntries } from "~/shared/utils/directory"
+import { pickRelatedHubEntries } from "~/shared/utils/directory"
 
 const route = useRoute()
 const slug = String(route.params.slug)
-const hub = getRoleHubs(workspaceSeed).find(entry => entry.slug === slug)
+const directory = await usePublicDirectory()
+const hub = directory.roleHubs.find(entry => entry.slug === slug)
 
 if (!hub)
   throw createError({ statusCode: 404, statusMessage: "Role hub not found" })
 
-const profiles = getPublicProfilesForRole(workspaceSeed, slug)
-const opportunities = getPublicOpportunitiesForRole(workspaceSeed, slug)
-const relatedIndustries = pickRelatedHubEntries(getIndustryHubs(workspaceSeed), "", 3)
-const relatedStages = pickRelatedHubEntries(getStageHubs(workspaceSeed), "", 3)
+const profiles = directory.profiles.filter(entry => entry.roleSlugs.includes(slug))
+const opportunities = directory.opportunities.filter(entry => entry.roleSlugs.includes(slug))
+const relatedIndustries = pickRelatedHubEntries(directory.industryHubs, "", 3)
+const relatedStages = pickRelatedHubEntries(directory.stageHubs, "", 3)
 const { buildAccessRequestPath, policy } = useProductAccess()
 const roleHubCta = computed(() => policy.value.accountsEnabled
   ? { label: "Create your profile", to: "/auth/sign-up" }
@@ -53,6 +53,7 @@ usePageSeo(`${hub.label} searches`, hub.description, {
           :key="entry.slug"
           :profile="entry.profile"
           :skills="entry.skillLabels"
+          :trust-summary="entry.trustSummary"
         >
           <BaseButton variant="secondary" :to="`/people/${entry.slug}`">
             View public profile

@@ -1,22 +1,16 @@
-import type { SessionUser } from "~/shared/types/domain"
 import { completeOnboarding, requireAuthenticatedSession } from "~/server/utils/auth"
+import { assertRateLimit, buildRateLimitKey } from "../../utils/rate-limit"
 
 export default defineEventHandler(async (event) => {
   const currentSession = await requireAuthenticatedSession(event)
-  const { session } = await readBody<{ session: SessionUser }>(event)
-
-  if (!session)
-    throw createError({ statusCode: 400, statusMessage: "Missing session payload." })
-
-  if (session.id !== currentSession.id)
-    throw createError({ statusCode: 403, statusMessage: "You can only complete onboarding for your own account." })
+  assertRateLimit(event, {
+    key: buildRateLimitKey(event, currentSession.id),
+    limit: 10,
+    scope: "auth:complete-onboarding",
+    windowMs: 60 * 60 * 1000,
+  })
 
   return {
-    session: await completeOnboarding(event, {
-      ...currentSession,
-      ...session,
-      id: currentSession.id,
-      email: currentSession.email,
-    }),
+    session: await completeOnboarding(event, currentSession),
   }
 })

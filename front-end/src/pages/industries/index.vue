@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import { workspaceSeed } from "~/shared/data/seed"
-import { getIndustryHubs } from "~/shared/utils/directory"
-
-const industryHubs = getIndustryHubs(workspaceSeed)
+const industryHubs = (await usePublicDirectory()).industryHubs
 
 usePageSeo("Industry hubs", "Browse public founder and startup searches organized by industry.", {
   canonicalPath: "/industries",

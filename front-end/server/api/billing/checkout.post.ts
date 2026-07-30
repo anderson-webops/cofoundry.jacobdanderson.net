@@ -1,10 +1,11 @@
 import { billingCheckoutSchema } from "~/shared/utils/validation"
+import { projectWorkspaceForSession } from "~/shared/utils/workspace-authorization"
 import { resolveServerAppUrl } from "../../utils/app-url"
 import { requireAuthenticatedSession } from "../../utils/auth"
 import { buildOperatorManagedBillingUrl, resolveServerBillingAccessPolicy } from "../../utils/billing-access"
 import { createOrReuseStripeCustomer, persistMockCheckoutSubscription, recordStripeCheckoutSession } from "../../utils/billing-persistence"
 import { assertRateLimit, buildRateLimitKey } from "../../utils/rate-limit"
-import { createStripeClient } from "../../utils/stripe"
+import { createStripeClient, validateStripeHostedUrl } from "../../utils/stripe"
 
 export default defineEventHandler(async (event) => {
   const runtimeConfig = useRuntimeConfig(event)
@@ -33,10 +34,17 @@ export default defineEventHandler(async (event) => {
     return {
       mode: "mock",
       checkoutUrl: `${appUrl}/app/billing?checkout=success&plan=${payload.plan}`,
-      data: workspace?.seed,
+      data: workspace ? projectWorkspaceForSession(workspace.seed, workspace.session) : undefined,
       session: workspace?.session,
       subscription: workspace?.state.subscription,
     }
+  }
+
+  if (payload.interval !== "monthly") {
+    throw createError({
+      statusCode: 409,
+      statusMessage: "Annual Stripe checkout is not available until dedicated annual price IDs are configured.",
+    })
   }
 
   const priceId = payload.plan === "pro"
@@ -78,10 +86,17 @@ export default defineEventHandler(async (event) => {
     cancel_url: `${appUrl}/app/billing?checkout=cancelled`,
   })
 
+  const checkoutUrl = validateStripeHostedUrl(checkoutSession.url, "checkout")
+  if (!checkoutUrl) {
+    throw createError({
+      statusCode: 502,
+      statusMessage: "Stripe returned an invalid checkout URL.",
+    })
+  }
   await recordStripeCheckoutSession(event, session.id, checkoutSession.id, customerId)
 
   return {
     mode: "stripe",
-    checkoutUrl: checkoutSession.url,
+    checkoutUrl,
   }
 })

@@ -1,7 +1,7 @@
 import { getRouterParam } from "h3"
-import { fileScanResultSchema } from "~/shared/utils/validation"
+import { adminFileScanResultSchema } from "~/shared/utils/validation"
 import { requireAdminSession } from "../../../../utils/admin"
-import { recordFileScanResult } from "../../../../utils/file-uploads"
+import { recordAdminFileScanResult } from "../../../../utils/file-uploads"
 import { assertRateLimit, buildRateLimitKey } from "../../../../utils/rate-limit"
 
 export default defineEventHandler(async (event) => {
@@ -18,10 +18,27 @@ export default defineEventHandler(async (event) => {
   if (!uploadId)
     throw createError({ statusCode: 400, statusMessage: "Upload id is required." })
 
-  const payload = fileScanResultSchema.parse(await readBody(event))
-  const upload = await recordFileScanResult(event, uploadId, payload)
+  const payload = adminFileScanResultSchema.parse(await readBody(event))
+  const createdAt = new Date().toISOString()
+  const action = {
+    id: crypto.randomUUID(),
+    adminUserId: session.id,
+    createdAt,
+    metadata: {
+      nextStatus: payload.scanStatus,
+      scanStatus: payload.scanStatus,
+    },
+    notes: payload.notes,
+    targetId: uploadId,
+    targetType: "file_upload" as const,
+    type: "record_file_scan" as const,
+  }
+  const upload = await recordAdminFileScanResult(event, uploadId, payload, action)
+  if (!upload)
+    throw createError({ statusCode: 404, statusMessage: "File upload was not found." })
 
   return {
+    action,
     upload,
   }
 })

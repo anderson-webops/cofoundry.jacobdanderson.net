@@ -1,4 +1,6 @@
 import type { H3Event } from "h3"
+import { Buffer } from "node:buffer"
+import { createHmac } from "node:crypto"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -82,6 +84,22 @@ describe("email preference tokens", () => {
     })
 
     expect(url).toContain("https://cofoundry.example/email/preferences?token=")
+
+    const legacyPayload = Buffer.from(JSON.stringify({
+      action: "disable",
+      category: "digest",
+      email: "member@example.com",
+      exp: now + 24 * 60 * 60 * 1000,
+      userId: "user_member",
+      v: 1,
+    })).toString("base64url")
+    const legacySignature = createHmac("sha256", "test-email-preference-secret")
+      .update(legacyPayload)
+      .digest("base64url")
+    expect(verifyEmailPreferenceToken(`${legacyPayload}.${legacySignature}`, { now })).toMatchObject({
+      ok: false,
+      reason: "Email preference link is invalid.",
+    })
   })
 
   it("disables only the linked optional email category in durable local member state", async () => {
@@ -117,5 +135,18 @@ describe("email preference tokens", () => {
     })
     expect(reloaded.state.user.notificationPreferences.workflowEmail).toBe(false)
     expect(reloaded.state.user.notificationPreferences.unreadDigestEmail).toBe(true)
+  })
+
+  it("does not recreate a missing member from a validly signed preference link", async () => {
+    const token = createEmailPreferenceToken({
+      category: "digest",
+      email: "deleted-member@example.com",
+      userId: "user_deleted_member",
+    })
+
+    expect(token).toBeTruthy()
+    await expect(applyEmailPreferenceToken(event, token!)).rejects.toMatchObject({
+      statusCode: 403,
+    })
   })
 })

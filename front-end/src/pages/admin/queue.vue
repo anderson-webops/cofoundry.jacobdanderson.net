@@ -86,7 +86,7 @@ const queueItems = computed(() => buildAdminCommandQueue({
 
 const assignableAdmins = computed(() => {
   const admins = workspaceStore.data.users
-    .filter(user => ["admin", "investor_admin"].includes(user.role))
+    .filter(user => !user.suspendedAt && user.role === "admin")
     .map((user) => {
       const profile = workspaceStore.data.profiles.find(item => item.userId === user.id)
       return {
@@ -97,7 +97,7 @@ const assignableAdmins = computed(() => {
 
   if (
     authStore.currentUser
-    && ["admin", "investor_admin"].includes(authStore.currentUser.role)
+    && authStore.currentUser.role === "admin"
     && !admins.some(admin => admin.id === authStore.currentUser?.id)
   ) {
     admins.unshift({
@@ -306,8 +306,13 @@ async function recordOpportunityVerification(item: AdminCommandQueueItem, status
   pendingAction.value = `${item.id}:verify:${status}`
 
   try {
+    const opportunity = queueSeed.value.opportunities.find(candidate => candidate.id === item.targetId)
+    if (!opportunity)
+      throw new Error("Refresh the queue before reviewing this listing.")
+
     await requestFetch(`/api/admin/opportunities/${item.targetId}/verification`, {
       body: {
+        expectedUpdatedAt: opportunity.updatedAt,
         notes: defaultOpportunityVerificationNote(item, status),
         status,
       },

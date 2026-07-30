@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import { workspaceSeed } from "~/shared/data/seed"
-import { getStageHubs } from "~/shared/utils/directory"
-
-const stageHubs = getStageHubs(workspaceSeed)
+const stageHubs = (await usePublicDirectory()).stageHubs
 
 usePageSeo("Stage hubs", "Browse public founder and startup searches organized by startup stage.", {
   canonicalPath: "/stage",

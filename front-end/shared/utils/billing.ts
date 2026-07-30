@@ -100,13 +100,14 @@ export function getPlanPriceLabel(plan: SubscriptionPlan, billingCycle: BillingC
 }
 
 export function getSubscriptionEntitlements(subscription?: Subscription): SubscriptionEntitlements {
-  const plan = subscription?.plan || "free"
+  const entitled = subscription?.status === "active" || subscription?.status === "trialing"
+  const plan = entitled ? subscription.plan : "free"
   const limits = PLAN_LIMITS[plan]
 
   return {
     plan,
     ...limits,
-    hasVisibilityBoost: subscription?.visibilityBoost || plan !== "free",
+    hasVisibilityBoost: entitled && Boolean(subscription?.visibilityBoost || plan !== "free"),
   }
 }
 

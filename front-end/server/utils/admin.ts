@@ -5,8 +5,25 @@ import { requireAuthenticatedSession } from "./auth"
 export async function requireAdminSession(event: H3Event) {
   const session = await requireAuthenticatedSession(event)
 
-  if (!["admin", "investor_admin"].includes(session.role))
-    throw createError({ statusCode: 403, statusMessage: "Admin access is required for this action." })
+  if (session.role !== "admin")
+    throw createError({ statusCode: 403, statusMessage: "Full admin access is required for this action." })
+
+  return session
+}
+
+export async function requireFullAdminSession(event: H3Event) {
+  return requireAdminSession(event)
+}
+
+export async function requireOpportunityReviewerSession(event: H3Event) {
+  const session = await requireAuthenticatedSession(event)
+  const runtimeConfig = useRuntimeConfig(event)
+
+  const allowed = session.role === "admin"
+    || (session.role === "investor_admin" && runtimeConfig.public.featureInvestmentModule === true)
+
+  if (!allowed)
+    throw createError({ statusCode: 403, statusMessage: "Opportunity-review access is required for this action." })
 
   return session
 }

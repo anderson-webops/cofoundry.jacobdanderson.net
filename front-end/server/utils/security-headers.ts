@@ -2,6 +2,7 @@ export interface SecurityHeaderOptions {
   appUrl?: string
   backendMode?: string
   billingMode?: string
+  includeContentSecurityPolicy?: boolean
   isProduction?: boolean
   stripePublishableKey?: string
   supabaseUrl?: string
@@ -52,7 +53,11 @@ function directive(name: string, values: Array<string | null | undefined>) {
   return `${name} ${uniqueValues(values).join(" ")}`
 }
 
-export function buildContentSecurityPolicy(options: SecurityHeaderOptions = {}) {
+export function shouldDefaultApiResponseToNoStore(pathname: string) {
+  return pathname.startsWith("/api/") && !pathname.startsWith("/api/public/")
+}
+
+export function buildContentSecurityPolicyDirectives(options: SecurityHeaderOptions = {}) {
   const appOrigin = originFor(options.appUrl)
   const supabaseOrigin = options.backendMode === "supabase" ? originFor(options.supabaseUrl) : null
   const stripeEnabled = options.billingMode === "stripe" || Boolean(options.stripePublishableKey)
@@ -60,23 +65,35 @@ export function buildContentSecurityPolicy(options: SecurityHeaderOptions = {}) 
   const stripeFrameOrigins = stripeEnabled ? ["https://checkout.stripe.com", "https://js.stripe.com"] : []
   const stripeConnectOrigins = stripeEnabled ? stripeOrigins : []
 
-  return [
-    directive("default-src", ["'self'"]),
-    directive("base-uri", ["'self'"]),
-    directive("object-src", ["'none'"]),
-    directive("frame-ancestors", ["'none'"]),
-    directive("form-action", ["'self'"]),
-    directive("script-src", ["'self'", "'unsafe-inline'", ...analyticsOrigins, ...stripeScriptOrigins]),
-    directive("style-src", ["'self'", "'unsafe-inline'"]),
-    directive("img-src", ["'self'", "data:", "blob:", "https:"]),
-    directive("font-src", ["'self'", "data:"]),
-    directive("connect-src", ["'self'", appOrigin, supabaseOrigin, ...analyticsOrigins, ...stripeConnectOrigins]),
-    directive("frame-src", ["'self'", ...stripeFrameOrigins]),
-    directive("manifest-src", ["'self'"]),
-    directive("media-src", ["'self'", "data:", "blob:"]),
-    directive("worker-src", ["'self'", "blob:"]),
-    ...(isHttpsUrl(options.appUrl) ? ["upgrade-insecure-requests"] : []),
-  ].join("; ")
+  return {
+    "base-uri": ["'none'"],
+    "connect-src": uniqueValues(["'self'", appOrigin, supabaseOrigin, ...analyticsOrigins, ...stripeConnectOrigins]),
+    "default-src": ["'self'"],
+    "font-src": ["'self'", "data:"],
+    "form-action": ["'self'"],
+    "frame-ancestors": ["'none'"],
+    "frame-src": uniqueValues(["'self'", ...stripeFrameOrigins]),
+    "img-src": ["'self'", "data:", "blob:", "https:"],
+    "manifest-src": ["'self'"],
+    "media-src": ["'self'", "data:", "blob:"],
+    "object-src": ["'none'"],
+    "script-src": uniqueValues(["'self'", "'strict-dynamic'", "'nonce-{{nonce}}'", ...analyticsOrigins, ...stripeScriptOrigins]),
+    "script-src-attr": ["'none'"],
+    "style-src": ["'self'", "'unsafe-inline'"],
+    "upgrade-insecure-requests": isHttpsUrl(options.appUrl),
+    "worker-src": ["'self'", "blob:"],
+  }
+}
+
+export function buildContentSecurityPolicy(options: SecurityHeaderOptions = {}) {
+  return Object.entries(buildContentSecurityPolicyDirectives(options))
+    .flatMap(([name, values]) => {
+      if (values === false)
+        return []
+
+      return Array.isArray(values) ? [directive(name, values)] : [name]
+    })
+    .join("; ")
 }
 
 export function buildSecurityHeaders(options: SecurityHeaderOptions = {}): SecurityHeaders {
@@ -97,12 +114,11 @@ export function buildSecurityHeaders(options: SecurityHeaderOptions = {}): Secur
     "X-Frame-Options": "DENY",
   }
 
-  if (options.isProduction) {
+  if (options.isProduction && options.includeContentSecurityPolicy !== false)
     headers["Content-Security-Policy"] = buildContentSecurityPolicy(options)
 
-    if (isHttpsUrl(options.appUrl))
-      headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-  }
+  if (options.isProduction && isHttpsUrl(options.appUrl))
+    headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
 
   return headers
 }

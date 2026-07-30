@@ -3,6 +3,7 @@ import type {
   Contract,
   ContractVersion,
   Conversation,
+  InvestmentApplication,
   Match,
   Message,
   Notification,
@@ -14,16 +15,18 @@ import type {
   Signature,
   TrialCollaboration,
 } from "../../shared/types/domain"
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
-import { dirname, resolve } from "node:path"
+import { rm } from "node:fs/promises"
+import { resolve } from "node:path"
 import process from "node:process"
 import { cloneValue } from "../../shared/utils/clone"
+import { readPrivateTextFile, writePrivateFileAtomic } from "./private-file-store"
 
 export interface PersistedCollaborationState {
   connectRequests: ConnectRequest[]
   contractVersions: ContractVersion[]
   contracts: Contract[]
   conversations: Conversation[]
+  investmentApplications: InvestmentApplication[]
   matches: Match[]
   messages: Message[]
   notifications: Notification[]
@@ -74,6 +77,7 @@ function emptyCollaborationState(): PersistedCollaborationState {
     contractVersions: [],
     contracts: [],
     conversations: [],
+    investmentApplications: [],
     matches: [],
     messages: [],
     notifications: [],
@@ -112,6 +116,7 @@ function pruneStore(store: LocalCollaborationStore): LocalCollaborationStore {
     contractVersions: newestFirst(store.contractVersions).slice(0, limit),
     contracts: newestFirst(store.contracts).slice(0, limit),
     conversations: newestFirst(store.conversations).slice(0, limit),
+    investmentApplications: newestFirst(store.investmentApplications).slice(0, limit),
     matches: newestFirst(store.matches).slice(0, limit),
     messages: newestFirst(store.messages).slice(0, limit),
     notifications: newestFirst(store.notifications).slice(0, limit),
@@ -127,15 +132,7 @@ function pruneStore(store: LocalCollaborationStore): LocalCollaborationStore {
 }
 
 async function readStoreFile() {
-  try {
-    return await readFile(storePath(), "utf-8")
-  }
-  catch (error) {
-    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT")
-      return null
-
-    throw error
-  }
+  return readPrivateTextFile(storePath())
 }
 
 async function readStore() {
@@ -150,8 +147,7 @@ async function readStore() {
 }
 
 async function writeStore(store: LocalCollaborationStore) {
-  await mkdir(dirname(storePath()), { recursive: true })
-  await writeFile(storePath(), `${JSON.stringify(pruneStore(store), null, 2)}\n`, "utf-8")
+  await writePrivateFileAtomic(storePath(), `${JSON.stringify(pruneStore(store), null, 2)}\n`)
 }
 
 async function updateStore<T>(updater: (_store: LocalCollaborationStore) => T | Promise<T>) {
@@ -172,6 +168,68 @@ function upsertById<T extends { id: string }>(existing: T[], nextRows: T[]) {
     ...existing.filter(row => !nextIds.has(row.id)),
     ...cloneValue(nextRows),
   ]
+}
+
+function extractLocalStateForUsers(state: PersistedCollaborationState, userIds: string[]): PersistedCollaborationState {
+  const userIdSet = new Set(userIds)
+  const connectRequests = state.connectRequests.filter(request => userIdSet.has(request.fromUserId) || userIdSet.has(request.toUserId))
+  const matches = state.matches.filter(match => match.participantIds.some(userId => userIdSet.has(userId)))
+  const matchIds = new Set(matches.map(match => match.id))
+  const conversations = state.conversations.filter(conversation => conversation.participantIds.some(userId => userIdSet.has(userId)))
+  const conversationIds = new Set(conversations.map(conversation => conversation.id))
+  const proposals = state.proposals.filter(proposal => userIdSet.has(proposal.createdByUserId) || userIdSet.has(proposal.recipientUserId))
+  const proposalIds = new Set(proposals.map(proposal => proposal.id))
+  const contracts = state.contracts.filter(contract => proposalIds.has(contract.proposalId))
+  const contractIds = new Set(contracts.map(contract => contract.id))
+
+  return {
+    connectRequests,
+    contractVersions: state.contractVersions.filter(version => contractIds.has(version.contractId)),
+    contracts,
+    conversations,
+    investmentApplications: state.investmentApplications.filter(application => userIdSet.has(application.applicantUserId)),
+    matches,
+    messages: state.messages.filter(message => conversationIds.has(message.conversationId)),
+    notifications: state.notifications.filter(notification => userIdSet.has(notification.userId)),
+    proposalComments: state.proposalComments.filter(comment => proposalIds.has(comment.proposalId)),
+    proposalVersions: state.proposalVersions.filter(version => proposalIds.has(version.proposalId)),
+    proposals,
+    relationshipDecisions: state.relationshipDecisions.filter(decision => matchIds.has(decision.matchId)),
+    reports: state.reports.filter(report => userIdSet.has(report.reporterUserId)),
+    signatures: state.signatures.filter(signature => contractIds.has(signature.contractId)),
+    trialCollaborations: state.trialCollaborations.filter(trial => matchIds.has(trial.matchId)),
+  }
+}
+
+function collaborationStateFingerprint(state: PersistedCollaborationState) {
+  return JSON.stringify(Object.fromEntries(
+    Object.entries(state).map(([key, rows]) => [
+      key,
+      [...rows].sort((left, right) => left.id.localeCompare(right.id)),
+    ]),
+  ))
+}
+
+function assertExpectedCollaborationState(
+  store: LocalCollaborationStore,
+  expected: PersistedCollaborationState,
+  userIds: string[],
+) {
+  const current = extractLocalStateForUsers(pruneStore(store), userIds)
+
+  // The local runtime starts from demonstration seed data. An empty private
+  // store is therefore a valid first-write bootstrap, but every later write
+  // must be based on the exact affected-user snapshot that was loaded.
+  if (!hasCollaborationRows(current))
+    return
+
+  if (collaborationStateFingerprint(current) === collaborationStateFingerprint(expected))
+    return
+
+  throw Object.assign(new Error("Collaboration state changed after this action began."), {
+    statusCode: 409,
+    statusMessage: "The collaboration changed after this action began. Refresh and try again.",
+  })
 }
 
 function buildUserIndexes(state: PersistedCollaborationState, userId: string) {
@@ -210,7 +268,11 @@ export function hasCollaborationRows(state: PersistedCollaborationState) {
   return Object.values(state).some(rows => Array.isArray(rows) && rows.length > 0)
 }
 
-export function filterCollaborationStateForUser(state: PersistedCollaborationState, userId: string): PersistedCollaborationState {
+export function filterCollaborationStateForUser(
+  state: PersistedCollaborationState,
+  userId: string,
+  options: { includeAdministrativeData?: boolean } = {},
+): PersistedCollaborationState {
   const connectRequests = state.connectRequests.filter(request => request.fromUserId === userId || request.toUserId === userId)
   const matches = state.matches.filter(match => match.participantIds.includes(userId))
   const matchIds = new Set(matches.map(match => match.id))
@@ -234,6 +296,9 @@ export function filterCollaborationStateForUser(state: PersistedCollaborationSta
     contractVersions,
     contracts,
     conversations,
+    investmentApplications: options.includeAdministrativeData
+      ? state.investmentApplications
+      : state.investmentApplications.filter(application => application.applicantUserId === userId),
     matches,
     messages,
     notifications,
@@ -241,24 +306,45 @@ export function filterCollaborationStateForUser(state: PersistedCollaborationSta
     proposalVersions,
     proposals,
     relationshipDecisions,
-    reports: state.reports,
+    reports: options.includeAdministrativeData
+      ? state.reports
+      : state.reports.filter(report => report.reporterUserId === userId),
     signatures,
     trialCollaborations,
   }
 }
 
-export async function loadLocalCollaborationState(userId: string) {
+export async function loadLocalCollaborationState(
+  userId: string,
+  options: { includeAdministrativeData?: boolean } = {},
+) {
   const store = pruneStore(await readStore())
-  const state = filterCollaborationStateForUser(store, userId)
+  const state = filterCollaborationStateForUser(store, userId, options)
   return hasCollaborationRows(state) ? state : null
 }
 
-export async function persistLocalCollaborationState(userId: string, state: PersistedCollaborationState) {
+export async function findLocalReportById(reportId: string) {
+  const store = await readStore()
+  return store.reports.find(report => report.id === reportId) || null
+}
+
+export async function persistLocalCollaborationStateForUsers(
+  userIds: string[],
+  state: PersistedCollaborationState,
+  options: { expectedState?: PersistedCollaborationState } = {},
+) {
   return updateStore((store) => {
-    removeExistingUserState(store, userId)
+    if (options.expectedState)
+      assertExpectedCollaborationState(store, options.expectedState, userIds)
+
+    const uniqueUserIds = [...new Set(userIds)]
+    for (const userId of uniqueUserIds)
+      removeExistingUserState(store, userId)
+
     store.connectRequests = upsertById(store.connectRequests, state.connectRequests)
     store.matches = upsertById(store.matches, state.matches)
     store.conversations = upsertById(store.conversations, state.conversations)
+    store.investmentApplications = upsertById(store.investmentApplications, state.investmentApplications)
     store.messages = upsertById(store.messages, state.messages)
     store.proposals = upsertById(store.proposals, state.proposals)
     store.proposalVersions = upsertById(store.proposalVersions, state.proposalVersions)
@@ -270,7 +356,39 @@ export async function persistLocalCollaborationState(userId: string, state: Pers
     store.relationshipDecisions = upsertById(store.relationshipDecisions, state.relationshipDecisions)
     store.notifications = upsertById(store.notifications, state.notifications)
     store.reports = upsertById(store.reports, state.reports)
-    return filterCollaborationStateForUser(store, userId)
+    return cloneValue(state)
+  })
+}
+
+export async function persistLocalCollaborationState(userId: string, state: PersistedCollaborationState) {
+  await persistLocalCollaborationStateForUsers([userId], state)
+  return filterCollaborationStateForUser(state, userId)
+}
+
+export async function recordLocalReportSubmission(report: Report, notifications: Notification[]) {
+  return updateStore((store) => {
+    store.reports = upsertById(store.reports, [report])
+    store.notifications = upsertById(store.notifications, notifications)
+    return report
+  })
+}
+
+export async function recordLocalInvestmentApplication(application: InvestmentApplication) {
+  return updateStore((store) => {
+    const duplicate = store.investmentApplications.some(existing =>
+      existing.applicantUserId === application.applicantUserId
+      && existing.opportunityId === application.opportunityId
+      && existing.status !== "declined",
+    )
+    if (duplicate) {
+      throw Object.assign(new Error("An active investment application already exists for this opportunity."), {
+        statusCode: 409,
+        statusMessage: "An active investment application already exists for this opportunity.",
+      })
+    }
+
+    store.investmentApplications = upsertById(store.investmentApplications, [application])
+    return application
   })
 }
 

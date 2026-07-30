@@ -1,19 +1,12 @@
 <script setup lang="ts">
-import { workspaceSeed } from "~/shared/data/seed"
-import {
-  formatHubInventoryLabel,
-  getIndustryHubs,
-  getPublicOpportunities,
-  getPublicProfiles,
-  getRoleHubs,
-  getStageHubs,
-} from "~/shared/utils/directory"
+import { formatHubInventoryLabel } from "~/shared/utils/directory"
 
-const publicProfiles = getPublicProfiles(workspaceSeed)
-const publicOpportunities = getPublicOpportunities(workspaceSeed)
-const roleHubs = getRoleHubs(workspaceSeed)
-const industryHubs = getIndustryHubs(workspaceSeed)
-const stageHubs = getStageHubs(workspaceSeed)
+const directory = await usePublicDirectory()
+const publicProfiles = directory.profiles
+const publicOpportunities = directory.opportunities
+const roleHubs = directory.roleHubs
+const industryHubs = directory.industryHubs
+const stageHubs = directory.stageHubs
 const { buildAccessRequestPath, policy } = useProductAccess()
 const directoryAccessCta = computed(() => policy.value.accountsEnabled
   ? { label: "Create your profile", to: "/auth/sign-up" }

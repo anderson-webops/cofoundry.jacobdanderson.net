@@ -4,11 +4,14 @@ import { workspaceSeed } from "../../shared/data/seed"
 import { cloneValue } from "../../shared/utils/clone"
 import {
   addRelationshipDecisionTransition,
+  canUserCounterProposal,
   canUserRespondToConnectRequest,
+  canUserUpdateProposalStatus,
   collaborationContractNeedsUserSignature,
   collaborationProposalNeedsUserResponse,
   createConnectRequestTransition,
   createProposalTransition,
+  deriveCollaborationTrustMetrics,
   isConnectRequestParticipant,
   isContractParticipant,
   isConversationParticipant,
@@ -51,6 +54,39 @@ describe("collaboration helpers", () => {
       id: "notification_noah_sofia",
       type: "match",
       userId: "user_sofia",
+    })
+  })
+
+  it("derives response and activity metrics from authoritative workflow records", () => {
+    const seed = cloneValue(workspaceSeed)
+    const profile = seed.profiles.find(item => item.userId === "user_noah")!
+    profile.trustSignals.replyRatePercent = 100
+    profile.trustSignals.medianReplyHours = 1
+    profile.trustSignals.lastActiveAt = "2026-04-01T10:00:00.000Z"
+    seed.connectRequests = [{
+      ...seed.connectRequests[0]!,
+      createdAt: "2026-04-16T10:00:00.000Z",
+      fromUserId: "user_arjun",
+      id: "connect_metrics",
+      respondedAt: "2026-04-16T13:00:00.000Z",
+      status: "accepted",
+      toUserId: "user_noah",
+    }]
+    seed.messages = [{
+      ...seed.messages[0]!,
+      createdAt: "2026-04-16T14:00:00.000Z",
+      id: "message_metrics",
+      senderUserId: "user_noah",
+    }]
+
+    const derivedProfile = deriveCollaborationTrustMetrics(seed)
+      .profiles
+      .find(item => item.userId === "user_noah")!
+
+    expect(derivedProfile.trustSignals).toMatchObject({
+      lastActiveAt: "2026-04-16T14:00:00.000Z",
+      medianReplyHours: 3,
+      replyRatePercent: 100,
     })
   })
 
@@ -254,5 +290,26 @@ describe("collaboration helpers", () => {
     expect(isRelationshipParticipant(workspaceSeed, "match_olivia_malik", "user_sofia")).toBe(false)
     expect(isNotificationOwnedByUser(notification!, "user_olivia")).toBe(true)
     expect(isNotificationOwnedByUser(notification!, "user_malik")).toBe(false)
+  })
+
+  it("only lets the counterparty act on the active proposal version", () => {
+    const proposal = getProposalById(workspaceSeed, "proposal_ledgerloop_cto")
+    expect(proposal).toBeDefined()
+    const currentVersion = getCurrentProposalVersion(workspaceSeed, proposal!)
+    expect(currentVersion).toBeDefined()
+    const counterpartyId = proposal!.createdByUserId === currentVersion!.createdByUserId
+      ? proposal!.recipientUserId
+      : proposal!.createdByUserId
+
+    expect(canUserUpdateProposalStatus(workspaceSeed, proposal!, currentVersion!.createdByUserId, "accepted")).toBe(false)
+    expect(canUserUpdateProposalStatus(workspaceSeed, proposal!, counterpartyId, "accepted")).toBe(true)
+    expect(canUserCounterProposal(workspaceSeed, proposal!, currentVersion!.createdByUserId)).toBe(false)
+    expect(canUserCounterProposal(workspaceSeed, proposal!, counterpartyId)).toBe(true)
+
+    const terminalSeed = cloneValue(workspaceSeed)
+    const terminalProposal = getProposalById(terminalSeed, proposal!.id)!
+    terminalProposal.status = "accepted"
+    expect(canUserUpdateProposalStatus(terminalSeed, terminalProposal, counterpartyId, "rejected")).toBe(false)
+    expect(canUserCounterProposal(terminalSeed, terminalProposal, counterpartyId)).toBe(false)
   })
 })

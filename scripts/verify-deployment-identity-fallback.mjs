@@ -6,6 +6,8 @@ import process from "node:process"
 
 const repoRoot = process.cwd()
 const serverEntry = join(repoRoot, "front-end", ".output", "server", "index.mjs")
+const operationsToken = "verify-deployment-operations-token-0001"
+const sessionSigningSecret = "verify-deployment-session-secret-000001"
 const identityEnvKeys = [
   "APP_VERSION",
   "BUILD_TIMESTAMP",
@@ -98,12 +100,14 @@ async function main() {
   const port = await getFreePort()
   const env = {
     ...process.env,
+    COFOUNDRY_OPERATIONS_TOKEN: operationsToken,
     HOST: "127.0.0.1",
     NODE_ENV: "production",
     NUXT_PUBLIC_APP_URL: "https://cofoundry.example",
     NUXT_PUBLIC_BACKEND_MODE: "mock",
     NUXT_PUBLIC_BILLING_MODE: "mock",
     PORT: String(port),
+    SESSION_SIGNING_SECRET: sessionSigningSecret,
   }
 
   for (const key of identityEnvKeys)
@@ -123,9 +127,12 @@ async function main() {
     const body = await waitForHealth(`http://127.0.0.1:${port}`, child, output)
     const commitSha = body?.deployment?.commitSha
     const release = body?.deployment?.release
+    const serializedBody = JSON.stringify(body)
 
     assert(commitSha === expectedCommit, `/api/health should expose baked commit fallback ${expectedCommit}; received ${commitSha || "<empty>"}.`)
     assert(release === expectedRelease, `/api/health should expose package release fallback ${expectedRelease}; received ${release || "<empty>"}.`)
+    assert(!serializedBody.includes(operationsToken), "/api/health must not expose the operations token.")
+    assert(!serializedBody.includes(sessionSigningSecret), "/api/health must not expose the session signing secret.")
     console.log(`Deployment identity fallback verified: ${expectedRelease} (${commitSha})`)
   }
   finally {

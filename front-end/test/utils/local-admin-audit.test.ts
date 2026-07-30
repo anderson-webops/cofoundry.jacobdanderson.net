@@ -4,7 +4,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import process from "node:process"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { persistAdminAction, persistOpportunityVerification, persistReportStatus, persistUserEmailVerification, persistUserNotification, persistUserRole, persistUserSuspension } from "../../server/utils/admin-persistence"
+import { persistAdminAction, persistAdminReportStatusAction, persistAdminUserSecurityAction, persistOpportunityVerificationAction, persistUserNotification } from "../../server/utils/admin-persistence"
 import { clearLocalAdminAuditStoreForTests, mergeLocalAdminAuditState, readLocalAdminAuditStore } from "../../server/utils/local-admin-audit"
 import { workspaceSeed } from "../../shared/data/seed"
 
@@ -37,22 +37,62 @@ describe("local admin audit store", () => {
     const opportunityId = workspaceSeed.opportunities[0]!.id
     const createdAt = "2026-06-12T18:00:00.000Z"
 
-    await persistUserSuspension({} as H3Event, targetUserId, createdAt)
-    await persistUserRole({} as H3Event, targetUserId, "admin")
-    await persistUserEmailVerification({} as H3Event, targetUserId, false)
-    await persistReportStatus({} as H3Event, {
-      adminUserId: "user_ava",
-      notes: "Reviewed report in local production mode.",
-      reportId,
-      status: "reviewed",
-      timestamp: createdAt,
+    await persistAdminUserSecurityAction({} as H3Event, {
+      action: {
+        adminUserId: "user_ava",
+        createdAt,
+        id: "admin_action_role",
+        notes: "Promoted after a documented privileged-access review.",
+        targetId: targetUserId,
+        targetType: "user",
+        type: "change_user_role",
+      },
+      mutation: {
+        kind: "change_role",
+        role: "admin",
+      },
     })
-    await persistOpportunityVerification({} as H3Event, {
-      adminUserId: "user_ava",
-      notes: "Reviewed opportunity ownership proof in local production mode.",
-      opportunityId,
+    await persistAdminUserSecurityAction({} as H3Event, {
+      action: {
+        adminUserId: "user_ava",
+        createdAt,
+        id: "admin_action_suspend",
+        notes: "Suspended after a documented account-security review.",
+        targetId: targetUserId,
+        targetType: "user",
+        type: "suspend_user",
+      },
+      mutation: {
+        action: "suspend",
+        kind: "change_status",
+      },
+    })
+    await persistAdminReportStatusAction({} as H3Event, {
+      action: {
+        adminUserId: "user_ava",
+        createdAt,
+        id: "admin_action_report",
+        notes: "Reviewed report in local production mode.",
+        targetId: reportId,
+        targetType: "report",
+        type: "review_report",
+      },
+      expectedStatus: "open",
+      status: "reviewed",
+    })
+    const opportunity = workspaceSeed.opportunities.find(item => item.id === opportunityId)!
+    await persistOpportunityVerificationAction({} as H3Event, {
+      action: {
+        adminUserId: "user_ava",
+        createdAt,
+        id: "admin_action_opportunity",
+        notes: "Reviewed opportunity ownership proof in local production mode.",
+        targetId: opportunityId,
+        targetType: "opportunity",
+        type: "review_evidence",
+      },
+      expectedUpdatedAt: opportunity.updatedAt,
       status: "domain_verified",
-      timestamp: createdAt,
     })
     await persistAdminAction({} as H3Event, {
       adminUserId: "user_ava",
@@ -60,8 +100,8 @@ describe("local admin audit store", () => {
       id: "admin_action_local",
       notes: "Suspended account after review.",
       targetId: targetUserId,
-      targetType: "user",
-      type: "suspend_user",
+      targetType: "readiness_check",
+      type: "assign_case",
     })
     await persistUserNotification({} as H3Event, {
       body: "An operator reviewed your request.",
@@ -79,15 +119,15 @@ describe("local admin audit store", () => {
     expect(mergedSeed.adminActions[0]).toMatchObject({
       id: "admin_action_local",
       targetId: targetUserId,
-      type: "suspend_user",
+      type: "assign_case",
     })
     expect(mergedSeed.users.find(user => user.id === targetUserId)).toMatchObject({
       role: "admin",
       suspendedAt: createdAt,
-      verifiedEmail: false,
+      verifiedEmail: true,
     })
     expect(mergedSeed.profiles.find(profile => profile.userId === targetUserId)?.verificationBadges).toMatchObject({
-      emailVerified: false,
+      emailVerified: true,
     })
     expect(mergedSeed.reports.find(report => report.id === reportId)).toMatchObject({
       reviewNotes: "Reviewed report in local production mode.",
@@ -113,8 +153,8 @@ describe("local admin audit store", () => {
         id: `admin_action_${index}`,
         notes: `Retention action ${index}.`,
         targetId: "user_target",
-        targetType: "user",
-        type: "warn_user",
+        targetType: "readiness_check",
+        type: "assign_case",
       })
     }
 
@@ -123,4 +163,50 @@ describe("local admin audit store", () => {
     expect(store.actions).toHaveLength(5)
     expect(store.actions[0]?.id).toBe("admin_action_9")
   }, 15_000)
+
+  it("rejects queue actions from a suspended local admin", async () => {
+    const replacementAdminId = workspaceSeed.users.find(user => user.role === "collaborator")!.id
+    await persistAdminUserSecurityAction({} as H3Event, {
+      action: {
+        adminUserId: "user_ava",
+        createdAt: "2026-06-12T17:58:00.000Z",
+        id: "admin_action_promote_replacement",
+        notes: "Promoted after a documented privileged-access review.",
+        targetId: replacementAdminId,
+        targetType: "user",
+        type: "change_user_role",
+      },
+      mutation: {
+        kind: "change_role",
+        role: "admin",
+      },
+    })
+    await persistAdminUserSecurityAction({} as H3Event, {
+      action: {
+        adminUserId: replacementAdminId,
+        createdAt: "2026-06-12T18:00:00.000Z",
+        id: "admin_action_suspend_original",
+        notes: "Suspended after a documented account-security review.",
+        targetId: "user_ava",
+        targetType: "user",
+        type: "suspend_user",
+      },
+      mutation: {
+        action: "suspend",
+        kind: "change_status",
+      },
+    })
+
+    await expect(persistAdminAction({} as H3Event, {
+      adminUserId: "user_ava",
+      createdAt: "2026-06-12T18:01:00.000Z",
+      id: "admin_action_suspended",
+      notes: "Attempted a queue action after account suspension.",
+      targetId: "readiness-check",
+      targetType: "readiness_check",
+      type: "assign_case",
+    })).rejects.toMatchObject({
+      statusCode: 403,
+    })
+  })
 })

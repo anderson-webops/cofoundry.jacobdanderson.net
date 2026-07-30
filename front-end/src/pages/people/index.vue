@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import { workspaceSeed } from "~/shared/data/seed"
-import { getPublicProfiles } from "~/shared/utils/directory"
-
-const profiles = getPublicProfiles(workspaceSeed)
+const profiles = (await usePublicDirectory()).profiles
 
 usePageSeo("Public founder profiles", "Browse opt-in public founder and collaborator profiles on CoFoundry.", {
   canonicalPath: "/people",
@@ -24,6 +21,7 @@ usePageSeo("Public founder profiles", "Browse opt-in public founder and collabor
         :heading-level="2"
         :profile="entry.profile"
         :skills="entry.skillLabels"
+        :trust-summary="entry.trustSummary"
       >
         <BaseButton variant="secondary" :to="`/people/${entry.slug}`">
           View public profile

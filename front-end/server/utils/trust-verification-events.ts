@@ -16,22 +16,27 @@ export async function recordTrustVerificationEvent(event: H3Event, payload: Oper
     throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
 
   const now = new Date().toISOString()
+  const provider = payload.provider.trim().toLowerCase()
+  const sourceEventId = payload.sourceEventId || null
   const { data, error } = await adminClient
     .from("trust_verification_events")
-    .insert({
+    .upsert({
       confidence: typeof payload.confidence === "number" ? payload.confidence : null,
       created_at: now,
       evidence_file_upload_id: payload.evidenceFileUploadId || null,
       id: randomUUID(),
       metadata: payload.metadata,
       occurred_at: payload.occurredAt || now,
-      provider: payload.provider,
+      provider,
       provider_subject_id: payload.providerSubjectId || null,
-      source_event_id: payload.sourceEventId || null,
+      source_event_id: sourceEventId,
       status: payload.status,
       target_id: payload.targetId,
       target_type: payload.targetType,
       verification_type: payload.verificationType,
+    }, {
+      ignoreDuplicates: true,
+      onConflict: "provider,source_event_id",
     })
     .select()
     .maybeSingle()
@@ -39,5 +44,18 @@ export async function recordTrustVerificationEvent(event: H3Event, payload: Oper
   if (error)
     throw error
 
-  return data
+  if (data || !sourceEventId)
+    return data
+
+  const { data: existing, error: existingError } = await adminClient
+    .from("trust_verification_events")
+    .select("*")
+    .eq("provider", provider)
+    .eq("source_event_id", sourceEventId)
+    .maybeSingle()
+
+  if (existingError)
+    throw existingError
+
+  return existing
 }

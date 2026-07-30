@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { workspaceSeed } from "~/shared/data/seed"
-import { getIndustryHubs, getPublicOpportunitiesForIndustry, getPublicProfilesForIndustry, getRoleHubs, getStageHubs, pickRelatedHubEntries } from "~/shared/utils/directory"
+import { pickRelatedHubEntries } from "~/shared/utils/directory"
 
 const route = useRoute()
 const slug = String(route.params.slug)
-const hub = getIndustryHubs(workspaceSeed).find(entry => entry.slug === slug)
+const directory = await usePublicDirectory()
+const hub = directory.industryHubs.find(entry => entry.slug === slug)
 
 if (!hub)
   throw createError({ statusCode: 404, statusMessage: "Industry hub not found" })
 
-const profiles = getPublicProfilesForIndustry(workspaceSeed, slug)
-const opportunities = getPublicOpportunitiesForIndustry(workspaceSeed, slug)
-const relatedRoles = pickRelatedHubEntries(getRoleHubs(workspaceSeed), "", 3)
-const relatedStages = pickRelatedHubEntries(getStageHubs(workspaceSeed), "", 3)
+const profiles = directory.profiles.filter(entry => entry.industrySlugs.includes(slug))
+const opportunities = directory.opportunities.filter(entry => entry.industrySlugs.includes(slug))
+const relatedRoles = pickRelatedHubEntries(directory.roleHubs, "", 3)
+const relatedStages = pickRelatedHubEntries(directory.stageHubs, "", 3)
 
 usePageSeo(`${hub.label} founder searches`, hub.description, {
   canonicalPath: `/industries/${hub.slug}`,
@@ -46,6 +46,7 @@ usePageSeo(`${hub.label} founder searches`, hub.description, {
           :key="entry.slug"
           :profile="entry.profile"
           :skills="entry.skillLabels"
+          :trust-summary="entry.trustSummary"
         >
           <BaseButton variant="secondary" :to="`/people/${entry.slug}`">
             View public profile

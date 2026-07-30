@@ -46,13 +46,11 @@ Stage 3: operations workers
 5. Confirm `/admin/operations` shows fresh rows for backup runs, scanner results, digest runs, trust-verification events, contract envelope events, operational events, and restore-drill results.
 6. Keep the actual backup artifacts, completed-provider PDFs, and scanner quarantine outside the repo and outside public web roots.
 
-Stage 3b: realtime scaling, only if the app runs multiple instances
-1. Leave this stage disabled if production runs one Node process; process-local SSE plus polling fallback is the expected single-instance path.
-2. If the host runs more than one app instance, set `COFOUNDRY_EXPECT_MULTI_INSTANCE=true`, `COFOUNDRY_APP_INSTANCE_COUNT=<count>`, and a stable `COFOUNDRY_INSTANCE_ID` for each instance.
-3. Configure `COFOUNDRY_REALTIME_FANOUT_URL` to an internal relay endpoint. Do not expose relay credentials to the client.
-4. Configure the relay to POST each realtime envelope to every app instance at `/api/operations/realtime-events` using `Authorization: Bearer <COFOUNDRY_OPERATIONS_TOKEN>`.
-5. Restart the app instances, run `npm run operations:realtime-smoke -- --min-delivered 0`, and confirm `/admin/readiness` shows recent realtime fanout smoke evidence.
-6. Run a smoke with two instances: connect a member SSE stream to instance B, trigger a message/proposal/typing event through instance A, then run `npm run operations:realtime-smoke -- --min-delivered 1` or higher and confirm instance B receives the pushed event without waiting for polling fallback.
+Stage 3b: single-process security boundary
+1. Keep production on exactly one Node app process with `COFOUNDRY_EXPECT_MULTI_INSTANCE=false`, `COFOUNDRY_APP_INSTANCE_COUNT=1`, and no realtime fanout URL.
+2. Confirm `npm run verify:host-env -- --production` and `/admin/readiness` pass this topology check.
+3. Do not scale out until a shared atomic rate-limiter store and cross-instance abuse tests are implemented.
+4. Treat the checked-in realtime relay and smoke worker as isolated staging tools until that security boundary exists.
 
 Stage 4: Supabase persistence cutover
 1. Apply all SQL migrations in `back-end/supabase/migrations/` to a staging Supabase project first.

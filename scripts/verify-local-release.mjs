@@ -9,7 +9,7 @@ const syntheticProductionHostEnv = {
   COFOUNDRY_GOOGLE_OAUTH_PROVIDER: "",
   COFOUNDRY_LOCAL_DATA_DIR: "/var/lib/cofoundry",
   COFOUNDRY_OAUTH_PROVIDER: "",
-  COFOUNDRY_OPERATIONS_TOKEN: "synthetic-release-worker-token",
+  COFOUNDRY_OPERATIONS_TOKEN: "synthetic-release-worker-token-000001",
   COFOUNDRY_RELEASE: "local-release",
   NODE_ENV: "production",
   NUXT_PUBLIC_APP_URL: "https://cofoundry.example.com",
@@ -17,6 +17,17 @@ const syntheticProductionHostEnv = {
   NUXT_PUBLIC_BILLING_MODE: "mock",
   NUXT_PUBLIC_ENABLE_DEMO_ACCESS: "false",
   SESSION_SIGNING_SECRET: "synthetic-release-session-signing-secret",
+}
+
+const syntheticProductionBuildEnv = {
+  COFOUNDRY_LOCAL_DATA_DIR: syntheticProductionHostEnv.COFOUNDRY_LOCAL_DATA_DIR,
+  COFOUNDRY_OPERATIONS_TOKEN: syntheticProductionHostEnv.COFOUNDRY_OPERATIONS_TOKEN,
+  NODE_ENV: syntheticProductionHostEnv.NODE_ENV,
+  NUXT_PUBLIC_APP_URL: "https://cofoundry.jacobdanderson.net",
+  NUXT_PUBLIC_BACKEND_MODE: syntheticProductionHostEnv.NUXT_PUBLIC_BACKEND_MODE,
+  NUXT_PUBLIC_BILLING_MODE: syntheticProductionHostEnv.NUXT_PUBLIC_BILLING_MODE,
+  NUXT_PUBLIC_ENABLE_DEMO_ACCESS: syntheticProductionHostEnv.NUXT_PUBLIC_ENABLE_DEMO_ACCESS,
+  SESSION_SIGNING_SECRET: syntheticProductionHostEnv.SESSION_SIGNING_SECRET,
 }
 
 function releaseTagFromPackageVersion(version) {
@@ -85,6 +96,7 @@ const steps = [
   },
   {
     args: ["run", "build"],
+    env: syntheticProductionBuildEnv,
     id: "build",
     label: "Build frontend and backend",
   },

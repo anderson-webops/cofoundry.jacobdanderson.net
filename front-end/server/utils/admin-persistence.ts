@@ -1,8 +1,12 @@
 import type { H3Event } from "h3"
 import type { AdminAction, AppRole, Notification, OpportunityVerificationStatus, PrivacyRequestStatus, ReportStatus } from "~/shared/types/domain"
+import type { AdminSecurityMutation, AdminSecurityUser } from "~/shared/utils/admin-authorization"
 import { workspaceSeed } from "../../shared/data/seed"
-import { persistLocalOpportunityVerification, persistLocalReportStatus, persistLocalUserEmailVerification, persistLocalUserRole, persistLocalUserSuspension, readLocalAdminAuditStore, recordLocalAdminAction, recordLocalUserNotification } from "./local-admin-audit"
-import { updateLocalPrivacyRequestStatus } from "./local-privacy-requests"
+import { listLocalAccessAdminActions } from "./local-access-requests"
+import { mergeLocalAdminAuditState, persistLocalAdminUserSecurityAction, persistLocalOpportunityVerificationAction, persistLocalReportStatusAction, readLocalAdminAuditStore, recordLocalAdminQueueAction, recordLocalUserNotification } from "./local-admin-audit"
+import { readLocalMemberWorkspaceStates } from "./local-member-workspace"
+import { listLocalOperationsAdminActions } from "./local-operations-store"
+import { listLocalPrivacyAdminActions, persistLocalPrivacyRequestStatusAction } from "./local-privacy-requests"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
 
 interface PersistedAdminActionRow {
@@ -14,6 +18,83 @@ interface PersistedAdminActionRow {
   target_id: string
   target_type: AdminAction["targetType"]
   type: AdminAction["type"]
+}
+
+interface PersistedAdminSecurityUserRow {
+  id: string
+  role: AppRole
+  suspended_at: string | null
+  verified_email: boolean
+}
+
+export async function listAdminSecurityUsers(event: H3Event): Promise<AdminSecurityUser[]> {
+  if (!isSupabaseEnabled(event)) {
+    const localStates = await readLocalMemberWorkspaceStates()
+    const localUserIds = new Set(localStates.map(state => state.user.id))
+    const seed = await mergeLocalAdminAuditState({
+      ...structuredClone(workspaceSeed),
+      users: [
+        ...localStates.map(state => state.user),
+        ...workspaceSeed.users.filter(user => !localUserIds.has(user.id)),
+      ],
+    })
+    return seed.users.map(user => ({
+      id: user.id,
+      role: user.role,
+      suspendedAt: user.suspendedAt,
+      verifiedEmail: user.verifiedEmail,
+    }))
+  }
+
+  const adminClient = createSupabaseAdminClient(event)
+  if (!adminClient)
+    throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
+
+  const { data, error } = await adminClient
+    .from("users")
+    .select("id,role,suspended_at,verified_email")
+
+  if (error)
+    throw error
+
+  return ((data || []) as PersistedAdminSecurityUserRow[]).map(user => ({
+    id: user.id,
+    role: user.role,
+    suspendedAt: user.suspended_at,
+    verifiedEmail: user.verified_email,
+  }))
+}
+
+export async function persistAdminUserSecurityAction(event: H3Event, input: {
+  action: AdminAction
+  mutation: AdminSecurityMutation
+}) {
+  if (!isSupabaseEnabled(event))
+    return persistLocalAdminUserSecurityAction(input)
+
+  const adminClient = createSupabaseAdminClient(event)
+  if (!adminClient)
+    throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
+
+  const { data, error } = await adminClient.rpc("cofoundry_apply_admin_security_action", {
+    p_action_id: input.action.id,
+    p_actor_user_id: input.action.adminUserId,
+    p_created_at: input.action.createdAt,
+    p_new_role: input.mutation.kind === "change_role" ? input.mutation.role : null,
+    p_notes: input.action.notes,
+    p_operation: input.mutation.kind,
+    p_status_action: input.mutation.kind === "change_status" ? input.mutation.action : null,
+    p_target_user_id: input.action.targetId,
+  })
+
+  if (error) {
+    throw createError({
+      statusCode: error.message.includes("not found") ? 404 : 409,
+      statusMessage: error.message,
+    })
+  }
+
+  return data
 }
 
 function fromAdminActionRow(row: PersistedAdminActionRow): AdminAction {
@@ -31,33 +112,44 @@ function fromAdminActionRow(row: PersistedAdminActionRow): AdminAction {
 
 export async function persistAdminAction(event: H3Event, action: AdminAction) {
   if (!isSupabaseEnabled(event))
-    return recordLocalAdminAction(action)
+    return recordLocalAdminQueueAction(action)
 
   const adminClient = createSupabaseAdminClient(event)
   if (!adminClient)
     throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
 
-  const { error } = await adminClient
-    .from("admin_actions")
-    .insert({
-      id: action.id,
-      admin_user_id: action.adminUserId,
-      type: action.type,
-      target_id: action.targetId,
-      target_type: action.targetType,
-      notes: action.notes,
-      metadata: action.metadata || {},
-      created_at: action.createdAt,
-    })
+  const { error } = await adminClient.rpc("cofoundry_record_admin_queue_action", {
+    p_action_id: action.id,
+    p_action_type: action.type,
+    p_actor_user_id: action.adminUserId,
+    p_metadata: action.metadata || {},
+    p_notes: action.notes,
+    p_target_id: action.targetId,
+    p_target_type: action.targetType,
+    p_timestamp: action.createdAt,
+  })
 
-  if (error)
-    throw error
+  if (error) {
+    throw createError({
+      statusCode: error.message.includes("active full admin") ? 403 : 400,
+      statusMessage: error.message.includes("active full admin")
+        ? "An active full admin account is required for this action."
+        : "The queue action could not be recorded.",
+    })
+  }
 }
 
 export async function listPersistedAdminActions(event: H3Event) {
   if (!isSupabaseEnabled(event)) {
-    const store = await readLocalAdminAuditStore()
-    return store.actions
+    const [store, accessActions, operationsActions, privacyActions] = await Promise.all([
+      readLocalAdminAuditStore(),
+      listLocalAccessAdminActions(),
+      listLocalOperationsAdminActions(),
+      listLocalPrivacyAdminActions(),
+    ])
+    return [...store.actions, ...accessActions, ...operationsActions, ...privacyActions]
+      .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+      .slice(0, 500)
   }
 
   const adminClient = createSupabaseAdminClient(event)
@@ -101,134 +193,55 @@ export async function persistUserNotification(event: H3Event, notification: Noti
     throw error
 }
 
-export async function persistUserSuspension(event: H3Event, targetUserId: string, suspendedAt: string | null) {
-  if (!isSupabaseEnabled(event))
-    return persistLocalUserSuspension(targetUserId, suspendedAt)
-
-  const adminClient = createSupabaseAdminClient(event)
-  if (!adminClient)
-    throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
-
-  const { data, error } = await adminClient
-    .from("users")
-    .update({ suspended_at: suspendedAt })
-    .eq("id", targetUserId)
-    .select("id")
-
-  if (error)
-    throw error
-
-  if (!data?.length)
-    throw createError({ statusCode: 404, statusMessage: "Target user was not found." })
-}
-
-export async function persistUserRole(event: H3Event, targetUserId: string, role: AppRole) {
-  if (!isSupabaseEnabled(event))
-    return persistLocalUserRole(targetUserId, role)
-
-  const adminClient = createSupabaseAdminClient(event)
-  if (!adminClient)
-    throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
-
-  const { data, error } = await adminClient
-    .from("users")
-    .update({ role })
-    .eq("id", targetUserId)
-    .select("id")
-
-  if (error)
-    throw error
-
-  if (!data?.length)
-    throw createError({ statusCode: 404, statusMessage: "Target user was not found." })
-}
-
-export async function persistUserEmailVerification(event: H3Event, targetUserId: string, verifiedEmail: boolean) {
-  if (!isSupabaseEnabled(event))
-    return persistLocalUserEmailVerification(targetUserId, verifiedEmail)
-
-  const adminClient = createSupabaseAdminClient(event)
-  if (!adminClient)
-    throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
-
-  const { data, error } = await adminClient
-    .from("users")
-    .update({ verified_email: verifiedEmail })
-    .eq("id", targetUserId)
-    .select("id")
-
-  if (error)
-    throw error
-
-  if (!data?.length)
-    throw createError({ statusCode: 404, statusMessage: "Target user was not found." })
-}
-
-export async function persistReportStatus(event: H3Event, input: {
-  adminUserId: string
-  notes: string
-  reportId: string
+export async function persistAdminReportStatusAction(event: H3Event, input: {
+  action: AdminAction
+  expectedStatus: "open" | "reviewed"
   status: ReportStatus
-  timestamp: string
 }) {
-  if (!isSupabaseEnabled(event)) {
-    const patch = await persistLocalReportStatus(input)
-    const report = workspaceSeed.reports.find(item => item.id === input.reportId)
-
-    return {
-      id: patch.id,
-      reporterUserId: report?.reporterUserId || null,
-      status: patch.status,
-    }
-  }
+  if (!isSupabaseEnabled(event))
+    return persistLocalReportStatusAction(input)
 
   const adminClient = createSupabaseAdminClient(event)
   if (!adminClient)
     throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
 
-  const patch = input.status === "reviewed"
-    ? {
-        status: "reviewed",
-        review_notes: input.notes,
-        reviewed_at: input.timestamp,
-        reviewed_by_user_id: input.adminUserId,
-      }
-    : {
-        status: "resolved",
-        resolution_notes: input.notes,
-        resolved_at: input.timestamp,
-        resolved_by_user_id: input.adminUserId,
-      }
+  const { data, error } = await adminClient.rpc("cofoundry_apply_admin_report_action", {
+    p_action_id: input.action.id,
+    p_actor_user_id: input.action.adminUserId,
+    p_expected_status: input.expectedStatus,
+    p_notes: input.action.notes,
+    p_status: input.status,
+    p_target_id: input.action.targetId,
+    p_timestamp: input.action.createdAt,
+  })
 
-  const { data, error } = await adminClient
-    .from("reports")
-    .update(patch)
-    .eq("id", input.reportId)
-    .select("id,reporter_user_id,status")
-    .maybeSingle<{ id: string, reporter_user_id: string, status: ReportStatus }>()
+  if (error) {
+    const stale = error.message.includes("changed after")
+    throw createError({
+      statusCode: error.message.includes("not found") ? 404 : stale ? 409 : 400,
+      statusMessage: stale
+        ? "The report changed after this review began. Refresh and review the current state."
+        : error.message.includes("not found")
+          ? "Target report was not found."
+          : "The report action could not be applied.",
+    })
+  }
 
-  if (error)
-    throw error
-
-  if (!data)
-    throw createError({ statusCode: 404, statusMessage: "Target report was not found." })
-
+  const result = data as { reporterUserId?: string, status?: ReportStatus, targetId?: string } | null
   return {
-    id: data.id,
-    reporterUserId: data.reporter_user_id,
-    status: data.status,
+    id: result?.targetId || input.action.targetId,
+    reporterUserId: result?.reporterUserId || null,
+    status: result?.status || input.status,
   }
 }
 
-export async function persistOpportunityVerification(event: H3Event, input: {
-  adminUserId: string
-  notes: string
-  opportunityId: string
+export async function persistOpportunityVerificationAction(event: H3Event, input: {
+  action: AdminAction
+  expectedUpdatedAt: string
   status: Exclude<OpportunityVerificationStatus, "manual_review">
-  timestamp: string
 }) {
   if (!isSupabaseEnabled(event)) {
-    const patch = await persistLocalOpportunityVerification(input)
+    const patch = await persistLocalOpportunityVerificationAction(input)
     return {
       id: patch.id,
       verificationStatus: patch.status,
@@ -239,41 +252,48 @@ export async function persistOpportunityVerification(event: H3Event, input: {
   if (!adminClient)
     throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
 
-  const { data, error } = await adminClient
-    .from("startup_opportunities")
-    .update({
-      updated_at: input.timestamp,
-      verification_status: input.status,
+  const { data, error } = await adminClient.rpc("cofoundry_review_opportunity", {
+    p_action_id: input.action.id,
+    p_actor_user_id: input.action.adminUserId,
+    p_expected_updated_at: input.expectedUpdatedAt,
+    p_notes: input.action.notes,
+    p_status: input.status,
+    p_target_id: input.action.targetId,
+    p_timestamp: input.action.createdAt,
+  })
+
+  if (error) {
+    throw createError({
+      statusCode: error.message.includes("not found")
+        ? 404
+        : error.message.includes("changed after")
+          ? 409
+          : 400,
+      statusMessage: error.message,
     })
-    .eq("id", input.opportunityId)
-    .select("id,owner_user_id,verification_status")
-    .maybeSingle<{ id: string, owner_user_id: string, verification_status: OpportunityVerificationStatus }>()
+  }
 
-  if (error)
-    throw error
-
-  if (!data)
-    throw createError({ statusCode: 404, statusMessage: "Target opportunity was not found." })
+  const result = data as {
+    ownerUserId?: string
+    targetId?: string
+    verificationStatus?: OpportunityVerificationStatus
+  } | null
 
   return {
-    id: data.id,
-    ownerUserId: data.owner_user_id,
-    verificationStatus: data.verification_status,
+    id: result?.targetId || input.action.targetId,
+    ownerUserId: result?.ownerUserId,
+    verificationStatus: result?.verificationStatus || input.status,
   }
 }
 
-export async function persistPrivacyRequestStatus(event: H3Event, input: {
-  adminUserId: string
-  notes: string
-  requestId: string
+export async function persistAdminPrivacyRequestStatusAction(event: H3Event, input: {
+  action: AdminAction
+  completionConfirmed: boolean
+  expectedStatus: "open" | "reviewed"
   status: Exclude<PrivacyRequestStatus, "open">
-  timestamp: string
 }) {
   if (!isSupabaseEnabled(event)) {
-    const updatedRequest = await updateLocalPrivacyRequestStatus(input)
-    if (!updatedRequest)
-      throw createError({ statusCode: 404, statusMessage: "Privacy request was not found." })
-
+    const updatedRequest = await persistLocalPrivacyRequestStatusAction(input)
     return {
       id: updatedRequest.id,
       status: updatedRequest.status,
@@ -285,36 +305,33 @@ export async function persistPrivacyRequestStatus(event: H3Event, input: {
   if (!adminClient)
     throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
 
-  const patch = input.status === "reviewed"
-    ? {
-        status: "reviewed",
-        review_notes: input.notes,
-        reviewed_at: input.timestamp,
-        reviewed_by_user_id: input.adminUserId,
-      }
-    : {
-        status: "resolved",
-        resolution_notes: input.notes,
-        resolved_at: input.timestamp,
-        resolved_by_user_id: input.adminUserId,
-      }
+  const { data, error } = await adminClient.rpc("cofoundry_apply_admin_privacy_action", {
+    p_action_id: input.action.id,
+    p_actor_user_id: input.action.adminUserId,
+    p_completion_confirmed: input.completionConfirmed,
+    p_expected_status: input.expectedStatus,
+    p_notes: input.action.notes,
+    p_status: input.status,
+    p_target_id: input.action.targetId,
+    p_timestamp: input.action.createdAt,
+  })
 
-  const { data, error } = await adminClient
-    .from("privacy_requests")
-    .update(patch)
-    .eq("id", input.requestId)
-    .select("id,user_id,status")
-    .maybeSingle()
+  if (error) {
+    const stale = error.message.includes("changed after")
+    throw createError({
+      statusCode: error.message.includes("not found") ? 404 : stale ? 409 : 400,
+      statusMessage: stale
+        ? "The privacy request changed after this review began. Refresh and review the current state."
+        : error.message.includes("not found")
+          ? "Privacy request was not found."
+          : "The privacy-request action could not be applied.",
+    })
+  }
 
-  if (error)
-    throw error
-
-  if (!data)
-    throw createError({ statusCode: 404, statusMessage: "Privacy request was not found." })
-
+  const result = data as { status?: PrivacyRequestStatus, targetId?: string, userId?: string } | null
   return {
-    id: data.id as string,
-    status: data.status as PrivacyRequestStatus,
-    userId: data.user_id as string,
+    id: result?.targetId || input.action.targetId,
+    status: result?.status || input.status,
+    userId: result?.userId || "",
   }
 }

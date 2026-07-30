@@ -1,9 +1,10 @@
-import { mkdir, writeFile } from "node:fs/promises"
-import { dirname, resolve } from "node:path"
+import { resolve } from "node:path"
 import process from "node:process"
 import { createClient } from "@supabase/supabase-js"
+import { demoAuthAccounts } from "../../front-end/server/data/demo-auth-accounts"
+import { writePrivateFileAtomic } from "../../front-end/server/utils/private-file-store"
 import { workspaceSeed } from "../../front-end/shared/data/seed"
-import { formatEnvironmentValidationError, readPublicEnvironment, readSecretEnvironment } from "../src/environment"
+import { formatEnvironmentValidationError, isLocalDevelopmentEnvironment, readPublicEnvironment, readSecretEnvironment } from "../src/environment"
 
 const localOutputPath = resolve(process.cwd(), "../.data/mock-seed.json")
 
@@ -14,8 +15,7 @@ interface SeedTable {
 }
 
 async function writeLocalSeedSnapshot() {
-  await mkdir(dirname(localOutputPath), { recursive: true })
-  await writeFile(localOutputPath, `${JSON.stringify(workspaceSeed, null, 2)}\n`, "utf-8")
+  await writePrivateFileAtomic(localOutputPath, `${JSON.stringify(workspaceSeed, null, 2)}\n`)
   console.log(`Wrote local mock seed snapshot to ${localOutputPath}`)
 }
 
@@ -34,16 +34,6 @@ function mapTables(): SeedTable[] {
         email_digest_enabled: user.notificationPreferences.unreadDigestEmail,
         workflow_email_enabled: user.notificationPreferences.workflowEmail,
         suspended_at: user.suspendedAt,
-      })),
-    },
-    {
-      name: "demo_auth_accounts",
-      onConflict: "email",
-      rows: workspaceSeed.authAccounts.map(account => ({
-        email: account.email,
-        password: account.password,
-        providers: account.providers,
-        user_id: account.userId,
       })),
     },
     {
@@ -182,14 +172,22 @@ async function seedSupabase() {
     return
   }
 
+  if (process.env.SEED_SUPABASE_DATA !== "true") {
+    console.log("Supabase credentials found, but SEED_SUPABASE_DATA is not true. No remote writes were attempted.")
+    return
+  }
+
   const supabase = createClient(supabaseUrl, serviceRoleKey, {
     auth: {
       persistSession: false,
     },
   })
 
-  if (process.env.SEED_SUPABASE_AUTH !== "false") {
-    for (const account of workspaceSeed.authAccounts) {
+  if (process.env.SEED_SUPABASE_AUTH === "true") {
+    if (!isLocalDevelopmentEnvironment(process.env))
+      throw new Error("Demo Supabase Auth seeding is restricted to local development.")
+
+    for (const account of demoAuthAccounts) {
       const result = await supabase.auth.admin.createUser({
         email: account.email,
         password: account.password,

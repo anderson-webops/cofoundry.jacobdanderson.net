@@ -9,6 +9,7 @@ import {
   getProposalsNeedingResponse,
   getUnreadConversationsForUser,
   proposalNeedsUserResponse,
+  sanitizeNotificationHref,
 } from "../../shared/utils/inbox"
 
 describe("inbox helpers", () => {
@@ -69,5 +70,23 @@ describe("inbox helpers", () => {
     expect(unreadForOlivia.counts.unreadNotifications).toBe(1)
     expect(unreadForOlivia.actions.some(item => item.kind === "notification")).toBe(true)
     expect(unreadForEmma.actions.some(item => item.kind === "notification")).toBe(true)
+  })
+
+  it("limits stored notification links to normalized internal app routes", () => {
+    expect(sanitizeNotificationHref("/app/proposals/proposal_1?tab=history#latest")).toBe("/app/proposals/proposal_1?tab=history#latest")
+    expect(sanitizeNotificationHref("https://attacker.example/phish")).toBe("/app/inbox")
+    expect(sanitizeNotificationHref("//attacker.example/phish")).toBe("/app/inbox")
+    expect(sanitizeNotificationHref("/app/../../admin")).toBe("/app/inbox")
+    expect(sanitizeNotificationHref("javascript:alert(1)")).toBe("/app/inbox")
+  })
+
+  it("sanitizes unsafe notification links before building member actions", () => {
+    const seed = structuredClone(workspaceSeed)
+    const notification = seed.notifications.find(item => item.userId === "user_olivia")!
+    notification.href = "https://attacker.example/phish"
+
+    const action = buildInboxSnapshot(seed, "user_olivia").actions.find(item => item.id === `notification:${notification.id}`)
+
+    expect(action?.href).toBe("/app/inbox")
   })
 })

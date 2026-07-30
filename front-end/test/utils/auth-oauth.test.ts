@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { inferSupabaseOAuthProvider, validateSupabaseOAuthRedirectUrl } from "../../server/utils/auth"
 import { isOAuthProviderEnabled, normalizeOAuthProvider, readConfiguredOAuthProviders } from "../../shared/utils/oauth-providers"
 
 describe("oauth provider configuration", () => {
@@ -34,5 +35,54 @@ describe("oauth provider configuration", () => {
     expect(isOAuthProviderEnabled("github", {
       COFOUNDRY_GITHUB_OAUTH_PROVIDER: "enabled",
     })).toBe(true)
+  })
+
+  it("uses the authenticated identity provider instead of an untrusted callback hint", () => {
+    const user = {
+      app_metadata: {
+        provider: "google",
+        providers: ["google"],
+      },
+      identities: [{ provider: "google" }],
+    } as Parameters<typeof inferSupabaseOAuthProvider>[0]
+
+    expect(inferSupabaseOAuthProvider(user, "github")).toBe("google")
+  })
+
+  it("accepts only the configured Supabase OAuth authorization endpoint and provider", () => {
+    expect(validateSupabaseOAuthRedirectUrl(
+      "https://project.supabase.co/auth/v1/authorize?provider=github&redirect_to=https%3A%2F%2Fcofoundry.example%2Fcallback",
+      "https://project.supabase.co",
+      "github",
+    )).toBe("https://project.supabase.co/auth/v1/authorize?provider=github&redirect_to=https%3A%2F%2Fcofoundry.example%2Fcallback")
+
+    expect(validateSupabaseOAuthRedirectUrl(
+      "https://attacker.example/auth/v1/authorize?provider=github",
+      "https://project.supabase.co",
+      "github",
+    )).toBeNull()
+    expect(validateSupabaseOAuthRedirectUrl(
+      "https://project.supabase.co/auth/v1/token?provider=github",
+      "https://project.supabase.co",
+      "github",
+    )).toBeNull()
+    expect(validateSupabaseOAuthRedirectUrl(
+      "https://project.supabase.co/auth/v1/authorize?provider=google",
+      "https://project.supabase.co",
+      "github",
+    )).toBeNull()
+    expect(validateSupabaseOAuthRedirectUrl(
+      "http://project.supabase.co/auth/v1/authorize?provider=github",
+      "http://project.supabase.co",
+      "github",
+    )).toBeNull()
+  })
+
+  it("allows the local Supabase OAuth endpoint during local development", () => {
+    expect(validateSupabaseOAuthRedirectUrl(
+      "http://127.0.0.1:54321/auth/v1/authorize?provider=google",
+      "http://127.0.0.1:54321",
+      "google",
+    )).toBe("http://127.0.0.1:54321/auth/v1/authorize?provider=google")
   })
 })

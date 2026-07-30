@@ -1,13 +1,9 @@
 import { requireAuthenticatedSession } from "~/server/utils/auth"
 import { isConversationParticipant } from "~/shared/utils/collaboration"
+import { typingPresenceSchema } from "~/shared/utils/validation"
 import { loadMemberWorkspaceState } from "../../utils/member-workspace"
 import { assertRateLimit, buildRateLimitKey } from "../../utils/rate-limit"
 import { emitWorkspaceTypingPresence } from "../../utils/workspace-realtime"
-
-interface TypingPresencePayload {
-  conversationId?: string
-  isTyping?: boolean
-}
 
 export default defineEventHandler(async (event) => {
   const session = await requireAuthenticatedSession(event)
@@ -18,11 +14,8 @@ export default defineEventHandler(async (event) => {
     windowMs: 60 * 1000,
   })
 
-  const payload = await readBody<TypingPresencePayload>(event)
-  const conversationId = payload.conversationId?.trim()
-
-  if (!conversationId)
-    throw createError({ statusCode: 400, statusMessage: "A conversation id is required." })
+  const payload = typingPresenceSchema.parse(await readBody(event))
+  const conversationId = payload.conversationId
 
   const workspace = await loadMemberWorkspaceState(event, {
     email: session.email,

@@ -1,6 +1,8 @@
 import { setHeader } from "h3"
+import { redactReportForReporter } from "~/shared/utils/workspace-authorization"
 import { requireAuthenticatedSession } from "../../utils/auth"
 import { loadMemberWorkspaceState } from "../../utils/member-workspace"
+import { listPrivacyRequestsForUser } from "../../utils/privacy-requests"
 import { assertRateLimit, buildRateLimitKey } from "../../utils/rate-limit"
 
 function buildIdentity(session: Awaited<ReturnType<typeof requireAuthenticatedSession>>) {
@@ -33,8 +35,15 @@ export default defineEventHandler(async (event) => {
   const proposalIds = new Set(proposals.map(proposal => proposal.id))
   const contracts = seed.contracts.filter(contract => proposalIds.has(contract.proposalId))
   const contractIds = new Set(contracts.map(contract => contract.id))
-  const ownedProfileIds = new Set(seed.profiles.filter(profile => profile.userId === session.id).map(profile => profile.id))
-
+  const privacyRequests = (await listPrivacyRequestsForUser(event, session.id)).map(request => ({
+    createdAt: request.createdAt,
+    details: request.details,
+    id: request.id,
+    resolvedAt: request.resolvedAt,
+    reviewedAt: request.reviewedAt,
+    status: request.status,
+    type: request.type,
+  }))
   const exportPayload = {
     account: state.user,
     bookmarks: state.bookmarks,
@@ -43,6 +52,7 @@ export default defineEventHandler(async (event) => {
       contractVersions: seed.contractVersions.filter(version => contractIds.has(version.contractId)),
       contracts,
       conversations,
+      investmentApplications: seed.investmentApplications.filter(application => application.applicantUserId === session.id),
       matches,
       messages: seed.messages.filter(message => conversationIds.has(message.conversationId)),
       notifications: seed.notifications.filter(notification => notification.userId === session.id),
@@ -50,11 +60,14 @@ export default defineEventHandler(async (event) => {
       proposalVersions: seed.proposalVersions.filter(version => proposalIds.has(version.proposalId)),
       proposals,
       relationshipDecisions: seed.relationshipDecisions.filter(decision => matchIds.has(decision.matchId) || decision.authorUserId === session.id),
-      reports: seed.reports.filter(report => report.reporterUserId === session.id || ownedProfileIds.has(report.targetId)),
+      reports: seed.reports
+        .filter(report => report.reporterUserId === session.id)
+        .map(redactReportForReporter),
       signatures: seed.signatures.filter(signature => signature.userId === session.id || contractIds.has(signature.contractId)),
       trialCollaborations: seed.trialCollaborations.filter(trial => matchIds.has(trial.matchId)),
     },
     exportedAt: new Date().toISOString(),
+    privacyRequests,
     profile: state.profile,
     savedSearches: state.savedSearches,
     startupOpportunities: state.opportunities,

@@ -298,6 +298,8 @@ export function formatAdminActionType(type: AdminActionType) {
     assign_case: "Assigned case",
     change_user_role: "Changed user role",
     escalate_case: "Escalated case",
+    issue_access_invite: "Issued access invite",
+    record_file_scan: "Recorded file scan",
     remove_content: "Removed content",
     reinstate_user: "Reinstated user",
     review_evidence: "Reviewed evidence",
@@ -306,6 +308,7 @@ export function formatAdminActionType(type: AdminActionType) {
     resolve_report: "Resolved report",
     resolve_privacy_request: "Resolved privacy request",
     suspend_user: "Suspended user",
+    update_access_request: "Updated access request",
     verify_email: "Verified email",
     warn_user: "Warned user",
   }[type]

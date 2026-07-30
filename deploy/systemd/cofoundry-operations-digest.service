@@ -9,7 +9,36 @@ User=cofoundry
 Group=cofoundry
 WorkingDirectory=/srv/cofoundry/current
 EnvironmentFile=/etc/cofoundry/operations.env
-ExecStart=/usr/bin/env bash -lc 'dry_run_flag=""; if [ "$${COFOUNDRY_DIGEST_DRY_RUN:-true}" != "false" ]; then dry_run_flag="--dry-run"; fi; npm run operations:digest -- $$dry_run_flag --max-users "$${COFOUNDRY_DIGEST_MAX_USERS:-100}"'
+Environment=NPM_CONFIG_CACHE=/var/lib/cofoundry/npm-cache
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+ExecStart=/usr/bin/env npm run operations:digest
 SyslogIdentifier=cofoundry-operations-digest
+AmbientCapabilities=
+CapabilityBoundingSet=
+LockPersonality=true
 NoNewPrivileges=true
+PrivateDevices=true
+PrivateMounts=true
 PrivateTmp=true
+ProcSubset=pid
+ProtectClock=true
+ProtectControlGroups=true
+ProtectHome=true
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectProc=invisible
+ProtectSystem=strict
+ReadWritePaths=/var/lib/cofoundry /run/cofoundry
+RemoveIPC=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+RuntimeDirectory=cofoundry
+StateDirectory=cofoundry
+SystemCallArchitectures=native
+TimeoutStartSec=1h
+TimeoutStopSec=30s
+UMask=0077

@@ -5,6 +5,7 @@ import {
   emitWorkspaceRealtimeChange,
   emitWorkspaceTypingPresence,
   getWorkspaceRealtimeSubscriberCount,
+  resolveWorkspaceRealtimeFanoutDestination,
   safePushWorkspaceRealtimeSink,
   subscribeWorkspaceRealtime,
 } from "../../server/utils/workspace-realtime"
@@ -63,6 +64,20 @@ describe("workspace realtime hub", () => {
     })
 
     expect(delivered).toBe(0)
+    expect(getWorkspaceRealtimeSubscriberCount("user_one")).toBe(0)
+  })
+
+  it("caps long-lived realtime connections per account", () => {
+    const subscriptions = Array.from({ length: 5 }, () => subscribeWorkspaceRealtime("user_one", {
+      push: () => {},
+    }))
+
+    expect(getWorkspaceRealtimeSubscriberCount("user_one")).toBe(5)
+    expect(() => subscribeWorkspaceRealtime("user_one", {
+      push: () => {},
+    })).toThrow(/capacity/)
+
+    subscriptions.forEach(unsubscribe => unsubscribe())
     expect(getWorkspaceRealtimeSubscriberCount("user_one")).toBe(0)
   })
 
@@ -191,5 +206,73 @@ describe("workspace realtime hub", () => {
     expect(await deliverWorkspaceRealtimeEnvelope(envelope)).toBe(1)
     expect(await deliverWorkspaceRealtimeEnvelope(envelope)).toBe(0)
     expect(messages).toHaveLength(1)
+  })
+
+  it("rejects oversized or partially malformed worker fanout envelopes", async () => {
+    const baseMessage = {
+      message: {
+        data: JSON.stringify({ userId: "user_recipient" }),
+        event: "workspace-change" as const,
+        id: "message-id",
+        retry: 5000,
+      },
+      userId: "user_recipient",
+    }
+    const baseEnvelope = {
+      createdAt: "2026-06-15T00:00:00.000Z",
+      eventType: "workspace-change" as const,
+      idScope: "workspace.collaboration",
+      sourceInstanceId: "instance_a",
+      version: 1 as const,
+    }
+
+    expect(await deliverWorkspaceRealtimeEnvelope({
+      ...baseEnvelope,
+      messages: Array.from({ length: 501 }).fill(baseMessage),
+    })).toBe(0)
+
+    expect(await deliverWorkspaceRealtimeEnvelope({
+      ...baseEnvelope,
+      messages: [
+        baseMessage,
+        {
+          ...baseMessage,
+          userId: "",
+        },
+      ],
+    })).toBe(0)
+  })
+
+  it("keeps the operations token on same-origin fanout and uses a separate cross-origin token", () => {
+    expect(resolveWorkspaceRealtimeFanoutDestination({
+      COFOUNDRY_OPERATIONS_TOKEN: "same-origin-operations-token-at-least-32",
+      COFOUNDRY_REALTIME_FANOUT_URL: "https://cofoundry.example/api/operations/realtime-events",
+      NUXT_PUBLIC_APP_URL: "https://cofoundry.example",
+    })).toMatchObject({
+      token: "same-origin-operations-token-at-least-32",
+    })
+
+    expect(resolveWorkspaceRealtimeFanoutDestination({
+      COFOUNDRY_OPERATIONS_TOKEN: "operations-token-that-must-not-leak",
+      COFOUNDRY_REALTIME_FANOUT_TOKEN: "cross-origin-realtime-token-at-least-32",
+      COFOUNDRY_REALTIME_FANOUT_URL: "https://relay.example/events",
+      NUXT_PUBLIC_APP_URL: "https://cofoundry.example",
+    })).toMatchObject({
+      token: "cross-origin-realtime-token-at-least-32",
+    })
+  })
+
+  it("rejects insecure or unauthenticated realtime fanout destinations", () => {
+    expect(() => resolveWorkspaceRealtimeFanoutDestination({
+      COFOUNDRY_OPERATIONS_TOKEN: "operations-token-that-must-not-leak",
+      COFOUNDRY_REALTIME_FANOUT_URL: "https://relay.example/events",
+      NUXT_PUBLIC_APP_URL: "https://cofoundry.example",
+    })).toThrow(/distinct COFOUNDRY_REALTIME_FANOUT_TOKEN/)
+
+    expect(() => resolveWorkspaceRealtimeFanoutDestination({
+      COFOUNDRY_REALTIME_FANOUT_TOKEN: "cross-origin-realtime-token-at-least-32",
+      COFOUNDRY_REALTIME_FANOUT_URL: "http://relay.example/events",
+      NUXT_PUBLIC_APP_URL: "https://cofoundry.example",
+    })).toThrow(/credential-free HTTPS URL/)
   })
 })

@@ -1,9 +1,10 @@
 import type { H3Event } from "h3"
 import type Stripe from "stripe"
 import { getHeader, readRawBody } from "h3"
-import { recordStripeCheckoutSession, syncStripeSubscription } from "../../utils/billing-persistence"
+import { recordStripeCheckoutSession, resolveStripeCheckoutUser, syncStripeSubscription } from "../../utils/billing-persistence"
 import { recordOperationalEvent } from "../../utils/operations-persistence"
-import { createStripeClient } from "../../utils/stripe"
+import { assertRateLimit } from "../../utils/rate-limit"
+import { createStripeClient, readStripeWebhookSecret } from "../../utils/stripe"
 
 function getStripeObjectId(value: string | { id: string } | null | undefined) {
   if (!value)
@@ -13,23 +14,51 @@ function getStripeObjectId(value: string | { id: string } | null | undefined) {
 }
 
 async function handleCheckoutCompleted(event: H3Event, stripe: Stripe, checkoutSession: Stripe.Checkout.Session) {
-  const userId = checkoutSession.client_reference_id || checkoutSession.metadata?.cofoundryUserId || null
+  const owner = resolveStripeCheckoutUser({
+    clientReferenceId: checkoutSession.client_reference_id,
+    metadataUserId: checkoutSession.metadata?.cofoundryUserId,
+  })
+  if (owner.conflict || !owner.userId) {
+    throw createError({
+      statusCode: 409,
+      statusMessage: "Stripe checkout ownership metadata is missing or inconsistent.",
+    })
+  }
+
+  const userId = owner.userId
   const customerId = getStripeObjectId(checkoutSession.customer)
 
-  if (userId)
-    await recordStripeCheckoutSession(event, userId, checkoutSession.id, customerId)
-
   const subscriptionId = getStripeObjectId(checkoutSession.subscription)
-  if (!subscriptionId)
-    return
+  if (!subscriptionId) {
+    throw createError({
+      statusCode: 409,
+      statusMessage: "Stripe checkout did not include the expected subscription.",
+    })
+  }
 
   const subscription = await stripe.subscriptions.retrieve(subscriptionId)
-  await syncStripeSubscription(event, subscription, userId)
+  const subscriptionCustomerId = getStripeObjectId(subscription.customer)
+  if (customerId && subscriptionCustomerId && customerId !== subscriptionCustomerId) {
+    throw createError({
+      statusCode: 409,
+      statusMessage: "Stripe checkout customer does not match the subscription customer.",
+    })
+  }
+
+  return { customerId: customerId || subscriptionCustomerId, subscription, userId }
 }
 
 async function handleStripeEvent(event: H3Event, stripe: Stripe, stripeEvent: Stripe.Event) {
+  const eventIdentity = {
+    createdAt: new Date(stripeEvent.created * 1000).toISOString(),
+    id: stripeEvent.id,
+  }
+
   if (stripeEvent.type === "checkout.session.completed") {
-    await handleCheckoutCompleted(event, stripe, stripeEvent.data.object as Stripe.Checkout.Session)
+    const checkout = await handleCheckoutCompleted(event, stripe, stripeEvent.data.object as Stripe.Checkout.Session)
+    const result = await syncStripeSubscription(event, checkout.subscription, eventIdentity, checkout.userId) as { applied?: boolean } | null
+    if (result?.applied)
+      await recordStripeCheckoutSession(event, checkout.userId, (stripeEvent.data.object as Stripe.Checkout.Session).id, checkout.customerId)
     return true
   }
 
@@ -38,7 +67,9 @@ async function handleStripeEvent(event: H3Event, stripe: Stripe, stripeEvent: St
     || stripeEvent.type === "customer.subscription.updated"
     || stripeEvent.type === "customer.subscription.deleted"
   ) {
-    await syncStripeSubscription(event, stripeEvent.data.object as Stripe.Subscription)
+    const eventSubscription = stripeEvent.data.object as Stripe.Subscription
+    const currentSubscription = await stripe.subscriptions.retrieve(eventSubscription.id)
+    await syncStripeSubscription(event, currentSubscription, eventIdentity)
     return true
   }
 
@@ -81,8 +112,14 @@ async function recordStripeWebhookTelemetry(
 }
 
 export default defineEventHandler(async (event) => {
-  const runtimeConfig = useRuntimeConfig(event)
+  assertRateLimit(event, {
+    limit: 300,
+    scope: "billing:stripe-webhook",
+    windowMs: 60 * 1000,
+  })
+
   const stripe = createStripeClient(event)
+  const webhookSecret = readStripeWebhookSecret(event)
 
   if (!stripe) {
     throw createError({
@@ -91,7 +128,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  if (!runtimeConfig.stripeWebhookSecret) {
+  if (!webhookSecret) {
     throw createError({
       statusCode: 500,
       statusMessage: "Stripe webhook secret is missing from server runtime config.",
@@ -116,7 +153,7 @@ export default defineEventHandler(async (event) => {
 
   let stripeEvent: Stripe.Event
   try {
-    stripeEvent = stripe.webhooks.constructEvent(rawBody, signature, runtimeConfig.stripeWebhookSecret)
+    stripeEvent = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret)
   }
   catch {
     throw createError({
@@ -132,7 +169,11 @@ export default defineEventHandler(async (event) => {
   catch (error) {
     const message = error instanceof Error ? error.message : "Stripe webhook processing failed."
     await recordStripeWebhookTelemetry(event, stripeEvent, "failed", message)
-    throw error
+    console.error("[billing] Signed Stripe webhook processing failed.", error)
+    throw createError({
+      statusCode: 500,
+      statusMessage: "Stripe webhook processing failed.",
+    })
   }
 
   return {

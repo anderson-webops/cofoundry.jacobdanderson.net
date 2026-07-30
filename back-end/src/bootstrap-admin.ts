@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import { randomUUID } from "node:crypto"
 import { assertEnvironmentIsValid, readPublicEnvironment, readSecretEnvironment } from "./environment.js"
 
-const bootstrapAdminRoles = ["admin", "investor_admin"] as const
+const bootstrapAdminRoles = ["admin"] as const
 
 type BootstrapAdminRole = (typeof bootstrapAdminRoles)[number]
 
@@ -22,6 +22,7 @@ interface PersistedUserRow {
   email: string
   id: string
   role: string
+  verified_email: boolean
 }
 
 interface BootstrapAdminResult {
@@ -55,13 +56,16 @@ function normalizeBootstrapRole(value: string): BootstrapAdminRole {
 export function resolveBootstrapAdminInput(env: EnvironmentSource): BootstrapAdminInput {
   const email = normalizeBootstrapEmail(readValue(env, "BOOTSTRAP_ADMIN_EMAIL"))
   const userId = readValue(env, "BOOTSTRAP_ADMIN_USER_ID")
+  const notes = readValue(env, "BOOTSTRAP_ADMIN_NOTES") || "Initial production admin bootstrap."
 
   if (!email && !userId)
     throw new Error("Set BOOTSTRAP_ADMIN_EMAIL or BOOTSTRAP_ADMIN_USER_ID before running the admin bootstrap script.")
+  if (notes.length < 8 || notes.length > 1000)
+    throw new Error("BOOTSTRAP_ADMIN_NOTES must contain 8 to 1000 characters.")
 
   return {
     email,
-    notes: readValue(env, "BOOTSTRAP_ADMIN_NOTES") || "Initial production admin bootstrap.",
+    notes,
     role: normalizeBootstrapRole(readValue(env, "BOOTSTRAP_ADMIN_ROLE")),
     userId,
   }
@@ -88,7 +92,7 @@ async function findBootstrapTarget(client: SupabaseClient, input: BootstrapAdmin
   const lookupValue = input.userId || input.email
   const { data, error } = await client
     .from("users")
-    .select("id,email,role")
+    .select("id,email,role,verified_email")
     .eq(lookupColumn, lookupValue)
     .limit(1)
     .maybeSingle()
@@ -104,46 +108,32 @@ async function findBootstrapTarget(client: SupabaseClient, input: BootstrapAdmin
     )
   }
 
-  return data as PersistedUserRow
+  const target = data as PersistedUserRow
+  if (!target.verified_email)
+    throw new Error("The first full admin account must have a verified email address.")
+
+  return target
 }
 
 export async function bootstrapAdmin(client: SupabaseClient, input: BootstrapAdminInput): Promise<BootstrapAdminResult> {
   const target = await findBootstrapTarget(client, input)
   const createdAt = new Date().toISOString()
-
-  const { data: updatedUser, error: updateError } = await client
-    .from("users")
-    .update({ role: input.role, suspended_at: null })
-    .eq("id", target.id)
-    .select("id,email,role")
-    .single()
-
-  if (updateError)
-    throw updateError
-
-  const updated = updatedUser as PersistedUserRow
   const actionId = randomUUID()
-  const { error: actionError } = await client
-    .from("admin_actions")
-    .insert({
-      id: actionId,
-      admin_user_id: updated.id,
-      type: "change_user_role",
-      target_id: updated.id,
-      target_type: "user",
-      notes: input.notes,
-      metadata: {},
-      created_at: createdAt,
-    })
+  const { error } = await client.rpc("cofoundry_bootstrap_first_admin", {
+    p_action_id: actionId,
+    p_created_at: createdAt,
+    p_notes: input.notes,
+    p_target_user_id: target.id,
+  })
 
-  if (actionError)
-    throw actionError
+  if (error)
+    throw error
 
   return {
     actionId,
     createdAt,
-    email: updated.email,
-    role: updated.role as BootstrapAdminRole,
-    userId: updated.id,
+    email: target.email,
+    role: "admin",
+    userId: target.id,
   }
 }

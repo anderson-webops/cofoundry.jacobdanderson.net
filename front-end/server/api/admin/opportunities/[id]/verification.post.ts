@@ -1,9 +1,9 @@
-import { requireAdminSession, validateAdminOpportunityVerificationPayload } from "../../../../utils/admin"
-import { persistAdminAction, persistOpportunityVerification } from "../../../../utils/admin-persistence"
+import { requireOpportunityReviewerSession, validateAdminOpportunityVerificationPayload } from "../../../../utils/admin"
+import { persistOpportunityVerificationAction } from "../../../../utils/admin-persistence"
 import { assertRateLimit, buildRateLimitKey } from "../../../../utils/rate-limit"
 
 export default defineEventHandler(async (event) => {
-  const session = await requireAdminSession(event)
+  const session = await requireOpportunityReviewerSession(event)
   assertRateLimit(event, {
     key: buildRateLimitKey(event, session.id),
     limit: 60,
@@ -30,14 +30,11 @@ export default defineEventHandler(async (event) => {
     type: "review_evidence" as const,
   }
 
-  const opportunity = await persistOpportunityVerification(event, {
-    adminUserId: session.id,
-    notes: payload.notes,
-    opportunityId,
+  const opportunity = await persistOpportunityVerificationAction(event, {
+    action,
+    expectedUpdatedAt: payload.expectedUpdatedAt,
     status: payload.status,
-    timestamp: createdAt,
   })
-  await persistAdminAction(event, action)
 
   return {
     action,

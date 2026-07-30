@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ProposalSectionKey, ProposalSectionState } from "~/shared/types/domain"
 import { buildSubscriptionUsage, formatUsageQuota, getSubscriptionEntitlements } from "~/shared/utils/billing"
+import { canUserCounterProposal, canUserUpdateProposalStatus } from "~/shared/utils/collaboration"
 import { formatDate, formatProposalRelationshipType, formatProposalSectionKey, formatProposalSectionState, formatProposalStatus } from "~/shared/utils/format"
 import { buildProposalSectionSummaries, buildProposalTermsSummary, buildProposalTimeline, buildProposalUnresolvedItems, getProposalStatusTone } from "~/shared/utils/proposals"
 import { getRelationshipHrefForProposal } from "~/shared/utils/relationships"
@@ -46,6 +47,20 @@ const contractId = computed(() => workspaceStore.data.contracts.find(contract =>
 const relationshipHref = computed(() => proposal.value && authStore.currentUser ? getRelationshipHrefForProposal(workspaceStore.data, authStore.currentUser.id, proposal.value.id) : null)
 const entitlements = computed(() => getSubscriptionEntitlements(subscription.value || undefined))
 const usage = computed(() => authStore.currentUser ? buildSubscriptionUsage(workspaceStore.data, authStore.currentUser.id, subscription.value || undefined) : null)
+const canRespondToCurrentVersion = computed(() =>
+  Boolean(
+    proposal.value
+    && authStore.currentUser
+    && canUserUpdateProposalStatus(workspaceStore.data, proposal.value, authStore.currentUser.id, "accepted"),
+  ),
+)
+const canCounterCurrentVersion = computed(() =>
+  Boolean(
+    proposal.value
+    && authStore.currentUser
+    && canUserCounterProposal(workspaceStore.data, proposal.value, authStore.currentUser.id),
+  ),
+)
 
 const commentBody = ref("")
 const commentSection = ref<ProposalSectionKey>("partnership")
@@ -168,19 +183,19 @@ function contractQuotaText() {
           <BaseButton v-if="relationshipHref" :to="relationshipHref">
             Open relationship
           </BaseButton>
-          <BaseButton variant="secondary" @click="updateStatus('viewed')">
+          <BaseButton v-if="canRespondToCurrentVersion" variant="secondary" @click="updateStatus('viewed')">
             Mark viewed
           </BaseButton>
-          <BaseButton variant="secondary" @click="counterDialogOpen = true">
+          <BaseButton v-if="canCounterCurrentVersion" variant="secondary" @click="counterDialogOpen = true">
             Counter terms
           </BaseButton>
-          <BaseButton @click="updateStatus('accepted')">
+          <BaseButton v-if="canRespondToCurrentVersion" @click="updateStatus('accepted')">
             Accept proposal
           </BaseButton>
-          <BaseButton variant="danger" @click="updateStatus('rejected')">
+          <BaseButton v-if="canRespondToCurrentVersion" variant="danger" @click="updateStatus('rejected')">
             Reject
           </BaseButton>
-          <BaseButton v-if="!contractId" variant="secondary" @click="createContract">
+          <BaseButton v-if="!contractId && proposal.status === 'accepted'" variant="secondary" @click="createContract">
             {{ entitlements.canSignContracts ? "Generate agreement" : "Generate agreement preview" }}
           </BaseButton>
           <BaseButton v-else variant="secondary" :to="`/app/contracts/${contractId}`">

@@ -17,14 +17,27 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: "An access request id is required." })
 
   const payload = adminAccessRequestStatusSchema.parse(await readBody(event))
+  const createdAt = new Date().toISOString()
+  const action = {
+    id: crypto.randomUUID(),
+    adminUserId: session.id,
+    createdAt,
+    metadata: {
+      nextStatus: payload.status,
+    },
+    notes: payload.notes,
+    targetId: requestId,
+    targetType: "access_request" as const,
+    type: "update_access_request" as const,
+  }
   const request = await updateAccessRequestStatus(event, requestId, {
-    adminNotes: payload.notes,
-    reviewedByUserId: session.id,
+    action,
+    expectedUpdatedAt: payload.expectedUpdatedAt,
     status: payload.status,
   })
 
   if (!request)
     throw createError({ statusCode: 404, statusMessage: "Access request was not found." })
 
-  return { request }
+  return { action, request }
 })

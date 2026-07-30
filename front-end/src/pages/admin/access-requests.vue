@@ -116,7 +116,7 @@ async function updateStatus(request: AccessRequest, status: "approved" | "denied
 
   try {
     await $fetch(`/api/admin/access-requests/${request.id}/status`, {
-      body: { notes, status },
+      body: { expectedUpdatedAt: request.updatedAt, notes, status },
       method: "POST",
     })
     actionNotes[request.id] = ""
@@ -145,7 +145,7 @@ async function issueInvite(request: AccessRequest) {
 
   try {
     const invite = await $fetch<InviteResponse>(`/api/admin/access-requests/${request.id}/invite`, {
-      body: { notes },
+      body: { expectedUpdatedAt: request.updatedAt, notes },
       method: "POST",
     })
     lastInviteByRequestId[request.id] = invite

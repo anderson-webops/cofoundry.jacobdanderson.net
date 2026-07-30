@@ -4,7 +4,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import process from "node:process"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import { clearLocalOperationsStoreForTests, findLocalEmailSuppression, hashLocalUploadToken, listLocalContractEnvelopeEvents, listLocalFileUploadsByRelated, listLocalPendingFileScans, readLocalFileUploadContent, readLocalOperationsRows, recordLocalBackupRun, recordLocalContractEnvelopeEvent, recordLocalEmailSuppression, recordLocalFileScanResult, recordLocalFileUploadPolicy, recordLocalNotificationDelivery, recordLocalOperationalEvent, recordLocalTrustVerificationEvent, writeLocalFileUploadContent } from "../../server/utils/local-operations-store"
+import { assertLocalFileUploadToken, clearLocalOperationsStoreForTests, findLocalEmailSuppression, hashLocalUploadToken, listLocalContractEnvelopeEvents, listLocalFileUploadsByRelated, listLocalPendingFileScans, readLocalFileUploadContent, readLocalOperationsRows, recordLocalBackupRun, recordLocalContractEnvelopeEvent, recordLocalEmailSuppression, recordLocalFileScanResult, recordLocalFileUploadPolicy, recordLocalNotificationDelivery, recordLocalOperationalEvent, recordLocalTrustVerificationEvent, writeLocalFileUploadContent } from "../../server/utils/local-operations-store"
 
 let dataDirectory: string
 
@@ -49,10 +49,21 @@ describe("local operations telemetry store", () => {
       severity: "info",
       source: "vitest",
     })
+    await recordLocalFileUploadPolicy(session, {
+      bucket: "cofoundry-private",
+      id: "upload_test",
+      objectPath: "users/user_operations_test/upload_test/evidence.pdf",
+    }, {
+      filename: "evidence.pdf",
+      mimeType: "application/pdf",
+      purpose: "trust_evidence",
+      relatedId: "profile_user_operations_test",
+      relatedType: "profile",
+      sizeBytes: 1024,
+    })
     await recordLocalFileScanResult("upload_test", {
       notes: "Clean test scan.",
       scanStatus: "clean",
-      status: "uploaded",
     })
     await recordLocalNotificationDelivery(session, {
       bodyPreview: "Malik updated a proposal.",
@@ -75,6 +86,15 @@ describe("local operations telemetry store", () => {
       sourceEventId: "provider-event-1",
       suppressedAt: "2026-04-29T11:00:00.000Z",
     })
+    await recordLocalEmailSuppression({
+      category: "all",
+      email: "different@example.com",
+      metadata: { replay: true },
+      provider: "POSTMARK",
+      reason: "bounce",
+      sourceEventId: "provider-event-1",
+      suppressedAt: "2026-04-29T11:30:00.000Z",
+    })
     await recordLocalContractEnvelopeEvent({
       completedPdfFileUploadId: "upload_completed_pdf",
       completedPdfSha256: "b".repeat(64),
@@ -88,6 +108,19 @@ describe("local operations telemetry store", () => {
       sourceEventId: "provider-envelope-event-1",
       status: "completed",
     })
+    await recordLocalContractEnvelopeEvent({
+      completedPdfFileUploadId: null,
+      completedPdfSha256: null,
+      contractId: "contract_changed",
+      contractVersionId: "contract_changed_version",
+      metadata: { replay: true },
+      occurredAt: "2026-04-29T12:30:00.000Z",
+      provider: "DOCUSIGN",
+      providerEnvelopeId: "envelope_changed",
+      signedByUserIds: [],
+      sourceEventId: "provider-envelope-event-1",
+      status: "failed",
+    })
     await recordLocalTrustVerificationEvent({
       confidence: 0.94,
       evidenceFileUploadId: "upload_trust_evidence",
@@ -98,6 +131,19 @@ describe("local operations telemetry store", () => {
       sourceEventId: "provider-trust-event-1",
       status: "verified",
       targetId: "profile_user_olivia",
+      targetType: "profile",
+      verificationType: "government_id",
+    })
+    await recordLocalTrustVerificationEvent({
+      confidence: 0.1,
+      evidenceFileUploadId: null,
+      metadata: { replay: true },
+      occurredAt: "2026-04-29T13:30:00.000Z",
+      provider: "PERSONA",
+      providerSubjectId: "inquiry_changed",
+      sourceEventId: "provider-trust-event-1",
+      status: "failed",
+      targetId: "profile_changed",
       targetType: "profile",
       verificationType: "government_id",
     })
@@ -128,6 +174,7 @@ describe("local operations telemetry store", () => {
       source_event_id: "provider-event-1",
       suppressed_at: "2026-04-29T11:00:00.000Z",
     })
+    expect(payload.emailSuppressions).toHaveLength(1)
 
     const matchedSuppression = await findLocalEmailSuppression("OPERATIONS-TEST@cofoundry.local", "workflow")
     expect(matchedSuppression?.reason).toBe("complaint")
@@ -142,6 +189,7 @@ describe("local operations telemetry store", () => {
       source_event_id: "provider-envelope-event-1",
       status: "completed",
     })
+    expect(payload.contractEnvelopeEvents).toHaveLength(1)
     expect(payload.trustVerificationEvents[0]).toMatchObject({
       confidence: 0.94,
       evidence_file_upload_id: "upload_trust_evidence",
@@ -154,6 +202,7 @@ describe("local operations telemetry store", () => {
       target_type: "profile",
       verification_type: "government_id",
     })
+    expect(payload.trustVerificationEvents).toHaveLength(1)
 
     const matchedEnvelopeEvents = await listLocalContractEnvelopeEvents("contract_ledgerloop", "contract_ledgerloop_version_1")
     expect(matchedEnvelopeEvents).toHaveLength(1)
@@ -180,6 +229,7 @@ describe("local operations telemetry store", () => {
       bucket: "cofoundry-private-files",
       id: "upload_local",
       objectPath: "user_operations_test/2026-06-12/upload-local.txt",
+      uploadTokenExpiresAt: new Date(Date.now() + 60_000).toISOString(),
       uploadTokenHash: hashLocalUploadToken(uploadToken),
     }, {
       filename: "upload-local.txt",
@@ -187,7 +237,7 @@ describe("local operations telemetry store", () => {
       purpose: "trust_evidence",
       relatedId: "profile_user_operations_test",
       relatedType: "profile",
-      sizeBytes: 100,
+      sizeBytes: 8,
     })
 
     const pendingBeforeUpload = await listLocalPendingFileScans(10, { appUrl: "https://cofoundry.example" })
@@ -197,9 +247,15 @@ describe("local operations telemetry store", () => {
       signedDownloadUrl: null,
     })
 
-    await expect(writeLocalFileUploadContent("upload_local", "wrong-token", Buffer.from("evidence"))).rejects.toThrow("Local upload token is invalid.")
+    await expect(assertLocalFileUploadToken("upload_local", "wrong-token")).rejects.toThrow("Local upload token is invalid or expired.")
+    await expect(assertLocalFileUploadToken("upload_local", uploadToken)).resolves.toEqual({
+      sizeBytes: 8,
+    })
+    await expect(writeLocalFileUploadContent("upload_local", "wrong-token", Buffer.from("evidence"))).rejects.toThrow("Local upload token is invalid or expired.")
 
     await writeLocalFileUploadContent("upload_local", uploadToken, Buffer.from("evidence"))
+    await expect(assertLocalFileUploadToken("upload_local", uploadToken)).rejects.toThrow("Local upload token is invalid or expired.")
+    await expect(writeLocalFileUploadContent("upload_local", uploadToken, Buffer.from("evidence"))).rejects.toThrow("Local upload token is invalid or expired.")
 
     const content = await readLocalFileUploadContent("upload_local")
     expect(content?.bytes.toString("utf-8")).toBe("evidence")

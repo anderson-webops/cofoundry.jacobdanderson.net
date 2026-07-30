@@ -1,7 +1,7 @@
 {
   "name": "cofoundry-monorepo",
   "type": "module",
-  "version": "1.1.106",
+  "version": "1.1.107",
   "private": true,
   "packageManager": "npm@11.16.0",
   "engines": {
@@ -33,7 +33,7 @@
   "scripts": {
     "audit": "npm audit --workspaces",
     "audit-fix": "npm audit fix --workspaces",
-    "build": "npm run -w front-end build && npm run -w back-end build",
+    "build": "npm run -w front-end build && npm run -w back-end build && npm run verify:build-secrets",
     "dev": "npm run -w front-end dev",
     "server": "npm run -w back-end server",
     "server:once": "npm run -w back-end server:once",
@@ -63,6 +63,7 @@
     "test:e2e": "npm run -w front-end test:e2e",
     "test:run": "npm run test:unit",
     "verify:analytics": "npm run -w front-end verify:analytics",
+    "verify:build-secrets": "node scripts/verify-build-secret-boundary.mjs",
     "verify:deployment-identity": "node scripts/verify-deployment-identity-fallback.mjs",
     "verify:github-actions": "node scripts/verify-github-actions-health.mjs",
     "verify:host-env": "npm run -w back-end verify:host-env --",

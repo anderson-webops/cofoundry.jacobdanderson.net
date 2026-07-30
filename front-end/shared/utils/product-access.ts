@@ -34,9 +34,9 @@ function buildQueryPath(path: string, query: Record<string, string | undefined>)
 }
 
 export function resolveProductAccessPolicy(environment: ProductAccessEnvironment, isLocalDevelopment: boolean): ProductAccessPolicy {
-  const showDemoConveniences = environment.backendMode === "mock" && (isLocalDevelopment || environment.enableDemoAccess)
+  const showDemoConveniences = environment.backendMode === "mock" && isLocalDevelopment
   const accountsEnabled = environment.backendMode === "supabase" || showDemoConveniences
-  const mockBillingPreviewEnabled = accountsEnabled && environment.billingMode === "mock" && (isLocalDevelopment || environment.enableDemoAccess)
+  const mockBillingPreviewEnabled = accountsEnabled && environment.billingMode === "mock" && isLocalDevelopment
   const selfServeBillingEnabled = accountsEnabled && environment.billingMode === "stripe"
 
   return {

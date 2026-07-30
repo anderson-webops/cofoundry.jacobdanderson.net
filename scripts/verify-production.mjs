@@ -14,8 +14,9 @@ const baseUrl = `http://${host}:${port}`
 const release = process.env.COFOUNDRY_RELEASE || "verify-production"
 const commitSha = process.env.COFOUNDRY_COMMIT_SHA || "verify-production-commit"
 const deployedAt = process.env.COFOUNDRY_DEPLOYED_AT || "2026-06-14T00:00:00.000Z"
-const configuredPublicAppUrl = process.env.VERIFY_PRODUCTION_APP_URL ?? ""
 const expectedCanonicalOrigin = normalizeBaseUrl(process.env.VERIFY_PRODUCTION_CANONICAL_ORIGIN || "https://cofoundry.jacobdanderson.net")
+const configuredPublicAppUrl = process.env.VERIFY_PRODUCTION_APP_URL?.trim() || expectedCanonicalOrigin
+const operationsToken = "verify-production-operations-token-000001"
 const sessionSigningSecret = "verify-production-session-secret"
 const adminSession = {
   email: "ava@cofoundry.dev",
@@ -80,16 +81,20 @@ function encodeBase64Url(value) {
   return Buffer.from(value, "utf8").toString("base64url")
 }
 
-function createSessionSignature(session) {
-  return createHmac("sha256", sessionSigningSecret)
-    .update(`${session.id}:${session.email.toLowerCase()}`)
+function createSessionSignature(encodedSession) {
+  const issuedAtSeconds = Math.floor(Date.now() / 1000)
+  const digest = createHmac("sha256", sessionSigningSecret)
+    .update(`cofoundry:session:v1\0${issuedAtSeconds}.${encodedSession}`)
     .digest("base64url")
+
+  return `${issuedAtSeconds}.${digest}`
 }
 
 function signedAdminCookieHeader() {
+  const encodedSession = encodeBase64Url(JSON.stringify(adminSession))
   return [
-    `cofoundry_session=${encodeBase64Url(JSON.stringify(adminSession))}`,
-    `cofoundry_session_sig=${createSessionSignature(adminSession)}`,
+    `cofoundry_session=${encodedSession}`,
+    `cofoundry_session_sig=${createSessionSignature(encodedSession)}`,
   ].join("; ")
 }
 
@@ -165,7 +170,7 @@ function startServer() {
       COFOUNDRY_COMMIT_SHA: commitSha,
       COFOUNDRY_ALLOW_LOCAL_PUBLIC_APP_URL: "false",
       COFOUNDRY_DEPLOYED_AT: deployedAt,
-      COFOUNDRY_OPERATIONS_TOKEN: "",
+      COFOUNDRY_OPERATIONS_TOKEN: operationsToken,
       COFOUNDRY_RELEASE: release,
       CONTACT_BCC_EMAIL: "",
       CONTACT_FROM_EMAIL: "",
@@ -273,7 +278,7 @@ try {
     sourceInstanceId: "verify-production",
     version: 1,
   })
-  assert(realtimeFanoutIngress.response.status === 503, "/api/operations/realtime-events should fail closed when the worker token is not configured")
+  assert(realtimeFanoutIngress.response.status === 401, "/api/operations/realtime-events should fail closed without worker authorization")
   assertPrivateResponsePolicy(realtimeFanoutIngress.response, "/api/operations/realtime-events unauthorized response")
 
   const readiness = await fetchJson("/api/admin/readiness", {

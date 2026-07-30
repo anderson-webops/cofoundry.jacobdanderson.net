@@ -1,7 +1,14 @@
-import type { AdminAction, AppRole, Notification, OpportunityVerificationStatus, PrivacyRequestStatus, ReportStatus, WorkspaceSeed } from "../../shared/types/domain"
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
-import { dirname, resolve } from "node:path"
+import type { AdminAction, AppRole, Notification, OpportunityVerificationStatus, ReportStatus, WorkspaceSeed } from "../../shared/types/domain"
+import type { AdminSecurityMutation } from "../../shared/utils/admin-authorization"
+import { rm } from "node:fs/promises"
+import { resolve } from "node:path"
 import process from "node:process"
+import { workspaceSeed } from "../../shared/data/seed"
+import { evaluateAdminSecurityMutation } from "../../shared/utils/admin-authorization"
+import { withLocalAdminSecurityLock } from "./local-admin-security-lock"
+import { findLocalReportById } from "./local-collaboration-store"
+import { readLocalMemberWorkspaceStates } from "./local-member-workspace"
+import { readPrivateTextFile, writePrivateFileAtomic } from "./private-file-store"
 
 interface LocalUserAdminPatch {
   id: string
@@ -44,6 +51,7 @@ interface LocalAdminAuditStore {
 
 const defaultRetentionLimit = 500
 const localAdminAuditStoreFilename = "admin-audit.json"
+const queueActionTypes = new Set<AdminAction["type"]>(["assign_case", "escalate_case", "review_evidence"])
 
 let writeQueue = Promise.resolve()
 let cachedStore: LocalAdminAuditStore | null = null
@@ -106,15 +114,7 @@ function pruneStore(store: LocalAdminAuditStore): LocalAdminAuditStore {
 }
 
 async function readStoreFile() {
-  try {
-    return await readFile(storePath(), "utf-8")
-  }
-  catch (error) {
-    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT")
-      return null
-
-    throw error
-  }
+  return readPrivateTextFile(storePath())
 }
 
 async function readStore() {
@@ -141,8 +141,7 @@ async function writeStore(store: LocalAdminAuditStore) {
   const path = storePath()
   const prunedStore = pruneStore(store)
 
-  await mkdir(dirname(path), { recursive: true })
-  await writeFile(path, `${JSON.stringify(prunedStore)}\n`, "utf-8")
+  await writePrivateFileAtomic(path, `${JSON.stringify(prunedStore)}\n`)
   cachedStore = prunedStore
   cachedStorePath = path
 }
@@ -159,10 +158,67 @@ async function updateStore<T>(updater: (_store: LocalAdminAuditStore) => T | Pro
   return run
 }
 
-export async function recordLocalAdminAction(action: AdminAction) {
-  return updateStore((store) => {
-    store.actions = [action, ...store.actions.filter(item => item.id !== action.id)]
-    return action
+function buildLocalAdminSecurityUsers(
+  localStates: Awaited<ReturnType<typeof readLocalMemberWorkspaceStates>>,
+  store: LocalAdminAuditStore,
+) {
+  const patchById = new Map(store.userPatches.map(row => [row.id, row]))
+  const localUserIds = new Set(localStates.map(state => state.user.id))
+
+  return [
+    ...localStates.map(state => state.user),
+    ...workspaceSeed.users.filter(user => !localUserIds.has(user.id)),
+  ].map((user) => {
+    const patch = patchById.get(user.id)
+    return {
+      id: user.id,
+      role: patch?.role || user.role,
+      suspendedAt: typeof patch?.suspendedAt === "undefined" ? user.suspendedAt : patch.suspendedAt,
+      verifiedEmail: typeof patch?.verifiedEmail === "undefined" ? user.verifiedEmail : patch.verifiedEmail,
+    }
+  })
+}
+
+export async function assertLocalAdminActor(
+  actorUserId: string,
+  allowedRoles: readonly AppRole[] = ["admin"],
+) {
+  const localStates = await readLocalMemberWorkspaceStates()
+  const actor = buildLocalAdminSecurityUsers(localStates, await readStore())
+    .find(user => user.id === actorUserId)
+
+  if (!actor || actor.suspendedAt || !actor.verifiedEmail || !allowedRoles.includes(actor.role)) {
+    const fullAdminOnly = allowedRoles.length === 1 && allowedRoles[0] === "admin"
+    throw Object.assign(new Error(
+      fullAdminOnly
+        ? "An active full admin account is required for this action."
+        : "An active admin account is required for this action.",
+    ), {
+      statusCode: 403,
+      statusMessage: fullAdminOnly
+        ? "An active full admin account is required for this action."
+        : "An active admin account is required for this action.",
+    })
+  }
+
+  return actor
+}
+
+export async function recordLocalAdminQueueAction(action: AdminAction) {
+  return withLocalAdminSecurityLock(async () => {
+    await assertLocalAdminActor(action.adminUserId)
+
+    return updateStore((store) => {
+      if (!queueActionTypes.has(action.type)) {
+        throw Object.assign(new Error("The requested queue action is invalid."), {
+          statusCode: 400,
+          statusMessage: "The requested queue action is invalid.",
+        })
+      }
+
+      store.actions = [action, ...store.actions.filter(item => item.id !== action.id)]
+      return action
+    })
   })
 }
 
@@ -173,110 +229,158 @@ export async function recordLocalUserNotification(notification: Notification) {
   })
 }
 
-export async function persistLocalUserSuspension(targetUserId: string, suspendedAt: string | null) {
-  return updateStore((store) => {
-    const now = new Date().toISOString()
-    const existing = store.userPatches.find(row => row.id === targetUserId)
-    const row: LocalUserAdminPatch = {
-      ...existing,
-      id: targetUserId,
-      suspendedAt,
-      updatedAt: now,
-    }
-
-    store.userPatches = [row, ...store.userPatches.filter(item => item.id !== targetUserId)]
-    return row
-  })
-}
-
-export async function persistLocalUserRole(targetUserId: string, role: AppRole) {
-  return updateStore((store) => {
-    const now = new Date().toISOString()
-    const existing = store.userPatches.find(row => row.id === targetUserId)
-    const row: LocalUserAdminPatch = {
-      ...existing,
-      id: targetUserId,
-      role,
-      updatedAt: now,
-    }
-
-    store.userPatches = [row, ...store.userPatches.filter(item => item.id !== targetUserId)]
-    return row
-  })
-}
-
-export async function persistLocalUserEmailVerification(targetUserId: string, verifiedEmail: boolean) {
-  return updateStore((store) => {
-    const now = new Date().toISOString()
-    const existing = store.userPatches.find(row => row.id === targetUserId)
-    const row: LocalUserAdminPatch = {
-      ...existing,
-      id: targetUserId,
-      updatedAt: now,
-      verifiedEmail,
-    }
-
-    store.userPatches = [row, ...store.userPatches.filter(item => item.id !== targetUserId)]
-    return row
-  })
-}
-
-export async function persistLocalReportStatus(input: {
-  adminUserId: string
-  notes: string
-  reportId: string
-  status: Exclude<PrivacyRequestStatus, "open"> | ReportStatus
-  timestamp: string
+export async function persistLocalAdminUserSecurityAction(input: {
+  action: AdminAction
+  mutation: AdminSecurityMutation
 }) {
-  return updateStore((store) => {
-    const existing = store.reportPatches.find(row => row.id === input.reportId)
-    const row: LocalReportAdminPatch = {
-      id: input.reportId,
-      resolutionNotes: existing?.resolutionNotes || null,
-      resolvedAt: existing?.resolvedAt || null,
-      resolvedByUserId: existing?.resolvedByUserId || null,
-      reviewNotes: existing?.reviewNotes || null,
-      reviewedAt: existing?.reviewedAt || null,
-      reviewedByUserId: existing?.reviewedByUserId || null,
-      status: input.status === "reviewed" ? "reviewed" : "resolved",
-      updatedAt: input.timestamp,
-    }
+  return withLocalAdminSecurityLock(async () => {
+    const localStates = await readLocalMemberWorkspaceStates()
 
-    if (input.status === "reviewed") {
-      row.reviewNotes = input.notes
-      row.reviewedAt = input.timestamp
-      row.reviewedByUserId = input.adminUserId
-    }
-    else {
-      row.resolutionNotes = input.notes
-      row.resolvedAt = input.timestamp
-      row.resolvedByUserId = input.adminUserId
-    }
+    return updateStore((store) => {
+      const users = buildLocalAdminSecurityUsers(localStates, store)
+      const decision = evaluateAdminSecurityMutation(users, input.action.adminUserId, input.action.targetId, input.mutation)
+      if (!decision.allowed) {
+        throw Object.assign(new Error(decision.statusMessage), {
+          statusCode: decision.statusCode,
+          statusMessage: decision.statusMessage,
+        })
+      }
 
-    store.reportPatches = [row, ...store.reportPatches.filter(item => item.id !== input.reportId)]
-    return row
+      const existing = store.userPatches.find(row => row.id === input.action.targetId)
+      const row: LocalUserAdminPatch = {
+        ...existing,
+        id: input.action.targetId,
+        updatedAt: input.action.createdAt,
+      }
+      if (input.mutation.kind === "change_role")
+        row.role = input.mutation.role
+      else if (input.mutation.kind === "change_status")
+        row.suspendedAt = input.mutation.action === "suspend" ? input.action.createdAt : null
+      else
+        row.verifiedEmail = true
+
+      store.userPatches = [row, ...store.userPatches.filter(item => item.id !== input.action.targetId)]
+      store.actions = [input.action, ...store.actions.filter(item => item.id !== input.action.id)]
+      return row
+    })
   })
 }
 
-export async function persistLocalOpportunityVerification(input: {
-  adminUserId: string
-  notes: string
-  opportunityId: string
+export async function persistLocalReportStatusAction(input: {
+  action: AdminAction
+  expectedStatus: "open" | "reviewed"
+  status: ReportStatus
+}) {
+  return withLocalAdminSecurityLock(async () => {
+    await assertLocalAdminActor(input.action.adminUserId)
+    const sourceReport = await findLocalReportById(input.action.targetId)
+      || workspaceSeed.reports.find(report => report.id === input.action.targetId)
+
+    return updateStore((store) => {
+      const existing = store.reportPatches.find(row => row.id === input.action.targetId)
+      const currentStatus = existing?.status || sourceReport?.status
+
+      if (!sourceReport || !currentStatus) {
+        throw Object.assign(new Error("Target report was not found."), {
+          statusCode: 404,
+          statusMessage: "Target report was not found.",
+        })
+      }
+
+      if (currentStatus !== input.expectedStatus) {
+        throw Object.assign(new Error("The report changed after this review began. Refresh and review the current state."), {
+          statusCode: 409,
+          statusMessage: "The report changed after this review began. Refresh and review the current state.",
+        })
+      }
+
+      if (input.status === "reviewed" && currentStatus !== "open") {
+        throw Object.assign(new Error("The requested report transition is invalid."), {
+          statusCode: 409,
+          statusMessage: "The requested report transition is invalid.",
+        })
+      }
+
+      const row: LocalReportAdminPatch = {
+        id: input.action.targetId,
+        resolutionNotes: existing?.resolutionNotes || null,
+        resolvedAt: existing?.resolvedAt || null,
+        resolvedByUserId: existing?.resolvedByUserId || null,
+        reviewNotes: existing?.reviewNotes || null,
+        reviewedAt: existing?.reviewedAt || null,
+        reviewedByUserId: existing?.reviewedByUserId || null,
+        status: input.status,
+        updatedAt: input.action.createdAt,
+      }
+
+      if (input.status === "reviewed") {
+        row.reviewNotes = input.action.notes
+        row.reviewedAt = input.action.createdAt
+        row.reviewedByUserId = input.action.adminUserId
+      }
+      else {
+        row.reviewNotes ||= input.action.notes
+        row.reviewedAt ||= input.action.createdAt
+        row.reviewedByUserId ||= input.action.adminUserId
+        row.resolutionNotes = input.action.notes
+        row.resolvedAt = input.action.createdAt
+        row.resolvedByUserId = input.action.adminUserId
+      }
+
+      store.reportPatches = [row, ...store.reportPatches.filter(item => item.id !== input.action.targetId)]
+      store.actions = [input.action, ...store.actions.filter(item => item.id !== input.action.id)]
+      return {
+        id: row.id,
+        reporterUserId: sourceReport.reporterUserId,
+        status: row.status,
+      }
+    })
+  })
+}
+
+export async function persistLocalOpportunityVerificationAction(input: {
+  action: AdminAction
+  expectedUpdatedAt: string
   status: Exclude<OpportunityVerificationStatus, "manual_review">
-  timestamp: string
 }) {
-  return updateStore((store) => {
-    const row: LocalOpportunityAdminPatch = {
-      id: input.opportunityId,
-      reviewedAt: input.timestamp,
-      reviewedByUserId: input.adminUserId,
-      reviewNotes: input.notes,
-      status: input.status,
-      updatedAt: input.timestamp,
-    }
+  return withLocalAdminSecurityLock(async () => {
+    await assertLocalAdminActor(input.action.adminUserId, ["admin", "investor_admin"])
+    const localStates = await readLocalMemberWorkspaceStates()
+    const localOpportunities = localStates.flatMap(state => state.opportunities)
+    const target = localOpportunities.find(item => item.id === input.action.targetId)
+      || workspaceSeed.opportunities.find(item => item.id === input.action.targetId)
 
-    store.opportunityPatches = [row, ...store.opportunityPatches.filter(item => item.id !== input.opportunityId)]
-    return row
+    return updateStore((store) => {
+      const existingPatch = store.opportunityPatches.find(item => item.id === input.action.targetId)
+      const currentUpdatedAt = existingPatch?.updatedAt || target?.updatedAt
+
+      if (!target || !currentUpdatedAt) {
+        throw Object.assign(new Error("Target opportunity was not found."), {
+          statusCode: 404,
+          statusMessage: "Target opportunity was not found.",
+        })
+      }
+
+      if (currentUpdatedAt !== input.expectedUpdatedAt) {
+        throw Object.assign(new Error("The opportunity changed after this review began. Refresh and review the current revision."), {
+          statusCode: 409,
+          statusMessage: "The opportunity changed after this review began. Refresh and review the current revision.",
+        })
+      }
+
+      const row: LocalOpportunityAdminPatch = {
+        id: input.action.targetId,
+        reviewedAt: input.action.createdAt,
+        reviewedByUserId: input.action.adminUserId,
+        reviewNotes: input.action.notes,
+        status: input.status,
+        updatedAt: input.action.createdAt,
+      }
+
+      store.opportunityPatches = [row, ...store.opportunityPatches.filter(item => item.id !== input.action.targetId)]
+      store.actions = [input.action, ...store.actions.filter(item => item.id !== input.action.id)]
+      return row
+    })
   })
 }
 

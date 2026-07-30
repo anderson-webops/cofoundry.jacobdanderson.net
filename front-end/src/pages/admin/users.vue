@@ -51,6 +51,18 @@ const onboardingOptions = [
 ]
 
 const rows = computed(() => filterAdminUserRows(buildAdminUserRows(workspaceStore.data), filters))
+const isFullAdmin = computed(() => authStore.currentUser?.role === "admin")
+
+function canModerateUser(row: AdminUserRow) {
+  if (!authStore.currentUser || row.user.id === authStore.currentUser.id)
+    return false
+
+  return isFullAdmin.value || !["admin", "investor_admin"].includes(row.user.role)
+}
+
+function canManageUserSecurity(row: AdminUserRow) {
+  return Boolean(isFullAdmin.value && authStore.currentUser && row.user.id !== authStore.currentUser.id)
+}
 
 function syncRoleSelections(currentRows: AdminUserRow[]) {
   currentRows.forEach((row) => {
@@ -296,6 +308,7 @@ async function verifyEmail(row: AdminUserRow) {
                 >
               </label>
               <BaseButton
+                v-if="canModerateUser(row)"
                 class="mt-3 w-full"
                 :disabled="pendingByUserId[row.user.id]"
                 :variant="row.user.suspendedAt ? 'secondary' : 'danger'"
@@ -304,6 +317,7 @@ async function verifyEmail(row: AdminUserRow) {
                 {{ pendingByUserId[row.user.id] ? "Saving..." : row.user.suspendedAt ? "Reinstate" : "Suspend" }}
               </BaseButton>
               <BaseButton
+                v-if="canManageUserSecurity(row)"
                 class="mt-3 w-full"
                 :disabled="pendingEmailByUserId[row.user.id] || row.user.verifiedEmail"
                 variant="secondary"
@@ -311,7 +325,7 @@ async function verifyEmail(row: AdminUserRow) {
               >
                 {{ pendingEmailByUserId[row.user.id] ? "Saving..." : row.user.verifiedEmail ? "Email verified" : "Verify email" }}
               </BaseButton>
-              <div class="mt-4 pt-4 border-t border-[var(--line)]">
+              <div v-if="canManageUserSecurity(row)" class="mt-4 pt-4 border-t border-[var(--line)]">
                 <SelectInput
                   v-model="roleSelections[row.user.id]"
                   label="Role assignment"
@@ -418,6 +432,7 @@ async function verifyEmail(row: AdminUserRow) {
                   >
                 </label>
                 <BaseButton
+                  v-if="canModerateUser(row)"
                   class="mt-3"
                   :disabled="pendingByUserId[row.user.id]"
                   :variant="row.user.suspendedAt ? 'secondary' : 'danger'"
@@ -426,6 +441,7 @@ async function verifyEmail(row: AdminUserRow) {
                   {{ pendingByUserId[row.user.id] ? "Saving..." : row.user.suspendedAt ? "Reinstate" : "Suspend" }}
                 </BaseButton>
                 <BaseButton
+                  v-if="canManageUserSecurity(row)"
                   class="ml-2 mt-3"
                   :disabled="pendingEmailByUserId[row.user.id] || row.user.verifiedEmail"
                   variant="secondary"
@@ -433,7 +449,7 @@ async function verifyEmail(row: AdminUserRow) {
                 >
                   {{ pendingEmailByUserId[row.user.id] ? "Saving..." : row.user.verifiedEmail ? "Email verified" : "Verify email" }}
                 </BaseButton>
-                <div class="mt-4 pt-4 border-t border-[var(--line)]">
+                <div v-if="canManageUserSecurity(row)" class="mt-4 pt-4 border-t border-[var(--line)]">
                   <SelectInput
                     v-model="roleSelections[row.user.id]"
                     label="Role assignment"

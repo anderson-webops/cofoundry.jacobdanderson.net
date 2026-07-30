@@ -1,8 +1,9 @@
 import type { MemberWorkspaceState } from "../../shared/types/domain"
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
-import { dirname, resolve } from "node:path"
+import { rm } from "node:fs/promises"
+import { resolve } from "node:path"
 import process from "node:process"
 import { cloneValue } from "../../shared/utils/clone"
+import { readPrivateTextFile, writePrivateFileAtomic } from "./private-file-store"
 
 interface LocalMemberWorkspaceStore {
   members: MemberWorkspaceState[]
@@ -36,15 +37,7 @@ function emptyStore(): LocalMemberWorkspaceStore {
 }
 
 async function readStoreFile() {
-  try {
-    return await readFile(storePath(), "utf-8")
-  }
-  catch (error) {
-    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT")
-      return null
-
-    throw error
-  }
+  return readPrivateTextFile(storePath())
 }
 
 async function readStore() {
@@ -59,8 +52,7 @@ async function readStore() {
 }
 
 async function writeStore(store: LocalMemberWorkspaceStore) {
-  await mkdir(dirname(storePath()), { recursive: true })
-  await writeFile(storePath(), `${JSON.stringify({ ...store, updatedAt: new Date().toISOString() }, null, 2)}\n`, "utf-8")
+  await writePrivateFileAtomic(storePath(), `${JSON.stringify({ ...store, updatedAt: new Date().toISOString() }, null, 2)}\n`)
 }
 
 async function updateStore<T>(updater: (_store: LocalMemberWorkspaceStore) => T | Promise<T>) {
@@ -94,6 +86,14 @@ export async function persistLocalMemberWorkspaceState(state: MemberWorkspaceSta
       ...store.members.filter(member => member.user.id !== state.user.id),
     ]
     return cloneValue(nextState)
+  })
+}
+
+export async function deleteLocalMemberWorkspaceState(userId: string) {
+  return updateStore((store) => {
+    const previousLength = store.members.length
+    store.members = store.members.filter(member => member.user.id !== userId)
+    return store.members.length !== previousLength
   })
 }
 

@@ -1,14 +1,17 @@
 import type { H3Event } from "h3"
 import type { z } from "zod"
-import type { FileUpload, FileUploadRelatedType, SessionUser } from "~/shared/types/domain"
-import type { fileScanResultSchema, fileUploadPolicySchema } from "~/shared/utils/validation"
+import type { AdminAction, FileUpload, FileUploadRelatedType, SessionUser } from "~/shared/types/domain"
+import type { adminFileScanResultSchema, fileScanResultSchema, fileUploadPolicySchema } from "~/shared/utils/validation"
 import { randomUUID } from "node:crypto"
+import { createError } from "h3"
 import { resolveServerAppUrl } from "./app-url"
-import { hashLocalUploadToken, listLocalFileUploadsByRelated, listLocalPendingFileScans, recordLocalFileScanResult, recordLocalFileUploadPolicy } from "./local-operations-store"
+import { hashLocalUploadToken, listLocalFileUploadsByRelated, listLocalPendingFileScans, recordLocalAdminFileScanResult, recordLocalFileScanResult, recordLocalFileUploadPolicy } from "./local-operations-store"
+import { loadMemberWorkspaceState } from "./member-workspace"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
 
 type FileUploadPolicyPayload = z.infer<typeof fileUploadPolicySchema>
 type FileScanResultPayload = z.infer<typeof fileScanResultSchema>
+type AdminFileScanResultPayload = z.infer<typeof adminFileScanResultSchema>
 
 interface PendingFileScanRow {
   bucket: string
@@ -58,6 +61,12 @@ const allowedMimeTypes = new Set([
 ])
 const unsafeFilenamePattern = /[^\w.-]+/g
 const leadingDotsPattern = /^\.+/
+const allowedRelatedTypesByPurpose: Record<FileUpload["purpose"], ReadonlySet<FileUploadRelatedType>> = {
+  contract_attachment: new Set(["contract"]),
+  message_attachment: new Set(["message"]),
+  proposal_attachment: new Set(["proposal"]),
+  trust_evidence: new Set(["opportunity", "profile"]),
+}
 
 function sanitizeFilename(filename: string) {
   return filename
@@ -105,6 +114,75 @@ function dedupeRelatedSelectors(relatedItems: FileUploadRelatedSelector[]) {
   })
 }
 
+function buildIdentity(session: SessionUser) {
+  return {
+    email: session.email,
+    id: session.id,
+    name: session.name,
+    onboardingCompleted: session.onboardingCompleted,
+    role: session.role,
+    subscriptionPlan: session.subscriptionPlan,
+  }
+}
+
+export function assertFileUploadAuthorization(seed: Awaited<ReturnType<typeof loadMemberWorkspaceState>>["seed"], session: SessionUser, payload: FileUploadPolicyPayload) {
+  const relatedId = payload.relatedId
+  const relatedType = payload.relatedType
+  if (!relatedId || !relatedType)
+    throw createError({ statusCode: 400, statusMessage: "A related workspace record is required for every upload." })
+  if (!allowedRelatedTypesByPurpose[payload.purpose].has(relatedType)) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "The upload purpose does not match the selected workspace record.",
+    })
+  }
+
+  const fullAdmin = session.role === "admin"
+  let authorized = false
+
+  if (relatedType === "message") {
+    const message = seed.messages.find(item => item.id === relatedId)
+    const conversation = message
+      ? seed.conversations.find(item => item.id === message.conversationId)
+      : null
+    authorized = Boolean(message && conversation?.participantIds.includes(session.id))
+  }
+  else if (relatedType === "proposal") {
+    const proposal = seed.proposals.find(item => item.id === relatedId)
+    authorized = Boolean(proposal && (
+      proposal.createdByUserId === session.id
+      || proposal.recipientUserId === session.id
+      || fullAdmin
+    ))
+  }
+  else if (relatedType === "contract") {
+    const contract = seed.contracts.find(item => item.id === relatedId)
+    const proposal = contract
+      ? seed.proposals.find(item => item.id === contract.proposalId)
+      : null
+    authorized = Boolean(contract && proposal && (
+      proposal.createdByUserId === session.id
+      || proposal.recipientUserId === session.id
+      || fullAdmin
+    ))
+  }
+  else if (relatedType === "profile") {
+    const profile = seed.profiles.find(item => item.id === relatedId)
+    authorized = Boolean(profile && (profile.userId === session.id || fullAdmin))
+  }
+  else if (relatedType === "opportunity") {
+    const opportunity = seed.opportunities.find(item => item.id === relatedId)
+    authorized = Boolean(opportunity && (opportunity.ownerUserId === session.id || fullAdmin))
+  }
+
+  if (!authorized) {
+    throw createError({
+      statusCode: 403,
+      statusMessage: "You cannot attach files to that workspace record.",
+    })
+  }
+}
+
 export async function createFileUploadPolicy(event: H3Event, session: SessionUser, payload: FileUploadPolicyPayload) {
   if (!allowedMimeTypes.has(payload.mimeType)) {
     throw createError({
@@ -112,6 +190,9 @@ export async function createFileUploadPolicy(event: H3Event, session: SessionUse
       statusMessage: "That file type is not allowed for workspace uploads.",
     })
   }
+
+  const workspace = await loadMemberWorkspaceState(event, buildIdentity(session))
+  assertFileUploadAuthorization(workspace.seed, workspace.session, payload)
 
   const uploadId = randomUUID()
   const objectPath = objectPathFor(session, payload.filename)
@@ -147,16 +228,28 @@ export async function createFileUploadPolicy(event: H3Event, session: SessionUse
       .from(privateFileBucket)
       .createSignedUploadUrl(objectPath)
 
-    if (signed.error)
+    if (signed.error) {
+      await adminClient
+        .from("file_uploads")
+        .delete()
+        .eq("id", uploadId)
+        .eq("owner_user_id", session.id)
       throw signed.error
+    }
 
     signedUploadUrl = signed.data.signedUrl
     uploadToken = signed.data.token
   }
   else {
     uploadToken = randomUUID()
-    signedUploadUrl = `${resolveServerAppUrl(event)}/api/files/local-upload/${encodeURIComponent(uploadId)}?token=${encodeURIComponent(uploadToken)}`
-    await recordLocalFileUploadPolicy(session, { bucket: privateFileBucket, id: uploadId, objectPath, uploadTokenHash: hashLocalUploadToken(uploadToken) }, payload)
+    signedUploadUrl = `${resolveServerAppUrl(event)}/api/files/local-upload/${encodeURIComponent(uploadId)}`
+    await recordLocalFileUploadPolicy(session, {
+      bucket: privateFileBucket,
+      id: uploadId,
+      objectPath,
+      uploadTokenExpiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+      uploadTokenHash: hashLocalUploadToken(uploadToken),
+    }, payload)
   }
 
   return {
@@ -223,10 +316,12 @@ export async function recordFileScanResult(event: H3Event, uploadId: string, pay
     .update({
       scan_notes: payload.notes || null,
       scan_status: payload.scanStatus,
-      status: payload.status || (payload.scanStatus === "flagged" ? "blocked" : "uploaded"),
+      status: payload.scanStatus === "clean" ? "uploaded" : "blocked",
       updated_at: new Date().toISOString(),
     })
     .eq("id", uploadId)
+    .eq("scan_status", "pending")
+    .eq("status", "pending")
     .select()
     .maybeSingle()
 
@@ -234,6 +329,62 @@ export async function recordFileScanResult(event: H3Event, uploadId: string, pay
     throw error
 
   return data
+}
+
+export async function recordAdminFileScanResult(
+  event: H3Event,
+  uploadId: string,
+  payload: AdminFileScanResultPayload,
+  action: AdminAction,
+) {
+  if (!isSupabaseEnabled(event))
+    return recordLocalAdminFileScanResult(uploadId, payload, action)
+
+  const adminClient = createSupabaseAdminClient(event)
+  if (!adminClient)
+    throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
+
+  const { data: existingData, error: existingError } = await adminClient
+    .from("file_uploads")
+    .select("*")
+    .eq("id", uploadId)
+    .maybeSingle<PersistedFileUploadRow>()
+
+  if (existingError)
+    throw existingError
+  if (!existingData)
+    return null
+
+  const { error } = await adminClient.rpc("cofoundry_apply_admin_file_scan", {
+    p_action_id: action.id,
+    p_actor_user_id: action.adminUserId,
+    p_expected_updated_at: payload.expectedUpdatedAt,
+    p_notes: action.notes,
+    p_scan_status: payload.scanStatus,
+    p_target_id: uploadId,
+    p_timestamp: action.createdAt,
+  })
+
+  if (error) {
+    const stale = error.message.includes("changed after")
+    const ineligible = error.message.includes("not eligible")
+    throw createError({
+      statusCode: stale || ineligible ? 409 : 400,
+      statusMessage: stale
+        ? "The file changed after this review began. Refresh and review the current state."
+        : ineligible
+          ? "This file is not eligible for a manual scan verdict."
+          : "The file-scan action could not be applied.",
+    })
+  }
+
+  return {
+    ...existingData,
+    scan_notes: payload.notes,
+    scan_status: payload.scanStatus,
+    status: payload.scanStatus === "clean" ? "uploaded" as const : "blocked" as const,
+    updated_at: action.createdAt,
+  }
 }
 
 export async function listPendingFileScans(event: H3Event, limit: number) {

@@ -155,7 +155,7 @@ That route should unify:
 Remaining depth:
 
 - run the checked-in scanner worker against real host storage and confirm file scan status recovers from pending to clean/flagged in `/app/relationships/[id]` and `/admin/operations`
-- if production runs multiple app instances, configure the host realtime relay and run `npm run operations:realtime-smoke -- --min-delivered 1` with a cross-instance member SSE stream connected
+- implement a shared atomic rate limiter and cross-instance abuse tests before allowing production to run multiple app instances; only then validate the host realtime relay with `npm run operations:realtime-smoke -- --min-delivered 1`
 
 ### 6. Production-grade onboarding
 
@@ -237,7 +237,7 @@ The admin analytics page now reports:
 
 After persistence is stable:
 
-Status: production-safe refresh bridge, first-party SSE invalidation, non-persistent typing presence, guarded operations-authenticated fanout ingress, and worker-reported fanout smoke evidence are implemented. External relay setup remains host/provider work.
+Status: production-safe single-process refresh bridge, first-party SSE invalidation, non-persistent typing presence, guarded operations-authenticated experimental fanout ingress, and worker-reported fanout smoke evidence are implemented. Horizontal production scaling remains blocked until rate limits use a shared atomic store.
 
 The app shell now:
 
@@ -253,8 +253,8 @@ The app shell now:
 
 Remaining work:
 
-- configure the host-side relay if production scales beyond one Node process
-- run the checked-in realtime smoke worker against every app instance with `COFOUNDRY_EXPECT_MULTI_INSTANCE=true` and `COFOUNDRY_REALTIME_FANOUT_URL` set
+- implement a shared atomic rate-limiter store and cross-instance abuse tests
+- after that boundary passes, configure the host-side relay and run the checked-in realtime smoke worker against every staging instance
 - provider-level presence semantics if production needs richer online/offline state beyond typing presence
 
 ### 11. Email and outbound system events

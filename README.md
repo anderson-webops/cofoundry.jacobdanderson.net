@@ -103,16 +103,18 @@ Server-only secrets:
 - `CONTACT_BCC_EMAIL`
 - `CONTACT_USE_SENDMAIL`
 - `CONTACT_SENDMAIL_PATH`
+- `CONTACT_SENDMAIL_TIMEOUT_MS`
 - `CONTACT_SMTP_HOST`
 - `CONTACT_SMTP_PORT`
 - `CONTACT_SMTP_SECURE`
 - `CONTACT_SMTP_REQUIRE_TLS`
+- `CONTACT_SMTP_TIMEOUT_MS`
 - `CONTACT_SMTP_USER`
 - `CONTACT_SMTP_PASS`
 
 If a non-mock mode is enabled without the required public values and server secrets, startup fails with a clear error. In mock mode, the current production-safe mock behavior remains unchanged.
 
-The public contact form now delivers through the server instead of only validating the payload. For production, prefer SMTP so the envelope sender is explicitly controlled by `CONTACT_FROM_EMAIL`. The current delivery target should remain `contacts@jacobdanderson.net`. To move later to an alias-based outbound pattern, set `CONTACT_FROM_EMAIL` to the sending alias, `CONTACT_TO_EMAIL` to the primary destination, and `CONTACT_BCC_EMAIL` to `contacts@jacobdanderson.net`. `CONTACT_USE_SENDMAIL=true` remains available as a local or fallback transport.
+The public contact form now delivers through the server instead of only validating the payload. For production, prefer SMTP so the envelope sender is explicitly controlled by `CONTACT_FROM_EMAIL`; STARTTLS is required by default whenever implicit TLS is off, and authenticated cleartext SMTP is rejected. The current delivery target should remain `contacts@jacobdanderson.net`. To move later to an alias-based outbound pattern, set `CONTACT_FROM_EMAIL` to the sending alias, `CONTACT_TO_EMAIL` to the primary destination, and `CONTACT_BCC_EMAIL` to `contacts@jacobdanderson.net`. `CONTACT_USE_SENDMAIL=true` remains available as a local or fallback transport and requires an absolute executable path.
 
 The same server mail transport now powers on-demand unread workspace digests from `/app/inbox`. Digest content is generated from the same inbox action queue that drives intros, unread conversations, proposals, signatures, and operational notices, and manual digest requests skip cleanly when the queue is clear. Scheduled digests are exposed through the worker-authenticated `/api/operations/notification-digests/run` endpoint and should be called by a server cron/timer with `COFOUNDRY_OPERATIONS_TOKEN`. Event-specific lifecycle notifications are exposed through `/api/operations/notifications/lifecycle` for `match.created`, `message.unread`, `proposal.updated`, `contract.signature_required`, `report.reviewed`, and `subscription.changed`. In mock/access-request mode, operations telemetry is persisted to `.data/operations-telemetry.json` by default, or to `COFOUNDRY_LOCAL_DATA_DIR` when set. Local mock-mode file uploads are stored under `.data/local-file-uploads/` by default and are exposed to scanner workers through worker-authenticated download URLs.
 
@@ -128,7 +130,7 @@ The canonical shared model and utility source lives under `front-end/shared`. Fi
 - Collaborator review account: `malik@cofoundry.dev` / `builder123`
 - Admin review account: `ava@cofoundry.dev` / `admin123`
 
-Seeded review credentials remain available for local and explicitly enabled staging review environments. They are no longer advertised as one-click review shortcuts in the sign-in UI.
+Seeded review credentials are restricted to local development. Hosted environments reject the demo-access flag, and the credentials are not advertised as one-click shortcuts in the sign-in UI.
 
 ## Root scripts
 
@@ -181,7 +183,7 @@ Behavior:
 - In production-facing deployments, CoFoundry behaves as a public marketing shell plus access-request funnel
 - Public directories, pricing, legal pages, contact, sitemap, and SEO surfaces remain live
 - `/auth/sign-in` and `/auth/sign-up` become intentional access-request pages instead of fake-live account creation
-- The private app stays available only in local development or when demo access is explicitly enabled
+- The bundled demo workspace stays available only in local development
 - Local development still supports cookie-backed mock auth, seeded workspace data, and preview billing flows
 - Live accounts with `NUXT_PUBLIC_BILLING_MODE="mock"` use operator-managed billing instead of self-granting paid entitlements
 
@@ -192,10 +194,7 @@ Required env:
 - `NUXT_PUBLIC_ENABLE_DEMO_ACCESS="false"` for production-facing shells
 - No server secrets are required
 
-Optional:
-
-- `NUXT_PUBLIC_ENABLE_DEMO_ACCESS="true"` if you intentionally want seeded review-account flows in a staging environment
-- `SESSION_SIGNING_SECRET` if you intentionally enable review accounts in a non-local environment
+Hosted staging should use invited test accounts or a dedicated Supabase staging project; bundled demo credentials remain disabled outside local development.
 
 ### Supabase-backed mode
 
@@ -212,7 +211,7 @@ Then:
 1. Apply the SQL migration in `back-end/supabase/migrations/20260410190000_initial.sql`
 2. Run `npm run seed`
 
-`npm run seed` always writes `.data/mock-seed.json`, and when `NUXT_PUBLIC_SUPABASE_URL` plus `SUPABASE_SERVICE_ROLE_KEY` are present it also upserts the workspace seed into the database tables defined by the migration. If `SEED_SUPABASE_AUTH` is not `"false"`, it also attempts to create the seeded review auth users in Supabase Auth.
+`npm run seed` always writes `.data/mock-seed.json`. Remote Supabase writes require `SEED_SUPABASE_DATA=true` in addition to `NUXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`; credentials alone never trigger remote writes. `SEED_SUPABASE_AUTH=true` additionally creates seeded review users, but only in local development.
 
 Required env:
 
@@ -267,7 +266,7 @@ Provisioning after merge:
 5. Enable only the intended Supabase password/email account path first. Keep OAuth/external auth provider env markers blank until the provider app callback URLs, account linking, suspended-user rejection, role rehydration, and rollback have been smoke-tested. Provider sign-in buttons remain hidden unless Supabase mode and matching server-side OAuth markers are active.
 6. Assign the first real admin user server-side before using `/admin`: `BOOTSTRAP_ADMIN_EMAIL=operator@example.com npm run -w back-end bootstrap-admin`. The script requires Supabase mode and the Vault-injected `SUPABASE_SERVICE_ROLE_KEY`; it updates an existing user row and records an admin action that `/admin/readiness` uses as first-admin bootstrap evidence.
 7. Turn on Stripe env only when checkout and webhook infrastructure are ready.
-8. Configure `COFOUNDRY_OPERATIONS_TOKEN` before enabling scheduled digests, backup-run reporting, operational event ingestion, or file-scan callbacks.
+8. Configure a distinct `COFOUNDRY_OPERATIONS_TOKEN` before starting any hosted deployment. It protects backend metadata and all scheduled digest, backup, event-ingestion, and file-scan worker calls. A non-loopback `BACKEND_HOST` is rejected unless the public-bind flag is explicit and this token is at least 32 characters.
 9. In mock/access-request mode, ensure the app process can write to `.data/operations-telemetry.json`, `.data/access-requests.json`, `.data/member-workspace-state.json`, `.data/collaboration-state.json`, `.data/admin-audit.json`, `.data/privacy-requests.json`, `.data/local-auth-accounts.json`, and `.data/local-file-uploads/`, or set `COFOUNDRY_LOCAL_DATA_DIR` to a durable writable host path.
 
 ## Production control surfaces
@@ -280,15 +279,15 @@ Provisioning after merge:
 - Scheduled unread workspace digest emails respect each member's account-level email notification preference; seeded review users remain enabled, while newly persisted Supabase users default to disabled until they opt in.
 - Member workspace changes, collaboration workflow updates, and billing preview state persist in Supabase mode and in durable local mock-mode stores.
 - Relationship workspaces support first-class decision notes before or alongside proposals, and those notes persist in durable mock mode and the future Supabase `relationship_decisions` table.
-- Signed sessions are revalidated against persisted user state on every protected request. Role changes take effect without requiring a new login, and suspended users are rejected in both durable mock/access-request mode and Supabase-backed mode.
-- Seeded review account credentials are accepted only in local development or deliberate staging demo access. Production-facing mock/access-request deployments can still sign in invited durable local accounts, but they do not accept seeded review credentials.
+- Signed sessions are revalidated against persisted user state on every protected request. Role changes take effect without requiring a new login, and suspended users are rejected in both durable mock/access-request mode and Supabase-backed mode. Missing workspace/subscription rows fail closed to a free member baseline rather than rebuilding privileges from stale cookie claims.
+- Seeded review account credentials are accepted only in local development. Hosted mock/access-request deployments can still sign in invited durable local accounts, but they never accept bundled demo credentials.
 - Admin moderation actions persist user suspension, role changes, report status changes, opportunity verification decisions, notifications, queue assignment/routing metadata, and audit actions in Supabase mode and in the durable local mock-mode admin audit store.
 - Admins can mark member emails verified from `/admin/users` after invite, domain, or operator evidence review; the decision is persisted and auditable in mock/access-request mode and Supabase mode.
-- Access-request review has a mock-mode admin queue at `/admin/access-requests` and a Supabase-backed table path for later. Operators can approve, deny, reopen, and issue invite links while Supabase and Stripe remain disabled.
+- Access-request review has a mock-mode admin queue at `/admin/access-requests` and a Supabase-backed table path for later. Operators can approve, deny, reopen, and issue invite links while Supabase and Stripe remain disabled. Intake is serialized by normalized email, so simultaneous duplicate submissions reuse the existing active request and do not resend operator mail.
 - `/auth/recover` gives invited or existing members an intentional account-help path. It files a durable `auth-recovery` row into the access-request queue and sends the normal access-request notification when mail is configured; it does not expose automated password-reset tokens before the live auth/mail provider path is intentionally provisioned.
-- Account settings include a JSON data export, privacy-request submission, and trust-verification review requests. The settings UI no longer self-awards trust badges.
+- Account settings include a JSON data export, privacy-request submission, and trust-verification review requests. The export includes the member's own investment applications and privacy/trust requests without exposing internal operator notes or administrator identifiers. The settings UI no longer self-awards trust badges.
 - New startup opportunity posts cannot self-award owner or domain verification. Claimed proof methods put the listing under manual review until an operator or verification provider confirms the signal.
-- Admins can review privacy and trust-review requests at `/admin/privacy` from Supabase mode or the local mock-mode queue. Reviewed/resolved requests create audit actions and user notifications when Supabase persistence is enabled.
+- Admins can review privacy and trust-review requests at `/admin/privacy` from Supabase mode or the local mock-mode queue. A request can be marked reviewed with a handling note, but it can be marked resolved only after the operator explicitly confirms that the requested export, deletion, correction, visibility, or safety action was actually completed or documented outside CoFoundry. Both transitions create audit actions and user notifications.
 - Admins can assign queue cases to another admin, route escalations to the right operator lane, review trust-evidence packages, and resolve opportunity ownership/domain verification reviews from `/admin/queue` and `/admin/evidence`; these decisions are backed by `admin_actions.metadata` plus the audit log. The admin queue reads opportunity listings through an admin-only endpoint that includes seeded listings plus persisted member listings from durable local mock mode or Supabase mode.
 - Admins can review `/admin/readiness` for a server-derived launch-readiness view covering environment, session secrets, admin access/bootstrap evidence, mail, local persistence, access/privacy queues, backups, restore-drill evidence, scanner status, digest worker evidence, email-suppression provider evidence when configured, contract-envelope provider evidence when configured, monitoring heartbeats, and operational events. The same view exposes a copyable provisioning checklist for host-level secrets, local durable storage, mail, worker timers, restore drills, monitoring, first-admin bootstrap, and future Stripe cutover.
 - Supabase migrations include RLS policies for user-owned, participant-owned, admin-only, notification, privacy, file-upload, backup, and operational tables.
@@ -304,7 +303,7 @@ Worker-authenticated operations endpoints:
 - `GET /api/operations/file-scans/pending?limit=25` returns pending upload metadata with scanner download URLs. Supabase mode returns short-lived signed storage URLs; mock/access-request mode returns worker-authenticated app URLs when local content has been uploaded.
 - `POST /api/operations/file-scans/:id` records malware/content scan results for uploaded files.
 
-Each endpoint requires `Authorization: Bearer <COFOUNDRY_OPERATIONS_TOKEN>` or `x-cofoundry-operations-token`. The token is intentionally optional at startup so mock production remains unchanged, but the endpoints fail closed if called before the token is configured.
+Each endpoint requires `Authorization: Bearer <COFOUNDRY_OPERATIONS_TOKEN>` or `x-cofoundry-operations-token`. Hosted startup now requires this token, while tokenless local development remains available; the endpoints fail closed whenever a strong token is absent.
 
 Checked-in worker commands wrap those endpoints for systemd timers or cron:
 
@@ -360,6 +359,8 @@ Current deployments can stay in mock mode with no secret-backed services enabled
 
 - Public env can live in normal env files or deploy-time public environment settings.
 - Server-only secrets are expected to come from Vault-managed env files or equivalent host injection later.
+- Local development generates process-random fallback keys for sessions and email-preference links. Those keys intentionally do not survive a restart; every hosted or durable environment must inject `SESSION_SIGNING_SECRET`.
+- Build stages use non-production sentinel values only to compile the SSR bundle. `npm run build` scans the output and fails if a server-only secret name or sentinel value is embedded.
 - The repo is already wired so that moving from mock mode to Supabase or Stripe is a config change, not another refactor.
 - Production app processes should set `NODE_ENV=production`. If `NODE_ENV` is omitted, a non-local `NUXT_PUBLIC_APP_URL` is still treated as hosted rather than local development for account access policy, secure session/OAuth cookies, and production security headers.
 - Deployment identity values are non-secret. Prefer setting `COFOUNDRY_RELEASE`, `COFOUNDRY_COMMIT_SHA`, and `COFOUNDRY_DEPLOYED_AT` from the deploy pipeline or host unit env; if `COFOUNDRY_COMMIT_SHA` is missing, the frontend falls back to the Git commit captured during `nuxt build`.

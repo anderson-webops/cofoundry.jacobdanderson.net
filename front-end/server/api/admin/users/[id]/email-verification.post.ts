@@ -1,9 +1,10 @@
-import { requireAdminSession, validateAdminUserEmailVerificationPayload } from "../../../../utils/admin"
-import { persistAdminAction, persistUserEmailVerification } from "../../../../utils/admin-persistence"
+import { evaluateAdminSecurityMutation } from "~/shared/utils/admin-authorization"
+import { requireFullAdminSession, validateAdminUserEmailVerificationPayload } from "../../../../utils/admin"
+import { listAdminSecurityUsers, persistAdminUserSecurityAction } from "../../../../utils/admin-persistence"
 import { assertRateLimit, buildRateLimitKey } from "../../../../utils/rate-limit"
 
 export default defineEventHandler(async (event) => {
-  const session = await requireAdminSession(event)
+  const session = await requireFullAdminSession(event)
   assertRateLimit(event, {
     key: buildRateLimitKey(event, session.id),
     limit: 60,
@@ -16,6 +17,13 @@ export default defineEventHandler(async (event) => {
   if (!targetUserId)
     throw createError({ statusCode: 400, statusMessage: "A target user id is required." })
 
+  const users = await listAdminSecurityUsers(event)
+  const target = users.find(user => user.id === targetUserId)
+  const mutation = { kind: "verify_email" as const }
+  const decision = evaluateAdminSecurityMutation(users, session.id, targetUserId, mutation)
+  if (!decision.allowed)
+    throw createError(decision)
+
   const createdAt = new Date().toISOString()
   const action = {
     id: crypto.randomUUID(),
@@ -25,10 +33,13 @@ export default defineEventHandler(async (event) => {
     targetId: targetUserId,
     targetType: "user" as const,
     type: "verify_email" as const,
+    metadata: {
+      previousVerifiedEmail: target?.verifiedEmail,
+      nextVerifiedEmail: true,
+    },
   }
 
-  await persistUserEmailVerification(event, targetUserId, true)
-  await persistAdminAction(event, action)
+  await persistAdminUserSecurityAction(event, { action, mutation })
 
   return {
     action,
