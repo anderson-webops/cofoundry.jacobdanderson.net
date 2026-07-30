@@ -7,9 +7,7 @@ import type {
   ConnectRequestStatus,
   ContactRevealStage,
   ContractVersion,
-  MessageAttachment,
   NotificationPreferences,
-  NotificationType,
   ProposalPayload,
   ProposalSectionKey,
   ProposalStatus,
@@ -19,9 +17,8 @@ import type {
   SessionUser,
   WorkspaceSeed,
 } from "~/shared/types/domain"
-import { useStorage, watchDebounced } from "@vueuse/core"
+import { watchDebounced } from "@vueuse/core"
 import { acceptHMRUpdate, defineStore } from "pinia"
-import { workspaceSeed } from "~/shared/data/seed"
 import { buildSubscriptionUsage } from "~/shared/utils/billing"
 import { cloneValue } from "~/shared/utils/clone"
 import {
@@ -40,7 +37,8 @@ import {
   startTrialCollaborationTransition,
   updateProposalStatusTransition,
 } from "~/shared/utils/collaboration"
-import { buildOpportunityRiskFlags, buildProfileReadiness, getReportPriority, resolveNewOpportunityVerificationStatus } from "~/shared/utils/formation"
+import { createEmptyWorkspaceSeed } from "~/shared/utils/empty-workspace"
+import { buildOpportunityRiskFlags, buildProfileReadiness, resolveNewOpportunityVerificationStatus } from "~/shared/utils/formation"
 import { normalizeNotificationPreferences } from "~/shared/utils/notification-preferences"
 import {
   getContractById,
@@ -139,9 +137,7 @@ function deriveUserRole(hasIdea: boolean, wantsToJoinIdea: boolean) {
 
 export const useWorkspaceStore = defineStore("workspace", () => {
   const { session } = useSessionState()
-  const data = useStorage<WorkspaceSeed>("cofoundry-workspace", cloneValue(workspaceSeed), undefined, {
-    mergeDefaults: true,
-  })
+  const data = ref<WorkspaceSeed>(createEmptyWorkspaceSeed())
 
   const ready = ref(false)
   const hydrating = ref(false)
@@ -199,7 +195,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   normalizeLegacyConnectRequests()
 
   function resetToSeed() {
-    data.value = cloneValue(workspaceSeed)
+    data.value = createEmptyWorkspaceSeed()
     loadedUserId.value = ""
     lastSyncedAt.value = null
     lastAuthoritativeWriteSignature.value = null
@@ -229,12 +225,11 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     profile.verificationBadges.emailVerified = user.verifiedEmail
     profile.verificationBadges.profileComplete = buildProfileReadiness(profile).profileComplete
     profile.verificationBadges.linkedAccounts = Boolean(
-      profile.links.linkedin
-      || profile.links.github
-      || profile.links.portfolio
-      || profile.links.website,
+      profile.trustSignals.linkedInVerified
+      || profile.trustSignals.githubVerified
+      || profile.trustSignals.workDomainVerified
+      || profile.trustSignals.websiteVerified,
     )
-    profile.trustSignals.workHistoryVerified = profile.trustSignals.workHistoryVerified || Boolean(profile.links.linkedin || profile.links.website)
     profile.trustSignals.identityVerified = profile.trustSignals.governmentIdVerified || Boolean(
       profile.verificationBadges.emailVerified
       && (profile.trustSignals.linkedInVerified || profile.trustSignals.githubVerified || profile.trustSignals.workDomainVerified || profile.trustSignals.websiteVerified),
@@ -638,7 +633,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     return transition.conversationId
   }
 
-  async function sendMessage(conversationId: string, senderUserId: string | null, body: string, attachments: MessageAttachment[] = [], type: "user" | "system" = "user") {
+  async function sendMessage(conversationId: string, senderUserId: string | null, body: string) {
     const conversation = data.value.conversations.find(item => item.id === conversationId)
     if (!conversation)
       return
@@ -646,15 +641,13 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     if (serverBackedWorkspace.value) {
       await runCollaborationMutation({
         action: "send_message",
-        attachments,
         body,
         conversationId,
-        type,
       })
       return
     }
 
-    data.value = sendMessageTransition(data.value, conversationId, senderUserId, body, attachments, now(), type).seed
+    data.value = sendMessageTransition(data.value, conversationId, senderUserId, body, [], now(), "user").seed
   }
 
   async function markConversationRead(conversationId: string, userId: string) {
@@ -878,19 +871,6 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     data.value = signContractTransition(data.value, contractId, userId, typedName, now())
   }
 
-  function createNotification(userId: string, type: NotificationType, title: string, body: string, href: string) {
-    data.value.notifications.unshift({
-      id: crypto.randomUUID(),
-      userId,
-      type,
-      title,
-      body,
-      href,
-      readAt: null,
-      createdAt: now(),
-    })
-  }
-
   function completeTrustVerification(userId: string, verificationType: "phone" | "linkedin" | "github" | "website" | "work_domain" | "government_id") {
     const profile = getProfileByUserId(data.value, userId)
     if (!profile)
@@ -963,43 +943,18 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     await persistWorkspace(true)
   }
 
-  function createReport(
-    reporterUserId: string,
+  async function createReport(
     targetType: "profile" | "message" | "opportunity",
     targetId: string,
     reason: ReportReason,
     details: string,
   ) {
-    const priority = getReportPriority(reason)
-    data.value.reports.unshift({
-      id: crypto.randomUUID(),
-      reporterUserId,
-      targetType,
-      targetId,
-      reason,
-      priority,
-      details,
-      status: "open",
-      reviewNotes: null,
-      reviewedAt: null,
-      reviewedByUserId: null,
-      resolutionNotes: null,
-      resolvedAt: null,
-      resolvedByUserId: null,
-      createdAt: now(),
+    const response = await $fetch<{ data: WorkspaceSeed, report: WorkspaceSeed["reports"][number], session: SessionUser }>("/api/reports", {
+      body: { details, reason, targetId, targetType },
+      method: "POST",
     })
-
-    data.value.users
-      .filter(user => user.role === "admin")
-      .forEach((user) => {
-        createNotification(
-          user.id,
-          "admin",
-          priority === "high" ? "High-priority safety report" : "New moderation report",
-          details,
-          "/admin/reports",
-        )
-      })
+    applyAuthoritativeWorkspace(response)
+    return response.report
   }
 
   async function startTrialCollaboration(matchId: string, createdByUserId: string) {
@@ -1305,6 +1260,10 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   }
 
   async function reviewReport(reportId: string, adminUserId: string, notes: string) {
+    const expectedStatus = data.value.reports.find(report => report.id === reportId)?.status
+    if (expectedStatus !== "open")
+      throw new Error("Refresh the report before recording this review.")
+
     const response = await $fetch<{
       action: {
         id: string
@@ -1319,13 +1278,17 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       }
     }>(`/api/admin/reports/${reportId}/status`, {
       method: "POST",
-      body: { status: "reviewed", notes },
+      body: { expectedStatus, status: "reviewed", notes },
     })
 
     applyReportReview(response.report.id, response.action.adminUserId || adminUserId, response.action.notes, response.report.reviewedAt, response.action.id)
   }
 
   async function resolveReport(reportId: string, adminUserId: string, notes: string) {
+    const expectedStatus = data.value.reports.find(report => report.id === reportId)?.status
+    if (!expectedStatus || expectedStatus === "resolved")
+      throw new Error("Refresh the report before recording this resolution.")
+
     const response = await $fetch<{
       action: {
         id: string
@@ -1340,27 +1303,28 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       }
     }>(`/api/admin/reports/${reportId}/status`, {
       method: "POST",
-      body: { status: "resolved", notes },
+      body: { expectedStatus, status: "resolved", notes },
     })
 
     applyReportResolution(response.report.id, response.action.adminUserId || adminUserId, response.action.notes, response.report.resolvedAt, response.action.id)
   }
 
-  function createInvestmentApplication(userId: string, opportunityId: string, payload: {
+  async function createInvestmentApplication(opportunityId: string, payload: {
     raiseAmount: string
     traction: string
     deckLink: string
     teamSummary: string
     reason: string
   }) {
-    data.value.investmentApplications.unshift({
-      id: crypto.randomUUID(),
-      opportunityId,
-      applicantUserId: userId,
-      status: "submitted",
-      createdAt: now(),
-      ...payload,
+    const response = await $fetch<{ application: WorkspaceSeed["investmentApplications"][number], data: WorkspaceSeed, session: SessionUser }>("/api/investment-applications", {
+      body: {
+        opportunityId,
+        ...payload,
+      },
+      method: "POST",
     })
+    applyAuthoritativeWorkspace(response)
+    return response.application
   }
 
   function getConversationPreview(conversationId: string) {

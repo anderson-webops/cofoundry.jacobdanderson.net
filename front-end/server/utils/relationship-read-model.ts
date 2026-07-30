@@ -2,6 +2,7 @@ import type { H3Event } from "h3"
 import type { FileUpload, FileUploadRelatedType, SessionUser, WorkspaceSeed } from "../../shared/types/domain"
 import type { RelationshipSnapshot } from "../../shared/utils/relationships"
 import { buildRelationshipSnapshot } from "../../shared/utils/relationships"
+import { projectWorkspaceForSession } from "../../shared/utils/workspace-authorization"
 import { listFileUploadsByRelated } from "./file-uploads"
 import { loadMemberWorkspaceState } from "./member-workspace"
 import { buildSessionIdentity } from "./session-identity"
@@ -34,7 +35,8 @@ function relationshipFileSelectors(seed: WorkspaceSeed, relationship: Relationsh
 
 export async function loadRelationshipReadModel(event: H3Event, session: SessionUser, matchId: string) {
   const workspace = await loadMemberWorkspaceState(event, buildSessionIdentity(session))
-  const relationship = buildRelationshipSnapshot(workspace.seed, workspace.session.id, matchId)
+  const projectedSeed = projectWorkspaceForSession(workspace.seed, workspace.session)
+  const relationship = buildRelationshipSnapshot(projectedSeed, workspace.session.id, matchId)
 
   if (!relationship) {
     return {
@@ -44,16 +46,17 @@ export async function loadRelationshipReadModel(event: H3Event, session: Session
     }
   }
 
-  const fileUploads = await listFileUploadsByRelated(event, relationshipFileSelectors(workspace.seed, relationship))
+  const fileUploads = await listFileUploadsByRelated(event, relationshipFileSelectors(projectedSeed, relationship))
   const seed = mergeFileUploads(workspace.seed, fileUploads)
-  const refreshedRelationship = buildRelationshipSnapshot(seed, workspace.session.id, matchId)
+  const refreshedSeed = projectWorkspaceForSession(seed, workspace.session)
+  const refreshedRelationship = buildRelationshipSnapshot(refreshedSeed, workspace.session.id, matchId)
 
   return {
     relationship: refreshedRelationship,
     session: workspace.session,
     workspace: {
       ...workspace,
-      seed,
+      seed: refreshedSeed,
     },
   }
 }

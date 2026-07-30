@@ -11,9 +11,11 @@ const publicVerifier = resolve(scriptDir, "verify-public-site.mjs")
 const port = Number(process.env.VERIFY_PUBLIC_LOCAL_PORT || 3401)
 const host = "127.0.0.1"
 const baseUrl = `http://${host}:${port}`
+const canonicalOrigin = process.env.VERIFY_PUBLIC_CANONICAL_ORIGIN || "https://cofoundry.jacobdanderson.net"
 const release = process.env.COFOUNDRY_RELEASE || "verify-public-local"
 const commitSha = process.env.COFOUNDRY_COMMIT_SHA || "verify-public-local-commit"
 const deployedAt = process.env.COFOUNDRY_DEPLOYED_AT || "2026-06-14T00:00:00.000Z"
+const operationsToken = "verify-public-local-operations-token-0001"
 const sessionSigningSecret = "verify-public-local-session-secret"
 
 if (!Number.isInteger(port) || port <= 0 || port > 65535) {
@@ -57,10 +59,11 @@ function startServer() {
       COFOUNDRY_COMMIT_SHA: commitSha,
       COFOUNDRY_ALLOW_LOCAL_PUBLIC_APP_URL: "true",
       COFOUNDRY_DEPLOYED_AT: deployedAt,
+      COFOUNDRY_OPERATIONS_TOKEN: operationsToken,
       COFOUNDRY_RELEASE: release,
       HOST: host,
       NODE_ENV: "production",
-      NUXT_PUBLIC_APP_URL: baseUrl,
+      NUXT_PUBLIC_APP_URL: canonicalOrigin,
       NUXT_PUBLIC_BACKEND_MODE: "mock",
       NUXT_PUBLIC_BILLING_MODE: "mock",
       NUXT_PUBLIC_ENABLE_DEMO_ACCESS: "false",
@@ -109,7 +112,7 @@ async function runPublicVerifier() {
     env: {
       ...process.env,
       VERIFY_PUBLIC_BASE_URL: baseUrl,
-      VERIFY_PUBLIC_CANONICAL_ORIGIN: baseUrl,
+      VERIFY_PUBLIC_CANONICAL_ORIGIN: canonicalOrigin,
       VERIFY_PUBLIC_EXPECT_BACKEND_MODE: "mock",
       VERIFY_PUBLIC_EXPECT_BILLING_MODE: "mock",
       VERIFY_PUBLIC_EXPECT_COMMIT_SHA: commitSha,

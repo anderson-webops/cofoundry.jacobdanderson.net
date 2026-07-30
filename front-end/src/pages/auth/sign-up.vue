@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { AccessRequest } from "~/shared/types/domain"
 import { accessRequestSchema, signUpSchema } from "~/shared/utils/validation"
 
 definePageMeta({
@@ -10,7 +9,7 @@ definePageMeta({
 usePageSeo("Create account")
 
 interface InviteValidation {
-  request: AccessRequest | null
+  request: { email: string, name: string } | null
   valid: boolean
 }
 
@@ -27,16 +26,31 @@ const inviteValidation = ref<InviteValidation>({ request: null, valid: false })
 if (inviteToken) {
   try {
     inviteValidation.value = await $fetch<InviteValidation>("/api/access-requests/invite", {
-      query: {
+      body: {
         email: inviteEmail,
         token: inviteToken,
       },
+      method: "POST",
     })
   }
   catch {
     inviteValidation.value = { request: null, valid: false }
   }
 }
+
+onMounted(() => {
+  if (!inviteToken)
+    return
+
+  const sanitizedUrl = new URL(window.location.href)
+  sanitizedUrl.searchParams.delete("email")
+  sanitizedUrl.searchParams.delete("invite")
+  window.history.replaceState(
+    window.history.state,
+    "",
+    `${sanitizedUrl.pathname}${sanitizedUrl.search}`,
+  )
+})
 
 const form = reactive({
   email: inviteValidation.value.request?.email || inviteEmail,
@@ -59,6 +73,7 @@ const accessForm = reactive({
 const accessErrors = ref<Record<string, string>>({})
 const accessPending = ref(false)
 const accessSubmitted = ref(false)
+const verificationPending = ref(false)
 
 const shouldShowAccountForm = computed(() => !policy.value.marketingShellOnly || inviteValidation.value.valid)
 
@@ -95,13 +110,23 @@ async function submitForm() {
   }
 
   try {
-    const session = await authStore.signUp(result.data)
+    const response = await authStore.signUp(result.data)
+    if (!response.session) {
+      verificationPending.value = true
+      toastStore.push({
+        title: "Confirm your email",
+        message: "Open the verification link sent to your email before signing in.",
+        tone: "success",
+      })
+      return
+    }
+
     toastStore.push({
       title: "Account created",
       message: "Next step: complete your onboarding profile so matching can start.",
       tone: "success",
     })
-    await navigateTo(session.onboardingCompleted ? "/app" : "/onboarding")
+    await navigateTo(response.session.onboardingCompleted ? "/app" : "/onboarding")
   }
   catch {}
 }
@@ -215,6 +240,17 @@ async function submitAccessRequest() {
         </BaseButton>
       </div>
     </template>
+    <template v-else-if="verificationPending">
+      <h2 class="text-3xl tracking-tight font-semibold mt-3">
+        Check your email.
+      </h2>
+      <p class="muted text-sm leading-6 mt-3">
+        Use the confirmation link we sent before signing in. No workspace session is created until the email address is verified.
+      </p>
+      <BaseButton class="mt-8" to="/auth/sign-in">
+        Go to sign in
+      </BaseButton>
+    </template>
     <template v-else>
       <h2 class="text-3xl tracking-tight font-semibold mt-3">
         {{ inviteValidation.valid ? "Create your invited account." : "Create your account." }}
@@ -228,7 +264,7 @@ async function submitAccessRequest() {
       <form class="mt-8 gap-4 grid" @submit.prevent="submitForm">
         <TextInput v-model="form.name" label="Full name" :error="errors.name" />
         <TextInput v-model="form.email" label="Email" type="email" :error="errors.email || authStore.error" />
-        <TextInput v-model="form.password" label="Password" type="password" helper="Use at least 8 characters." :error="errors.password" />
+        <TextInput v-model="form.password" label="Password" type="password" helper="Use at least 12 characters." :error="errors.password" />
         <BaseButton type="submit" block :disabled="authStore.pending">
           {{ authStore.pending ? "Creating account..." : "Create account" }}
         </BaseButton>

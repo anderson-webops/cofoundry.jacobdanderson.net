@@ -152,4 +152,24 @@ describe("billing helpers", () => {
     expect(getPlanPriceLabel("pro", "monthly")).toBe("$29/mo")
     expect(getPlanPriceLabel("pro", "annual")).toBe("$240/yr")
   })
+
+  it("fails closed to free entitlements when a paid subscription is not active", () => {
+    const entitlements = getSubscriptionEntitlements({
+      id: "subscription_canceled",
+      userId: "user_canceled",
+      plan: "team",
+      status: "canceled",
+      billingCycle: "monthly",
+      renewsAt: null,
+      cancelAtPeriodEnd: false,
+      visibilityBoost: true,
+      unlimitedMessaging: true,
+      proposalWorkflow: true,
+      contractBuilder: true,
+    })
+
+    expect(entitlements.plan).toBe("free")
+    expect(entitlements.canSignContracts).toBe(false)
+    expect(entitlements.hasVisibilityBoost).toBe(false)
+  })
 })

@@ -1,5 +1,6 @@
 import { assertAccountAccessEnabled, beginSupabaseOAuthSignIn, getMockSessionByUserId, writeSession } from "~/server/utils/auth"
 import { normalizeOAuthProvider } from "~/shared/utils/oauth-providers"
+import { oauthSignInSchema } from "~/shared/utils/validation"
 import { assertRateLimit } from "../../utils/rate-limit"
 import { isSupabaseEnabled } from "../../utils/supabase"
 
@@ -10,7 +11,7 @@ export default defineEventHandler(async (event) => {
     scope: "auth:oauth",
     windowMs: 5 * 60 * 1000,
   })
-  const body = await readBody<{ provider: "google" | "github" }>(event)
+  const body = oauthSignInSchema.parse(await readBody(event))
   const provider = normalizeOAuthProvider(body.provider)
 
   if (!provider)

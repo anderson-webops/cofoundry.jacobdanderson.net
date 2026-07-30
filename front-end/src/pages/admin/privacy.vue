@@ -11,6 +11,7 @@ usePageSeo("Admin privacy requests")
 
 const { data, pending, refresh } = await useFetch<{ requests: PrivacyRequest[] }>("/api/admin/privacy-requests")
 const actionNotes = reactive<Record<string, string>>({})
+const resolutionConfirmed = reactive<Record<string, boolean>>({})
 const actionPending = ref("")
 const requests = computed(() => data.value?.requests || [])
 
@@ -28,9 +29,17 @@ async function updateRequestStatus(request: PrivacyRequest, status: "reviewed" |
   try {
     await $fetch(`/api/admin/privacy-requests/${request.id}/status`, {
       method: "POST",
-      body: { notes, status },
+      body: status === "resolved"
+        ? {
+            completionConfirmed: resolutionConfirmed[request.id] === true,
+            expectedStatus: request.status,
+            notes,
+            status,
+          }
+        : { expectedStatus: request.status, notes, status },
     })
     actionNotes[request.id] = ""
+    resolutionConfirmed[request.id] = false
     await refresh()
   }
   finally {
@@ -96,6 +105,16 @@ async function updateRequestStatus(request: PrivacyRequest, status: "reviewed" |
               helper="Required before marking this request reviewed or resolved."
               :rows="3"
             />
+            <label class="text-sm p-3 border border-[var(--border)] rounded-xl flex gap-3 items-start">
+              <input
+                v-model="resolutionConfirmed[request.id]"
+                class="mt-1"
+                type="checkbox"
+              >
+              <span>
+                I confirm the requested export, deletion, correction, visibility, or safety action has actually been completed or documented outside CoFoundry.
+              </span>
+            </label>
             <div class="flex flex-wrap gap-3 justify-end">
               <BaseButton
                 v-if="request.status === 'open'"
@@ -106,7 +125,7 @@ async function updateRequestStatus(request: PrivacyRequest, status: "reviewed" |
                 {{ actionPending === `${request.id}:reviewed` ? "Saving..." : "Mark reviewed" }}
               </BaseButton>
               <BaseButton
-                :disabled="actionPending === `${request.id}:resolved` || (actionNotes[request.id] || '').trim().length < 8"
+                :disabled="actionPending === `${request.id}:resolved` || (actionNotes[request.id] || '').trim().length < 8 || resolutionConfirmed[request.id] !== true"
                 @click="updateRequestStatus(request, 'resolved')"
               >
                 {{ actionPending === `${request.id}:resolved` ? "Saving..." : "Resolve" }}

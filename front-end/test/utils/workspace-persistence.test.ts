@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
+import { createInitialWorkspaceDocument } from "../../server/utils/workspace-seed"
 import { workspaceSeed } from "../../shared/data/seed"
-import { buildDraftMemberWorkspaceState, buildMemberWorkspaceState, buildMemberWorkspaceWritePayload, createInitialWorkspaceDocument, findWorkspaceUserIdByEmail, mergeMemberWorkspaceState, resolveSessionUserFromWorkspace } from "../../shared/utils/workspace-persistence"
+import { buildDraftMemberWorkspaceState, buildMemberWorkspaceState, buildMemberWorkspaceWritePayload, findWorkspaceUserIdByEmail, mergeMemberWorkspaceState, resolveSessionUserFromWorkspace } from "../../shared/utils/workspace-persistence"
 
 describe("workspace persistence helpers", () => {
   it("maps known emails back to seeded users", () => {

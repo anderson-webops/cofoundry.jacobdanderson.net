@@ -18,23 +18,35 @@ const form = reactive({
   teamSummary: "",
   reason: "",
 })
+const pending = ref(false)
+const formError = ref("")
 
-function submitApplication() {
+async function submitApplication() {
   if (!authStore.currentUser || !form.opportunityId)
     return
 
-  workspaceStore.createInvestmentApplication(authStore.currentUser.id, form.opportunityId, {
-    raiseAmount: form.raiseAmount,
-    traction: form.traction,
-    deckLink: form.deckLink,
-    teamSummary: form.teamSummary,
-    reason: form.reason,
-  })
-  toastStore.push({
-    title: "Application submitted",
-    message: "The investment application was added to the review queue.",
-    tone: "success",
-  })
+  pending.value = true
+  formError.value = ""
+  try {
+    await workspaceStore.createInvestmentApplication(form.opportunityId, {
+      raiseAmount: form.raiseAmount,
+      traction: form.traction,
+      deckLink: form.deckLink,
+      teamSummary: form.teamSummary,
+      reason: form.reason,
+    })
+    toastStore.push({
+      title: "Application submitted",
+      message: "The investment application was added to the review queue.",
+      tone: "success",
+    })
+  }
+  catch (caughtError) {
+    formError.value = caughtError instanceof Error ? caughtError.message : "The application could not be submitted."
+  }
+  finally {
+    pending.value = false
+  }
 }
 </script>
 
@@ -70,9 +82,12 @@ function submitApplication() {
             <TextInput v-model="form.deckLink" label="Deck link" />
             <TextareaInput v-model="form.teamSummary" label="Team summary" :rows="3" />
             <TextareaInput v-model="form.reason" label="Why do you want investment?" :rows="4" />
+            <p v-if="formError" class="field-error">
+              {{ formError }}
+            </p>
             <div class="flex justify-end">
-              <BaseButton type="submit">
-                Submit application
+              <BaseButton type="submit" :disabled="pending">
+                {{ pending ? "Submitting..." : "Submit application" }}
               </BaseButton>
             </div>
           </form>

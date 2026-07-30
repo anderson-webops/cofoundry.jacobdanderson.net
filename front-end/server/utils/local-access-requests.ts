@@ -1,10 +1,13 @@
 import type { z } from "zod"
-import type { AccessRequest } from "../../shared/types/domain"
+import type { AccessRequest, AdminAction } from "../../shared/types/domain"
 import type { accessRequestSchema } from "../../shared/utils/validation"
 import { createHash, randomBytes, randomUUID } from "node:crypto"
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
-import { dirname, resolve } from "node:path"
+import { rm } from "node:fs/promises"
+import { resolve } from "node:path"
 import process from "node:process"
+import { assertLocalAdminActor } from "./local-admin-audit"
+import { withLocalAdminSecurityLock } from "./local-admin-security-lock"
+import { readPrivateTextFile, writePrivateFileAtomic } from "./private-file-store"
 
 type AccessRequestPayload = z.infer<typeof accessRequestSchema>
 
@@ -13,6 +16,7 @@ interface LocalAccessRequestRow extends AccessRequest {
 }
 
 interface LocalAccessRequestStore {
+  actions: AdminAction[]
   requests: LocalAccessRequestRow[]
   updatedAt: string
   version: 1
@@ -49,6 +53,7 @@ function retentionLimit() {
 
 function emptyStore(): LocalAccessRequestStore {
   return {
+    actions: [],
     requests: [],
     updatedAt: new Date().toISOString(),
     version: 1,
@@ -68,28 +73,21 @@ function publicRequest(row: LocalAccessRequestRow): AccessRequest {
   return request
 }
 
-function newestFirst(rows: LocalAccessRequestRow[]) {
+function newestFirst<T extends { createdAt: string }>(rows: T[]) {
   return [...rows].sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
 }
 
 function pruneStore(store: LocalAccessRequestStore): LocalAccessRequestStore {
   return {
     ...store,
+    actions: newestFirst(store.actions).slice(0, retentionLimit()),
     requests: newestFirst(store.requests).slice(0, retentionLimit()),
     updatedAt: new Date().toISOString(),
   }
 }
 
 async function readStoreFile() {
-  try {
-    return await readFile(storePath(), "utf-8")
-  }
-  catch (error) {
-    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT")
-      return null
-
-    throw error
-  }
+  return readPrivateTextFile(storePath())
 }
 
 async function readStore() {
@@ -116,8 +114,7 @@ async function writeStore(store: LocalAccessRequestStore) {
   const path = storePath()
   const prunedStore = pruneStore(store)
 
-  await mkdir(dirname(path), { recursive: true })
-  await writeFile(path, `${JSON.stringify(prunedStore)}\n`, "utf-8")
+  await writePrivateFileAtomic(path, `${JSON.stringify(prunedStore)}\n`)
   cachedStore = prunedStore
   cachedStorePath = path
 }
@@ -134,7 +131,7 @@ async function updateStore<T>(updater: (_store: LocalAccessRequestStore) => T | 
   return run
 }
 
-export async function createLocalAccessRequest(payload: AccessRequestPayload) {
+export async function createLocalAccessRequestResult(payload: AccessRequestPayload) {
   const email = normalizeEmail(payload.email)
 
   return updateStore((store) => {
@@ -142,17 +139,10 @@ export async function createLocalAccessRequest(payload: AccessRequestPayload) {
     const existing = store.requests.find(request => request.email === email && request.status !== "denied" && !request.inviteAcceptedAt)
 
     if (existing) {
-      Object.assign(existing, {
-        company: payload.company?.trim() || "",
-        companyStage: payload.companyStage,
-        name: payload.name.trim(),
-        role: payload.role,
-        source: payload.source?.trim() || "site",
-        timeline: payload.timeline,
-        updatedAt: now,
-        useCase: payload.useCase.trim(),
-      })
-      return publicRequest(existing)
+      return {
+        created: false,
+        request: publicRequest(existing),
+      }
     }
 
     const row: LocalAccessRequestRow = {
@@ -178,8 +168,15 @@ export async function createLocalAccessRequest(payload: AccessRequestPayload) {
     }
 
     store.requests = [row, ...store.requests]
-    return publicRequest(row)
+    return {
+      created: true,
+      request: publicRequest(row),
+    }
   })
+}
+
+export async function createLocalAccessRequest(payload: AccessRequestPayload) {
+  return (await createLocalAccessRequestResult(payload)).request
 }
 
 export async function listLocalAccessRequests() {
@@ -187,50 +184,110 @@ export async function listLocalAccessRequests() {
   return store.requests.map(publicRequest)
 }
 
-export async function updateLocalAccessRequestStatus(id: string, payload: { adminNotes: string, reviewedByUserId: string, status: "approved" | "denied" | "open" }) {
-  return updateStore((store) => {
-    const request = store.requests.find(row => row.id === id)
-    if (!request)
-      return null
+export async function listLocalAccessAdminActions() {
+  return pruneStore(await readStore()).actions
+}
 
-    const now = new Date().toISOString()
-    request.adminNotes = payload.adminNotes
-    request.reviewedAt = now
-    request.reviewedByUserId = payload.reviewedByUserId
-    request.status = payload.status
-    request.updatedAt = now
-    return publicRequest(request)
+export async function applyLocalAdminAccessRequestStatus(
+  id: string,
+  payload: {
+    action: AdminAction
+    expectedUpdatedAt: string
+    status: "approved" | "denied" | "open"
+  },
+) {
+  return withLocalAdminSecurityLock(async () => {
+    await assertLocalAdminActor(payload.action.adminUserId)
+
+    return updateStore((store) => {
+      const request = store.requests.find(row => row.id === id)
+      if (!request)
+        return null
+
+      if (request.updatedAt !== payload.expectedUpdatedAt) {
+        throw Object.assign(new Error("The access request changed after this review began. Refresh and review the current state."), {
+          statusCode: 409,
+          statusMessage: "The access request changed after this review began. Refresh and review the current state.",
+        })
+      }
+
+      if (request.inviteAcceptedAt) {
+        throw Object.assign(new Error("An accepted access invite cannot be reopened or denied."), {
+          statusCode: 409,
+          statusMessage: "An accepted access invite cannot be reopened or denied.",
+        })
+      }
+
+      request.adminNotes = payload.action.notes
+      request.inviteExpiresAt = null
+      request.inviteTokenHash = null
+      request.inviteTokenIssuedAt = null
+      request.reviewedAt = payload.action.createdAt
+      request.reviewedByUserId = payload.action.adminUserId
+      request.status = payload.status
+      request.updatedAt = payload.action.createdAt
+      store.actions = [payload.action, ...store.actions.filter(action => action.id !== payload.action.id)]
+      return publicRequest(request)
+    })
   })
 }
 
-export async function createLocalAccessInvite(id: string, payload: { adminNotes: string, appUrl: string, reviewedByUserId: string }) {
-  return updateStore((store) => {
-    const request = store.requests.find(row => row.id === id)
-    if (!request)
-      return null
+export async function issueLocalAdminAccessInvite(id: string, payload: {
+  action: AdminAction
+  appUrl: string
+  expectedUpdatedAt: string
+}) {
+  return withLocalAdminSecurityLock(async () => {
+    await assertLocalAdminActor(payload.action.adminUserId)
 
-    const token = randomBytes(32).toString("base64url")
-    const now = new Date()
-    const expiresAt = new Date(now)
-    expiresAt.setDate(expiresAt.getDate() + inviteLifetimeDays)
+    return updateStore((store) => {
+      const request = store.requests.find(row => row.id === id)
+      if (!request)
+        return null
 
-    request.adminNotes = payload.adminNotes
-    request.inviteAcceptedAt = null
-    request.inviteExpiresAt = expiresAt.toISOString()
-    request.inviteTokenHash = tokenHash(token)
-    request.inviteTokenIssuedAt = now.toISOString()
-    request.reviewedAt = now.toISOString()
-    request.reviewedByUserId = payload.reviewedByUserId
-    request.status = "invited"
-    request.updatedAt = now.toISOString()
+      if (request.updatedAt !== payload.expectedUpdatedAt) {
+        throw Object.assign(new Error("The access request changed after this review began. Refresh and review the current state."), {
+          statusCode: 409,
+          statusMessage: "The access request changed after this review began. Refresh and review the current state.",
+        })
+      }
 
-    const inviteUrl = `${payload.appUrl.replace(/\/+$/, "")}/auth/sign-up?invite=${encodeURIComponent(token)}&email=${encodeURIComponent(request.email)}`
+      if (request.inviteAcceptedAt) {
+        throw Object.assign(new Error("An accepted access invite cannot be reissued."), {
+          statusCode: 409,
+          statusMessage: "An accepted access invite cannot be reissued.",
+        })
+      }
 
-    return {
-      inviteToken: token,
-      inviteUrl,
-      request: publicRequest(request),
-    }
+      if (!["approved", "invited"].includes(request.status)) {
+        throw Object.assign(new Error("Approve the access request before issuing an invite."), {
+          statusCode: 409,
+          statusMessage: "Approve the access request before issuing an invite.",
+        })
+      }
+
+      const token = randomBytes(32).toString("base64url")
+      const now = new Date(payload.action.createdAt)
+      const expiresAt = new Date(now)
+      expiresAt.setDate(expiresAt.getDate() + inviteLifetimeDays)
+
+      request.adminNotes = payload.action.notes
+      request.inviteAcceptedAt = null
+      request.inviteExpiresAt = expiresAt.toISOString()
+      request.inviteTokenHash = tokenHash(token)
+      request.inviteTokenIssuedAt = payload.action.createdAt
+      request.reviewedAt = payload.action.createdAt
+      request.reviewedByUserId = payload.action.adminUserId
+      request.status = "invited"
+      request.updatedAt = payload.action.createdAt
+      store.actions = [payload.action, ...store.actions.filter(action => action.id !== payload.action.id)]
+
+      return {
+        inviteToken: token,
+        inviteUrl: `${payload.appUrl.replace(/\/+$/, "")}/auth/sign-up?invite=${encodeURIComponent(token)}&email=${encodeURIComponent(request.email)}`,
+        request: publicRequest(request),
+      }
+    })
   })
 }
 
@@ -254,16 +311,27 @@ export async function validateLocalAccessInvite(token: string, email?: string) {
   return publicRequest(request)
 }
 
-export async function markLocalAccessInviteAccepted(token: string) {
+export async function markLocalAccessInviteAccepted(token: string, email: string) {
   const hash = tokenHash(token.trim())
+  const normalizedEmail = normalizeEmail(email)
 
   return updateStore((store) => {
     const request = store.requests.find(row => row.inviteTokenHash === hash)
-    if (!request)
-      return null
-
     const now = new Date().toISOString()
+    if (
+      !request
+      || request.status !== "invited"
+      || request.email !== normalizedEmail
+      || request.inviteAcceptedAt
+      || !request.inviteExpiresAt
+      || request.inviteExpiresAt < now
+    ) {
+      return null
+    }
+
     request.inviteAcceptedAt = now
+    request.inviteExpiresAt = null
+    request.inviteTokenHash = null
     request.updatedAt = now
     return publicRequest(request)
   })

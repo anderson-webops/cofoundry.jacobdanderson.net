@@ -1,18 +1,17 @@
 <script setup lang="ts">
-import { workspaceSeed } from "~/shared/data/seed"
-import { buildPublicProfileSlug, getPublicOpportunityBySlug, slugifySegment } from "~/shared/utils/directory"
+import { buildPublicProfileSlug, slugifySegment } from "~/shared/utils/directory"
 import { formatCommitment, formatCompensation, formatOpportunityVerificationStatus, formatRemotePreference, formatStage } from "~/shared/utils/format"
 import { getOpportunityVerificationTone } from "~/shared/utils/formation"
 
 const route = useRoute()
 const slug = String(route.params.slug)
-const entry = getPublicOpportunityBySlug(workspaceSeed, slug)
+const entry = (await usePublicDirectory()).opportunities.find(entry => entry.slug === slug)
 const { getIntroCta } = useProductAccess()
 
 if (!entry)
   throw createError({ statusCode: 404, statusMessage: "Public startup search not found" })
 
-const { opportunity, ownerProfile } = entry
+const { opportunity, ownerProfile, ownerTrustSummary } = entry
 const introCta = computed(() => getIntroCta(`startup-search-${entry.slug}`))
 
 usePageSeo(`${opportunity.startupName} startup search`, opportunity.oneLinePitch, {
@@ -97,7 +96,7 @@ usePageSeo(`${opportunity.startupName} startup search`, opportunity.oneLinePitch
             {{ ownerProfile.headline }}
           </p>
           <div class="mt-4">
-            <TrustSignalStrip :profile="ownerProfile" />
+            <TrustSignalStrip :profile="ownerProfile" :trust-summary="ownerTrustSummary" />
           </div>
           <div class="mt-4 flex flex-wrap gap-4">
             <NuxtLink :to="`/people/${buildPublicProfileSlug(ownerProfile)}`" class="public-action-link text-sm">

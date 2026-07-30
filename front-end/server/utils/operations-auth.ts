@@ -7,9 +7,9 @@ import { createError, getHeader } from "h3"
 function readConfiguredToken(event: H3Event) {
   const runtimeConfig = useRuntimeConfig(event)
   return String(
-    runtimeConfig.operationsWorkerToken
-    || process.env.COFOUNDRY_OPERATIONS_TOKEN
+    process.env.COFOUNDRY_OPERATIONS_TOKEN
     || process.env.OPERATIONS_WORKER_TOKEN
+    || runtimeConfig.operationsWorkerToken
     || "",
   ).trim()
 }
@@ -36,10 +36,10 @@ function tokensMatch(leftValue: string, rightValue: string) {
 
 export function requireOperationsWorker(event: H3Event) {
   const configuredToken = readConfiguredToken(event)
-  if (!configuredToken) {
+  if (configuredToken.length < 32) {
     throw createError({
       statusCode: 503,
-      statusMessage: "Operations worker token is not configured on this server.",
+      statusMessage: "A strong operations worker token is not configured on this server.",
     })
   }
 

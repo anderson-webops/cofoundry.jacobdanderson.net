@@ -7,10 +7,12 @@ import { randomUUID } from "node:crypto"
 import { once } from "node:events"
 import net from "node:net"
 import os from "node:os"
+import { isAbsolute } from "node:path"
 import { env } from "node:process"
 import tls from "node:tls"
 
-import { getHeader, getRequestIP } from "h3"
+import { getHeader } from "h3"
+import { getRequesterIp } from "./rate-limit"
 
 type ContactPayload = z.infer<typeof contactSchema>
 
@@ -20,6 +22,7 @@ interface SendmailConfig {
   fromEmail: string
   fromName: string
   sendmailPath: string
+  timeoutMs: number
   toEmail: string
 }
 
@@ -33,6 +36,7 @@ interface SmtpConfig {
   port: number
   requireTLS: boolean
   secure: boolean
+  timeoutMs: number
   toEmail: string
   user?: string
 }
@@ -46,6 +50,10 @@ const newlinePattern = /\r?\n/g
 const trailingCarriageReturnPattern = /\r$/g
 const smtpResponsePattern = /^(\d{3})([ -]).*$/
 const smtpCapabilityPattern = /^\d{3}[ -]([a-z0-9-]+)/i
+const maximumSmtpBufferChars = 64 * 1024
+const maximumSendmailStderrBytes = 64 * 1024
+const maximumMailMessageBytes = 512 * 1024
+const defaultSmtpTimeoutMs = 15_000
 
 function isEnabled(value?: string) {
   return truthyValues.has(value?.trim().toLowerCase() || "")
@@ -61,6 +69,55 @@ function parseAddressList(value?: string) {
     ?.split(",")
     .map(part => part.trim())
     .filter(Boolean)
+}
+
+function requireEnvelopeAddress(value: string, label: string) {
+  const atIndex = value.indexOf("@")
+  const localPart = atIndex > 0 ? value.slice(0, atIndex) : ""
+  const domain = atIndex > 0 ? value.slice(atIndex + 1) : ""
+  const structurallyValid = Boolean(
+    localPart
+    && localPart.length <= 64
+    && domain
+    && domain.length <= 253
+    && domain.includes(".")
+    && !domain.startsWith(".")
+    && !domain.endsWith(".")
+    && !domain.includes("..")
+    && !domain.includes("@"),
+  )
+
+  if (value.length > 254 || !structurallyValid || /[\0-\x20<>]/.test(value))
+    throw new TypeError(`${label} must be a valid single email address.`)
+
+  return value
+}
+
+function requireSmtpHost(value: string) {
+  if (value.length > 253 || /[\0-\x20/\\]/.test(value))
+    throw new TypeError("CONTACT_SMTP_HOST is invalid.")
+
+  return value
+}
+
+function parsePort(value: string) {
+  const port = Number.parseInt(value, 10)
+  if (!/^\d+$/.test(value) || port < 1 || port > 65_535)
+    throw new TypeError("CONTACT_SMTP_PORT must be an integer from 1 to 65535.")
+
+  return port
+}
+
+function parseTimeout(value: string | undefined, label = "CONTACT_SMTP_TIMEOUT_MS") {
+  const configured = value?.trim()
+  if (!configured)
+    return defaultSmtpTimeoutMs
+
+  const timeoutMs = Number.parseInt(configured, 10)
+  if (!/^\d+$/.test(configured) || timeoutMs < 1000 || timeoutMs > 60_000)
+    throw new TypeError(`${label} must be an integer from 1000 to 60000.`)
+
+  return timeoutMs
 }
 
 function escapeHeader(value: string) {
@@ -129,6 +186,10 @@ class SmtpLineReader {
   constructor(private readonly socket: SocketLike) {
     socket.on("data", (chunk) => {
       this.buffer += chunk.toString()
+      if (this.buffer.length > maximumSmtpBufferChars) {
+        this.error = new Error("SMTP response exceeded the allowed buffer.")
+        socket.destroy(this.error)
+      }
       this.resume?.()
       this.resume = null
     })
@@ -181,6 +242,8 @@ class SmtpLineReader {
     while (true) {
       const line = await this.readLine()
       lines.push(line)
+      if (lines.length > 100)
+        throw new Error("SMTP response contained too many lines.")
 
       const match = smtpResponsePattern.exec(line)
       if (!match) {
@@ -239,13 +302,20 @@ function parseSmtpCapabilities(response: SmtpResponse) {
   return capabilities
 }
 
-async function upgradeToTls(socket: net.Socket, host: string) {
+function applySocketTimeout(socket: SocketLike, timeoutMs: number) {
+  socket.setTimeout(timeoutMs, () => {
+    socket.destroy(new Error("SMTP connection timed out."))
+  })
+}
+
+async function upgradeToTls(socket: net.Socket, host: string, timeoutMs: number) {
   const secureSocket = tls.connect({
     host,
-    servername: host,
+    ...(net.isIP(host) ? {} : { servername: host }),
     socket,
   })
 
+  applySocketTimeout(secureSocket, timeoutMs)
   await once(secureSocket, "secureConnect")
   return secureSocket
 }
@@ -257,8 +327,9 @@ async function connectSmtp(config: SmtpConfig) {
     socket = tls.connect({
       host: config.host,
       port: config.port,
-      servername: config.host,
+      ...(net.isIP(config.host) ? {} : { servername: config.host }),
     })
+    applySocketTimeout(socket, config.timeoutMs)
     await once(socket, "secureConnect")
   }
   else {
@@ -266,6 +337,7 @@ async function connectSmtp(config: SmtpConfig) {
       host: config.host,
       port: config.port,
     })
+    applySocketTimeout(socket, config.timeoutMs)
     await once(socket, "connect")
   }
 
@@ -273,7 +345,9 @@ async function connectSmtp(config: SmtpConfig) {
   const greeting = await reader.readResponse()
   assertSmtpCode(greeting, [220], "SMTP greeting")
 
-  const clientName = trimToUndefined(env.CONTACT_SMTP_CLIENT_NAME) || os.hostname() || "localhost"
+  const clientName = (trimToUndefined(env.CONTACT_SMTP_CLIENT_NAME) || os.hostname() || "localhost")
+    .replace(/[^a-z0-9.-]/gi, "-")
+    .slice(0, 253)
   let ehlo = await sendSmtpCommand(socket, reader, `EHLO ${clientName}`)
   assertSmtpCode(ehlo, [250], "SMTP EHLO")
 
@@ -287,7 +361,7 @@ async function connectSmtp(config: SmtpConfig) {
     const startTls = await sendSmtpCommand(socket, reader, "STARTTLS")
     assertSmtpCode(startTls, [220], "SMTP STARTTLS")
 
-    socket = await upgradeToTls(socket as net.Socket, config.host)
+    socket = await upgradeToTls(socket as net.Socket, config.host, config.timeoutMs)
     reader = new SmtpLineReader(socket)
     ehlo = await sendSmtpCommand(socket, reader, `EHLO ${clientName}`)
     assertSmtpCode(ehlo, [250], "SMTP EHLO after STARTTLS")
@@ -360,60 +434,93 @@ async function sendRawSendmail(config: SendmailConfig, message: string) {
     const child = spawn(
       config.sendmailPath,
       ["-i", "-f", config.fromEmail, ...recipients],
-      { stdio: ["pipe", "ignore", "pipe"] },
+      {
+        shell: false,
+        stdio: ["pipe", "ignore", "pipe"],
+        windowsHide: true,
+      },
     )
 
     let stderr = ""
+    let settled = false
+    let timeout: ReturnType<typeof setTimeout> | undefined
+    const settle = (error?: Error) => {
+      if (settled)
+        return
+      settled = true
+      if (timeout)
+        clearTimeout(timeout)
+      if (error)
+        reject(error)
+      else
+        resolve()
+    }
+    timeout = setTimeout(() => {
+      child.kill("SIGKILL")
+      settle(new Error("sendmail delivery timed out."))
+    }, config.timeoutMs)
 
     child.stderr.on("data", (chunk) => {
+      if (Buffer.byteLength(stderr) + chunk.length > maximumSendmailStderrBytes) {
+        child.kill("SIGKILL")
+        settle(new Error("sendmail error output exceeded the allowed buffer."))
+        return
+      }
       stderr += chunk.toString()
     })
 
-    child.on("error", reject)
-    child.on("close", (code) => {
+    child.stdin.on("error", error => settle(error))
+    child.once("error", error => settle(error))
+    child.once("close", (code) => {
       if (code === 0) {
-        resolve()
+        settle()
         return
       }
 
-      reject(new Error(stderr.trim() || `sendmail exited with code ${code}`))
+      settle(new Error(stderr.trim() || `sendmail exited with code ${code}`))
     })
 
     child.stdin.end(message)
   })
 }
 
-function getContactMailConfig(): ContactMailConfig | null {
+export function getContactMailConfig(): ContactMailConfig | null {
   const fromEmail = trimToUndefined(env.CONTACT_FROM_EMAIL)
   if (!fromEmail) {
     return null
   }
 
-  const toEmail = trimToUndefined(env.CONTACT_TO_EMAIL) || "contacts@jacobdanderson.net"
-  const bccEmail = parseAddressList(env.CONTACT_BCC_EMAIL)
+  const safeFromEmail = requireEnvelopeAddress(fromEmail, "CONTACT_FROM_EMAIL")
+  const toEmail = requireEnvelopeAddress(trimToUndefined(env.CONTACT_TO_EMAIL) || "contacts@jacobdanderson.net", "CONTACT_TO_EMAIL")
+  const bccEmail = parseAddressList(env.CONTACT_BCC_EMAIL)?.map(address => requireEnvelopeAddress(address, "CONTACT_BCC_EMAIL"))
   const fromName = trimToUndefined(env.CONTACT_FROM_NAME) || "CoFoundry"
 
   const smtpHost = trimToUndefined(env.CONTACT_SMTP_HOST)
   if (smtpHost) {
     const secure = isEnabled(env.CONTACT_SMTP_SECURE)
-    const port = Number.parseInt(env.CONTACT_SMTP_PORT || (secure ? "465" : "587"), 10)
-
-    if (!Number.isFinite(port)) {
-      throw new TypeError("Invalid CONTACT_SMTP_PORT")
-    }
+    const requireTLS = env.CONTACT_SMTP_REQUIRE_TLS?.trim()
+      ? isEnabled(env.CONTACT_SMTP_REQUIRE_TLS)
+      : !secure
+    const user = trimToUndefined(env.CONTACT_SMTP_USER)
+    const pass = trimToUndefined(env.CONTACT_SMTP_PASS)
+    if (Boolean(user) !== Boolean(pass))
+      throw new TypeError("CONTACT_SMTP_USER and CONTACT_SMTP_PASS must be configured together.")
+    if (!secure && !requireTLS && user)
+      throw new TypeError("SMTP authentication requires implicit TLS or STARTTLS.")
 
     return {
       kind: "smtp",
       bccEmail,
-      fromEmail,
+      fromEmail: safeFromEmail,
       fromName,
-      host: smtpHost,
-      pass: trimToUndefined(env.CONTACT_SMTP_PASS),
-      port,
-      requireTLS: isEnabled(env.CONTACT_SMTP_REQUIRE_TLS),
+      host: requireSmtpHost(smtpHost),
+      pass,
+      port: parsePort(env.CONTACT_SMTP_PORT || (secure ? "465" : "587")),
+      requireTLS,
       secure,
+      timeoutMs: parseTimeout(env.CONTACT_SMTP_TIMEOUT_MS),
       toEmail,
-      user: trimToUndefined(env.CONTACT_SMTP_USER),
+      user,
     }
   }
 
@@ -423,13 +530,16 @@ function getContactMailConfig(): ContactMailConfig | null {
   if (!useSendmail) {
     return null
   }
+  if (!isAbsolute(sendmailPath))
+    throw new TypeError("CONTACT_SENDMAIL_PATH must be an absolute executable path.")
 
   return {
     kind: "sendmail",
     bccEmail,
-    fromEmail,
+    fromEmail: safeFromEmail,
     fromName,
     sendmailPath,
+    timeoutMs: parseTimeout(env.CONTACT_SENDMAIL_TIMEOUT_MS, "CONTACT_SENDMAIL_TIMEOUT_MS"),
     toEmail,
   }
 }
@@ -451,17 +561,20 @@ export async function sendPlainTextEmail(payload: PlainTextEmailPayload) {
 
   const targetConfig = {
     ...mailConfig,
-    toEmail: payload.toEmail || mailConfig.toEmail,
+    toEmail: requireEnvelopeAddress(payload.toEmail || mailConfig.toEmail, "Email recipient"),
   }
+  const replyTo = requireEnvelopeAddress(payload.replyTo || targetConfig.fromEmail, "Email reply-to")
   const message = buildRawMessage({
     body: payload.body,
     fromEmail: targetConfig.fromEmail,
     fromName: targetConfig.fromName,
     headers: payload.headers,
-    replyTo: payload.replyTo || targetConfig.fromEmail,
+    replyTo,
     subject: payload.subject,
     toEmail: targetConfig.toEmail,
   })
+  if (Buffer.byteLength(message) > maximumMailMessageBytes)
+    throw new Error("Email message exceeds the configured delivery limit.")
 
   if (targetConfig.kind === "smtp") {
     await sendViaSmtp(targetConfig, message)
@@ -484,7 +597,7 @@ export async function sendContactMessage(payload: ContactPayload, event: H3Event
   const submittedAt = new Date().toISOString()
   const userAgent = trimToUndefined(getHeader(event, "user-agent") || undefined)
   const referer = trimToUndefined(getHeader(event, "referer") || undefined)
-  const ip = trimToUndefined(getRequestIP(event, { xForwardedFor: true }) || undefined)
+  const ip = trimToUndefined(getRequesterIp(event) || undefined)
 
   const metadata = [
     formatHeaderLine("Submitted", submittedAt),

@@ -198,9 +198,9 @@ async function recordFileScan(item: AdminEvidencePackage, scanStatus: "clean" | 
   try {
     await requestFetch(`/api/admin/files/${item.targetId}/scan`, {
       body: {
+        expectedUpdatedAt: item.updatedAt,
         notes: defaultScanNote(item, scanStatus),
         scanStatus,
-        status: scanStatus === "clean" ? "uploaded" : "blocked",
       },
       method: "POST",
     })

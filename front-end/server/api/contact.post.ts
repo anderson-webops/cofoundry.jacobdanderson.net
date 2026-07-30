@@ -7,6 +7,12 @@ import { isContactMailConfigured, sendContactMessage } from "../utils/contact"
 import { assertRateLimit, buildRateLimitKey } from "../utils/rate-limit"
 
 export default defineEventHandler(async (event) => {
+  assertRateLimit(event, {
+    limit: 20,
+    scope: "contact:ip",
+    windowMs: 10 * 60 * 1000,
+  })
+
   const payload = contactSchema.parse(await readBody(event))
 
   if (payload.website) {
@@ -40,7 +46,7 @@ export default defineEventHandler(async (event) => {
   assertRateLimit(event, {
     key: buildRateLimitKey(event, payload.email),
     limit: 5,
-    scope: "contact",
+    scope: "contact:account",
     windowMs: 10 * 60 * 1000,
   })
 

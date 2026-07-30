@@ -146,7 +146,7 @@ function onReportCreated() {
             <div class="muted text-sm leading-6 mt-4 gap-2 grid">
               <div>Listing verification: {{ formatOpportunityVerificationStatus(opportunity.verificationStatus) }}</div>
               <div v-if="opportunity.officialWebsite">
-                Official website: <a :href="opportunity.officialWebsite" target="_blank" class="underline underline-offset-4">{{ opportunity.officialWebsite }}</a>
+                Official website: <a :href="opportunity.officialWebsite" target="_blank" rel="ugc nofollow noopener noreferrer" class="underline underline-offset-4">{{ opportunity.officialWebsite }}</a>
               </div>
               <div>
                 Contact reveal rule: {{ ownerProfile ? formatContactRevealStage(ownerProfile.privacy.contactRevealStage) : "After a mutual match" }}

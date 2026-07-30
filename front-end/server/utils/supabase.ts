@@ -96,8 +96,9 @@ export function createSupabaseAdminClient(event?: H3Event) {
     return null
 
   const runtimeConfig = useRuntimeConfig(event)
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || runtimeConfig.supabaseServiceRoleKey
 
-  if (!runtimeConfig.public.supabaseUrl || !runtimeConfig.supabaseServiceRoleKey) {
+  if (!runtimeConfig.public.supabaseUrl || !serviceRoleKey) {
     throw createError({
       statusCode: 500,
       statusMessage: "Supabase mode is enabled but the server-only service role key or Supabase URL is missing from runtime config.",
@@ -106,7 +107,7 @@ export function createSupabaseAdminClient(event?: H3Event) {
 
   return createClient(
     runtimeConfig.public.supabaseUrl,
-    runtimeConfig.supabaseServiceRoleKey,
+    serviceRoleKey,
     {
       auth: {
         autoRefreshToken: false,

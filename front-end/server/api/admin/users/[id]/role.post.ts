@@ -1,9 +1,10 @@
-import { requireAdminSession, validateAdminUserRolePayload } from "../../../../utils/admin"
-import { persistAdminAction, persistUserRole } from "../../../../utils/admin-persistence"
+import { evaluateAdminSecurityMutation } from "~/shared/utils/admin-authorization"
+import { requireFullAdminSession, validateAdminUserRolePayload } from "../../../../utils/admin"
+import { listAdminSecurityUsers, persistAdminUserSecurityAction } from "../../../../utils/admin-persistence"
 import { assertRateLimit, buildRateLimitKey } from "../../../../utils/rate-limit"
 
 export default defineEventHandler(async (event) => {
-  const session = await requireAdminSession(event)
+  const session = await requireFullAdminSession(event)
   assertRateLimit(event, {
     key: buildRateLimitKey(event, session.id),
     limit: 60,
@@ -16,8 +17,12 @@ export default defineEventHandler(async (event) => {
   if (!targetUserId)
     throw createError({ statusCode: 400, statusMessage: "A target user id is required." })
 
-  if (targetUserId === session.id && !["admin", "investor_admin"].includes(payload.role))
-    throw createError({ statusCode: 400, statusMessage: "Admins cannot remove their own admin role from this surface." })
+  const users = await listAdminSecurityUsers(event)
+  const target = users.find(user => user.id === targetUserId)
+  const mutation = { kind: "change_role" as const, role: payload.role }
+  const decision = evaluateAdminSecurityMutation(users, session.id, targetUserId, mutation)
+  if (!decision.allowed)
+    throw createError(decision)
 
   const createdAt = new Date().toISOString()
   const action = {
@@ -28,10 +33,13 @@ export default defineEventHandler(async (event) => {
     targetId: targetUserId,
     targetType: "user" as const,
     type: "change_user_role" as const,
+    metadata: {
+      previousRole: target?.role,
+      nextRole: payload.role,
+    },
   }
 
-  await persistUserRole(event, targetUserId, payload.role)
-  await persistAdminAction(event, action)
+  await persistAdminUserSecurityAction(event, { action, mutation })
 
   return {
     action,

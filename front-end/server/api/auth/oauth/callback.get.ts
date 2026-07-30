@@ -1,8 +1,15 @@
 import { getQuery, sendRedirect } from "h3"
 import { completeSupabaseOAuthCallback } from "~/server/utils/auth"
 import { normalizeOAuthProvider } from "~/shared/utils/oauth-providers"
+import { assertRateLimit } from "../../../utils/rate-limit"
 
 export default defineEventHandler(async (event) => {
+  assertRateLimit(event, {
+    limit: 60,
+    scope: "auth:oauth-callback",
+    windowMs: 5 * 60 * 1000,
+  })
+
   const query = getQuery(event)
   const code = typeof query.code === "string" ? query.code : ""
   const error = typeof query.error === "string" ? query.error : ""

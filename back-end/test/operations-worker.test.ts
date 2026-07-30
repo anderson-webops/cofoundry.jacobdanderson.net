@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { Buffer } from "node:buffer"
 import test from "node:test"
-import { resolveOperationsWorkerEnvironment, runOperationsWorker, shellQuote } from "../src/operations-worker"
+import { parseExecutableCommand, resolveOperationsWorkerEnvironment, runOperationsWorker } from "../src/operations-worker"
 
 interface CapturedRequest {
   body: unknown
@@ -35,7 +35,7 @@ function createJsonFetch(handler?: (_request: CapturedRequest) => unknown | Resp
 }
 
 const workerEnv = {
-  COFOUNDRY_OPERATIONS_TOKEN: "test-worker-token",
+  COFOUNDRY_OPERATIONS_TOKEN: "test-worker-token-at-least-32-characters",
   NUXT_PUBLIC_APP_URL: "https://cofoundry.example.com/",
 }
 
@@ -43,7 +43,7 @@ test("operations worker environment validates app URL and token", () => {
   assert.deepEqual(resolveOperationsWorkerEnvironment(workerEnv), {
     appUrl: "https://cofoundry.example.com",
     timeoutMs: 60_000,
-    token: "test-worker-token",
+    token: "test-worker-token-at-least-32-characters",
   })
 
   assert.throws(
@@ -52,14 +52,38 @@ test("operations worker environment validates app URL and token", () => {
   )
 
   assert.throws(
+    () => resolveOperationsWorkerEnvironment({
+      COFOUNDRY_OPERATIONS_TOKEN: "short-token",
+      NUXT_PUBLIC_APP_URL: "https://cofoundry.example.com",
+    }),
+    /at least 32 characters/,
+  )
+
+  assert.throws(
     () => resolveOperationsWorkerEnvironment({ COFOUNDRY_OPERATIONS_TOKEN: "token", NUXT_PUBLIC_APP_URL: "localhost:3000" }),
     /absolute HTTP\(S\) URL/,
+  )
+
+  assert.throws(
+    () => resolveOperationsWorkerEnvironment({
+      COFOUNDRY_OPERATIONS_TOKEN: "test-worker-token-at-least-32-characters",
+      NUXT_PUBLIC_APP_URL: "http://cofoundry.example.com",
+    }),
+    /must use HTTPS/,
+  )
+
+  assert.throws(
+    () => resolveOperationsWorkerEnvironment({
+      COFOUNDRY_OPERATIONS_TOKEN: "test-worker-token-at-least-32-characters",
+      NUXT_PUBLIC_APP_URL: "https://cofoundry.example.com/operations",
+    }),
+    /must be an origin/,
   )
 })
 
 test("operations backup worker reports running and succeeded lifecycle rows", async () => {
   const { fetchImpl, requests } = createJsonFetch()
-  const commands: string[] = []
+  const commands: Array<{ args: string[], executable: string }> = []
 
   await runOperationsWorker([
     "backup",
@@ -78,16 +102,19 @@ test("operations backup worker reports running and succeeded lifecycle rows", as
     fetch: fetchImpl,
     log: () => {},
     now: () => new Date("2026-06-12T20:00:00.000Z"),
-    runShellCommand: async (command) => {
-      commands.push(command)
+    runCommand: async (executable, args) => {
+      commands.push({ args, executable })
       return 0
     },
   })
 
-  assert.deepEqual(commands, ["restic backup /srv/cofoundry"])
+  assert.deepEqual(commands, [{
+    args: ["backup", "/srv/cofoundry"],
+    executable: "restic",
+  }])
   assert.equal(requests.length, 2)
   assert.equal(requests[0].url, "https://cofoundry.example.com/api/operations/backup-runs")
-  assert.equal(requests[0].headers.get("authorization"), "Bearer test-worker-token")
+  assert.equal(requests[0].headers.get("authorization"), "Bearer test-worker-token-at-least-32-characters")
   assert.deepEqual(requests[0].body, {
     artifactUri: "s3://cofoundry/backups/latest",
     id: "backup-2026-06-12T20-00-00-000Z",
@@ -478,7 +505,7 @@ test("operations realtime smoke worker emits readiness-recognized fanout evidenc
 
   assert.equal(requests.length, 2)
   assert.equal(requests[0].url, "https://cofoundry.example.com/api/operations/realtime-events")
-  assert.equal(requests[0].headers.get("authorization"), "Bearer test-worker-token")
+  assert.equal(requests[0].headers.get("authorization"), "Bearer test-worker-token-at-least-32-characters")
   assert.deepEqual(requests[0].body, {
     createdAt: "2026-06-13T12:15:00.000Z",
     eventType: "workspace-change",
@@ -614,7 +641,7 @@ test("operations backup worker alerts on failed runs", async () => {
       fetch: fetchImpl,
       log: () => {},
       now: () => new Date("2026-06-13T12:05:00.000Z"),
-      runShellCommand: async () => 2,
+      runCommand: async () => 2,
     }),
     /Backup command failed with exit code 2/,
   )
@@ -627,7 +654,8 @@ test("operations backup worker alerts on failed runs", async () => {
     appUrl: "https://cofoundry.example.com",
     eventType: "backup_run_failed",
     metadata: {
-      command: "pg_dump postgres://cofoundry",
+      commandArgumentCount: 1,
+      commandExecutable: "pg_dump",
       exitCode: 2,
       provider: "pg-dump",
       timer: "daily",
@@ -642,7 +670,7 @@ test("operations backup worker alerts on failed runs", async () => {
 })
 
 test("operations scanner downloads local app URLs with worker auth and blocks flagged files", async () => {
-  const commands: string[] = []
+  const commands: Array<{ args: string[], executable: string }> = []
   const { fetchImpl, requests } = createJsonFetch((request) => {
     if (request.url.endsWith("/api/operations/file-scans/pending?limit=5")) {
       return {
@@ -651,6 +679,7 @@ test("operations scanner downloads local app URLs with worker auth and blocks fl
           id: "upload_1",
           originalFilename: "evidence.txt",
           signedDownloadUrl: "https://cofoundry.example.com/api/operations/file-scans/upload_1/download",
+          sizeBytes: 6,
         }],
       }
     }
@@ -668,8 +697,8 @@ test("operations scanner downloads local app URLs with worker auth and blocks fl
     env: workerEnv,
     fetch: fetchImpl,
     log: () => {},
-    runShellCommand: async (command) => {
-      commands.push(command)
+    runCommand: async (executable, args) => {
+      commands.push({ args, executable })
       return 1
     },
   })
@@ -678,14 +707,49 @@ test("operations scanner downloads local app URLs with worker auth and blocks fl
   const scanResult = requests.find(request => request.url.endsWith("/api/operations/file-scans/upload_1") && request.method === "POST")
   const completionEvent = requests.find(request => request.url.endsWith("/api/operations/events"))
 
-  assert.equal(download?.headers.get("authorization"), "Bearer test-worker-token")
-  assert.match(commands[0], /^scanner --path '.+' --id 'upload_1'$/)
+  assert.equal(download?.headers.get("authorization"), "Bearer test-worker-token-at-least-32-characters")
+  assert.equal(commands[0]?.executable, "scanner")
+  assert.equal(commands[0]?.args[0], "--path")
+  assert.match(commands[0]?.args[1] || "", /upload_1-/)
+  assert.deepEqual(commands[0]?.args.slice(2), ["--id", "upload_1"])
   assert.deepEqual(scanResult?.body, {
     notes: "Scanner command flagged this upload.",
     scanStatus: "flagged",
-    status: "blocked",
   })
   assert.equal((completionEvent?.body as { severity: string }).severity, "warning")
+})
+
+test("operations scanner rejects unapproved file download origins", async () => {
+  const { fetchImpl, requests } = createJsonFetch((request) => {
+    if (request.url.endsWith("/api/operations/file-scans/pending?limit=5")) {
+      return {
+        mode: "supabase",
+        pendingScans: [{
+          id: "upload_untrusted",
+          originalFilename: "evidence.txt",
+          signedDownloadUrl: "https://untrusted.example.net/private/evidence.txt",
+          sizeBytes: 6,
+        }],
+      }
+    }
+
+    return { ok: true }
+  })
+
+  await runOperationsWorker(["scan", "--limit", "5", "--scanner-command", "scanner {file}"], {
+    env: {
+      ...workerEnv,
+      NUXT_PUBLIC_SUPABASE_URL: "https://project-ref.supabase.co",
+    },
+    fetch: fetchImpl,
+    log: () => {},
+    runCommand: async () => 0,
+  })
+
+  assert.equal(requests.some(request => request.url.startsWith("https://untrusted.example.net")), false)
+  const scanResult = requests.find(request => request.url.endsWith("/api/operations/file-scans/upload_untrusted"))
+  assert.match(String((scanResult?.body as { notes?: string }).notes), /not the app, Supabase, or an explicitly allowed storage origin/)
+  assert.equal((scanResult?.body as { scanStatus?: string }).scanStatus, "failed")
 })
 
 test("operations restore drill worker reports start and success events", async () => {
@@ -695,19 +759,24 @@ test("operations restore drill worker reports start and success events", async (
     env: workerEnv,
     fetch: fetchImpl,
     log: () => {},
-    runShellCommand: async () => 0,
+    runCommand: async () => 0,
   })
 
   assert.equal(requests.length, 2)
   assert.equal((requests[0].body as { eventType: string }).eventType, "restore_drill_started")
   assert.equal((requests[1].body as { eventType: string }).eventType, "restore_drill_succeeded")
   assert.deepEqual((requests[1].body as { metadata: Record<string, unknown> }).metadata, {
-    command: "npm run smoke",
+    commandArgumentCount: 2,
+    commandExecutable: "npm",
     exitCode: 0,
     scope: "mock-store",
   })
 })
 
-test("shellQuote escapes single quotes for scanner command placeholders", () => {
-  assert.equal(shellQuote("scan Bob's file.txt"), "'scan Bob'\\''s file.txt'")
+test("executable command parsing preserves quoted argv without invoking a shell", () => {
+  assert.deepEqual(parseExecutableCommand("scanner --path \"Bob's file.txt\" --literal '$(touch nope)'"), {
+    args: ["--path", "Bob's file.txt", "--literal", "$(touch nope)"],
+    executable: "scanner",
+  })
+  assert.throws(() => parseExecutableCommand("scanner 'unterminated"), /unterminated quote or escape/)
 })

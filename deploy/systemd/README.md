@@ -47,18 +47,17 @@ Run manual smoke services after wiring their host secrets:
 ```sh
 systemctl start cofoundry-operations-alert-smoke.service
 systemctl start cofoundry-operations-mail-smoke.service
-systemctl start cofoundry-operations-realtime-smoke.service
 journalctl -u cofoundry-operations-alert-smoke.service -n 100 --no-pager
 journalctl -u cofoundry-operations-mail-smoke.service -n 100 --no-pager
-journalctl -u cofoundry-operations-realtime-smoke.service -n 100 --no-pager
 ```
 
-`cofoundry-operations-alert-smoke.service` needs `COFOUNDRY_ALERT_WEBHOOK_URL` to prove external alert delivery. `cofoundry-operations-mail-smoke.service` needs a configured contact mail transport and `COFOUNDRY_MAIL_SMOKE_TO_EMAIL` to prove inbox delivery. `cofoundry-operations-realtime-smoke.service` proves the protected realtime operations ingress and should be run after any multi-instance relay change; keep `COFOUNDRY_REALTIME_SMOKE_MIN_DELIVERED=0` for ingress-only smoke, or set it to `1` or higher when a member SSE stream is intentionally connected on another instance. These services persist operations telemetry so `/admin/operations` and `/admin/readiness` can show the result.
+`cofoundry-operations-alert-smoke.service` needs `COFOUNDRY_ALERT_WEBHOOK_URL` to prove external alert delivery. `cofoundry-operations-mail-smoke.service` needs a configured contact mail transport and `COFOUNDRY_MAIL_SMOKE_TO_EMAIL` to prove inbox delivery. The realtime smoke service is for isolated staging development only: production must remain on one app process until a shared atomic rate limiter is implemented. These services persist operations telemetry so `/admin/operations` and `/admin/readiness` can show the result.
 
 ## Notes
 
 - The app server still uses its normal production unit; these templates only run background worker commands.
 - `COFOUNDRY_OPERATIONS_TOKEN` must match the token injected into the Nuxt server process.
-- `COFOUNDRY_BACKUP_COMMAND` and `COFOUNDRY_RESTORE_DRILL_COMMAND` should point at host-owned wrapper scripts. Keep those scripts outside the repo if they contain host-specific paths or secrets.
-- `COFOUNDRY_ALERT_WEBHOOK_URL`, `COFOUNDRY_MAIL_SMOKE_TO_EMAIL`, and realtime smoke settings belong in `/etc/cofoundry/operations.env` or the host's Vault-managed env material, not in the repository.
+- `COFOUNDRY_BACKUP_COMMAND`, `COFOUNDRY_RESTORE_DRILL_COMMAND`, and `COFOUNDRY_FILE_SCANNER_COMMAND` are parsed into an executable plus arguments and are never passed to a shell. Put pipes, redirects, or other compound logic inside a reviewed, host-owned wrapper executable instead of the env value.
+- The service sandbox allows writes only under `/var/lib/cofoundry`, `/run/cofoundry`, and the optional `/var/backups/cofoundry` path. Keep provider caches and generated artifacts in those locations.
+- `COFOUNDRY_ALERT_WEBHOOK_URL` and `COFOUNDRY_MAIL_SMOKE_TO_EMAIL` belong in `/etc/cofoundry/operations.env` or the host's Vault-managed env material, not in the repository. Keep realtime relay and smoke settings unset in production.
 - Keep Supabase and Stripe disabled unless the cutover checklist in `docs/operations-runbook.md` has been completed.

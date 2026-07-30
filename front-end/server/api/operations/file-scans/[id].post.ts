@@ -21,6 +21,12 @@ export default defineEventHandler(async (event) => {
 
   const payload = fileScanResultSchema.parse(await readBody(event))
   const upload = await recordFileScanResult(event, uploadId, payload)
+  if (!upload) {
+    throw createError({
+      statusCode: 409,
+      statusMessage: "The upload is missing or no longer awaiting an automated scan.",
+    })
+  }
 
   return {
     mode: isSupabaseEnabled(event) ? "supabase" : "mock",

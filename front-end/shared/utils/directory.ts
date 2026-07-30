@@ -1,8 +1,8 @@
-import type { Profile, StartupOpportunity, StartupStage, WorkspaceSeed } from "../types/domain"
+import type { Profile, StartupOpportunity, StartupStage, TrustTier, WorkspaceSeed } from "../types/domain"
 import { publicMarketingRoutes } from "../constants/route-surfaces"
 import { contractGuidePages, trustCenterPages } from "../data/public-content"
 import { formatStage } from "./format"
-import { buildProfileReadiness, buildProfileTrustScore } from "./formation"
+import { buildProfileReadiness, buildProfileTrustScore, buildProfileTrustTier } from "./formation"
 import { getProfileByUserId, getProfileSkills } from "./workspace"
 
 const slugPattern = /[^a-z0-9]+/g
@@ -19,6 +19,7 @@ export interface PublicProfileEntry {
   skillLabels: string[]
   trustScore: number
   trustPercent: number
+  trustSummary: PublicTrustSummary
 }
 
 export interface PublicOpportunityEntry {
@@ -28,6 +29,7 @@ export interface PublicOpportunityEntry {
   roleSlugs: string[]
   industrySlugs: string[]
   stageSlugs: string[]
+  ownerTrustSummary: PublicTrustSummary
 }
 
 export interface PublicHubEntry {
@@ -36,6 +38,22 @@ export interface PublicHubEntry {
   description: string
   profileCount: number
   opportunityCount: number
+}
+
+export interface PublicDirectorySnapshot {
+  industryHubs: PublicHubEntry[]
+  opportunities: PublicOpportunityEntry[]
+  profiles: PublicProfileEntry[]
+  roleHubs: PublicHubEntry[]
+  stageHubs: PublicHubEntry[]
+}
+
+export interface PublicTrustSummary {
+  completedCount: number
+  percent: number
+  ready: boolean
+  tier: TrustTier
+  totalCount: number
 }
 
 function buildSlug(value: string) {
@@ -81,6 +99,158 @@ function buildOpportunityRoleSlugs(opportunity: StartupOpportunity) {
 
 function buildStageSlugs(stages: StartupStage[]) {
   return stages.map(stage => buildSlug(formatStage(stage)))
+}
+
+export function projectProfileForPublicDirectory(profile: Profile): Profile {
+  const revealLinks = !profile.privacy.contactDetailsVisibleToMatchesOnly
+
+  return {
+    id: "",
+    userId: profile.userId,
+    displayName: profile.displayName,
+    photoUrl: "",
+    headline: profile.headline,
+    bio: profile.bio,
+    location: profile.location,
+    remotePreference: profile.remotePreference,
+    roles: [...profile.roles],
+    yearsExperience: profile.yearsExperience,
+    industries: [...profile.industries],
+    startupStagePreferences: [...profile.startupStagePreferences],
+    availability: "",
+    compensationPreferences: [],
+    equityExpectationRange: "",
+    timeCommitment: profile.timeCommitment,
+    commitmentProfile: {
+      weeklyAvailabilityHours: profile.commitmentProfile.weeklyAvailabilityHours,
+      currentStatus: "exploring",
+      fullTimeBy: "",
+      runwayBucket: "undisclosed",
+    },
+    governancePreferences: {
+      equityPhilosophy: "equal_unless_strong_reason",
+      leadershipPreference: "open_to_ceo_role",
+      decisionModelPreference: "area_owner_decides",
+      deadlockPreference: "neutral_operator",
+    },
+    intent: {
+      startTimeline: profile.intent.startTimeline,
+      companyPreferences: [],
+      introCapacity: "",
+      nonNegotiables: [],
+    },
+    ipReadiness: {
+      existingAssets: [],
+      existingAssetsNotes: "",
+      priorObligations: "none_known",
+      readyToAssignIp: false,
+    },
+    links: revealLinks
+      ? profile.links
+      : {
+          github: "",
+          linkedin: "",
+          portfolio: "",
+          website: "",
+        },
+    hasIdea: profile.hasIdea,
+    wantsToJoinIdea: profile.wantsToJoinIdea,
+    values: [],
+    workStylePreferences: [],
+    privacy: {
+      contactDetailsVisibleToMatchesOnly: profile.privacy.contactDetailsVisibleToMatchesOnly,
+      contactRevealStage: profile.privacy.contactRevealStage,
+      opportunityVisibility: profile.privacy.opportunityVisibility === "public" ? "public" : "private",
+      portfolioVisibility: profile.privacy.portfolioVisibility === "public" ? "public" : "private",
+      profileVisibility: "public",
+    },
+    verificationBadges: {
+      emailVerified: profile.verificationBadges.emailVerified,
+      linkedAccounts: profile.verificationBadges.linkedAccounts,
+      profileComplete: profile.verificationBadges.profileComplete,
+    },
+    trustSignals: {
+      builderProofs: profile.trustSignals.builderProofs.map((artifact, index) => ({
+        id: `public-proof-${index + 1}`,
+        outcome: artifact.outcome,
+        summary: artifact.summary,
+        title: artifact.title,
+        url: artifact.url,
+      })),
+      githubVerified: profile.trustSignals.githubVerified,
+      governmentIdVerified: profile.trustSignals.governmentIdVerified,
+      identityVerified: profile.trustSignals.identityVerified,
+      lastActiveAt: profile.trustSignals.lastActiveAt,
+      linkedInVerified: profile.trustSignals.linkedInVerified,
+      medianReplyHours: profile.trustSignals.medianReplyHours,
+      phoneVerified: profile.trustSignals.phoneVerified,
+      replyRatePercent: profile.trustSignals.replyRatePercent,
+      websiteVerified: profile.trustSignals.websiteVerified,
+      workDomainVerified: profile.trustSignals.workDomainVerified,
+      workHistoryVerified: profile.trustSignals.workHistoryVerified,
+    },
+    portfolio: profile.privacy.portfolioVisibility === "public"
+      ? profile.portfolio.map((project, index) => ({
+          id: `public-project-${index + 1}`,
+          name: project.name,
+          outcome: project.outcome,
+          role: project.role,
+          summary: project.summary,
+          url: project.url,
+        }))
+      : [],
+    ventures: profile.ventures.map((venture, index) => ({
+      id: `public-venture-${index + 1}`,
+      name: venture.name,
+      role: venture.role,
+      stage: venture.stage,
+    })),
+    roleScope: {
+      primaryRole: profile.roleScope.primaryRole,
+      accountabilityMilestones: [],
+      nonResponsibilities: [],
+    },
+    summaryHighlights: [],
+  }
+}
+
+export function projectOpportunityForPublicDirectory(opportunity: StartupOpportunity): StartupOpportunity {
+  return {
+    id: "",
+    ownerUserId: "",
+    startupName: opportunity.startupName,
+    slug: opportunity.slug,
+    oneLinePitch: opportunity.oneLinePitch,
+    problem: opportunity.problem,
+    targetUsers: opportunity.targetUsers,
+    stage: opportunity.stage,
+    traction: opportunity.traction,
+    rolesNeeded: [...opportunity.rolesNeeded],
+    expectedCommitment: opportunity.expectedCommitment,
+    compensationStructure: opportunity.compensationStructure,
+    equityRange: opportunity.equityRange,
+    industries: [...opportunity.industries],
+    location: opportunity.location,
+    remotePreference: opportunity.remotePreference,
+    officialWebsite: opportunity.officialWebsite,
+    verificationMethod: "none",
+    verificationStatus: opportunity.verificationStatus,
+    riskFlags: [],
+    createdAt: opportunity.createdAt,
+    updatedAt: opportunity.updatedAt,
+    isOpen: true,
+  }
+}
+
+function buildPublicTrustSummary(profile: Profile): PublicTrustSummary {
+  const readiness = buildProfileReadiness(profile)
+  return {
+    completedCount: readiness.trustCompletedCount,
+    percent: readiness.trustPercent,
+    ready: readiness.trustReady,
+    tier: buildProfileTrustTier(profile),
+    totalCount: readiness.trustTotalCount,
+  }
 }
 
 function buildRoleDescription(label: string) {
@@ -161,16 +331,20 @@ export function getPublicProfiles(seed: WorkspaceSeed) {
 
       return buildProfileReadiness(profile).trustReady
     })
-    .map<PublicProfileEntry>(profile => ({
-      slug: buildPublicProfileSlug(profile),
-      profile,
-      roleSlugs: buildRoleSlugs(profile),
-      industrySlugs: uniqueBySlug(profile.industries).map(entry => entry.slug),
-      stageSlugs: buildStageSlugs(profile.startupStagePreferences),
-      skillLabels: getProfileSkills(seed, profile.id).map(entry => entry.skill.label),
-      trustScore: buildProfileTrustScore(profile),
-      trustPercent: buildProfileReadiness(profile).trustPercent,
-    }))
+    .map<PublicProfileEntry>((sourceProfile) => {
+      const profile = projectProfileForPublicDirectory(sourceProfile)
+      return {
+        slug: buildPublicProfileSlug(sourceProfile),
+        profile,
+        roleSlugs: buildRoleSlugs(profile),
+        industrySlugs: uniqueBySlug(profile.industries).map(entry => entry.slug),
+        stageSlugs: buildStageSlugs(profile.startupStagePreferences),
+        skillLabels: getProfileSkills(seed, sourceProfile.id).map(entry => entry.skill.label),
+        trustScore: buildProfileTrustScore(sourceProfile),
+        trustPercent: buildProfileReadiness(sourceProfile).trustPercent,
+        trustSummary: buildPublicTrustSummary(sourceProfile),
+      }
+    })
     .sort((left, right) => right.trustScore - left.trustScore)
 }
 
@@ -187,8 +361,9 @@ export function getPublicOpportunities(seed: WorkspaceSeed) {
 
       return {
         slug: opportunity.slug,
-        opportunity,
-        ownerProfile,
+        opportunity: projectOpportunityForPublicDirectory(opportunity),
+        ownerProfile: projectProfileForPublicDirectory(ownerProfile),
+        ownerTrustSummary: buildPublicTrustSummary(ownerProfile),
         roleSlugs: buildOpportunityRoleSlugs(opportunity),
         industrySlugs: uniqueBySlug(opportunity.industries).map(entry => entry.slug),
         stageSlugs: [buildSlug(formatStage(opportunity.stage))],
@@ -241,6 +416,16 @@ export function getStageHubs(seed: WorkspaceSeed) {
   ])
 
   return buildHubEntries(labels, profiles, opportunities, buildStageDescription, "stageSlugs")
+}
+
+export function buildPublicDirectorySnapshot(seed: WorkspaceSeed): PublicDirectorySnapshot {
+  return {
+    industryHubs: getIndustryHubs(seed),
+    opportunities: getPublicOpportunities(seed),
+    profiles: getPublicProfiles(seed),
+    roleHubs: getRoleHubs(seed),
+    stageHubs: getStageHubs(seed),
+  }
 }
 
 export function getPublicProfilesForRole(seed: WorkspaceSeed, slug: string) {

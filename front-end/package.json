@@ -1,7 +1,7 @@
 {
   "name": "front-end",
   "type": "module",
-  "version": "1.1.106",
+  "version": "1.1.107",
   "private": true,
   "description": "Nuxt frontend for CoFoundry",
   "author": "Jacob Anderson",
@@ -11,7 +11,7 @@
     "build": "nuxt build --dotenv ../.env",
     "dev": "nuxt dev --dotenv ../.env --port 3000",
     "generate": "nuxt generate --dotenv ../.env",
-    "prepare": "nuxt prepare --dotenv ../.env",
+    "prepare": "nuxt prepare",
     "preview": "nuxt preview --dotenv ../.env",
     "preview:e2e": "nuxt preview --host=127.0.0.1 --port=4173",
     "serve": "nuxt dev --dotenv ../.env --open --host 0.0.0.0 --port 3000",
@@ -28,7 +28,8 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "2.111.0",
-    "stripe": "22.3.2",
+    "nuxt-security": "2.6.0",
+    "stripe": "22.4.0",
     "zod": "4.4.3"
   },
   "devDependencies": {
@@ -37,7 +38,7 @@
     "@nuxt/devtools": "3.4.0",
     "@nuxt/eslint": "1.16.0",
     "@nuxtjs/color-mode": "4.0.1",
-    "@pinia/nuxt": "0.11.3",
+    "@pinia/nuxt": "1.0.1",
     "@playwright/test": "1.62.0",
     "@types/node": "^24.13.3",
     "@unocss/nuxt": "66.7.5",
@@ -48,7 +49,7 @@
     "h3": "1.15.11",
     "happy-dom": "^20.10.6",
     "nuxt": "4.5.1",
-    "pinia": "3.0.4",
+    "pinia": "4.0.2",
     "tsx": "4.23.1",
     "typescript": "^6.0.3",
     "unocss": "66.7.5",

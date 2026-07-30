@@ -66,6 +66,30 @@ const priorityWeight: Record<InboxActionPriority, number> = {
   low: 2,
 }
 
+export function sanitizeNotificationHref(value: string) {
+  const fallback = "/app/inbox"
+  const href = value.trim()
+  const containsControlCharacter = [...href].some((character) => {
+    const codePoint = character.codePointAt(0) || 0
+    return codePoint <= 31 || codePoint === 127
+  })
+  if (!href || href.startsWith("//") || href.includes("\\") || containsControlCharacter)
+    return fallback
+
+  try {
+    const url = new URL(href, "https://cofoundry.invalid")
+    const isInternalAppPath = url.origin === "https://cofoundry.invalid"
+      && (url.pathname === "/app" || url.pathname.startsWith("/app/"))
+
+    return isInternalAppPath
+      ? `${url.pathname}${url.search}${url.hash}`
+      : fallback
+  }
+  catch {
+    return fallback
+  }
+}
+
 function byNewest<T extends { createdAt: string }>(left: T, right: T) {
   return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()
 }
@@ -206,14 +230,14 @@ export function buildInboxSnapshot(seed: WorkspaceSeed, userId: string, queues =
   ])
 
   const notificationItems: InboxActionItem[] = unreadNotifications
-    .filter((notification: Notification) => !representedHrefs.has(notification.href))
+    .filter((notification: Notification) => !representedHrefs.has(sanitizeNotificationHref(notification.href)))
     .map(notification => ({
       id: `notification:${notification.id}`,
       kind: "notification",
       priority: notification.type === "admin" || notification.type === "billing" ? "high" : "medium",
       title: notification.title,
       summary: notification.body,
-      href: notification.href,
+      href: sanitizeNotificationHref(notification.href),
       createdAt: notification.createdAt,
       badgeLabel: "Update",
       badgeTone: notification.type === "admin" || notification.type === "billing" ? "warning" : "neutral",

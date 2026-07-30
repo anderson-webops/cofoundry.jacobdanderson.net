@@ -38,9 +38,11 @@ export async function recordContractEnvelopeEvent(event: H3Event, payload: Opera
     throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
 
   const now = new Date().toISOString()
+  const provider = payload.provider.trim().toLowerCase()
+  const sourceEventId = payload.sourceEventId || null
   const { data, error } = await adminClient
     .from("contract_provider_events")
-    .insert({
+    .upsert({
       completed_pdf_file_upload_id: payload.completedPdfFileUploadId || null,
       completed_pdf_sha256: payload.completedPdfSha256?.toLowerCase() || null,
       contract_id: payload.contractId,
@@ -49,11 +51,14 @@ export async function recordContractEnvelopeEvent(event: H3Event, payload: Opera
       id: randomUUID(),
       metadata: payload.metadata,
       occurred_at: payload.occurredAt || now,
-      provider: payload.provider,
+      provider,
       provider_envelope_id: payload.providerEnvelopeId,
       signed_by_user_ids: payload.signedByUserIds,
-      source_event_id: payload.sourceEventId || null,
+      source_event_id: sourceEventId,
       status: payload.status,
+    }, {
+      ignoreDuplicates: true,
+      onConflict: "provider,source_event_id",
     })
     .select()
     .maybeSingle()
@@ -61,7 +66,20 @@ export async function recordContractEnvelopeEvent(event: H3Event, payload: Opera
   if (error)
     throw error
 
-  return data
+  if (data || !sourceEventId)
+    return data
+
+  const { data: existing, error: existingError } = await adminClient
+    .from("contract_provider_events")
+    .select("*")
+    .eq("provider", provider)
+    .eq("source_event_id", sourceEventId)
+    .maybeSingle()
+
+  if (existingError)
+    throw existingError
+
+  return existing
 }
 
 export async function listContractProviderEvidence(event: H3Event, contractId: string, contractVersionId: string) {

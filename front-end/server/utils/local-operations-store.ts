@@ -1,11 +1,14 @@
-import type { Buffer } from "node:buffer"
 import type { z } from "zod"
-import type { FileUpload, FileUploadRelatedType, SessionUser } from "../../shared/types/domain"
+import type { AdminAction, FileUpload, FileUploadRelatedType, SessionUser } from "../../shared/types/domain"
 import type { fileScanResultSchema, fileUploadPolicySchema, operationsBackupRunSchema, operationsContractEnvelopeSchema, operationsEmailSuppressionSchema, operationsEventSchema, operationsTrustVerificationSchema } from "../../shared/utils/validation"
-import { createHash, randomUUID } from "node:crypto"
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
-import { dirname, resolve } from "node:path"
+import { Buffer } from "node:buffer"
+import { createHash, randomUUID, timingSafeEqual } from "node:crypto"
+import { rm } from "node:fs/promises"
+import { resolve } from "node:path"
 import process from "node:process"
+import { assertLocalAdminActor } from "./local-admin-audit"
+import { withLocalAdminSecurityLock } from "./local-admin-security-lock"
+import { readPrivateFile, readPrivateTextFile, writePrivateFileAtomic, writePrivateFileExclusive } from "./private-file-store"
 
 type FileScanResultPayload = z.infer<typeof fileScanResultSchema>
 type FileUploadPolicyPayload = z.infer<typeof fileUploadPolicySchema>
@@ -52,6 +55,7 @@ interface LocalFileUploadRow {
   deleted_at?: string | null
   id: string
   local_file_path?: string | null
+  local_upload_token_expires_at?: string | null
   local_upload_token_hash?: string | null
   mime_type: string
   object_path: string
@@ -63,7 +67,7 @@ interface LocalFileUploadRow {
   scan_notes: string | null
   scan_status: "pending" | FileScanResultPayload["scanStatus"]
   size_bytes: number
-  status: "pending" | NonNullable<FileScanResultPayload["status"]>
+  status: FileUpload["status"]
   updated_at: string
 }
 
@@ -136,6 +140,7 @@ interface LocalTrustVerificationEventRow {
 }
 
 interface LocalOperationsStore {
+  adminActions: AdminAction[]
   backupRuns: LocalBackupRunRow[]
   contractEnvelopeEvents: LocalContractEnvelopeEventRow[]
   emailSuppressions: LocalEmailSuppressionRow[]
@@ -185,6 +190,15 @@ export function hashLocalUploadToken(token: string) {
   return createHash("sha256").update(token).digest("hex")
 }
 
+function localUploadTokenMatches(storedHash: string, token: string) {
+  if (!storedHash || !token)
+    return false
+
+  const expected = Buffer.from(storedHash, "hex")
+  const actual = Buffer.from(hashLocalUploadToken(token), "hex")
+  return expected.length === actual.length && timingSafeEqual(expected, actual)
+}
+
 function retentionLimit() {
   const configuredLimit = Number.parseInt(process.env.COFOUNDRY_OPERATIONS_RETENTION_LIMIT || "", 10)
 
@@ -196,6 +210,7 @@ function retentionLimit() {
 
 function emptyStore(): LocalOperationsStore {
   return {
+    adminActions: [],
     backupRuns: [],
     contractEnvelopeEvents: [],
     emailSuppressions: [],
@@ -210,7 +225,7 @@ function emptyStore(): LocalOperationsStore {
 
 function getRowTime(row: object) {
   const record = row as Record<string, unknown>
-  const value = record.created_at || record.started_at || record.updated_at
+  const value = record.created_at || record.createdAt || record.started_at || record.updated_at || record.updatedAt
   return typeof value === "string" ? new Date(value).getTime() : 0
 }
 
@@ -225,6 +240,7 @@ function withRetention<T extends object>(rows: T[]) {
 function pruneStore(store: LocalOperationsStore): LocalOperationsStore {
   return {
     ...store,
+    adminActions: newestFirst(store.adminActions).slice(0, retentionLimit()),
     backupRuns: withRetention(store.backupRuns),
     contractEnvelopeEvents: withRetention(store.contractEnvelopeEvents),
     emailSuppressions: withRetention(store.emailSuppressions),
@@ -262,15 +278,7 @@ function relatedKey(relatedType: FileUploadRelatedType, relatedId: string) {
 }
 
 async function readStoreFile() {
-  try {
-    return await readFile(storePath(), "utf-8")
-  }
-  catch (error) {
-    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT")
-      return null
-
-    throw error
-  }
+  return readPrivateTextFile(storePath())
 }
 
 async function readStore() {
@@ -285,8 +293,7 @@ async function readStore() {
 }
 
 async function writeStore(store: LocalOperationsStore) {
-  await mkdir(dirname(storePath()), { recursive: true })
-  await writeFile(storePath(), `${JSON.stringify(pruneStore(store), null, 2)}\n`, "utf-8")
+  await writePrivateFileAtomic(storePath(), `${JSON.stringify(pruneStore(store), null, 2)}\n`)
 }
 
 async function updateStore<T>(updater: (_store: LocalOperationsStore) => T | Promise<T>) {
@@ -316,8 +323,20 @@ export async function readLocalOperationsRows() {
   }
 }
 
+export async function listLocalOperationsAdminActions() {
+  return pruneStore(await readStore()).adminActions
+}
+
 export async function recordLocalContractEnvelopeEvent(payload: OperationsContractEnvelopePayload) {
   return updateStore((store) => {
+    const provider = payload.provider.trim().toLowerCase()
+    const sourceEventId = payload.sourceEventId || null
+    const existing = sourceEventId
+      ? store.contractEnvelopeEvents.find(row => row.provider === provider && row.source_event_id === sourceEventId)
+      : null
+    if (existing)
+      return existing
+
     const now = new Date().toISOString()
     const row: LocalContractEnvelopeEventRow = {
       completed_pdf_file_upload_id: payload.completedPdfFileUploadId || null,
@@ -328,10 +347,10 @@ export async function recordLocalContractEnvelopeEvent(payload: OperationsContra
       id: randomUUID(),
       metadata: payload.metadata,
       occurred_at: payload.occurredAt || now,
-      provider: payload.provider,
+      provider,
       provider_envelope_id: payload.providerEnvelopeId,
       signed_by_user_ids: payload.signedByUserIds,
-      source_event_id: payload.sourceEventId || null,
+      source_event_id: sourceEventId,
       status: payload.status,
     }
 
@@ -352,15 +371,23 @@ export async function recordLocalEmailSuppression(payload: OperationsEmailSuppre
   return updateStore((store) => {
     const now = new Date().toISOString()
     const normalizedEmail = payload.email.toLowerCase()
+    const provider = payload.provider.trim().toLowerCase()
+    const sourceEventId = payload.sourceEventId || null
+    const existing = sourceEventId
+      ? store.emailSuppressions.find(row => row.provider === provider && row.source_event_id === sourceEventId)
+      : null
+    if (existing)
+      return existing
+
     const row: LocalEmailSuppressionRow = {
       category: payload.category,
       created_at: now,
       email: normalizedEmail,
       id: randomUUID(),
       metadata: payload.metadata,
-      provider: payload.provider,
+      provider,
       reason: payload.reason,
-      source_event_id: payload.sourceEventId || null,
+      source_event_id: sourceEventId,
       suppressed_at: payload.suppressedAt || now,
     }
 
@@ -382,6 +409,14 @@ export async function findLocalEmailSuppression(email: string, category: Operati
 
 export async function recordLocalTrustVerificationEvent(payload: OperationsTrustVerificationPayload) {
   return updateStore((store) => {
+    const provider = payload.provider.trim().toLowerCase()
+    const sourceEventId = payload.sourceEventId || null
+    const existing = sourceEventId
+      ? store.trustVerificationEvents.find(row => row.provider === provider && row.source_event_id === sourceEventId)
+      : null
+    if (existing)
+      return existing
+
     const now = new Date().toISOString()
     const row: LocalTrustVerificationEventRow = {
       confidence: typeof payload.confidence === "number" ? payload.confidence : null,
@@ -390,9 +425,9 @@ export async function recordLocalTrustVerificationEvent(payload: OperationsTrust
       id: randomUUID(),
       metadata: payload.metadata,
       occurred_at: payload.occurredAt || now,
-      provider: payload.provider,
+      provider,
       provider_subject_id: payload.providerSubjectId || null,
-      source_event_id: payload.sourceEventId || null,
+      source_event_id: sourceEventId,
       status: payload.status,
       target_id: payload.targetId,
       target_type: payload.targetType,
@@ -402,6 +437,17 @@ export async function recordLocalTrustVerificationEvent(payload: OperationsTrust
     store.trustVerificationEvents = [row, ...store.trustVerificationEvents]
     return row
   })
+}
+
+export async function listLocalTrustVerificationEvents(targetIds: string[]) {
+  const targets = new Set(targetIds)
+  if (!targets.size)
+    return []
+
+  const store = await readStore()
+  return store.trustVerificationEvents
+    .filter(row => targets.has(row.target_id))
+    .sort((left, right) => new Date(right.occurred_at).getTime() - new Date(left.occurred_at).getTime())
 }
 
 export async function listLocalFileUploadsByRelated(relatedItems: Array<{ relatedId: string, relatedType: FileUploadRelatedType }>) {
@@ -441,7 +487,7 @@ export async function recordLocalBackupRun(payload: OperationsBackupRunPayload) 
   })
 }
 
-export async function recordLocalFileUploadPolicy(session: SessionUser, policy: { bucket: string, id: string, objectPath: string, uploadTokenHash?: string | null }, payload: FileUploadPolicyPayload) {
+export async function recordLocalFileUploadPolicy(session: SessionUser, policy: { bucket: string, id: string, objectPath: string, uploadTokenExpiresAt?: string | null, uploadTokenHash?: string | null }, payload: FileUploadPolicyPayload) {
   return updateStore((store) => {
     const now = new Date().toISOString()
     const row: LocalFileUploadRow = {
@@ -450,6 +496,7 @@ export async function recordLocalFileUploadPolicy(session: SessionUser, policy: 
       deleted_at: null,
       id: policy.id,
       local_file_path: null,
+      local_upload_token_expires_at: policy.uploadTokenExpiresAt || null,
       local_upload_token_hash: policy.uploadTokenHash || null,
       mime_type: payload.mimeType,
       object_path: policy.objectPath,
@@ -470,6 +517,25 @@ export async function recordLocalFileUploadPolicy(session: SessionUser, policy: 
   })
 }
 
+export async function assertLocalFileUploadToken(uploadId: string, token: string) {
+  const existing = (await readStore()).fileUploads.find(row => row.id === uploadId)
+  if (
+    !existing
+    || !existing.local_upload_token_hash
+    || !existing.local_upload_token_expires_at
+    || Date.parse(existing.local_upload_token_expires_at) <= Date.now()
+    || !localUploadTokenMatches(existing.local_upload_token_hash, token)
+    || existing.local_file_path
+    || existing.status !== "pending"
+  ) {
+    throw new Error("Local upload token is invalid or expired.")
+  }
+
+  return {
+    sizeBytes: existing.size_bytes,
+  }
+}
+
 export async function writeLocalFileUploadContent(uploadId: string, token: string, bytes: Buffer) {
   if (!bytes.length)
     throw new Error("Uploaded file content is empty.")
@@ -483,19 +549,29 @@ export async function writeLocalFileUploadContent(uploadId: string, token: strin
     if (!existing)
       throw new Error("Local upload policy was not found.")
 
-    if (!existing.local_upload_token_hash || existing.local_upload_token_hash !== hashLocalUploadToken(token))
-      throw new Error("Local upload token is invalid.")
+    if (
+      !existing.local_upload_token_hash
+      || !existing.local_upload_token_expires_at
+      || Date.parse(existing.local_upload_token_expires_at) <= Date.now()
+      || !localUploadTokenMatches(existing.local_upload_token_hash, token)
+    ) {
+      throw new Error("Local upload token is invalid or expired.")
+    }
 
-    if (bytes.byteLength > existing.size_bytes)
-      throw new Error("Uploaded file is larger than the requested upload policy.")
+    if (existing.local_file_path || existing.status !== "pending")
+      throw new Error("This local upload policy has already been used.")
+
+    if (bytes.byteLength !== existing.size_bytes)
+      throw new Error("Uploaded file size does not match the requested upload policy.")
 
     const localFilePath = localFilePathForObjectPath(existing.object_path)
-    await mkdir(dirname(localFilePath), { recursive: true })
-    await writeFile(localFilePath, bytes)
+    await writePrivateFileExclusive(localFilePath, bytes)
 
     const row: LocalFileUploadRow = {
       ...existing,
       local_file_path: localFilePath,
+      local_upload_token_expires_at: null,
+      local_upload_token_hash: null,
       scan_status: "pending",
       status: "pending",
       updated_at: now,
@@ -510,27 +586,77 @@ export async function recordLocalFileScanResult(uploadId: string, payload: FileS
   return updateStore((store) => {
     const now = new Date().toISOString()
     const existing = store.fileUploads.find(row => row.id === uploadId)
+    if (!existing || existing.scan_status !== "pending" || existing.status !== "pending")
+      return null
+
     const row: LocalFileUploadRow = {
-      bucket: existing?.bucket || "local-mock-files",
-      created_at: existing?.created_at || now,
-      deleted_at: existing?.deleted_at || null,
+      ...existing,
+      bucket: existing.bucket,
+      created_at: existing.created_at,
+      deleted_at: existing.deleted_at || null,
       id: uploadId,
-      mime_type: existing?.mime_type || "application/octet-stream",
-      object_path: existing?.object_path || uploadId,
-      original_filename: existing?.original_filename || uploadId,
-      owner_user_id: existing?.owner_user_id || "operations-worker",
-      purpose: existing?.purpose || "trust_evidence",
-      related_id: existing?.related_id || null,
-      related_type: existing?.related_type || null,
+      mime_type: existing.mime_type,
+      object_path: existing.object_path,
+      original_filename: existing.original_filename,
+      owner_user_id: existing.owner_user_id,
+      purpose: existing.purpose,
+      related_id: existing.related_id,
+      related_type: existing.related_type,
       scan_notes: payload.notes || null,
       scan_status: payload.scanStatus,
-      size_bytes: existing?.size_bytes || 0,
-      status: payload.status || (payload.scanStatus === "flagged" ? "blocked" : "uploaded"),
+      size_bytes: existing.size_bytes,
+      status: payload.scanStatus === "clean" ? "uploaded" : "blocked",
       updated_at: now,
     }
 
     store.fileUploads = [row, ...store.fileUploads.filter(item => item.id !== uploadId)]
     return row
+  })
+}
+
+export async function recordLocalAdminFileScanResult(
+  uploadId: string,
+  payload: FileScanResultPayload & { expectedUpdatedAt: string },
+  action: AdminAction,
+) {
+  return withLocalAdminSecurityLock(async () => {
+    await assertLocalAdminActor(action.adminUserId)
+
+    return updateStore((store) => {
+      const existing = store.fileUploads.find(row => row.id === uploadId)
+      if (!existing)
+        return null
+
+      if (existing.updated_at !== payload.expectedUpdatedAt) {
+        throw Object.assign(new Error("The file changed after this review began. Refresh and review the current state."), {
+          statusCode: 409,
+          statusMessage: "The file changed after this review began. Refresh and review the current state.",
+        })
+      }
+
+      if (
+        existing.deleted_at
+        || existing.status === "deleted"
+        || !["pending", "failed", "skipped"].includes(existing.scan_status)
+      ) {
+        throw Object.assign(new Error("This file is not eligible for a manual scan verdict."), {
+          statusCode: 409,
+          statusMessage: "This file is not eligible for a manual scan verdict.",
+        })
+      }
+
+      const row: LocalFileUploadRow = {
+        ...existing,
+        scan_notes: payload.notes || null,
+        scan_status: payload.scanStatus,
+        status: payload.scanStatus === "clean" ? "uploaded" : "blocked",
+        updated_at: action.createdAt,
+      }
+
+      store.adminActions = [action, ...store.adminActions.filter(item => item.id !== action.id)]
+      store.fileUploads = [row, ...store.fileUploads.filter(item => item.id !== uploadId)]
+      return row
+    })
   })
 }
 
@@ -571,9 +697,12 @@ export async function readLocalFileUploadContent(uploadId: string) {
     return null
 
   const localFilePath = localFilePathForObjectPath(row.object_path)
+  const bytes = await readPrivateFile(localFilePath)
+  if (!bytes)
+    return null
 
   return {
-    bytes: await readFile(localFilePath),
+    bytes,
     filename: row.original_filename,
     mimeType: row.mime_type,
     row,

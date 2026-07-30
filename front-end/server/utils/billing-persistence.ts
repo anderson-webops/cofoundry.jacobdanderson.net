@@ -12,6 +12,15 @@ interface PersistedSubscriptionBillingRow {
   stripe_customer_id: string | null
 }
 
+interface PersistedSubscriptionOwnerRow {
+  user_id: string
+}
+
+export interface StripeEventIdentity {
+  createdAt: string
+  id: string
+}
+
 function getStripeId(value: string | { id: string } | null | undefined) {
   if (!value)
     return null
@@ -19,15 +28,16 @@ function getStripeId(value: string | { id: string } | null | undefined) {
   return typeof value === "string" ? value : value.id
 }
 
-function toSubscriptionStatus(status: Stripe.Subscription.Status): SubscriptionStatus {
-  if (status === "active" || status === "trialing" || status === "past_due" || status === "canceled")
-    return status
+export function toSubscriptionStatus(status: Stripe.Subscription.Status): SubscriptionStatus {
+  const normalizedStatus = String(status)
+  if (normalizedStatus === "active" || normalizedStatus === "trialing" || normalizedStatus === "past_due" || normalizedStatus === "canceled")
+    return normalizedStatus
 
   return "inactive"
 }
 
-function planCapabilities(plan: SubscriptionPlan) {
-  const paid = plan !== "free"
+function planCapabilities(plan: SubscriptionPlan, status: SubscriptionStatus) {
+  const paid = plan !== "free" && (status === "active" || status === "trialing")
   return {
     contract_builder: paid,
     proposal_workflow: paid,
@@ -55,11 +65,11 @@ function getPeriodEnd(item: Stripe.SubscriptionItem | undefined) {
   return typeof periodEnd === "number" ? new Date(periodEnd * 1000).toISOString() : null
 }
 
-export function resolveStripePlanFromPriceId(event: H3Event, priceId?: string | null): SubscriptionPlan {
+export function resolveStripePlanFromPriceId(event: H3Event, priceId?: string | null): SubscriptionPlan | null {
   const runtimeConfig = useRuntimeConfig(event)
 
   if (!priceId)
-    return "free"
+    return null
 
   if (priceId === runtimeConfig.public.stripePriceTeamMonthly)
     return "team"
@@ -67,7 +77,7 @@ export function resolveStripePlanFromPriceId(event: H3Event, priceId?: string | 
   if (priceId === runtimeConfig.public.stripePriceProMonthly)
     return "pro"
 
-  return "free"
+  return null
 }
 
 function buildIdentity(session: SessionUser) {
@@ -121,7 +131,7 @@ export async function persistMockCheckoutSubscription(event: H3Event, session: S
   await persistWholeMemberWorkspaceState(event, {
     ...workspace.state,
     subscription,
-  })
+  }, { replaceSubscription: true })
 
   const nextWorkspace = await loadMemberWorkspaceState(event, {
     ...buildIdentity(workspace.session),
@@ -156,7 +166,7 @@ export async function updateMockSubscriptionRenewal(event: H3Event, session: Ses
   await persistWholeMemberWorkspaceState(event, {
     ...workspace.state,
     subscription,
-  })
+  }, { replaceSubscription: true })
 
   const nextWorkspace = await loadMemberWorkspaceState(event, {
     ...buildIdentity(workspace.session),
@@ -205,13 +215,18 @@ export async function createOrReuseStripeCustomer(event: H3Event, stripe: Stripe
       return existingCustomerId
   }
 
-  const customer = await stripe.customers.create({
-    email: session.email,
-    metadata: {
-      cofoundryUserId: session.id,
+  const customer = await stripe.customers.create(
+    {
+      email: session.email,
+      metadata: {
+        cofoundryUserId: session.id,
+      },
+      name: session.name,
     },
-    name: session.name,
-  })
+    {
+      idempotencyKey: `cofoundry-customer-${session.id}`,
+    },
+  )
 
   if (adminClient) {
     const { error } = await adminClient
@@ -234,19 +249,86 @@ export async function recordStripeCheckoutSession(event: H3Event, userId: string
   if (!adminClient)
     throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
 
-  const { error } = await adminClient
-    .from("subscriptions")
-    .update({
-      stripe_checkout_session_id: sessionId,
-      stripe_customer_id: customerId,
-    })
-    .eq("user_id", userId)
+  const { error } = await adminClient.rpc("cofoundry_record_stripe_checkout_session", {
+    p_customer_id: customerId,
+    p_session_id: sessionId,
+    p_user_id: userId,
+  })
 
   if (error)
     throw error
 }
 
-export async function syncStripeSubscription(event: H3Event, subscription: Stripe.Subscription, fallbackUserId?: string | null) {
+async function selectStripeSubscriptionOwner(adminClient: AdminClient, subscriptionId: string) {
+  const { data, error } = await adminClient
+    .from("subscriptions")
+    .select("user_id")
+    .eq("stripe_subscription_id", subscriptionId)
+    .maybeSingle<PersistedSubscriptionOwnerRow>()
+
+  if (error)
+    throw error
+
+  return data?.user_id || null
+}
+
+async function selectStripeCustomerOwner(adminClient: AdminClient, customerId: string | null) {
+  if (!customerId)
+    return null
+
+  const { data, error } = await adminClient
+    .from("subscriptions")
+    .select("user_id")
+    .eq("stripe_customer_id", customerId)
+    .maybeSingle<PersistedSubscriptionOwnerRow>()
+
+  if (error)
+    throw error
+
+  return data?.user_id || null
+}
+
+export function resolveStripeSubscriptionOwner(input: {
+  existingCustomerOwnerId?: string | null
+  existingSubscriptionOwnerId?: string | null
+  fallbackUserId?: string | null
+  metadataUserId?: string | null
+}) {
+  const candidates = [
+    input.existingSubscriptionOwnerId,
+    input.existingCustomerOwnerId,
+    input.fallbackUserId,
+    input.metadataUserId,
+  ].filter((value): value is string => Boolean(value))
+  const userId = candidates[0] || null
+
+  return {
+    conflict: Boolean(userId && candidates.some(candidate => candidate !== userId)),
+    userId,
+  }
+}
+
+export function resolveStripeCheckoutUser(input: {
+  clientReferenceId?: string | null
+  metadataUserId?: string | null
+}) {
+  const candidates = [input.clientReferenceId, input.metadataUserId]
+    .map(value => value?.trim() || "")
+    .filter(Boolean)
+  const userId = candidates[0] || null
+
+  return {
+    conflict: Boolean(userId && candidates.some(candidate => candidate !== userId)),
+    userId,
+  }
+}
+
+export async function syncStripeSubscription(
+  event: H3Event,
+  subscription: Stripe.Subscription,
+  eventIdentity: StripeEventIdentity,
+  fallbackUserId?: string | null,
+) {
   if (!isSupabaseEnabled(event))
     return null
 
@@ -254,35 +336,56 @@ export async function syncStripeSubscription(event: H3Event, subscription: Strip
   if (!adminClient)
     throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
 
-  const userId = subscription.metadata.cofoundryUserId || fallbackUserId
+  const customerId = getStripeId(subscription.customer)
+  const owner = resolveStripeSubscriptionOwner({
+    existingCustomerOwnerId: await selectStripeCustomerOwner(adminClient, customerId),
+    existingSubscriptionOwnerId: await selectStripeSubscriptionOwner(adminClient, subscription.id),
+    fallbackUserId,
+    metadataUserId: subscription.metadata.cofoundryUserId,
+  })
+  if (owner.conflict) {
+    throw createError({
+      statusCode: 409,
+      statusMessage: "Stripe subscription ownership does not match the existing account binding.",
+    })
+  }
+
+  const userId = owner.userId
   if (!userId)
     return null
 
   const item = getFirstSubscriptionItem(subscription)
   const priceId = item?.price.id || null
   const plan = resolveStripePlanFromPriceId(event, priceId)
-  const currentPeriodEnd = getPeriodEnd(item)
-  const customerId = getStripeId(subscription.customer)
+  if (!plan) {
+    throw createError({
+      statusCode: 409,
+      statusMessage: "Stripe reported a subscription price that is not configured for this deployment.",
+    })
+  }
 
-  const { data, error } = await adminClient
-    .from("subscriptions")
-    .upsert({
+  const currentPeriodEnd = getPeriodEnd(item)
+  const status = toSubscriptionStatus(subscription.status)
+
+  const { data, error } = await adminClient.rpc("cofoundry_apply_stripe_subscription_event", {
+    p_event_created_at: eventIdentity.createdAt,
+    p_event_id: eventIdentity.id,
+    p_subscription: {
       id: `subscription_${userId}`,
       user_id: userId,
       plan,
-      status: toSubscriptionStatus(subscription.status),
+      status,
       billing_cycle: item?.price.recurring?.interval === "year" ? "annual" : "monthly",
-      renews_at: subscription.cancel_at_period_end ? currentPeriodEnd : currentPeriodEnd,
+      renews_at: currentPeriodEnd,
       cancel_at_period_end: subscription.cancel_at_period_end,
       stripe_customer_id: customerId,
       stripe_subscription_id: subscription.id,
       stripe_price_id: priceId,
       stripe_current_period_end: currentPeriodEnd,
       stripe_status: subscription.status,
-      ...planCapabilities(plan),
-    }, { onConflict: "user_id" })
-    .select()
-    .single()
+      ...planCapabilities(plan, status),
+    },
+  })
 
   if (error)
     throw error

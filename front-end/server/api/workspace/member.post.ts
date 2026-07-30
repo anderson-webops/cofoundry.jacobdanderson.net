@@ -1,5 +1,6 @@
-import type { MemberWorkspaceWritePayload } from "~/shared/types/domain"
 import { requireAuthenticatedSession } from "~/server/utils/auth"
+import { memberWorkspaceWriteEnvelopeSchema } from "~/shared/utils/validation"
+import { projectWorkspaceForSession } from "~/shared/utils/workspace-authorization"
 import { persistMemberWorkspaceWritePayload } from "../../utils/member-workspace"
 import { assertRateLimit, buildRateLimitKey } from "../../utils/rate-limit"
 import { emitWorkspaceRealtimeChange } from "../../utils/workspace-realtime"
@@ -12,10 +13,7 @@ export default defineEventHandler(async (event) => {
     scope: "workspace:member",
     windowMs: 60 * 1000,
   })
-  const body = await readBody<{ state: MemberWorkspaceWritePayload }>(event)
-
-  if (!body?.state)
-    throw createError({ statusCode: 400, statusMessage: "A member workspace payload is required." })
+  const body = memberWorkspaceWriteEnvelopeSchema.parse(await readBody(event))
 
   const workspace = await persistMemberWorkspaceWritePayload(event, {
     id: session.id,
@@ -33,7 +31,7 @@ export default defineEventHandler(async (event) => {
   })
 
   return {
-    data: workspace.seed,
+    data: projectWorkspaceForSession(workspace.seed, workspace.session),
     session: workspace.session,
   }
 })

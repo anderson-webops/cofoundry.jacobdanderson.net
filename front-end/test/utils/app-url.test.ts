@@ -12,14 +12,15 @@ describe("server app URL resolution", () => {
     })).toBe("https://cofoundry.example")
   })
 
-  it("uses forwarded production origin when configured URL is local", () => {
+  it("never lets forwarded headers replace the canonical production origin", () => {
     expect(resolveServerAppUrlFromParts({
       configuredAppUrl: "http://localhost:3000",
       forwardedHost: "cofoundry.example",
       forwardedProto: "https",
       host: "127.0.0.1:3000",
+      nodeEnv: "production",
       requestOrigin: "http://127.0.0.1:3000",
-    })).toBe("https://cofoundry.example")
+    })).toBe("https://cofoundry.jacobdanderson.net")
   })
 
   it("keeps local configured URL for local requests", () => {
@@ -30,14 +31,33 @@ describe("server app URL resolution", () => {
     })).toBe("http://localhost:3000")
   })
 
-  it("falls back to host headers when no configured URL exists", () => {
+  it("uses proxy headers outside production only when explicitly trusted", () => {
     expect(resolveServerAppUrlFromParts({
       configuredAppUrl: "",
       forwardedHost: "cofoundry.example",
       forwardedProto: "https",
       host: "localhost:3000",
       requestOrigin: "http://localhost:3000",
+      trustProxyHeaders: true,
     })).toBe("https://cofoundry.example")
+  })
+
+  it("ignores untrusted host headers", () => {
+    expect(resolveServerAppUrlFromParts({
+      configuredAppUrl: "",
+      forwardedHost: "attacker.example",
+      forwardedProto: "https",
+      host: "attacker.example",
+      requestOrigin: "http://127.0.0.1:3000",
+    })).toBe("http://127.0.0.1:3000")
+  })
+
+  it("uses the canonical fallback when an unconfigured host receives a non-local origin", () => {
+    expect(resolveServerAppUrlFromParts({
+      configuredAppUrl: "",
+      host: "attacker.example",
+      requestOrigin: "https://attacker.example",
+    })).toBe("https://cofoundry.jacobdanderson.net")
   })
 
   it("uses the production fallback when production only sees a local origin", () => {

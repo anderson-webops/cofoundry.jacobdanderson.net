@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Profile } from "~/shared/types/domain"
+import type { PublicTrustSummary } from "~/shared/utils/directory"
 import { computed } from "vue"
 import { formatCommitment, formatRemotePreference } from "~/shared/utils/format"
 import { buildProfileReadiness } from "~/shared/utils/formation"
@@ -7,12 +8,15 @@ import { buildProfileReadiness } from "~/shared/utils/formation"
 const props = withDefaults(defineProps<{
   profile: Profile
   skills: string[]
+  trustSummary?: PublicTrustSummary
   headingLevel?: 2 | 3
 }>(), {
   headingLevel: 3,
 })
 
 const readiness = computed(() => buildProfileReadiness(props.profile))
+const trustPercent = computed(() => props.trustSummary?.percent ?? readiness.value.trustPercent)
+const trustReady = computed(() => props.trustSummary?.ready ?? readiness.value.trustReady)
 const leadProof = computed(() => props.profile.trustSignals.builderProofs[0] || null)
 const headingTag = computed(() => `h${props.headingLevel}`)
 const proofHeadingTag = computed(() => `h${props.headingLevel + 1}`)
@@ -45,8 +49,8 @@ const profileRoleLabel = computed(() => {
     </div>
 
     <div class="flex flex-wrap gap-2">
-      <BaseBadge :tone="readiness.trustReady ? 'success' : 'accent'">
-        {{ readiness.trustPercent }}% profile signals
+      <BaseBadge :tone="trustReady ? 'success' : 'accent'">
+        {{ trustPercent }}% profile signals
       </BaseBadge>
     </div>
 

@@ -25,6 +25,14 @@ describe("session utilities", () => {
   it("returns null for invalid payloads", () => {
     expect(decodeSessionUser("not-a-real-session")).toBeNull()
     expect(decodeSessionUser("")).toBeNull()
+    expect(decodeSessionUser(encodeSessionUser({
+      id: "user_test",
+      email: "tester@cofoundry.dev",
+      name: "Test Founder",
+      role: "owner",
+      onboardingCompleted: true,
+      subscriptionPlan: "pro",
+    } as unknown as SessionUser))).toBeNull()
     expect(sessionCookieName).toBe("cofoundry_session")
     expect(sessionSignatureCookieName).toBe("cofoundry_session_sig")
   })
@@ -51,6 +59,18 @@ describe("session utilities", () => {
 
     expect(persistedUser).toBeDefined()
     persistedUser!.suspendedAt = new Date("2026-04-18T10:00:00.000Z").toISOString()
+
+    expect(resolveActiveSessionFromSeed(seed, staleSession!)).toBeNull()
+  })
+
+  it("rejects privileged sessions until the persisted email is verified", () => {
+    const seed = cloneValue(workspaceSeed)
+    const staleSession = buildSessionUser(workspaceSeed, "user_malik")
+    const persistedUser = seed.users.find(user => user.id === "user_malik")
+
+    expect(persistedUser).toBeDefined()
+    persistedUser!.role = "admin"
+    persistedUser!.verifiedEmail = false
 
     expect(resolveActiveSessionFromSeed(seed, staleSession!)).toBeNull()
   })

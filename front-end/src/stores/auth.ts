@@ -8,6 +8,11 @@ interface SessionAuthResponse {
   session: SessionUser
 }
 
+interface SignUpAuthResponse {
+  pendingVerification: boolean
+  session: SessionUser | null
+}
+
 interface OAuthAuthResponse {
   redirectUrl?: string
   session?: SessionUser
@@ -21,7 +26,7 @@ export const useAuthStore = defineStore("auth", () => {
 
   const currentUser = computed(() => session.value)
   const isAuthenticated = computed(() => Boolean(session.value))
-  const isAdmin = computed(() => ["admin", "investor_admin"].includes(session.value?.role || ""))
+  const isAdmin = computed(() => session.value?.role === "admin")
 
   function clearError() {
     error.value = ""
@@ -55,16 +60,19 @@ export const useAuthStore = defineStore("auth", () => {
     clearError()
 
     try {
-      const response = await $fetch<SessionAuthResponse>("/api/auth/sign-up", {
+      const response = await $fetch<SignUpAuthResponse>("/api/auth/sign-up", {
         method: "POST",
         body: payload,
       })
+
+      if (!response.session)
+        return response
 
       setSession(response.session)
       await workspaceStore.loadWorkspace(true)
       workspaceStore.createDraftUserFromSignUp(response.session, payload.name)
       await workspaceStore.persistWorkspace(true)
-      return response.session
+      return response
     }
     catch (caughtError) {
       error.value = caughtError instanceof Error ? caughtError.message : "Unable to create account."
@@ -112,13 +120,12 @@ export const useAuthStore = defineStore("auth", () => {
     workspaceStore.resetSessionState()
   }
 
-  async function completeOnboarding(nextSession: SessionUser) {
+  async function completeOnboarding() {
     pending.value = true
 
     try {
       const response = await $fetch<SessionAuthResponse>("/api/auth/complete-onboarding", {
         method: "POST",
-        body: { session: nextSession },
       })
 
       setSession(response.session)

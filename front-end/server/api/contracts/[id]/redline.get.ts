@@ -4,9 +4,16 @@ import { buildContractRedline } from "~/shared/utils/contract-documents"
 import { getContractById, getCurrentContractVersion } from "~/shared/utils/workspace"
 import { requireAuthenticatedSession } from "../../../utils/auth"
 import { loadMemberWorkspaceState } from "../../../utils/member-workspace"
+import { assertRateLimit, buildRateLimitKey } from "../../../utils/rate-limit"
 
 export default defineEventHandler(async (event) => {
   const session = await requireAuthenticatedSession(event)
+  assertRateLimit(event, {
+    key: buildRateLimitKey(event, session.id),
+    limit: 60,
+    scope: "contracts:redline",
+    windowMs: 60 * 60 * 1000,
+  })
   const contractId = getRouterParam(event, "id")
 
   if (!contractId)

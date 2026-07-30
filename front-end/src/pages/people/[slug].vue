@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { workspaceSeed } from "~/shared/data/seed"
-import { buildPublicProfileSlug, getPublicProfileBySlug, getRoleHubs, slugifySegment } from "~/shared/utils/directory"
+import { buildPublicProfileSlug, slugifySegment } from "~/shared/utils/directory"
 import { formatContactRevealStage, formatDate, formatRemotePreference, formatStage, formatStartTimeline } from "~/shared/utils/format"
 
 const route = useRoute()
 const slug = String(route.params.slug)
-const entry = getPublicProfileBySlug(workspaceSeed, slug)
+const directory = await usePublicDirectory()
+const entry = directory.profiles.find(entry => entry.slug === slug)
 
 if (!entry)
   throw createError({ statusCode: 404, statusMessage: "Public profile not found" })
@@ -17,7 +17,7 @@ const introCta = computed(() => getIntroCta(`public-profile-${entry.slug}`))
 const publicProfileUrl = canonicalAppUrl
   ? new URL(`/people/${buildPublicProfileSlug(profile)}`, `${canonicalAppUrl}/`).toString()
   : undefined
-const roleHubSlugs = new Set(getRoleHubs(workspaceSeed).map(entry => entry.slug))
+const roleHubSlugs = new Set(directory.roleHubs.map(entry => entry.slug))
 const linkedRoles = [...new Set([profile.roleScope.primaryRole, ...profile.roles])]
   .filter((role): role is string => Boolean(role) && roleHubSlugs.has(slugifySegment(role)))
 const publicLinks = [
@@ -83,7 +83,7 @@ usePageSeo(`${profile.displayName} founder profile`, profile.headline, {
         </p>
 
         <div class="mt-4">
-          <TrustSignalStrip :profile="profile" />
+          <TrustSignalStrip :profile="profile" :trust-summary="entry.trustSummary" />
         </div>
 
         <p class="muted text-base leading-7 mt-6">

@@ -1,4 +1,5 @@
 import { billingSubscriptionMutationSchema } from "~/shared/utils/validation"
+import { projectWorkspaceForSession } from "~/shared/utils/workspace-authorization"
 import { requireAuthenticatedSession } from "../../utils/auth"
 import { resolveServerBillingAccessPolicy } from "../../utils/billing-access"
 import { updateMockSubscriptionRenewal } from "../../utils/billing-persistence"
@@ -41,7 +42,7 @@ export default defineEventHandler(async (event) => {
   }
 
   return {
-    data: workspace.seed,
+    data: projectWorkspaceForSession(workspace.seed, workspace.session),
     mode: "mock",
     session: workspace.session,
     subscription: workspace.state.subscription,

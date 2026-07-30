@@ -60,12 +60,7 @@ async function submitProfile(payload: any) {
 
   workspaceStore.completeMinimumOnboarding(authStore.currentUser.id, payload)
   await workspaceStore.persistWorkspace(true)
-  await authStore.completeOnboarding({
-    ...authStore.currentUser,
-    name: payload.displayName,
-    role: payload.intentMode === "join" ? "collaborator" : authStore.currentUser.role,
-    onboardingCompleted: true,
-  })
+  await authStore.completeOnboarding()
 
   previewUnlocked.value = true
 

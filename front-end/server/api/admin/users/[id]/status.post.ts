@@ -1,5 +1,6 @@
+import { evaluateAdminSecurityMutation } from "~/shared/utils/admin-authorization"
 import { requireAdminSession, validateAdminUserModerationPayload } from "../../../../utils/admin"
-import { persistAdminAction, persistUserSuspension } from "../../../../utils/admin-persistence"
+import { listAdminSecurityUsers, persistAdminUserSecurityAction } from "../../../../utils/admin-persistence"
 import { assertRateLimit, buildRateLimitKey } from "../../../../utils/rate-limit"
 
 export default defineEventHandler(async (event) => {
@@ -16,8 +17,12 @@ export default defineEventHandler(async (event) => {
   if (!targetUserId)
     throw createError({ statusCode: 400, statusMessage: "A target user id is required." })
 
-  if (payload.action === "suspend" && targetUserId === session.id)
-    throw createError({ statusCode: 400, statusMessage: "Admins cannot suspend their own account." })
+  const users = await listAdminSecurityUsers(event)
+  const target = users.find(user => user.id === targetUserId)
+  const mutation = { action: payload.action, kind: "change_status" as const }
+  const decision = evaluateAdminSecurityMutation(users, session.id, targetUserId, mutation)
+  if (!decision.allowed)
+    throw createError(decision)
 
   const createdAt = new Date().toISOString()
   const action = {
@@ -28,11 +33,14 @@ export default defineEventHandler(async (event) => {
     targetId: targetUserId,
     targetType: "user" as const,
     type: payload.action === "suspend" ? "suspend_user" as const : "reinstate_user" as const,
+    metadata: {
+      previousSuspendedAt: target?.suspendedAt,
+      nextSuspendedAt: payload.action === "suspend" ? createdAt : null,
+    },
   }
   const suspendedAt = payload.action === "suspend" ? createdAt : null
 
-  await persistUserSuspension(event, targetUserId, suspendedAt)
-  await persistAdminAction(event, action)
+  await persistAdminUserSecurityAction(event, { action, mutation })
 
   return {
     action,

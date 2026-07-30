@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { appDescription, appName } from "~/shared/constants/app"
 import { isPrivateWorkspaceRoutePath } from "~/shared/constants/route-surfaces"
+import { serializeJsonForHtml } from "~/shared/utils/html"
 import { buildSiteStructuredData, buildSiteUrl } from "~/shared/utils/seo"
 import { themeSchemeStyleContent } from "~/shared/utils/theme"
 
@@ -57,7 +58,7 @@ useHead(() => ({
   script: [
     ...analyticsScripts,
     ...structuredData.value.map((entry, index) => ({
-      innerHTML: JSON.stringify(entry),
+      innerHTML: serializeJsonForHtml(entry),
       key: `structured-data-${index}`,
       type: "application/ld+json" as const,
     })),

@@ -1,32 +1,20 @@
 import type { H3Event } from "h3"
 import type { Signature } from "~/shared/types/domain"
 import { randomUUID } from "node:crypto"
-import { getHeader, getRequestIP } from "h3"
-import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
+import { getHeader } from "h3"
+import { getRequesterIp } from "./rate-limit"
 
-export async function recordContractSignatureEvent(event: H3Event, signature: Signature, typedName: string) {
-  if (!isSupabaseEnabled(event))
-    return
-
-  const adminClient = createSupabaseAdminClient(event)
-  if (!adminClient)
-    throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
-
-  const { error } = await adminClient
-    .from("contract_signature_events")
-    .insert({
-      id: randomUUID(),
-      contract_id: signature.contractId,
-      contract_version_id: signature.contractVersionId,
-      signature_id: signature.id,
-      user_id: signature.userId,
-      typed_name: typedName,
-      event_type: "typed_signature",
-      ip_address: getRequestIP(event, { xForwardedFor: true }) || null,
-      user_agent: getHeader(event, "user-agent") || null,
-      created_at: signature.signedAt,
-    })
-
-  if (error)
-    throw error
+export function buildContractSignatureEvent(event: H3Event, signature: Signature, typedName: string) {
+  return {
+    contract_id: signature.contractId,
+    contract_version_id: signature.contractVersionId,
+    created_at: signature.signedAt,
+    event_type: "typed_signature" as const,
+    id: randomUUID(),
+    ip_address: getRequesterIp(event) || null,
+    signature_id: signature.id,
+    typed_name: typedName,
+    user_agent: getHeader(event, "user-agent")?.slice(0, 1000) || null,
+    user_id: signature.userId,
+  }
 }

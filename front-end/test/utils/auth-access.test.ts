@@ -10,7 +10,7 @@ describe("auth access policy", () => {
     }, false)).toBe(false)
   })
 
-  it("allows seeded review credentials only for local development or deliberate staging demos", () => {
+  it("allows seeded review credentials only in local development", () => {
     expect(areSeededReviewCredentialsEnabled({
       backendMode: "mock",
       billingMode: "mock",
@@ -21,6 +21,6 @@ describe("auth access policy", () => {
       backendMode: "mock",
       billingMode: "mock",
       enableDemoAccess: true,
-    }, false)).toBe(true)
+    }, false)).toBe(false)
   })
 })

@@ -31,17 +31,17 @@ describe("product access policy", () => {
     expect(policy.signInEnabled).toBe(true)
   })
 
-  it("allows deliberate staging demos behind an explicit flag", () => {
+  it("does not expose bundled demo accounts on hosted staging origins", () => {
     const policy = resolveProductAccessPolicy({
       backendMode: "mock",
       billingMode: "mock",
       enableDemoAccess: true,
     }, false)
 
-    expect(policy.accountsEnabled).toBe(true)
-    expect(policy.mockBillingPreviewEnabled).toBe(true)
+    expect(policy.accountsEnabled).toBe(false)
+    expect(policy.mockBillingPreviewEnabled).toBe(false)
     expect(policy.operatorManagedBilling).toBe(false)
-    expect(policy.showDemoConveniences).toBe(true)
+    expect(policy.showDemoConveniences).toBe(false)
   })
 
   it("treats live accounts without Stripe as operator-managed billing", () => {

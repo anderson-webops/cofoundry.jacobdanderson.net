@@ -1,6 +1,10 @@
 import type { H3Event } from "h3"
 import type { PrivacyRequest, SessionUser } from "~/shared/types/domain"
-import { createLocalPrivacyRequest, listLocalPrivacyRequests } from "./local-privacy-requests"
+import {
+  createLocalPrivacyRequest,
+  listLocalPrivacyRequests,
+  listLocalPrivacyRequestsForUser,
+} from "./local-privacy-requests"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
 
 interface PersistedPrivacyRequestRow {
@@ -94,6 +98,27 @@ export async function listPrivacyRequests(event: H3Event) {
     .select("*")
     .order("created_at", { ascending: false })
     .limit(100)
+
+  if (error)
+    throw error
+
+  return ((data || []) as PersistedPrivacyRequestRow[]).map(fromRow)
+}
+
+export async function listPrivacyRequestsForUser(event: H3Event, userId: string) {
+  if (!isSupabaseEnabled(event))
+    return listLocalPrivacyRequestsForUser(userId)
+
+  const adminClient = createSupabaseAdminClient(event)
+  if (!adminClient)
+    throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
+
+  const { data, error } = await adminClient
+    .from("privacy_requests")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(500)
 
   if (error)
     throw error

@@ -1,17 +1,22 @@
 <script setup lang="ts">
 import type { Profile } from "~/shared/types/domain"
+import type { PublicTrustSummary } from "~/shared/utils/directory"
 import { formatRelativeDate, formatTrustTier } from "~/shared/utils/format"
 import { buildProfileReadiness, buildProfileTrustTier, buildVerifiedLinkCount, isRecentlyActive } from "~/shared/utils/formation"
 
 const props = withDefaults(defineProps<{
   profile: Profile
   compact?: boolean
+  trustSummary?: PublicTrustSummary
 }>(), {
   compact: false,
 })
 
 const readiness = computed(() => buildProfileReadiness(props.profile))
-const trustTier = computed(() => buildProfileTrustTier(props.profile))
+const trustTier = computed(() => props.trustSummary?.tier ?? buildProfileTrustTier(props.profile))
+const trustCompletedCount = computed(() => props.trustSummary?.completedCount ?? readiness.value.trustCompletedCount)
+const trustTotalCount = computed(() => props.trustSummary?.totalCount ?? readiness.value.trustTotalCount)
+const trustReady = computed(() => props.trustSummary?.ready ?? readiness.value.trustReady)
 const verifiedLinkCount = computed(() => buildVerifiedLinkCount(props.profile))
 const recentlyActive = computed(() => isRecentlyActive(props.profile.trustSignals.lastActiveAt))
 const badges = computed(() => {
@@ -21,8 +26,8 @@ const badges = computed(() => {
       tone: trustTier.value === "level_c" ? "success" : trustTier.value === "level_b" ? "accent" : "neutral",
     },
     {
-      label: `${readiness.value.trustCompletedCount}/${readiness.value.trustTotalCount} profile signals`,
-      tone: readiness.value.trustReady ? "success" : "accent",
+      label: `${trustCompletedCount.value}/${trustTotalCount.value} profile signals`,
+      tone: trustReady.value ? "success" : "accent",
     },
   ]
 

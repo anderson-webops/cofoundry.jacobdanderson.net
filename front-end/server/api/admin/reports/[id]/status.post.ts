@@ -1,5 +1,5 @@
 import { requireAdminSession, validateAdminReportStatusPayload } from "../../../../utils/admin"
-import { persistAdminAction, persistReportStatus } from "../../../../utils/admin-persistence"
+import { persistAdminReportStatusAction } from "../../../../utils/admin-persistence"
 import { emitLifecycleNotificationEvent } from "../../../../utils/lifecycle-notification-events"
 import { loadMemberWorkspaceState } from "../../../../utils/member-workspace"
 import { assertRateLimit, buildRateLimitKey } from "../../../../utils/rate-limit"
@@ -29,37 +29,39 @@ export default defineEventHandler(async (event) => {
     type: payload.status === "reviewed" ? "review_report" as const : "resolve_report" as const,
   }
 
-  const report = await persistReportStatus(event, {
-    adminUserId: session.id,
-    notes: payload.notes,
-    reportId,
+  const report = await persistAdminReportStatusAction(event, {
+    action,
+    expectedStatus: payload.expectedStatus,
     status: payload.status,
-    timestamp: createdAt,
   })
-  await persistAdminAction(event, action)
   if (report?.reporterUserId) {
-    const workspace = await loadMemberWorkspaceState(event, {
-      id: session.id,
-      email: session.email,
-      name: session.name,
-      onboardingCompleted: session.onboardingCompleted,
-      role: session.role,
-      subscriptionPlan: session.subscriptionPlan,
-    })
+    try {
+      const workspace = await loadMemberWorkspaceState(event, {
+        id: session.id,
+        email: session.email,
+        name: session.name,
+        onboardingCompleted: session.onboardingCompleted,
+        role: session.role,
+        subscriptionPlan: session.subscriptionPlan,
+      })
 
-    await emitLifecycleNotificationEvent(event, workspace.seed, {
-      eventType: "report.reviewed",
-      metadata: {
-        action: action.type,
-        adminUserId: session.id,
-        status: payload.status,
-      },
-      targetId: reportId,
-      targetType: "report",
-      userId: report.reporterUserId,
-    }, {
-      source: "admin.reports",
-    })
+      await emitLifecycleNotificationEvent(event, workspace.seed, {
+        eventType: "report.reviewed",
+        metadata: {
+          action: action.type,
+          adminUserId: session.id,
+          status: payload.status,
+        },
+        targetId: reportId,
+        targetType: "report",
+        userId: report.reporterUserId,
+      }, {
+        source: "admin.reports",
+      })
+    }
+    catch (error) {
+      console.warn("[reports] Report status persisted, but lifecycle notification delivery failed.", error)
+    }
   }
 
   return {

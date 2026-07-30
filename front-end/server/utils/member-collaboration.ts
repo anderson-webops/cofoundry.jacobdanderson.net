@@ -4,6 +4,7 @@ import type {
   Contract,
   ContractVersion,
   Conversation,
+  InvestmentApplication,
   Match,
   Message,
   Notification,
@@ -11,13 +12,15 @@ import type {
   ProposalComment,
   ProposalVersion,
   RelationshipDecision,
+  Report,
   Signature,
   TrialCollaboration,
   WorkspaceSeed,
 } from "../../shared/types/domain"
 import type { PersistedCollaborationState } from "./local-collaboration-store"
 import { cloneValue } from "../../shared/utils/clone"
-import { loadLocalCollaborationState, persistLocalCollaborationState } from "./local-collaboration-store"
+import { deriveCollaborationTrustMetrics } from "../../shared/utils/collaboration"
+import { loadLocalCollaborationState, persistLocalCollaborationStateForUsers } from "./local-collaboration-store"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
 
 type AdminClient = NonNullable<ReturnType<typeof createSupabaseAdminClient>>
@@ -179,6 +182,37 @@ interface PersistedNotificationRow {
   title: string
   type: Notification["type"]
   user_id: string
+}
+
+interface PersistedReportRow {
+  created_at: string
+  details: string
+  id: string
+  priority: Report["priority"]
+  reason: Report["reason"]
+  reporter_user_id: string
+  resolution_notes: string | null
+  resolved_at: string | null
+  resolved_by_user_id: string | null
+  review_notes: string | null
+  reviewed_at: string | null
+  reviewed_by_user_id: string | null
+  status: Report["status"]
+  target_id: string
+  target_type: Report["targetType"]
+}
+
+interface PersistedInvestmentApplicationRow {
+  applicant_user_id: string
+  created_at: string
+  deck_link: string
+  id: string
+  opportunity_id: string
+  raise_amount: string
+  reason: string
+  status: InvestmentApplication["status"]
+  team_summary: string
+  traction: string
 }
 
 interface PersistedRelationshipDecisionRow {
@@ -558,6 +592,41 @@ function toNotificationRow(notification: Notification): PersistedNotificationRow
   }
 }
 
+function fromReportRow(row: PersistedReportRow): Report {
+  return {
+    id: row.id,
+    reporterUserId: row.reporter_user_id,
+    targetType: row.target_type,
+    targetId: row.target_id,
+    reason: row.reason,
+    priority: row.priority,
+    details: row.details,
+    status: row.status,
+    reviewNotes: row.review_notes,
+    reviewedAt: row.reviewed_at,
+    reviewedByUserId: row.reviewed_by_user_id,
+    resolutionNotes: row.resolution_notes,
+    resolvedAt: row.resolved_at,
+    resolvedByUserId: row.resolved_by_user_id,
+    createdAt: row.created_at,
+  }
+}
+
+function fromInvestmentApplicationRow(row: PersistedInvestmentApplicationRow): InvestmentApplication {
+  return {
+    id: row.id,
+    opportunityId: row.opportunity_id,
+    applicantUserId: row.applicant_user_id,
+    status: row.status,
+    raiseAmount: row.raise_amount,
+    traction: row.traction,
+    deckLink: row.deck_link,
+    teamSummary: row.team_summary,
+    reason: row.reason,
+    createdAt: row.created_at,
+  }
+}
+
 function fromRelationshipDecisionRow(row: PersistedRelationshipDecisionRow): RelationshipDecision {
   return {
     id: row.id,
@@ -590,6 +659,7 @@ function buildEmptyState(): PersistedCollaborationState {
     contractVersions: [],
     contracts: [],
     conversations: [],
+    investmentApplications: [],
     matches: [],
     messages: [],
     notifications: [],
@@ -618,17 +688,20 @@ function mergeCollaborationState(seed: WorkspaceSeed, state: PersistedCollaborat
   nextSeed.trialCollaborations = state.trialCollaborations
   nextSeed.relationshipDecisions = state.relationshipDecisions
   nextSeed.notifications = state.notifications
-  return nextSeed
+  nextSeed.reports = state.reports
+  nextSeed.investmentApplications = state.investmentApplications
+  return deriveCollaborationTrustMetrics(nextSeed)
 }
 
-function extractUserCollaborationState(seed: WorkspaceSeed, userId: string): PersistedCollaborationState {
-  const connectRequests = seed.connectRequests.filter(request => request.fromUserId === userId || request.toUserId === userId)
-  const matches = seed.matches.filter(match => match.participantIds.includes(userId))
+export function extractUsersCollaborationState(seed: WorkspaceSeed, userIds: string[]): PersistedCollaborationState {
+  const userIdSet = new Set(userIds)
+  const connectRequests = seed.connectRequests.filter(request => userIdSet.has(request.fromUserId) || userIdSet.has(request.toUserId))
+  const matches = seed.matches.filter(match => match.participantIds.some(userId => userIdSet.has(userId)))
   const matchIds = new Set(matches.map(match => match.id))
-  const conversations = seed.conversations.filter(conversation => conversation.participantIds.includes(userId))
+  const conversations = seed.conversations.filter(conversation => conversation.participantIds.some(userId => userIdSet.has(userId)))
   const conversationIds = new Set(conversations.map(conversation => conversation.id))
   const messages = seed.messages.filter(message => conversationIds.has(message.conversationId))
-  const proposals = seed.proposals.filter(proposal => proposal.createdByUserId === userId || proposal.recipientUserId === userId)
+  const proposals = seed.proposals.filter(proposal => userIdSet.has(proposal.createdByUserId) || userIdSet.has(proposal.recipientUserId))
   const proposalIds = new Set(proposals.map(proposal => proposal.id))
   const proposalVersions = seed.proposalVersions.filter(version => proposalIds.has(version.proposalId))
   const proposalComments = seed.proposalComments.filter(comment => proposalIds.has(comment.proposalId))
@@ -638,7 +711,7 @@ function extractUserCollaborationState(seed: WorkspaceSeed, userId: string): Per
   const signatures = seed.signatures.filter(signature => contractIds.has(signature.contractId))
   const trialCollaborations = seed.trialCollaborations.filter(trial => matchIds.has(trial.matchId))
   const relationshipDecisions = seed.relationshipDecisions.filter(decision => matchIds.has(decision.matchId))
-  const notifications = seed.notifications.filter(notification => notification.userId === userId)
+  const notifications = seed.notifications.filter(notification => userIdSet.has(notification.userId))
 
   return {
     ...buildEmptyState(),
@@ -655,6 +728,8 @@ function extractUserCollaborationState(seed: WorkspaceSeed, userId: string): Per
     trialCollaborations,
     relationshipDecisions,
     notifications,
+    reports: seed.reports.filter(report => userIdSet.has(report.reporterUserId)),
+    investmentApplications: seed.investmentApplications.filter(application => userIdSet.has(application.applicantUserId)),
   }
 }
 
@@ -835,6 +910,38 @@ async function selectNotifications(adminClient: AdminClient, userId: string) {
   return (data || []) as PersistedNotificationRow[]
 }
 
+async function selectReports(adminClient: AdminClient, userId: string, includeAdministrativeData: boolean) {
+  const query = adminClient
+    .from("reports")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(500)
+  const { data, error } = includeAdministrativeData
+    ? await query
+    : await query.eq("reporter_user_id", userId)
+
+  if (error)
+    throw error
+
+  return (data || []) as PersistedReportRow[]
+}
+
+async function selectInvestmentApplications(adminClient: AdminClient, userId: string, includeAdministrativeData: boolean) {
+  const query = adminClient
+    .from("investment_applications")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(500)
+  const { data, error } = includeAdministrativeData
+    ? await query
+    : await query.eq("applicant_user_id", userId)
+
+  if (error)
+    throw error
+
+  return (data || []) as PersistedInvestmentApplicationRow[]
+}
+
 async function selectRelationshipDecisions(adminClient: AdminClient, matchIds: string[]) {
   if (!matchIds.length)
     return [] as PersistedRelationshipDecisionRow[]
@@ -851,31 +958,17 @@ async function selectRelationshipDecisions(adminClient: AdminClient, matchIds: s
   return (data || []) as PersistedRelationshipDecisionRow[]
 }
 
-async function replaceRows<T extends { id: string }>(
-  adminClient: AdminClient,
-  table: string,
-  runDelete: () => any,
-  rows: T[],
-) {
-  const { error: deleteError } = await runDelete()
-  if (deleteError)
-    throw deleteError
-
-  if (!rows.length)
-    return
-
-  const { error } = await adminClient.from(table).insert(rows)
-  if (error)
-    throw error
-}
-
 export function mergeServerCollaborationState(seed: WorkspaceSeed, state: PersistedCollaborationState) {
   return mergeCollaborationState(seed, state)
 }
 
-export async function loadServerCollaborationState(event: H3Event, userId: string) {
+export async function loadServerCollaborationState(
+  event: H3Event,
+  userId: string,
+  options: { includeAdministrativeData?: boolean } = {},
+) {
   if (!isSupabaseEnabled(event))
-    return await loadLocalCollaborationState(userId) || buildEmptyState()
+    return await loadLocalCollaborationState(userId, options) || buildEmptyState()
 
   const adminClient = createSupabaseAdminClient(event)
   if (!adminClient)
@@ -894,6 +987,8 @@ export async function loadServerCollaborationState(event: H3Event, userId: strin
   const trialCollaborations = await selectTrialCollaborations(adminClient, matches.map(match => match.id))
   const relationshipDecisions = await selectRelationshipDecisions(adminClient, matches.map(match => match.id))
   const notifications = await selectNotifications(adminClient, userId)
+  const reports = await selectReports(adminClient, userId, options.includeAdministrativeData === true)
+  const investmentApplications = await selectInvestmentApplications(adminClient, userId, options.includeAdministrativeData === true)
 
   return {
     ...buildEmptyState(),
@@ -910,14 +1005,42 @@ export async function loadServerCollaborationState(event: H3Event, userId: strin
     trialCollaborations: trialCollaborations.map(fromTrialCollaborationRow),
     relationshipDecisions: relationshipDecisions.map(fromRelationshipDecisionRow),
     notifications: notifications.map(fromNotificationRow),
+    reports: reports.map(fromReportRow),
+    investmentApplications: investmentApplications.map(fromInvestmentApplicationRow),
   } satisfies PersistedCollaborationState
 }
 
-export async function persistServerCollaborationState(event: H3Event, userId: string, seed: WorkspaceSeed) {
-  const state = extractUserCollaborationState(seed, userId)
+export async function persistServerCollaborationState(
+  event: H3Event,
+  userIdOrIds: string | string[],
+  seed: WorkspaceSeed,
+  options: {
+    expectedSeed: WorkspaceSeed
+    signatureEvents?: Array<{
+      contract_id: string
+      contract_version_id: string
+      created_at: string
+      event_type: "typed_signature"
+      id: string
+      ip_address: string | null
+      signature_id: string
+      typed_name: string
+      user_agent: string | null
+      user_id: string
+    }>
+  },
+) {
+  const userIds = [...new Set((Array.isArray(userIdOrIds) ? userIdOrIds : [userIdOrIds]).filter(Boolean))]
+  if (!userIds.length)
+    throw createError({ statusCode: 400, statusMessage: "At least one collaboration participant is required." })
+
+  const state = extractUsersCollaborationState(seed, userIds)
+  const expectedState = extractUsersCollaborationState(options.expectedSeed, userIds)
 
   if (!isSupabaseEnabled(event)) {
-    await persistLocalCollaborationState(userId, state)
+    await persistLocalCollaborationStateForUsers(userIds, state, {
+      expectedState,
+    })
     return
   }
 
@@ -925,103 +1048,92 @@ export async function persistServerCollaborationState(event: H3Event, userId: st
   if (!adminClient)
     throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
 
-  const conversationIds = state.conversations.map(conversation => conversation.id)
-  const proposalIds = state.proposals.map(proposal => proposal.id)
-  const contractIds = state.contracts.map(contract => contract.id)
-  const matchIds = state.matches.map(match => match.id)
+  const expectedConnectRequests = new Map(expectedState.connectRequests.map(row => [row.id, row]))
+  const expectedConversations = new Map(expectedState.conversations.map(row => [row.id, row]))
+  const expectedProposals = new Map(expectedState.proposals.map(row => [row.id, row]))
+  const expectedContracts = new Map(expectedState.contracts.map(row => [row.id, row]))
+  const expectedTrials = new Map(expectedState.trialCollaborations.map(row => [row.id, row]))
+  const expectedNotifications = new Map(expectedState.notifications.map(row => [row.id, row]))
 
-  await replaceRows(
-    adminClient,
-    "connect_requests",
-    () => adminClient.from("connect_requests").delete().or(`from_user_id.eq.${userId},to_user_id.eq.${userId}`),
-    state.connectRequests.map(toConnectRequestRow),
-  )
-  await replaceRows(
-    adminClient,
-    "matches",
-    () => adminClient.from("matches").delete().contains("participant_ids", [userId]),
-    state.matches.map(toMatchRow),
-  )
-  await replaceRows(
-    adminClient,
-    "conversations",
-    () => adminClient.from("conversations").delete().contains("participant_ids", [userId]),
-    state.conversations.map(toConversationRow),
-  )
-  await replaceRows(
-    adminClient,
-    "messages",
-    () => conversationIds.length
-      ? adminClient.from("messages").delete().in("conversation_id", conversationIds)
-      : adminClient.from("messages").delete().eq("id", "__none__"),
-    state.messages.map(toMessageRow),
-  )
-  await replaceRows(
-    adminClient,
-    "proposals",
-    () => adminClient.from("proposals").delete().or(`created_by_user_id.eq.${userId},recipient_user_id.eq.${userId}`),
-    state.proposals.map(toProposalRow),
-  )
-  await replaceRows(
-    adminClient,
-    "proposal_versions",
-    () => proposalIds.length
-      ? adminClient.from("proposal_versions").delete().in("proposal_id", proposalIds)
-      : adminClient.from("proposal_versions").delete().eq("id", "__none__"),
-    state.proposalVersions.map(toProposalVersionRow),
-  )
-  await replaceRows(
-    adminClient,
-    "proposal_comments",
-    () => proposalIds.length
-      ? adminClient.from("proposal_comments").delete().in("proposal_id", proposalIds)
-      : adminClient.from("proposal_comments").delete().eq("id", "__none__"),
-    state.proposalComments.map(toProposalCommentRow),
-  )
-  await replaceRows(
-    adminClient,
-    "contracts",
-    () => proposalIds.length
-      ? adminClient.from("contracts").delete().in("proposal_id", proposalIds)
-      : adminClient.from("contracts").delete().eq("id", "__none__"),
-    state.contracts.map(toContractRow),
-  )
-  await replaceRows(
-    adminClient,
-    "contract_versions",
-    () => contractIds.length
-      ? adminClient.from("contract_versions").delete().in("contract_id", contractIds)
-      : adminClient.from("contract_versions").delete().eq("id", "__none__"),
-    state.contractVersions.map(toContractVersionRow),
-  )
-  await replaceRows(
-    adminClient,
-    "signatures",
-    () => contractIds.length
-      ? adminClient.from("signatures").delete().in("contract_id", contractIds)
-      : adminClient.from("signatures").delete().eq("id", "__none__"),
-    state.signatures.map(toSignatureRow),
-  )
-  await replaceRows(
-    adminClient,
-    "trial_collaborations",
-    () => matchIds.length
-      ? adminClient.from("trial_collaborations").delete().in("match_id", matchIds)
-      : adminClient.from("trial_collaborations").delete().eq("id", "__none__"),
-    state.trialCollaborations.map(toTrialCollaborationRow),
-  )
-  await replaceRows(
-    adminClient,
-    "relationship_decisions",
-    () => matchIds.length
-      ? adminClient.from("relationship_decisions").delete().in("match_id", matchIds)
-      : adminClient.from("relationship_decisions").delete().eq("id", "__none__"),
-    state.relationshipDecisions.map(toRelationshipDecisionRow),
-  )
-  await replaceRows(
-    adminClient,
-    "notifications",
-    () => adminClient.from("notifications").delete().eq("user_id", userId),
-    state.notifications.map(toNotificationRow),
-  )
+  const { error } = await adminClient.rpc("cofoundry_upsert_collaboration_state", {
+    p_connect_requests: state.connectRequests.map((row) => {
+      const expected = expectedConnectRequests.get(row.id)
+      return {
+        ...toConnectRequestRow(row),
+        expected_decline_reason: expected?.declineReason ?? null,
+        expected_exists: Boolean(expected),
+        expected_responded_at: expected?.respondedAt ?? null,
+        expected_status: expected?.status ?? null,
+      }
+    }),
+    p_contract_versions: state.contractVersions.map(toContractVersionRow),
+    p_contracts: state.contracts.map((row) => {
+      const expected = expectedContracts.get(row.id)
+      return {
+        ...toContractRow(row),
+        expected_current_version_id: expected?.currentVersionId ?? null,
+        expected_disclaimer_acknowledged: expected?.disclaimerAcknowledged ?? null,
+        expected_exists: Boolean(expected),
+        expected_status: expected?.status ?? null,
+        expected_updated_at: expected?.updatedAt ?? null,
+      }
+    }),
+    p_conversations: state.conversations.map((row) => {
+      const expected = expectedConversations.get(row.id)
+      return {
+        ...toConversationRow(row),
+        expected_exists: Boolean(expected),
+        expected_last_message_at: expected?.lastMessageAt ?? null,
+        expected_typing_by_user_ids: expected?.typingByUserIds ?? null,
+        expected_unread_count_by_user: expected?.unreadCountByUser ?? null,
+      }
+    }),
+    p_matches: state.matches.map(toMatchRow),
+    p_messages: state.messages.map(toMessageRow),
+    p_notifications: state.notifications.map((row) => {
+      const expected = expectedNotifications.get(row.id)
+      return {
+        ...toNotificationRow(row),
+        expected_exists: Boolean(expected),
+        expected_read_at: expected?.readAt ?? null,
+      }
+    }),
+    p_proposal_comments: state.proposalComments.map(toProposalCommentRow),
+    p_proposal_versions: state.proposalVersions.map(toProposalVersionRow),
+    p_proposals: state.proposals.map((row) => {
+      const expected = expectedProposals.get(row.id)
+      return {
+        ...toProposalRow(row),
+        expected_current_version_id: expected?.currentVersionId ?? null,
+        expected_exists: Boolean(expected),
+        expected_status: expected?.status ?? null,
+        expected_updated_at: expected?.updatedAt ?? null,
+      }
+    }),
+    p_relationship_decisions: state.relationshipDecisions.map(toRelationshipDecisionRow),
+    p_signature_events: options.signatureEvents || [],
+    p_signatures: state.signatures.map(toSignatureRow),
+    p_trial_collaborations: state.trialCollaborations.map((row) => {
+      const expected = expectedTrials.get(row.id)
+      return {
+        ...toTrialCollaborationRow(row),
+        expected_acknowledged_by_user_ids: expected?.acknowledgedByUserIds ?? null,
+        expected_exists: Boolean(expected),
+        expected_next_check_in_at: expected?.nextCheckInAt ?? null,
+        expected_status: expected?.status ?? null,
+        expected_updated_at: expected?.updatedAt ?? null,
+      }
+    }),
+    p_user_ids: userIds,
+  })
+
+  if (error?.message?.includes("Collaboration state changed") || error?.code === "23505") {
+    throw createError({
+      statusCode: 409,
+      statusMessage: "The collaboration changed after this action began. Refresh and try again.",
+    })
+  }
+
+  if (error)
+    throw error
 }

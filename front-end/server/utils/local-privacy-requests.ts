@@ -1,9 +1,13 @@
-import type { PrivacyRequest, PrivacyRequestStatus } from "../../shared/types/domain"
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
-import { dirname, resolve } from "node:path"
+import type { AdminAction, PrivacyRequest, PrivacyRequestStatus } from "../../shared/types/domain"
+import { rm } from "node:fs/promises"
+import { resolve } from "node:path"
 import process from "node:process"
+import { assertLocalAdminActor } from "./local-admin-audit"
+import { withLocalAdminSecurityLock } from "./local-admin-security-lock"
+import { readPrivateTextFile, writePrivateFileAtomic } from "./private-file-store"
 
 interface LocalPrivacyRequestStore {
+  actions: AdminAction[]
   requests: PrivacyRequest[]
   updatedAt: string
   version: 1
@@ -39,34 +43,28 @@ function retentionLimit() {
 
 function emptyStore(): LocalPrivacyRequestStore {
   return {
+    actions: [],
     requests: [],
     updatedAt: new Date().toISOString(),
     version: 1,
   }
 }
 
-function newestFirst(rows: PrivacyRequest[]) {
+function newestFirst<T extends { createdAt: string }>(rows: T[]) {
   return [...rows].sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
 }
 
 function pruneStore(store: LocalPrivacyRequestStore): LocalPrivacyRequestStore {
   return {
     ...store,
+    actions: newestFirst(store.actions).slice(0, retentionLimit()),
     requests: newestFirst(store.requests).slice(0, retentionLimit()),
     updatedAt: new Date().toISOString(),
   }
 }
 
 async function readStoreFile() {
-  try {
-    return await readFile(storePath(), "utf-8")
-  }
-  catch (error) {
-    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT")
-      return null
-
-    throw error
-  }
+  return readPrivateTextFile(storePath())
 }
 
 async function readStore() {
@@ -93,8 +91,7 @@ async function writeStore(store: LocalPrivacyRequestStore) {
   const path = storePath()
   const prunedStore = pruneStore(store)
 
-  await mkdir(dirname(path), { recursive: true })
-  await writeFile(path, `${JSON.stringify(prunedStore)}\n`, "utf-8")
+  await writePrivateFileAtomic(path, `${JSON.stringify(prunedStore)}\n`)
   cachedStore = prunedStore
   cachedStorePath = path
 }
@@ -123,32 +120,71 @@ export async function listLocalPrivacyRequests() {
   return store.requests
 }
 
-export async function updateLocalPrivacyRequestStatus(input: {
-  adminUserId: string
-  notes: string
-  requestId: string
+export async function listLocalPrivacyRequestsForUser(userId: string) {
+  return (await listLocalPrivacyRequests()).filter(request => request.userId === userId)
+}
+
+export async function listLocalPrivacyAdminActions() {
+  return pruneStore(await readStore()).actions
+}
+
+export async function persistLocalPrivacyRequestStatusAction(input: {
+  action: AdminAction
+  completionConfirmed: boolean
+  expectedStatus: "open" | "reviewed"
   status: Exclude<PrivacyRequestStatus, "open">
-  timestamp: string
 }) {
-  return updateStore((store) => {
-    const request = store.requests.find(row => row.id === input.requestId)
-    if (!request)
-      return null
+  return withLocalAdminSecurityLock(async () => {
+    await assertLocalAdminActor(input.action.adminUserId)
 
-    request.status = input.status
+    return updateStore((store) => {
+      const request = store.requests.find(row => row.id === input.action.targetId)
+      if (!request) {
+        throw Object.assign(new Error("Privacy request was not found."), {
+          statusCode: 404,
+          statusMessage: "Privacy request was not found.",
+        })
+      }
 
-    if (input.status === "reviewed") {
-      request.reviewNotes = input.notes
-      request.reviewedAt = input.timestamp
-      request.reviewedByUserId = input.adminUserId
-    }
-    else {
-      request.resolutionNotes = input.notes
-      request.resolvedAt = input.timestamp
-      request.resolvedByUserId = input.adminUserId
-    }
+      if (request.status !== input.expectedStatus) {
+        throw Object.assign(new Error("The privacy request changed after this review began. Refresh and review the current state."), {
+          statusCode: 409,
+          statusMessage: "The privacy request changed after this review began. Refresh and review the current state.",
+        })
+      }
 
-    return request
+      if (input.status === "reviewed" && request.status !== "open") {
+        throw Object.assign(new Error("The requested privacy-request transition is invalid."), {
+          statusCode: 409,
+          statusMessage: "The requested privacy-request transition is invalid.",
+        })
+      }
+
+      if (input.status === "resolved" && !input.completionConfirmed) {
+        throw Object.assign(new Error("Confirm that the requested privacy action was actually completed before resolving it."), {
+          statusCode: 400,
+          statusMessage: "Confirm that the requested privacy action was actually completed before resolving it.",
+        })
+      }
+
+      request.status = input.status
+      if (input.status === "reviewed") {
+        request.reviewNotes = input.action.notes
+        request.reviewedAt = input.action.createdAt
+        request.reviewedByUserId = input.action.adminUserId
+      }
+      else {
+        request.reviewNotes ||= input.action.notes
+        request.reviewedAt ||= input.action.createdAt
+        request.reviewedByUserId ||= input.action.adminUserId
+        request.resolutionNotes = input.action.notes
+        request.resolvedAt = input.action.createdAt
+        request.resolvedByUserId = input.action.adminUserId
+      }
+
+      store.actions = [input.action, ...store.actions.filter(action => action.id !== input.action.id)]
+      return request
+    })
   })
 }
 

@@ -6,8 +6,13 @@ export function resolveActiveSessionFromSeed(seed: WorkspaceSeed, input: Session
   const session = resolveSessionUserFromWorkspace(seed, input)
   const user = getUserById(seed, session.id)
 
-  if (!user || user.suspendedAt)
+  if (
+    !user
+    || user.suspendedAt
+    || (["admin", "investor_admin"].includes(user.role) && !user.verifiedEmail)
+  ) {
     return null
+  }
 
   return session
 }

@@ -1,5 +1,8 @@
 import type { H3Event } from "h3"
+import { isIP } from "node:net"
+import process from "node:process"
 import { createError, getHeader, getRequestIP, setHeader } from "h3"
+import { isTrustedProxyAddress } from "./trusted-proxy"
 
 interface RateLimitBucket {
   count: number
@@ -14,16 +17,68 @@ interface RateLimitOptions {
 }
 
 const buckets = new Map<string, RateLimitBucket>()
+const maximumBucketCount = 20_000
 
 function normalizeKeyPart(value: string) {
   return value.trim().toLowerCase().replaceAll(/\s+/g, "_") || "unknown"
 }
 
-function getRequester(event: H3Event) {
-  return getRequestIP(event, { xForwardedFor: true })
-    || getHeader(event, "x-real-ip")
-    || getHeader(event, "cf-connecting-ip")
+function firstHeaderValue(value: string | null | undefined) {
+  return value?.split(",")[0]?.trim() || ""
+}
+
+function validIp(value: string | null | undefined) {
+  const candidate = firstHeaderValue(value)
+  return isIP(candidate) ? candidate : ""
+}
+
+function forwardedClientIp(value: string | null | undefined, trustedProxyIps: string | undefined) {
+  const addresses = (value || "")
+    .split(",")
+    .map(address => address.trim())
+    .filter(address => isIP(address))
+
+  for (let index = addresses.length - 1; index >= 0; index -= 1) {
+    const address = addresses[index] || ""
+    if (!isTrustedProxyAddress(address, trustedProxyIps))
+      return address
+  }
+
+  return ""
+}
+
+export function resolveRequesterIp(input: {
+  cfConnectingIp?: string | null
+  directIp?: string | null
+  forwardedFor?: string | null
+  realIp?: string | null
+  trustedProxyIps?: string
+  trustProxyHeaders?: boolean
+}) {
+  const directIp = validIp(input.directIp)
+  if (
+    !input.trustProxyHeaders
+    || !isTrustedProxyAddress(directIp, input.trustedProxyIps)
+  ) {
+    return directIp || "unknown"
+  }
+
+  return forwardedClientIp(input.forwardedFor, input.trustedProxyIps)
+    || validIp(input.realIp)
+    || validIp(input.cfConnectingIp)
+    || directIp
     || "unknown"
+}
+
+export function getRequesterIp(event: H3Event) {
+  return resolveRequesterIp({
+    cfConnectingIp: getHeader(event, "cf-connecting-ip"),
+    directIp: getRequestIP(event),
+    forwardedFor: getHeader(event, "x-forwarded-for"),
+    realIp: getHeader(event, "x-real-ip"),
+    trustedProxyIps: process.env.COFOUNDRY_TRUSTED_PROXY_IPS,
+    trustProxyHeaders: process.env.COFOUNDRY_TRUST_PROXY_HEADERS?.trim().toLowerCase() === "true",
+  })
 }
 
 function cleanupExpiredBuckets(now: number) {
@@ -38,13 +93,21 @@ function cleanupExpiredBuckets(now: number) {
 
 export function assertRateLimit(event: H3Event, options: RateLimitOptions) {
   const now = Date.now()
-  const identity = options.key ? normalizeKeyPart(options.key) : getRequester(event)
+  const identity = options.key ? normalizeKeyPart(options.key) : getRequesterIp(event)
   const key = `${options.scope}:${identity}`
   const existing = buckets.get(key)
 
   cleanupExpiredBuckets(now)
 
   if (!existing || existing.resetAt <= now) {
+    if (!existing && buckets.size >= maximumBucketCount) {
+      setHeader(event, "Retry-After", 60)
+      throw createError({
+        statusCode: 429,
+        statusMessage: "Request capacity is temporarily limited. Please retry shortly.",
+      })
+    }
+
     buckets.set(key, {
       count: 1,
       resetAt: now + options.windowMs,
@@ -65,7 +128,7 @@ export function assertRateLimit(event: H3Event, options: RateLimitOptions) {
 }
 
 export function buildRateLimitKey(event: H3Event, ...parts: string[]) {
-  return [getRequester(event), ...parts].map(normalizeKeyPart).join(":")
+  return [getRequesterIp(event), ...parts].map(normalizeKeyPart).join(":")
 }
 
 export function clearRateLimitBucketsForTests() {

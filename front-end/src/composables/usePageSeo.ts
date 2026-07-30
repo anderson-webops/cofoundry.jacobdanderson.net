@@ -1,4 +1,5 @@
 import { appDescription, appName } from "~/shared/constants/app"
+import { serializeJsonForHtml } from "~/shared/utils/html"
 import { buildSiteUrl } from "~/shared/utils/seo"
 
 interface PageSeoOptions {
@@ -71,7 +72,7 @@ export function usePageSeo(title: string, description = appDescription, options:
       .map((entry, index) => ({
         key: `structured-data-${index}`,
         type: "application/ld+json",
-        innerHTML: JSON.stringify(entry),
+        innerHTML: serializeJsonForHtml(entry),
       })),
   })
 }

@@ -15,6 +15,20 @@ const token = computed(() => {
   const value = route.query.token
   return typeof value === "string" ? value : ""
 })
+
+onMounted(() => {
+  if (!token.value)
+    return
+
+  const sanitizedUrl = new URL(window.location.href)
+  sanitizedUrl.searchParams.delete("token")
+  window.history.replaceState(
+    window.history.state,
+    "",
+    `${sanitizedUrl.pathname}${sanitizedUrl.search}`,
+  )
+})
+
 const status = ref<"idle" | "submitting" | "success" | "error">("idle")
 const result = ref<{ category: PreferenceCategory, email: string } | null>(null)
 const errorMessage = ref("")

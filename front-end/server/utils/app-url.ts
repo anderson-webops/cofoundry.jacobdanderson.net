@@ -1,7 +1,8 @@
 import type { H3Event } from "h3"
 import process from "node:process"
-import { getHeader, getRequestURL } from "h3"
+import { getHeader, getRequestIP, getRequestURL } from "h3"
 import { appProductionUrl } from "../../shared/constants/app"
+import { isTrustedProxyAddress } from "./trusted-proxy"
 
 const trailingSlashPattern = /\/+$/
 const localHostnames = new Set(["localhost", "127.0.0.1", "::1"])
@@ -27,18 +28,6 @@ function isLocalAppUrl(value: string) {
 
 function normalizeFallbackAppUrl(value: string | undefined) {
   return stripTrailingSlash(value?.trim() || appProductionUrl)
-}
-
-function shouldUseProductionFallback(input: {
-  allowLocalAppUrl?: boolean
-  configuredAppUrl: string
-  nodeEnv?: string
-  requestOrigin: string
-}) {
-  if (input.allowLocalAppUrl || input.nodeEnv !== "production")
-    return false
-
-  return isLocalAppUrl(input.requestOrigin) && (!input.configuredAppUrl || isLocalAppUrl(input.configuredAppUrl))
 }
 
 function originFromHeaders(input: {
@@ -74,24 +63,28 @@ export function resolveServerAppUrlFromParts(input: {
   nodeEnv?: string
   productionFallbackAppUrl?: string
   requestOrigin: string
+  trustProxyHeaders?: boolean
 }) {
   const configuredAppUrl = stripTrailingSlash(input.configuredAppUrl?.trim() || "")
-  const requestOrigin = originFromHeaders(input)
+  const requestOrigin = input.trustProxyHeaders
+    ? originFromHeaders(input)
+    : stripTrailingSlash(input.requestOrigin)
   const productionFallbackAppUrl = normalizeFallbackAppUrl(input.productionFallbackAppUrl)
 
-  if (shouldUseProductionFallback({
-    allowLocalAppUrl: input.allowLocalAppUrl,
-    configuredAppUrl,
-    nodeEnv: input.nodeEnv,
-    requestOrigin,
-  })) {
+  if (input.nodeEnv === "production" && !input.allowLocalAppUrl) {
+    if (configuredAppUrl && !isLocalAppUrl(configuredAppUrl))
+      return configuredAppUrl
+
     return productionFallbackAppUrl
   }
 
-  if (!configuredAppUrl)
-    return requestOrigin
+  if (!configuredAppUrl) {
+    return !input.trustProxyHeaders && !isLocalAppUrl(requestOrigin)
+      ? productionFallbackAppUrl
+      : requestOrigin
+  }
 
-  if (isLocalAppUrl(configuredAppUrl) && requestOrigin && !isLocalAppUrl(requestOrigin))
+  if (input.trustProxyHeaders && isLocalAppUrl(configuredAppUrl) && requestOrigin && !isLocalAppUrl(requestOrigin))
     return requestOrigin
 
   return configuredAppUrl
@@ -99,6 +92,10 @@ export function resolveServerAppUrlFromParts(input: {
 
 function allowLocalPublicAppUrl() {
   return localPublicAppUrlValues.has(process.env.COFOUNDRY_ALLOW_LOCAL_PUBLIC_APP_URL?.trim().toLowerCase() || "")
+}
+
+function trustProxyHeaders() {
+  return process.env.COFOUNDRY_TRUST_PROXY_HEADERS?.trim().toLowerCase() === "true"
 }
 
 export function resolveServerAppUrl(event: H3Event) {
@@ -127,5 +124,7 @@ export function resolveServerAppUrl(event: H3Event) {
     host: getHeader(event, "host"),
     nodeEnv: process.env.NODE_ENV,
     requestOrigin: requestUrl.origin,
+    trustProxyHeaders: trustProxyHeaders()
+      && isTrustedProxyAddress(getRequestIP(event), process.env.COFOUNDRY_TRUSTED_PROXY_IPS),
   })
 }

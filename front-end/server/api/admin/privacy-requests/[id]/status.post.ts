@@ -1,6 +1,6 @@
-import { adminReportStatusSchema } from "~/shared/utils/validation"
+import { adminPrivacyRequestStatusSchema } from "~/shared/utils/validation"
 import { requireAdminSession } from "../../../../utils/admin"
-import { persistAdminAction, persistPrivacyRequestStatus, persistUserNotification } from "../../../../utils/admin-persistence"
+import { persistAdminPrivacyRequestStatusAction, persistUserNotification } from "../../../../utils/admin-persistence"
 import { assertRateLimit, buildRateLimitKey } from "../../../../utils/rate-limit"
 
 export default defineEventHandler(async (event) => {
@@ -16,42 +16,47 @@ export default defineEventHandler(async (event) => {
   if (!requestId)
     throw createError({ statusCode: 400, statusMessage: "A privacy request id is required." })
 
-  const payload = adminReportStatusSchema.parse(await readBody(event))
+  const payload = adminPrivacyRequestStatusSchema.parse(await readBody(event))
   const updatedAt = new Date().toISOString()
-
-  const persistedRequest = await persistPrivacyRequestStatus(event, {
-    adminUserId: session.id,
-    notes: payload.notes,
-    requestId,
-    status: payload.status,
-    timestamp: updatedAt,
-  })
 
   const action = {
     id: crypto.randomUUID(),
     adminUserId: session.id,
     createdAt: updatedAt,
+    metadata: {
+      completionConfirmed: payload.status === "resolved" && payload.completionConfirmed,
+    },
     notes: payload.notes,
     targetId: requestId,
     targetType: "privacy_request" as const,
     type: payload.status === "reviewed" ? "review_privacy_request" as const : "resolve_privacy_request" as const,
   }
 
-  await persistAdminAction(event, action)
+  const persistedRequest = await persistAdminPrivacyRequestStatusAction(event, {
+    action,
+    completionConfirmed: payload.status === "resolved" && payload.completionConfirmed,
+    expectedStatus: payload.expectedStatus,
+    status: payload.status,
+  })
 
   if (persistedRequest) {
-    await persistUserNotification(event, {
-      id: crypto.randomUUID(),
-      userId: persistedRequest.userId,
-      type: "admin",
-      title: payload.status === "reviewed" ? "Privacy request reviewed" : "Privacy request resolved",
-      body: payload.status === "reviewed"
-        ? "An operator reviewed your privacy request and recorded the next handling note."
-        : "An operator marked your privacy request resolved. Review your account settings if you need another follow-up.",
-      href: "/app/settings",
-      readAt: null,
-      createdAt: updatedAt,
-    })
+    try {
+      await persistUserNotification(event, {
+        id: crypto.randomUUID(),
+        userId: persistedRequest.userId,
+        type: "admin",
+        title: payload.status === "reviewed" ? "Privacy request reviewed" : "Privacy request resolved",
+        body: payload.status === "reviewed"
+          ? "An operator reviewed your privacy request and recorded the next handling note."
+          : "An operator confirmed that the requested privacy action was completed and marked your request resolved. Review your account settings if you need another follow-up.",
+        href: "/app/settings",
+        readAt: null,
+        createdAt: updatedAt,
+      })
+    }
+    catch (error) {
+      console.warn("[privacy] Request status persisted, but member notification delivery failed.", error)
+    }
   }
 
   return {

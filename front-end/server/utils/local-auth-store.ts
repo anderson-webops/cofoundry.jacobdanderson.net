@@ -1,10 +1,11 @@
 import type { SessionUser } from "../../shared/types/domain"
 import { Buffer } from "node:buffer"
 import { randomUUID, scrypt, timingSafeEqual } from "node:crypto"
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
-import { dirname, resolve } from "node:path"
+import { rm } from "node:fs/promises"
+import { resolve } from "node:path"
 import process from "node:process"
 import { promisify } from "node:util"
+import { readPrivateTextFile, writePrivateFileAtomic } from "./private-file-store"
 
 interface LocalAuthAccountRow {
   created_at: string
@@ -25,6 +26,7 @@ interface LocalAuthStore {
 
 const scryptAsync = promisify(scrypt)
 const localAuthStoreFilename = "local-auth-accounts.json"
+const missingAccountScryptSalt = "cofoundry-missing-account-timing-salt"
 let writeQueue = Promise.resolve()
 
 function rootDataDirectory() {
@@ -49,15 +51,7 @@ function emptyStore(): LocalAuthStore {
 }
 
 async function readStoreFile() {
-  try {
-    return await readFile(storePath(), "utf-8")
-  }
-  catch (error) {
-    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT")
-      return null
-
-    throw error
-  }
+  return readPrivateTextFile(storePath())
 }
 
 async function readStore() {
@@ -72,8 +66,7 @@ async function readStore() {
 }
 
 async function writeStore(store: LocalAuthStore) {
-  await mkdir(dirname(storePath()), { recursive: true })
-  await writeFile(storePath(), `${JSON.stringify({ ...store, updatedAt: new Date().toISOString() }, null, 2)}\n`, "utf-8")
+  await writePrivateFileAtomic(storePath(), `${JSON.stringify({ ...store, updatedAt: new Date().toISOString() }, null, 2)}\n`)
 }
 
 async function updateStore<T>(updater: (_store: LocalAuthStore) => T | Promise<T>) {
@@ -145,6 +138,14 @@ export async function createLocalAuthAccount(payload: { email: string, name: str
   })
 }
 
+export async function deleteLocalAuthAccount(id: string) {
+  return updateStore((store) => {
+    const previousLength = store.accounts.length
+    store.accounts = store.accounts.filter(account => account.id !== id)
+    return store.accounts.length !== previousLength
+  })
+}
+
 export async function findLocalAuthSessionByEmail(email: string) {
   const normalizedEmail = normalizeEmail(email)
   const account = (await readStore()).accounts.find(row => row.email === normalizedEmail)
@@ -160,7 +161,12 @@ export async function verifyLocalAuthCredentials(email: string, password: string
   const normalizedEmail = normalizeEmail(email)
   const account = (await readStore()).accounts.find(row => row.email === normalizedEmail)
 
-  if (!account || !(await verifyPassword(password, account.password_hash)))
+  if (!account) {
+    await scryptAsync(password, missingAccountScryptSalt, 64)
+    return null
+  }
+
+  if (!(await verifyPassword(password, account.password_hash)))
     return null
 
   return toSession(account)

@@ -21,12 +21,46 @@ test("systemd templates use canonical operations worker scripts", async () => {
   const realtimeSmoke = await readSystemdTemplate("cofoundry-operations-realtime-smoke.service")
 
   assert.match(heartbeat, /npm run operations:heartbeat -- --metadata schedule=hourly/)
+  assert.doesNotMatch(heartbeat, /bash|-lc|shell/)
   assert.doesNotMatch(heartbeat, /operations_heartbeat/)
   assert.match(alertSmoke, /npm run operations:alert-smoke -- --metadata runbook=systemd-manual/)
-  assert.match(mailSmoke, /npm run operations:mail-smoke -- --to-email/)
-  assert.match(mailSmoke, /COFOUNDRY_MAIL_SMOKE_TO_EMAIL/)
-  assert.match(realtimeSmoke, /npm run operations:realtime-smoke -- --user-id/)
-  assert.match(realtimeSmoke, /COFOUNDRY_REALTIME_SMOKE_MIN_DELIVERED/)
+  assert.match(mailSmoke, /npm run operations:mail-smoke -- --metadata runbook=systemd-manual/)
+  assert.match(realtimeSmoke, /npm run operations:realtime-smoke -- --metadata runbook=systemd-manual/)
+})
+
+test("every operations service runs without a shell and enables the host sandbox", async () => {
+  const serviceNames = [
+    "cofoundry-operations-alert-smoke.service",
+    "cofoundry-operations-backup.service",
+    "cofoundry-operations-digest.service",
+    "cofoundry-operations-heartbeat.service",
+    "cofoundry-operations-mail-smoke.service",
+    "cofoundry-operations-realtime-smoke.service",
+    "cofoundry-operations-restore-drill.service",
+    "cofoundry-operations-scan.service",
+  ]
+
+  for (const serviceName of serviceNames) {
+    const service = await readSystemdTemplate(serviceName)
+    assert.doesNotMatch(service, /ExecStart=.*(?:bash|sh -c|-lc)/)
+    assert.match(service, /NoNewPrivileges=true/)
+    assert.match(service, /ProtectSystem=strict/)
+    assert.match(service, /ProtectHome=true/)
+    assert.match(service, /CapabilityBoundingSet=\n/)
+    assert.match(service, /Environment=PATH=\/usr\/local\/sbin:\/usr\/local\/bin:\/usr\/sbin:\/usr\/bin/)
+    assert.match(service, /PrivateMounts=true/)
+    assert.match(service, /ProcSubset=pid/)
+    assert.match(service, /ProtectProc=invisible/)
+    assert.match(service, /RemoveIPC=true/)
+    assert.match(service, /RestrictNamespaces=true/)
+    assert.match(service, /TimeoutStartSec=1h/)
+    assert.match(service, /UMask=0077/)
+
+    if (serviceName.includes("backup") || serviceName.includes("restore-drill"))
+      assert.match(service, /ReadWritePaths=.*\/var\/backups\/cofoundry/)
+    else
+      assert.doesNotMatch(service, /ReadWritePaths=.*\/var\/backups\/cofoundry/)
+  }
 })
 
 test("systemd README documents manual smoke service verification", async () => {
@@ -36,23 +70,21 @@ test("systemd README documents manual smoke service verification", async () => {
   assert.match(readme, /--enable-restore-drill/)
   assert.match(readme, /systemctl start cofoundry-operations-alert-smoke\.service/)
   assert.match(readme, /systemctl start cofoundry-operations-mail-smoke\.service/)
-  assert.match(readme, /systemctl start cofoundry-operations-realtime-smoke\.service/)
+  assert.doesNotMatch(readme, /systemctl start cofoundry-operations-realtime-smoke\.service/)
   assert.match(readme, /COFOUNDRY_ALERT_WEBHOOK_URL/)
   assert.match(readme, /COFOUNDRY_MAIL_SMOKE_TO_EMAIL/)
-  assert.match(readme, /COFOUNDRY_REALTIME_SMOKE_MIN_DELIVERED/)
+  assert.match(readme, /shared atomic rate limiter/)
 })
 
-test("server operations handoff prompt includes realtime smoke setup", async () => {
+test("server operations handoff prompt enforces the single-process security boundary", async () => {
   const prompt = await readRepoFile("docs", "server-ai-operations-prompt.md")
 
   assert.match(prompt, /COFOUNDRY_COMMIT_SHA/)
   assert.match(prompt, /Nuxt build fallback/)
-  assert.match(prompt, /npm run operations:realtime-smoke/)
-  assert.match(prompt, /COFOUNDRY_REALTIME_SMOKE_USER_ID/)
-  assert.match(prompt, /COFOUNDRY_REALTIME_SMOKE_MIN_DELIVERED=0/)
-  assert.match(prompt, /systemctl start cofoundry-operations-realtime-smoke\.service/)
-  assert.match(prompt, /realtime_fanout_smoke_succeeded/)
-  assert.match(prompt, /realtime-smoke result/)
+  assert.match(prompt, /COFOUNDRY_EXPECT_MULTI_INSTANCE=false/)
+  assert.match(prompt, /COFOUNDRY_APP_INSTANCE_COUNT=1/)
+  assert.match(prompt, /shared atomic limiter/)
+  assert.doesNotMatch(prompt, /systemctl start cofoundry-operations-realtime-smoke\.service/)
 })
 
 test("systemd installer defaults to safe timer installation", async () => {
@@ -70,4 +102,5 @@ test("systemd installer defaults to safe timer installation", async () => {
   assert.match(installer, /cofoundry-operations-backup\.timer/)
   assert.match(installer, /include_restore_drill=false/)
   assert.match(installer, /cofoundry-operations-restore-drill\.timer/)
+  assert.match(installer, /PATH=\/usr\/sbin:\/usr\/bin:\/sbin:\/bin/)
 })

@@ -14,7 +14,7 @@ interface WorkerCommandOptions {
   fetch?: FetchLike
   log?: (_message: string) => void
   now?: () => Date
-  runShellCommand?: typeof runShellCommand
+  runCommand?: typeof runCommand
 }
 
 interface ParsedArgs {
@@ -46,6 +46,7 @@ interface PendingFileScan {
   originalFilename: string
   signedDownloadError?: string | null
   signedDownloadUrl?: string | null
+  sizeBytes?: number
 }
 
 interface OperationsResponse<T> {
@@ -61,8 +62,11 @@ interface RealtimeIngressResponse {
 
 const defaultTimeoutMs = 60_000
 const defaultAlertTimeoutMs = 10_000
+const maximumScanFileBytes = 10 * 1024 * 1024
+const unsafeScannerFilenamePattern = /[^\w.-]+/g
 const defaultAlertSeverities = new Set<OperationsAlertSeverity>(["error", "warning"])
 const supportedAlertSeverities = new Set<OperationsAlertSeverity>(["error", "info", "warning"])
+const localWorkerHostnames = new Set(["127.0.0.1", "::1", "[::1]", "localhost"])
 
 function readValue(env: EnvironmentSource, key: string) {
   return env[key]?.trim() || ""
@@ -178,6 +182,27 @@ function shouldSendAlert(env: EnvironmentSource, severity: OperationsAlertSeveri
   return Boolean(readValue(env, "COFOUNDRY_ALERT_WEBHOOK_URL")) && configuredAlertSeverities(env).has(severity)
 }
 
+function parseWorkerHttpUrl(value: string, label: string, options: { allowPath?: boolean } = {}) {
+  let url: URL
+  try {
+    url = new URL(value)
+  }
+  catch {
+    throw new Error(`${label} must be an absolute HTTP(S) URL.`)
+  }
+
+  if (!["http:", "https:"].includes(url.protocol) || !url.host)
+    throw new Error(`${label} must be an absolute HTTP(S) URL.`)
+  if (url.username || url.password)
+    throw new Error(`${label} must not contain embedded credentials.`)
+  if (!options.allowPath && (url.pathname !== "/" || url.search || url.hash))
+    throw new Error(`${label} must be an origin without a path, query, or fragment.`)
+  if (url.protocol !== "https:" && !localWorkerHostnames.has(url.hostname))
+    throw new Error(`${label} must use HTTPS unless it targets the local host.`)
+
+  return url
+}
+
 async function sendOperationsAlert(options: Required<WorkerCommandOptions>, payload: OperationsAlertPayload) {
   const webhookUrl = readValue(options.env, "COFOUNDRY_ALERT_WEBHOOK_URL")
   if (!webhookUrl || !shouldSendAlert(options.env, payload.severity))
@@ -188,7 +213,8 @@ async function sendOperationsAlert(options: Required<WorkerCommandOptions>, payl
   const timeout = setTimeout(() => controller.abort(), parsePositiveInteger(readValue(options.env, "COFOUNDRY_ALERT_TIMEOUT_MS"), defaultAlertTimeoutMs))
 
   try {
-    const response = await options.fetch(webhookUrl, {
+    const destination = parseWorkerHttpUrl(webhookUrl, "Operations alert webhook URL", { allowPath: true })
+    const response = await options.fetch(destination, {
       body: JSON.stringify({
         appUrl: stripTrailingSlash(readValue(options.env, "NUXT_PUBLIC_APP_URL") || readValue(options.env, "COFOUNDRY_APP_URL")),
         eventType: payload.eventType,
@@ -205,6 +231,7 @@ async function sendOperationsAlert(options: Required<WorkerCommandOptions>, payl
         ...(token ? { authorization: `Bearer ${token}` } : {}),
       },
       method: "POST",
+      redirect: "error",
       signal: controller.signal,
     })
 
@@ -227,17 +254,10 @@ export function resolveOperationsWorkerEnvironment(env: EnvironmentSource = proc
   if (!appUrl)
     throw new Error("Set NUXT_PUBLIC_APP_URL or COFOUNDRY_APP_URL before running an operations worker.")
 
-  try {
-    const parsedUrl = new URL(appUrl)
-    if (!parsedUrl.protocol.startsWith("http") || !parsedUrl.host)
-      throw new Error("invalid")
-  }
-  catch {
-    throw new Error("Operations worker app URL must be an absolute HTTP(S) URL.")
-  }
+  parseWorkerHttpUrl(appUrl, "Operations worker app URL")
 
-  if (!token)
-    throw new Error("Set COFOUNDRY_OPERATIONS_TOKEN before running an operations worker.")
+  if (token.length < 32)
+    throw new Error("Set COFOUNDRY_OPERATIONS_TOKEN to a random value of at least 32 characters before running an operations worker.")
 
   return { appUrl, timeoutMs, token }
 }
@@ -250,9 +270,42 @@ function authHeaders(environment: OperationsWorkerEnvironment) {
 }
 
 function downloadHeaders(environment: OperationsWorkerEnvironment, url: string) {
-  return url.startsWith(`${environment.appUrl}/`)
+  return new URL(url).origin === new URL(environment.appUrl).origin
     ? { authorization: `Bearer ${environment.token}` }
     : undefined
+}
+
+function resolvePermittedDownloadOrigins(environment: OperationsWorkerEnvironment, env: EnvironmentSource) {
+  const origins = new Set([new URL(environment.appUrl).origin])
+  const configuredOrigins = [
+    readValue(env, "NUXT_PUBLIC_SUPABASE_URL"),
+    ...readValue(env, "COFOUNDRY_FILE_DOWNLOAD_ORIGINS").split(","),
+  ]
+
+  for (const value of configuredOrigins) {
+    const trimmed = value.trim()
+    if (!trimmed)
+      continue
+
+    origins.add(parseWorkerHttpUrl(trimmed, "File download origin").origin)
+  }
+
+  return origins
+}
+
+function validatePendingFileDownloadUrl(
+  environment: OperationsWorkerEnvironment,
+  env: EnvironmentSource,
+  value: string,
+) {
+  const url = parseWorkerHttpUrl(value, "Pending file download URL", { allowPath: true })
+  if (!resolvePermittedDownloadOrigins(environment, env).has(url.origin)) {
+    throw new Error(
+      `Pending file download origin ${url.origin} is not the app, Supabase, or an explicitly allowed storage origin.`,
+    )
+  }
+
+  return url
 }
 
 async function readResponseBody(response: Response) {
@@ -281,6 +334,7 @@ async function requestJson<T>(
       body: typeof options.body === "undefined" ? undefined : JSON.stringify(options.body),
       headers: authHeaders(environment),
       method: options.method || (typeof options.body === "undefined" ? "GET" : "POST"),
+      redirect: "error",
       signal: controller.signal,
     })
     const body = await readResponseBody(response)
@@ -326,10 +380,10 @@ async function reportOperationalEvent(
   return response
 }
 
-export async function runShellCommand(command: string, options: SpawnOptionsWithoutStdio = {}) {
+export async function runCommand(executable: string, args: string[] = [], options: SpawnOptionsWithoutStdio = {}) {
   return new Promise<number>((resolvePromise, rejectPromise) => {
-    const child = spawn(command, {
-      shell: true,
+    const child = spawn(executable, args, {
+      shell: false,
       stdio: "inherit",
       ...options,
     })
@@ -339,22 +393,127 @@ export async function runShellCommand(command: string, options: SpawnOptionsWith
   })
 }
 
-export function shellQuote(value: string) {
-  return `'${value.replaceAll("'", "'\\''")}'`
+export function parseExecutableCommand(command: string) {
+  const tokens: string[] = []
+  let current = ""
+  let quote: "'" | "\"" | null = null
+  let escaping = false
+  let tokenStarted = false
+
+  for (const character of command.trim()) {
+    if (character === "\0" || character === "\n" || character === "\r")
+      throw new Error("Executable commands must be a single line without null bytes.")
+
+    if (escaping) {
+      current += character
+      tokenStarted = true
+      escaping = false
+      continue
+    }
+
+    if (character === "\\" && quote !== "'") {
+      escaping = true
+      tokenStarted = true
+      continue
+    }
+
+    if (quote) {
+      if (character === quote)
+        quote = null
+      else
+        current += character
+      tokenStarted = true
+      continue
+    }
+
+    if (character === "'" || character === "\"") {
+      quote = character
+      tokenStarted = true
+      continue
+    }
+
+    if (/\s/.test(character)) {
+      if (tokenStarted) {
+        tokens.push(current)
+        current = ""
+        tokenStarted = false
+      }
+      continue
+    }
+
+    current += character
+    tokenStarted = true
+  }
+
+  if (quote || escaping)
+    throw new Error("Executable command has an unterminated quote or escape.")
+
+  if (tokenStarted)
+    tokens.push(current)
+
+  const [executable, ...args] = tokens
+  if (!executable)
+    throw new Error("Executable command is empty.")
+
+  return { args, executable }
+}
+
+function resolveExecutableCommand(commandArgs: string[], environmentCommand: string) {
+  if (commandArgs.length === 1)
+    return parseExecutableCommand(commandArgs[0]!)
+
+  if (commandArgs.length > 1) {
+    return {
+      args: commandArgs.slice(1),
+      executable: commandArgs[0]!,
+    }
+  }
+
+  return environmentCommand ? parseExecutableCommand(environmentCommand) : null
 }
 
 function scannerCommandForFile(scannerCommand: string, filePath: string, uploadId: string) {
-  if (scannerCommand.includes("{file}") || scannerCommand.includes("{id}")) {
-    return scannerCommand
-      .replaceAll("{file}", shellQuote(filePath))
-      .replaceAll("{id}", shellQuote(uploadId))
-  }
+  const parsed = parseExecutableCommand(scannerCommand)
+  const hasFilePlaceholder = [parsed.executable, ...parsed.args].some(value => value.includes("{file}"))
+  const replacePlaceholders = (value: string) => value
+    .replaceAll("{file}", filePath)
+    .replaceAll("{id}", uploadId)
 
-  return `${scannerCommand} ${shellQuote(filePath)}`
+  return {
+    args: [
+      ...parsed.args.map(replacePlaceholders),
+      ...(hasFilePlaceholder ? [] : [filePath]),
+    ],
+    executable: replacePlaceholders(parsed.executable),
+  }
+}
+
+function scannerFilename(item: PendingFileScan) {
+  const safeUploadId = item.id
+    .replace(unsafeScannerFilenamePattern, "_")
+    .replace(/^\.+/, "")
+    .slice(0, 80) || "upload"
+  const safeOriginalFilename = basename(item.originalFilename || "file")
+    .replace(unsafeScannerFilenamePattern, "_")
+    .replace(/^\.+/, "")
+    .slice(-120) || "file"
+
+  return `${safeUploadId}-${safeOriginalFilename}`
+}
+
+function commandTelemetry(executable: string, args: string[]) {
+  return {
+    commandArgumentCount: args.length,
+    commandExecutable: basename(executable),
+  }
 }
 
 async function runBackup(parsed: ParsedArgs, options: Required<WorkerCommandOptions>) {
-  if (!parsed.commandArgs.length)
+  const configuredCommand = resolveExecutableCommand(
+    parsed.commandArgs,
+    readValue(options.env, "COFOUNDRY_BACKUP_COMMAND"),
+  )
+  if (!configuredCommand)
     throw new Error("Backup worker requires a command after --, for example: operations-worker backup -- restic backup /path.")
 
   const environment = resolveOperationsWorkerEnvironment(options.env)
@@ -364,14 +523,14 @@ async function runBackup(parsed: ParsedArgs, options: Required<WorkerCommandOpti
   const artifactUri = flagValue(parsed.flags, "artifact-uri", readValue(options.env, "COFOUNDRY_BACKUP_ARTIFACT_URI")) || null
   const notes = flagValue(parsed.flags, "notes") || null
   const metadata = parseMetadata(parsed.flags)
-  const command = parsed.commandArgs.join(" ")
+  const commandMetadata = commandTelemetry(configuredCommand.executable, configuredCommand.args)
 
   await requestJson(environment, "/api/operations/backup-runs", {
     body: { artifactUri, id, metadata, notes, provider, startedAt, status: "running" },
     fetchImpl: options.fetch,
   })
 
-  const exitCode = await options.runShellCommand(command)
+  const exitCode = await options.runCommand(configuredCommand.executable, configuredCommand.args)
   const status = exitCode === 0 ? "succeeded" : "failed"
 
   await requestJson(environment, "/api/operations/backup-runs", {
@@ -381,7 +540,7 @@ async function runBackup(parsed: ParsedArgs, options: Required<WorkerCommandOpti
       id,
       metadata: {
         ...metadata,
-        command,
+        ...commandMetadata,
         exitCode,
       },
       notes: notes || `Backup command ${status}.`,
@@ -397,7 +556,7 @@ async function runBackup(parsed: ParsedArgs, options: Required<WorkerCommandOpti
       eventType: "backup_run_failed",
       metadata: {
         ...metadata,
-        command,
+        ...commandMetadata,
         exitCode,
         provider,
         ...(artifactUri ? { artifactUri } : {}),
@@ -418,8 +577,11 @@ async function runBackup(parsed: ParsedArgs, options: Required<WorkerCommandOpti
 
 async function runDigest(parsed: ParsedArgs, options: Required<WorkerCommandOptions>) {
   const environment = resolveOperationsWorkerEnvironment(options.env)
-  const dryRun = parseBooleanFlag(flagValue(parsed.flags, "dry-run", "false"))
-  const maxUsers = parsePositiveInteger(flagValue(parsed.flags, "max-users"), 100)
+  const dryRun = parseBooleanFlag(flagValue(parsed.flags, "dry-run", readValue(options.env, "COFOUNDRY_DIGEST_DRY_RUN") || "true"))
+  const maxUsers = parsePositiveInteger(
+    flagValue(parsed.flags, "max-users", readValue(options.env, "COFOUNDRY_DIGEST_MAX_USERS")),
+    100,
+  )
   const onlyWithUnread = !parseBooleanFlag(flagValue(parsed.flags, "include-read", "false"))
   const userId = flagValue(parsed.flags, "user-id") || undefined
   const response = await requestJson(environment, "/api/operations/notification-digests/run", {
@@ -604,21 +766,61 @@ async function runTrustVerification(parsed: ParsedArgs, options: Required<Worker
   options.log(JSON.stringify(response, null, 2))
 }
 
-async function downloadPendingFile(environment: OperationsWorkerEnvironment, item: PendingFileScan, fetchImpl: FetchLike) {
+async function readBoundedResponseBytes(response: Response, maximumBytes: number) {
+  const contentLength = Number.parseInt(response.headers.get("content-length") || "", 10)
+  if (Number.isFinite(contentLength) && contentLength > maximumBytes)
+    throw new Error(`Downloaded file exceeds the ${maximumBytes}-byte scanner limit.`)
+
+  if (!response.body)
+    return Buffer.alloc(0)
+
+  const reader = response.body.getReader()
+  const chunks: Uint8Array[] = []
+  let totalBytes = 0
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done)
+      break
+    if (!value)
+      continue
+
+    totalBytes += value.byteLength
+    if (totalBytes > maximumBytes) {
+      await reader.cancel()
+      throw new Error(`Downloaded file exceeds the ${maximumBytes}-byte scanner limit.`)
+    }
+    chunks.push(value)
+  }
+
+  return Buffer.concat(chunks, totalBytes)
+}
+
+async function downloadPendingFile(
+  environment: OperationsWorkerEnvironment,
+  env: EnvironmentSource,
+  item: PendingFileScan,
+  fetchImpl: FetchLike,
+) {
   if (!item.signedDownloadUrl)
     throw new Error(item.signedDownloadError || "No signed download URL was returned for the pending scan.")
 
-  const response = await fetchImpl(item.signedDownloadUrl, {
-    headers: downloadHeaders(environment, item.signedDownloadUrl),
+  const downloadUrl = validatePendingFileDownloadUrl(environment, env, item.signedDownloadUrl)
+  const response = await fetchImpl(downloadUrl, {
+    headers: downloadHeaders(environment, downloadUrl.toString()),
+    redirect: "error",
   })
 
   if (!response.ok)
     throw new Error(`Download failed (${response.status}) for upload ${item.id}.`)
 
-  const bytes = Buffer.from(await response.arrayBuffer())
+  const bytes = await readBoundedResponseBytes(response, maximumScanFileBytes)
+  if (typeof item.sizeBytes === "number" && bytes.byteLength !== item.sizeBytes)
+    throw new Error(`Downloaded file size does not match upload policy for ${item.id}.`)
+
   const directory = await mkdtemp(join(tmpdir(), "cofoundry-scan-"))
-  const filePath = join(directory, basename(item.originalFilename || item.id))
-  await writeFile(filePath, bytes)
+  const filePath = join(directory, scannerFilename(item))
+  await writeFile(filePath, bytes, { mode: 0o600 })
 
   return { directory, filePath }
 }
@@ -626,7 +828,7 @@ async function downloadPendingFile(environment: OperationsWorkerEnvironment, ite
 async function reportScanResult(
   environment: OperationsWorkerEnvironment,
   item: PendingFileScan,
-  result: { notes: string, scanStatus: "clean" | "flagged" | "failed" | "skipped", status?: "uploaded" | "blocked" },
+  result: { notes: string, scanStatus: "clean" | "flagged" | "failed" | "skipped" },
   fetchImpl: FetchLike,
 ) {
   await requestJson(environment, `/api/operations/file-scans/${encodeURIComponent(item.id)}`, {
@@ -637,7 +839,10 @@ async function reportScanResult(
 
 async function runScan(parsed: ParsedArgs, options: Required<WorkerCommandOptions>) {
   const environment = resolveOperationsWorkerEnvironment(options.env)
-  const limit = parsePositiveInteger(flagValue(parsed.flags, "limit"), 25)
+  const limit = parsePositiveInteger(
+    flagValue(parsed.flags, "limit", readValue(options.env, "COFOUNDRY_SCAN_LIMIT")),
+    25,
+  )
   const allowSkip = parseBooleanFlag(flagValue(parsed.flags, "allow-skip", "false"))
   const scannerCommand = flagValue(parsed.flags, "scanner-command", readValue(options.env, "COFOUNDRY_FILE_SCANNER_COMMAND"))
   const pendingResponse = await requestJson<OperationsResponse<unknown>>(environment, `/api/operations/file-scans/pending?limit=${limit}`, {
@@ -668,15 +873,14 @@ async function runScan(parsed: ParsedArgs, options: Required<WorkerCommandOption
         await reportScanResult(environment, item, {
           notes: "No scanner command configured; explicit skip requested by operations worker.",
           scanStatus: "skipped",
-          status: "uploaded",
         }, options.fetch)
         continue
       }
 
-      const downloaded = await downloadPendingFile(environment, item, options.fetch)
+      const downloaded = await downloadPendingFile(environment, options.env, item, options.fetch)
       tempDirectory = downloaded.directory
       const command = scannerCommandForFile(scannerCommand, downloaded.filePath, item.id)
-      const exitCode = await options.runShellCommand(command, {
+      const exitCode = await options.runCommand(command.executable, command.args, {
         env: {
           ...process.env,
           COFOUNDRY_SCAN_FILE: downloaded.filePath,
@@ -689,7 +893,6 @@ async function runScan(parsed: ParsedArgs, options: Required<WorkerCommandOption
         await reportScanResult(environment, item, {
           notes: "Scanner command exited cleanly.",
           scanStatus: "clean",
-          status: "uploaded",
         }, options.fetch)
       }
       else if (exitCode === 1) {
@@ -697,7 +900,6 @@ async function runScan(parsed: ParsedArgs, options: Required<WorkerCommandOption
         await reportScanResult(environment, item, {
           notes: "Scanner command flagged this upload.",
           scanStatus: "flagged",
-          status: "blocked",
         }, options.fetch)
       }
       else {
@@ -705,7 +907,6 @@ async function runScan(parsed: ParsedArgs, options: Required<WorkerCommandOption
         await reportScanResult(environment, item, {
           notes: `Scanner command failed with exit code ${exitCode}.`,
           scanStatus: "failed",
-          status: "blocked",
         }, options.fetch)
       }
     }
@@ -714,7 +915,6 @@ async function runScan(parsed: ParsedArgs, options: Required<WorkerCommandOption
       await reportScanResult(environment, item, {
         notes: error instanceof Error ? error.message : "Scanner worker failed.",
         scanStatus: "failed",
-        status: "blocked",
       }, options.fetch)
     }
     finally {
@@ -742,9 +942,16 @@ async function runRealtimeSmoke(parsed: ParsedArgs, options: Required<WorkerComm
     purpose: "realtime-fanout-smoke",
     ...parseMetadata(parsed.flags),
   }
-  const userId = flagValue(parsed.flags, "user-id", "cofoundry-realtime-smoke-user")
+  const userId = flagValue(
+    parsed.flags,
+    "user-id",
+    readValue(options.env, "COFOUNDRY_REALTIME_SMOKE_USER_ID") || "cofoundry-realtime-smoke-user",
+  )
   const sourceInstanceId = flagValue(parsed.flags, "source-instance-id", readValue(options.env, "COFOUNDRY_INSTANCE_ID") || "operations-worker")
-  const minDelivered = parseNonNegativeInteger(flagValue(parsed.flags, "min-delivered"), 0)
+  const minDelivered = parseNonNegativeInteger(
+    flagValue(parsed.flags, "min-delivered", readValue(options.env, "COFOUNDRY_REALTIME_SMOKE_MIN_DELIVERED")),
+    0,
+  )
   const envelope = {
     createdAt,
     eventType: "workspace-change",
@@ -876,27 +1083,31 @@ async function runAlertSmoke(parsed: ParsedArgs, options: Required<WorkerCommand
 }
 
 async function runRestoreDrill(parsed: ParsedArgs, options: Required<WorkerCommandOptions>) {
-  if (!parsed.commandArgs.length)
+  const configuredCommand = resolveExecutableCommand(
+    parsed.commandArgs,
+    readValue(options.env, "COFOUNDRY_RESTORE_DRILL_COMMAND"),
+  )
+  if (!configuredCommand)
     throw new Error("Restore drill worker requires a command after --.")
 
   const environment = resolveOperationsWorkerEnvironment(options.env)
   const id = flagValue(parsed.flags, "id", `restore-drill-${timestampForId(options.now())}`)
   const metadata = parseMetadata(parsed.flags)
-  const command = parsed.commandArgs.join(" ")
+  const commandMetadata = commandTelemetry(configuredCommand.executable, configuredCommand.args)
 
   await reportOperationalEvent(environment, {
     eventType: "restore_drill_started",
-    metadata: { ...metadata, command },
+    metadata: { ...metadata, ...commandMetadata },
     severity: "info",
     source: "restore-drill-worker",
     targetId: id,
     targetType: "restore_drill",
   }, options)
 
-  const exitCode = await options.runShellCommand(command)
+  const exitCode = await options.runCommand(configuredCommand.executable, configuredCommand.args)
   await reportOperationalEvent(environment, {
     eventType: exitCode === 0 ? "restore_drill_succeeded" : "restore_drill_failed",
-    metadata: { ...metadata, command, exitCode },
+    metadata: { ...metadata, ...commandMetadata, exitCode },
     severity: exitCode === 0 ? "info" : "error",
     source: "restore-drill-worker",
     targetId: id,
@@ -916,7 +1127,7 @@ export async function runOperationsWorker(argv: string[], options: WorkerCommand
     fetch: options.fetch || fetch,
     log: options.log || console.log,
     now: options.now || (() => new Date()),
-    runShellCommand: options.runShellCommand || runShellCommand,
+    runCommand: options.runCommand || runCommand,
   }
 
   switch (parsed.command) {

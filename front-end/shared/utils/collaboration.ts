@@ -68,8 +68,11 @@ function syncResponseMetrics(seed: WorkspaceSeed, userId: string) {
     return
 
   const inboundRequests = seed.connectRequests.filter(request => request.toUserId === userId)
-  if (!inboundRequests.length)
+  if (!inboundRequests.length) {
+    profile.trustSignals.replyRatePercent = 0
+    profile.trustSignals.medianReplyHours = 48
     return
+  }
 
   const respondedRequests = inboundRequests.filter(request => request.respondedAt)
   profile.trustSignals.replyRatePercent = Math.round((respondedRequests.length / inboundRequests.length) * 100)
@@ -88,6 +91,41 @@ function syncResponseMetrics(seed: WorkspaceSeed, userId: string) {
     .sort((left, right) => left - right)
 
   profile.trustSignals.medianReplyHours = replyHours[Math.floor(replyHours.length / 2)] || 48
+}
+
+export function deriveCollaborationTrustMetrics(seed: WorkspaceSeed) {
+  const nextSeed = cloneValue(seed)
+
+  for (const profile of nextSeed.profiles) {
+    const userId = profile.userId
+    const activityTimes = [
+      profile.trustSignals.lastActiveAt,
+      ...nextSeed.connectRequests.flatMap((request) => {
+        if (request.fromUserId === userId)
+          return [request.createdAt]
+        if (request.toUserId === userId && request.respondedAt)
+          return [request.respondedAt]
+        return []
+      }),
+      ...nextSeed.messages.flatMap(message => message.senderUserId === userId ? [message.createdAt] : []),
+      ...nextSeed.proposalVersions.flatMap(version => version.createdByUserId === userId ? [version.createdAt] : []),
+      ...nextSeed.proposalComments.flatMap(comment => comment.authorUserId === userId ? [comment.createdAt] : []),
+      ...nextSeed.signatures.flatMap(signature => signature.userId === userId ? [signature.signedAt] : []),
+      ...nextSeed.trialCollaborations.flatMap(trial => trial.createdByUserId === userId ? [trial.createdAt] : []),
+      ...nextSeed.relationshipDecisions.flatMap(decision => decision.authorUserId === userId ? [decision.updatedAt] : []),
+      ...nextSeed.reports.flatMap(report => report.reporterUserId === userId ? [report.createdAt] : []),
+      ...nextSeed.investmentApplications.flatMap(application => application.applicantUserId === userId ? [application.createdAt] : []),
+    ].filter(Boolean)
+    const latestActivity = activityTimes
+      .sort((left, right) => new Date(right).getTime() - new Date(left).getTime())[0]
+
+    if (latestActivity)
+      profile.trustSignals.lastActiveAt = latestActivity
+
+    syncResponseMetrics(nextSeed, userId)
+  }
+
+  return nextSeed
 }
 
 function createNotification(
@@ -129,6 +167,30 @@ export function isConversationParticipant(conversation: Conversation, userId: st
 
 export function isProposalParticipant(proposal: Proposal, userId: string) {
   return proposal.createdByUserId === userId || proposal.recipientUserId === userId
+}
+
+export function canUserUpdateProposalStatus(
+  seed: WorkspaceSeed,
+  proposal: Proposal,
+  userId: string,
+  status: Extract<ProposalStatus, "accepted" | "rejected" | "viewed">,
+) {
+  if (!isProposalParticipant(proposal, userId) || ["accepted", "rejected"].includes(proposal.status))
+    return false
+
+  const currentVersion = getCurrentProposalVersion(seed, proposal)
+  if (!currentVersion || currentVersion.createdByUserId === userId)
+    return false
+
+  return ["accepted", "rejected", "viewed"].includes(status)
+}
+
+export function canUserCounterProposal(seed: WorkspaceSeed, proposal: Proposal, userId: string) {
+  if (!isProposalParticipant(proposal, userId) || ["accepted", "rejected"].includes(proposal.status))
+    return false
+
+  const currentVersion = getCurrentProposalVersion(seed, proposal)
+  return Boolean(currentVersion && currentVersion.createdByUserId !== userId)
 }
 
 export function getContractParticipantIds(seed: WorkspaceSeed, contract: Contract) {

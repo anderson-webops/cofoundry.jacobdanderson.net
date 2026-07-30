@@ -64,6 +64,14 @@ const recentMessageIds = new Map<string, number>()
 const instanceId = process.env.COFOUNDRY_INSTANCE_ID?.trim() || randomUUID()
 const recentMessageTtlMs = 2 * 60 * 1000
 const recentMessageLimit = 2_000
+const maxFanoutMessages = 500
+const maxRealtimeDataLength = 16_384
+const maxRealtimeSubscribersPerUser = 5
+const maxRealtimeSubscribersPerProcess = 1_000
+
+function isBoundedString(value: unknown, maximum: number, minimum = 1): value is string {
+  return typeof value === "string" && value.length >= minimum && value.length <= maximum
+}
 
 function getSubscriberGroup(userId: string) {
   let group = subscribers.get(userId)
@@ -82,6 +90,55 @@ function normalizeUserIds(userIds: string[]) {
 
 function readFanoutUrl() {
   return process.env.COFOUNDRY_REALTIME_FANOUT_URL?.trim() || ""
+}
+
+export function resolveWorkspaceRealtimeFanoutDestination(
+  env: Record<string, string | undefined> = process.env,
+) {
+  const value = env.COFOUNDRY_REALTIME_FANOUT_URL?.trim() || ""
+  if (!value)
+    return null
+
+  let url: URL
+  try {
+    url = new URL(value)
+  }
+  catch {
+    throw new Error("COFOUNDRY_REALTIME_FANOUT_URL must be an absolute HTTP(S) URL.")
+  }
+
+  const localHost = ["localhost", "127.0.0.1", "::1"].includes(url.hostname)
+  if (
+    !["http:", "https:"].includes(url.protocol)
+    || !url.host
+    || url.username
+    || url.password
+    || url.hash
+    || (!localHost && url.protocol !== "https:")
+  ) {
+    throw new Error("COFOUNDRY_REALTIME_FANOUT_URL must be a credential-free HTTPS URL, except for local development.")
+  }
+
+  const configuredAppUrl = env.NUXT_PUBLIC_APP_URL?.trim() || "http://localhost:3000"
+  const sameOrigin = new URL(configuredAppUrl).origin === url.origin
+  const token = (
+    sameOrigin
+      ? env.COFOUNDRY_OPERATIONS_TOKEN || env.OPERATIONS_WORKER_TOKEN
+      : env.COFOUNDRY_REALTIME_FANOUT_TOKEN
+  )?.trim() || ""
+
+  if (token.length < 32) {
+    throw new Error(
+      sameOrigin
+        ? "A strong COFOUNDRY_OPERATIONS_TOKEN is required for same-origin realtime fanout."
+        : "A distinct COFOUNDRY_REALTIME_FANOUT_TOKEN is required for cross-origin realtime fanout.",
+    )
+  }
+
+  return {
+    token,
+    url: url.toString(),
+  }
 }
 
 function readFanoutTimeoutMs() {
@@ -128,39 +185,56 @@ function normalizeFanoutEnvelope(value: unknown): WorkspaceRealtimeFanoutEnvelop
   if (envelope.version !== 1 || (eventType !== "typing" && eventType !== "workspace-change"))
     return null
 
-  if (typeof envelope.createdAt !== "string" || typeof envelope.idScope !== "string" || typeof envelope.sourceInstanceId !== "string")
+  if (
+    !isBoundedString(envelope.createdAt, 80)
+    || !Number.isFinite(Date.parse(envelope.createdAt))
+    || !isBoundedString(envelope.idScope, 240)
+    || !isBoundedString(envelope.sourceInstanceId, 160)
+  ) {
     return null
+  }
 
-  if (!Array.isArray(envelope.messages))
+  if (
+    !Array.isArray(envelope.messages)
+    || !envelope.messages.length
+    || envelope.messages.length > maxFanoutMessages
+  ) {
     return null
+  }
 
-  const messages = envelope.messages
-    .map((item) => {
-      if (!item || typeof item !== "object")
-        return null
+  const messages: WorkspaceRealtimeFanoutEnvelope["messages"] = []
+  for (const item of envelope.messages) {
+    if (!item || typeof item !== "object")
+      return null
 
-      const candidate = item as { message?: Partial<WorkspaceRealtimeMessage>, userId?: unknown }
-      const message = candidate.message
-      if (!message || typeof candidate.userId !== "string")
-        return null
+    const candidate = item as { message?: Partial<WorkspaceRealtimeMessage>, userId?: unknown }
+    const message = candidate.message
+    if (!message || !isBoundedString(candidate.userId, 160))
+      return null
 
-      if (message.event !== eventType || typeof message.data !== "string" || typeof message.id !== "string")
-        return null
+    if (
+      message.event !== eventType
+      || !isBoundedString(message.data, maxRealtimeDataLength)
+      || !isBoundedString(message.id, 500)
+      || (message.retry !== undefined && (
+        !Number.isInteger(message.retry)
+        || message.retry < 1_000
+        || message.retry > 60_000
+      ))
+    ) {
+      return null
+    }
 
-      return {
-        message: {
-          data: message.data,
-          event: message.event,
-          id: message.id,
-          retry: typeof message.retry === "number" && Number.isFinite(message.retry) ? message.retry : 5000,
-        },
-        userId: candidate.userId,
-      }
+    messages.push({
+      message: {
+        data: message.data,
+        event: message.event,
+        id: message.id,
+        retry: message.retry ?? 5000,
+      },
+      userId: candidate.userId,
     })
-    .filter((item): item is WorkspaceRealtimeFanoutEnvelope["messages"][number] => Boolean(item))
-
-  if (!messages.length)
-    return null
+  }
 
   return {
     createdAt: envelope.createdAt,
@@ -176,6 +250,17 @@ export function subscribeWorkspaceRealtime(userId: string, sink: WorkspaceRealti
   const normalizedUserId = userId.trim()
   if (!normalizedUserId)
     return () => {}
+
+  const currentUserSubscriptions = subscribers.get(normalizedUserId)?.size || 0
+  if (
+    currentUserSubscriptions >= maxRealtimeSubscribersPerUser
+    || getWorkspaceRealtimeSubscriberCount() >= maxRealtimeSubscribersPerProcess
+  ) {
+    throw Object.assign(new Error("Realtime connection capacity has been reached."), {
+      statusCode: 429,
+      statusMessage: "Too many realtime connections are open. Close another session and try again.",
+    })
+  }
 
   const subscriptionId = randomUUID()
   const group = getSubscriberGroup(normalizedUserId)
@@ -320,24 +405,20 @@ export async function deliverWorkspaceRealtimeEnvelope(value: unknown) {
 }
 
 async function publishWorkspaceRealtimeFanout(envelope: WorkspaceRealtimeFanoutEnvelope) {
-  const fanoutUrl = readFanoutUrl()
-  if (!fanoutUrl)
-    return
-
-  const operationsToken = process.env.COFOUNDRY_OPERATIONS_TOKEN?.trim() || process.env.OPERATIONS_WORKER_TOKEN?.trim() || ""
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "X-CoFoundry-Realtime-Instance": instanceId,
-  }
-
-  if (operationsToken)
-    headers.Authorization = `Bearer ${operationsToken}`
-
   try {
-    await fetch(fanoutUrl, {
+    const destination = resolveWorkspaceRealtimeFanoutDestination()
+    if (!destination)
+      return
+
+    await fetch(destination.url, {
       body: JSON.stringify(envelope),
-      headers,
+      headers: {
+        "Authorization": `Bearer ${destination.token}`,
+        "Content-Type": "application/json",
+        "X-CoFoundry-Realtime-Instance": instanceId,
+      },
       method: "POST",
+      redirect: "error",
       signal: AbortSignal.timeout(readFanoutTimeoutMs()),
     })
   }

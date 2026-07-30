@@ -189,6 +189,52 @@ export function buildHostEnvironmentReport(
     )
   }
 
+  const backendHost = readValue(env, "BACKEND_HOST") || "127.0.0.1"
+  const publicBackendBind = !localHostnames.has(backendHost.toLowerCase())
+  if (publicBackendBind && readValue(env, "COFOUNDRY_ALLOW_PUBLIC_BACKEND_BIND") !== "true") {
+    addCheck(
+      checks,
+      "fail",
+      "backend-bind",
+      "Backend network bind",
+      `BACKEND_HOST=${backendHost} exposes the operations backend without explicit authorization.`,
+      "Bind the backend to 127.0.0.1 or explicitly authorize and firewall a public bind.",
+    )
+  }
+  else {
+    addCheck(
+      checks,
+      "pass",
+      "backend-bind",
+      "Backend network bind",
+      publicBackendBind ? `Explicit public bind authorized for ${backendHost}.` : `Backend binds to ${backendHost}.`,
+    )
+  }
+
+  const trustsProxyHeaders = readValue(env, "COFOUNDRY_TRUST_PROXY_HEADERS") === "true"
+  const trustedProxyIps = readValue(env, "COFOUNDRY_TRUSTED_PROXY_IPS")
+  if (trustsProxyHeaders && !trustedProxyIps) {
+    addCheck(
+      checks,
+      "fail",
+      "trusted-proxy",
+      "Trusted proxy boundary",
+      "Forwarded headers are enabled without a direct-proxy IP allowlist.",
+      "Set COFOUNDRY_TRUSTED_PROXY_IPS to the exact reverse-proxy addresses or disable forwarded-header trust.",
+    )
+  }
+  else {
+    addCheck(
+      checks,
+      "pass",
+      "trusted-proxy",
+      "Trusted proxy boundary",
+      trustsProxyHeaders
+        ? `Forwarded headers are limited to configured direct proxies: ${trustedProxyIps}.`
+        : "Forwarded headers are not trusted.",
+    )
+  }
+
   if (productionExpected && !secretEnvironment.sessionSigningSecret) {
     addCheck(
       checks,
@@ -267,15 +313,20 @@ export function buildHostEnvironmentReport(
     )
   }
 
+  const operationsTokenLength = secretEnvironment.operationsWorkerToken.length
   addCheck(
     checks,
-    secretEnvironment.operationsWorkerToken ? "pass" : "warn",
+    operationsTokenLength >= 32 ? "pass" : operationsTokenLength || productionExpected ? "fail" : "warn",
     "operations-token",
     "Operations worker token",
-    summarizeSecretPresence(Boolean(secretEnvironment.operationsWorkerToken), "COFOUNDRY_OPERATIONS_TOKEN"),
-    secretEnvironment.operationsWorkerToken
+    operationsTokenLength >= 32
+      ? "COFOUNDRY_OPERATIONS_TOKEN is present and meets the minimum length."
+      : operationsTokenLength
+        ? "COFOUNDRY_OPERATIONS_TOKEN is shorter than 32 characters."
+        : "COFOUNDRY_OPERATIONS_TOKEN is missing.",
+    operationsTokenLength >= 32
       ? undefined
-      : "Set COFOUNDRY_OPERATIONS_TOKEN before enabling worker-authenticated operations timers.",
+      : "Set COFOUNDRY_OPERATIONS_TOKEN to a distinct random value of at least 32 characters before starting a hosted app or operations timers.",
   )
 
   const oauthMarkers = [

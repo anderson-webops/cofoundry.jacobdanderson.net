@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import { workspaceSeed } from "~/shared/data/seed"
-import { getPublicOpportunities } from "~/shared/utils/directory"
-
-const opportunities = getPublicOpportunities(workspaceSeed)
+const opportunities = (await usePublicDirectory()).opportunities
 
 usePageSeo("Public startup searches", "Browse public startup opportunity pages on CoFoundry.", {
   canonicalPath: "/startups",

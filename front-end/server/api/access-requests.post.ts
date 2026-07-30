@@ -6,6 +6,12 @@ import { isContactMailConfigured, sendContactMessage } from "../utils/contact"
 import { assertRateLimit, buildRateLimitKey } from "../utils/rate-limit"
 
 export default defineEventHandler(async (event) => {
+  assertRateLimit(event, {
+    limit: 20,
+    scope: "access-requests:ip",
+    windowMs: 60 * 60 * 1000,
+  })
+
   const payload = accessRequestSchema.parse(await readBody(event))
 
   if (payload.website) {
@@ -41,15 +47,15 @@ export default defineEventHandler(async (event) => {
   assertRateLimit(event, {
     key: buildRateLimitKey(event, payload.email),
     limit: 4,
-    scope: "access-requests",
+    scope: "access-requests:account",
     windowMs: 60 * 60 * 1000,
   })
 
-  const request = await createAccessRequest(event, payload)
+  const { created } = await createAccessRequest(event, payload)
   let notified = false
   let notificationError: string | null = null
 
-  if (isContactMailConfigured()) {
+  if (created && isContactMailConfigured()) {
     try {
       await sendContactMessage({
         company: payload.company || "",
@@ -80,7 +86,6 @@ export default defineEventHandler(async (event) => {
   setResponseStatus(event, 202)
   return {
     notified,
-    request,
     success: true,
   }
 })

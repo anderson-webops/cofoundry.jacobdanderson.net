@@ -1,15 +1,14 @@
 import type { H3Event } from "h3"
 import type { z } from "zod"
-import type { AccessRequest } from "~/shared/types/domain"
+import type { AccessRequest, AdminAction } from "~/shared/types/domain"
 import type { accessRequestSchema } from "~/shared/utils/validation"
 import { createHash, randomBytes, randomUUID } from "node:crypto"
 import process from "node:process"
 import {
-  createLocalAccessInvite,
-  createLocalAccessRequest,
+  applyLocalAdminAccessRequestStatus,
+  createLocalAccessRequestResult,
+  issueLocalAdminAccessInvite,
   listLocalAccessRequests,
-  markLocalAccessInviteAccepted,
-  updateLocalAccessRequestStatus,
   validateLocalAccessInvite,
 } from "./local-access-requests"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
@@ -47,6 +46,10 @@ function normalizeEmail(email: string) {
 
 function tokenHash(token: string) {
   return createHash("sha256").update(token).digest("base64url")
+}
+
+export function hashAccessInviteToken(token: string) {
+  return tokenHash(token.trim())
 }
 
 function listLimit() {
@@ -95,65 +98,38 @@ function requireSupabaseAdmin(event: H3Event) {
 
 export async function createAccessRequest(event: H3Event, payload: AccessRequestPayload) {
   if (!isSupabaseEnabled(event))
-    return createLocalAccessRequest(payload)
+    return createLocalAccessRequestResult(payload)
 
   const adminClient = requireSupabaseAdmin(event)
   const email = normalizeEmail(payload.email)
   const now = new Date().toISOString()
-  const { data: existingRows, error: existingError } = await adminClient
-    .from("access_requests")
-    .select("*")
-    .eq("email", email)
-    .neq("status", "denied")
-    .is("invite_accepted_at", null)
-    .order("created_at", { ascending: false })
-    .limit(1)
-
-  if (existingError)
-    throw existingError
-
-  const existing = (existingRows?.[0] || null) as SupabaseAccessRequestRow | null
-  const patch = {
-    company: payload.company?.trim() || "",
-    company_stage: payload.companyStage,
-    email,
-    name: payload.name.trim(),
-    role: payload.role,
-    source: payload.source?.trim() || "site",
-    timeline: payload.timeline,
-    updated_at: now,
-    use_case: payload.useCase.trim(),
-  }
-
-  if (existing) {
-    const { data, error } = await adminClient
-      .from("access_requests")
-      .update(patch)
-      .eq("id", existing.id)
-      .select("*")
-      .single()
-
-    if (error)
-      throw error
-
-    return toAccessRequest(data as SupabaseAccessRequestRow)
-  }
-
-  const { data, error } = await adminClient
-    .from("access_requests")
-    .insert({
-      ...patch,
-      created_at: now,
-      id: `access_${randomUUID().replaceAll("-", "")}`,
-      status: "open",
-    })
-    .select("*")
-    .single()
+  const { data, error } = await adminClient.rpc("cofoundry_create_access_request", {
+    p_company: payload.company?.trim() || "",
+    p_company_stage: payload.companyStage,
+    p_created_at: now,
+    p_email: email,
+    p_id: `access_${randomUUID().replaceAll("-", "")}`,
+    p_name: payload.name.trim(),
+    p_role: payload.role,
+    p_source: payload.source?.trim() || "site",
+    p_timeline: payload.timeline,
+    p_use_case: payload.useCase.trim(),
+  })
 
   if (error)
     throw error
 
-  return toAccessRequest(data as SupabaseAccessRequestRow)
+  const result = data as {
+    created?: boolean
+    request?: SupabaseAccessRequestRow
+  } | null
+  if (!result?.request)
+    throw createError({ statusCode: 500, statusMessage: "Access request persistence returned an invalid response." })
+
+  return {
+    created: result.created === true,
+    request: toAccessRequest(result.request),
+  }
 }
 
 export async function listAccessRequests(event: H3Event) {
@@ -173,65 +149,125 @@ export async function listAccessRequests(event: H3Event) {
   return ((data || []) as SupabaseAccessRequestRow[]).map(toAccessRequest)
 }
 
-export async function updateAccessRequestStatus(event: H3Event, id: string, payload: { adminNotes: string, reviewedByUserId: string, status: "approved" | "denied" | "open" }) {
+export async function updateAccessRequestStatus(event: H3Event, id: string, payload: {
+  action: AdminAction
+  expectedUpdatedAt: string
+  status: "approved" | "denied" | "open"
+}) {
   if (!isSupabaseEnabled(event))
-    return updateLocalAccessRequestStatus(id, payload)
+    return applyLocalAdminAccessRequestStatus(id, payload)
 
   const adminClient = requireSupabaseAdmin(event)
-  const now = new Date().toISOString()
-  const { data, error } = await adminClient
+  const { data: existingData, error: existingError } = await adminClient
     .from("access_requests")
-    .update({
-      admin_notes: payload.adminNotes,
-      reviewed_at: now,
-      reviewed_by_user_id: payload.reviewedByUserId,
-      status: payload.status,
-      updated_at: now,
-    })
-    .eq("id", id)
     .select("*")
+    .eq("id", id)
     .maybeSingle()
 
-  if (error)
-    throw error
+  if (existingError)
+    throw existingError
+  if (!existingData)
+    return null
 
-  return data ? toAccessRequest(data as SupabaseAccessRequestRow) : null
+  const { error } = await adminClient.rpc("cofoundry_apply_admin_access_status", {
+    p_action_id: payload.action.id,
+    p_actor_user_id: payload.action.adminUserId,
+    p_expected_updated_at: payload.expectedUpdatedAt,
+    p_notes: payload.action.notes,
+    p_status: payload.status,
+    p_target_id: id,
+    p_timestamp: payload.action.createdAt,
+  })
+
+  if (error) {
+    const stale = error.message.includes("changed after")
+    throw createError({
+      statusCode: stale || error.message.includes("accepted") ? 409 : 400,
+      statusMessage: stale
+        ? "The access request changed after this review began. Refresh and review the current state."
+        : error.message.includes("accepted")
+          ? "An accepted access invite cannot be reopened or denied."
+          : "The access-request action could not be applied.",
+    })
+  }
+
+  return toAccessRequest({
+    ...(existingData as SupabaseAccessRequestRow),
+    admin_notes: payload.action.notes,
+    invite_expires_at: null,
+    invite_token_hash: null,
+    invite_token_issued_at: null,
+    reviewed_at: payload.action.createdAt,
+    reviewed_by_user_id: payload.action.adminUserId,
+    status: payload.status,
+    updated_at: payload.action.createdAt,
+  })
 }
 
-export async function createAccessInvite(event: H3Event, id: string, payload: { adminNotes: string, appUrl: string, reviewedByUserId: string }) {
+export async function createAccessInvite(event: H3Event, id: string, payload: {
+  action: AdminAction
+  appUrl: string
+  expectedUpdatedAt: string
+}) {
   if (!isSupabaseEnabled(event))
-    return createLocalAccessInvite(id, payload)
+    return issueLocalAdminAccessInvite(id, payload)
 
   const adminClient = requireSupabaseAdmin(event)
   const token = randomBytes(32).toString("base64url")
-  const now = new Date()
+  const now = new Date(payload.action.createdAt)
   const expiresAt = new Date(now)
   expiresAt.setDate(expiresAt.getDate() + inviteLifetimeDays)
 
-  const { data, error } = await adminClient
+  const { data: existingData, error: existingError } = await adminClient
     .from("access_requests")
-    .update({
-      admin_notes: payload.adminNotes,
-      invite_accepted_at: null,
-      invite_expires_at: expiresAt.toISOString(),
-      invite_token_hash: tokenHash(token),
-      invite_token_issued_at: now.toISOString(),
-      reviewed_at: now.toISOString(),
-      reviewed_by_user_id: payload.reviewedByUserId,
-      status: "invited",
-      updated_at: now.toISOString(),
-    })
-    .eq("id", id)
     .select("*")
+    .eq("id", id)
     .maybeSingle()
 
-  if (error)
-    throw error
-
-  if (!data)
+  if (existingError)
+    throw existingError
+  if (!existingData)
     return null
 
-  const request = toAccessRequest(data as SupabaseAccessRequestRow)
+  const { error } = await adminClient.rpc("cofoundry_issue_admin_access_invite", {
+    p_action_id: payload.action.id,
+    p_actor_user_id: payload.action.adminUserId,
+    p_expected_updated_at: payload.expectedUpdatedAt,
+    p_expires_at: expiresAt.toISOString(),
+    p_invite_token_hash: tokenHash(token),
+    p_notes: payload.action.notes,
+    p_target_id: id,
+    p_timestamp: payload.action.createdAt,
+  })
+
+  if (error) {
+    const stale = error.message.includes("changed after")
+    const accepted = error.message.includes("accepted")
+    const approval = error.message.includes("Approve")
+    throw createError({
+      statusCode: stale || accepted || approval ? 409 : 400,
+      statusMessage: stale
+        ? "The access request changed after this review began. Refresh and review the current state."
+        : accepted
+          ? "An accepted access invite cannot be reissued."
+          : approval
+            ? "Approve the access request before issuing an invite."
+            : "The access invite could not be issued.",
+    })
+  }
+
+  const request = toAccessRequest({
+    ...(existingData as SupabaseAccessRequestRow),
+    admin_notes: payload.action.notes,
+    invite_accepted_at: null,
+    invite_expires_at: expiresAt.toISOString(),
+    invite_token_hash: tokenHash(token),
+    invite_token_issued_at: payload.action.createdAt,
+    reviewed_at: payload.action.createdAt,
+    reviewed_by_user_id: payload.action.adminUserId,
+    status: "invited",
+    updated_at: payload.action.createdAt,
+  })
   return {
     inviteToken: token,
     inviteUrl: createInviteUrl(payload.appUrl, token, request.email),
@@ -268,26 +304,4 @@ export async function validateAccessInvite(event: H3Event, token: string, email?
     return null
 
   return request
-}
-
-export async function markAccessInviteAccepted(event: H3Event, token: string) {
-  if (!isSupabaseEnabled(event))
-    return markLocalAccessInviteAccepted(token)
-
-  const adminClient = requireSupabaseAdmin(event)
-  const now = new Date().toISOString()
-  const { data, error } = await adminClient
-    .from("access_requests")
-    .update({
-      invite_accepted_at: now,
-      updated_at: now,
-    })
-    .eq("invite_token_hash", tokenHash(token.trim()))
-    .select("*")
-    .maybeSingle()
-
-  if (error)
-    throw error
-
-  return data ? toAccessRequest(data as SupabaseAccessRequestRow) : null
 }

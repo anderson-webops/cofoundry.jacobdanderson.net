@@ -3,7 +3,7 @@ import { requireAuthenticatedSession } from "../../utils/auth"
 import { buildOperatorManagedBillingUrl, resolveServerBillingAccessPolicy } from "../../utils/billing-access"
 import { createOrReuseStripeCustomer } from "../../utils/billing-persistence"
 import { assertRateLimit, buildRateLimitKey } from "../../utils/rate-limit"
-import { createStripeClient } from "../../utils/stripe"
+import { createStripeClient, validateStripeHostedUrl } from "../../utils/stripe"
 
 export default defineEventHandler(async (event) => {
   const runtimeConfig = useRuntimeConfig(event)
@@ -47,9 +47,16 @@ export default defineEventHandler(async (event) => {
     customer: customerId,
     return_url: `${appUrl}/app/billing`,
   })
+  const portalUrl = validateStripeHostedUrl(portalSession.url, "portal")
+  if (!portalUrl) {
+    throw createError({
+      statusCode: 502,
+      statusMessage: "Stripe returned an invalid billing portal URL.",
+    })
+  }
 
   return {
     mode: "stripe",
-    portalUrl: portalSession.url,
+    portalUrl,
   }
 })

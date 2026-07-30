@@ -261,6 +261,7 @@ async function uploadRelationshipFile(event: Event) {
         id: string
         method: "PUT"
         signedUploadUrl: string | null
+        uploadToken: string | null
       }
     }>("/api/files/upload-policy", {
       method: "POST",
@@ -281,6 +282,7 @@ async function uploadRelationshipFile(event: Event) {
       body: file,
       headers: {
         "content-type": mimeType,
+        ...(policy.uploadToken ? { "x-cofoundry-upload-token": policy.uploadToken } : {}),
       },
       method: policy.method,
     })

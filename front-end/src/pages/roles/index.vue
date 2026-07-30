@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { workspaceSeed } from "~/shared/data/seed"
-import { formatPublicHubInventoryLabel, getRoleHubs } from "~/shared/utils/directory"
+import { formatPublicHubInventoryLabel } from "~/shared/utils/directory"
 
-const roleHubs = getRoleHubs(workspaceSeed)
+const roleHubs = (await usePublicDirectory()).roleHubs
 
 usePageSeo("Role hubs", "Browse public founder and collaborator searches organized by role.", {
   canonicalPath: "/roles",

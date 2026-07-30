@@ -111,12 +111,6 @@ function ipReadiness(
 
 export const workspaceSeed: WorkspaceSeed = {
   version: "2026-04-11-research-pass-trust-signals",
-  authAccounts: [
-    { email: "olivia@cofoundry.dev", password: "founder123", providers: ["email", "github"], userId: "user_olivia" },
-    { email: "malik@cofoundry.dev", password: "builder123", providers: ["email", "google"], userId: "user_malik" },
-    { email: "ava@cofoundry.dev", password: "admin123", providers: ["email"], userId: "user_ava" },
-    { email: "emma@cofoundry.dev", password: "operator123", providers: ["email"], userId: "user_emma" },
-  ],
   users: [
     {
       id: "user_olivia",

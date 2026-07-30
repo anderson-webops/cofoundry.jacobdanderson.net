@@ -1,13 +1,19 @@
 import type { H3Event } from "h3"
-import type { MemberWorkspaceState, MemberWorkspaceWritePayload, Profile, SavedSearch, StartupOpportunity, Subscription, User } from "../../shared/types/domain"
+import type { MemberWorkspaceState, MemberWorkspaceWritePayload, Profile, SavedSearch, SessionUser, StartupOpportunity, Subscription, User } from "../../shared/types/domain"
+import { randomUUID } from "node:crypto"
+import { createError } from "h3"
 import { checkSavedSearchCount } from "../../shared/utils/billing"
+import { buildOpportunityRiskFlags, buildProfileReadiness, resolveNewOpportunityVerificationStatus } from "../../shared/utils/formation"
 import { normalizeNotificationPreferences } from "../../shared/utils/notification-preferences"
-import { buildDraftMemberWorkspaceState, buildMemberWorkspaceState, createInitialWorkspaceDocument, mergeMemberWorkspaceState, resolveSessionUserFromWorkspace, sanitizeOwnedProfile, sanitizeUserOwnedBookmarks, sanitizeUserOwnedOpportunities, sanitizeUserOwnedSavedSearches } from "../../shared/utils/workspace-persistence"
+import { projectWorkspaceForSession } from "../../shared/utils/workspace-authorization"
+import { buildDraftMemberWorkspaceState, buildMemberWorkspaceState, mergeMemberWorkspaceState, resolveSessionUserFromWorkspace } from "../../shared/utils/workspace-persistence"
 import { mergeLocalAdminAuditState } from "./local-admin-audit"
 import { loadLocalCollaborationState } from "./local-collaboration-store"
 import { persistLocalMemberWorkspaceState, readLocalMemberWorkspaceState, readLocalMemberWorkspaceStates } from "./local-member-workspace"
+import { listLocalTrustVerificationEvents } from "./local-operations-store"
 import { loadServerCollaborationState, mergeServerCollaborationState } from "./member-collaboration"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
+import { createInitialWorkspaceDocument } from "./workspace-seed"
 
 interface PersistedIdentityInput {
   email: string
@@ -17,6 +23,10 @@ interface PersistedIdentityInput {
   role: User["role"]
   subscriptionPlan: Subscription["plan"]
   verifiedEmail?: boolean
+}
+
+interface LoadMemberWorkspaceOptions {
+  allowUserBootstrap?: boolean
 }
 
 interface PersistedProfileStateRow {
@@ -101,6 +111,14 @@ interface PersistedOpportunityRow {
   verification_status: StartupOpportunity["verificationStatus"]
 }
 
+export interface PersistedTrustVerificationRow {
+  occurred_at: string
+  status: "verified" | "failed" | "manual_review" | "expired"
+  target_id: string
+  target_type: "profile" | "user" | "opportunity"
+  verification_type: "identity" | "work_history" | "phone" | "linkedin" | "github" | "work_domain" | "website" | "government_id" | "email" | "opportunity_domain" | "opportunity_owner"
+}
+
 export interface AdminOpportunityWorkspaceSlice {
   opportunities: StartupOpportunity[]
   profiles: Profile[]
@@ -111,10 +129,31 @@ function createBaseSeed() {
   return createInitialWorkspaceDocument()
 }
 
-function buildBootstrapState(identity: PersistedIdentityInput) {
-  const baseSeed = createBaseSeed()
-  const resolvedSession = resolveSessionUserFromWorkspace(baseSeed, identity)
-  return buildMemberWorkspaceState(baseSeed, resolvedSession.id) || buildDraftMemberWorkspaceState(resolvedSession, undefined, {
+function safeBootstrapRole(role: User["role"]): "collaborator" | "founder" {
+  return role === "collaborator" ? "collaborator" : "founder"
+}
+
+function buildBootstrapSession(
+  identity: PersistedIdentityInput,
+  options: { preserveAuthoritativeRole?: boolean } = {},
+): SessionUser {
+  const email = identity.email.trim().toLowerCase()
+  return {
+    email,
+    id: identity.id,
+    name: identity.name.trim() || email.split("@")[0] || "Member",
+    onboardingCompleted: options.preserveAuthoritativeRole ? identity.onboardingCompleted : false,
+    role: options.preserveAuthoritativeRole ? identity.role : safeBootstrapRole(identity.role),
+    subscriptionPlan: "free",
+  }
+}
+
+export function buildBootstrapState(
+  identity: PersistedIdentityInput,
+  options: { preserveAuthoritativeRole?: boolean } = {},
+) {
+  const resolvedSession = buildBootstrapSession(identity, options)
+  return buildDraftMemberWorkspaceState(resolvedSession, undefined, {
     verifiedEmail: identity.verifiedEmail,
   })
 }
@@ -136,9 +175,84 @@ function syncWorkspaceVerificationState(state: MemberWorkspaceState): MemberWork
   }
 }
 
+export function applyAuthoritativeTrustEvents(state: MemberWorkspaceState, events: PersistedTrustVerificationRow[]): MemberWorkspaceState {
+  const relevantEvents = events
+    .filter(event =>
+      (event.target_type === "profile" && event.target_id === state.profile.id)
+      || (event.target_type === "user" && event.target_id === state.user.id),
+    )
+    .sort((left, right) => new Date(right.occurred_at).getTime() - new Date(left.occurred_at).getTime())
+  const latestByType = new Map<string, PersistedTrustVerificationRow>()
+
+  for (const event of relevantEvents) {
+    if (!latestByType.has(event.verification_type))
+      latestByType.set(event.verification_type, event)
+  }
+
+  const verified = (verificationType: PersistedTrustVerificationRow["verification_type"]) =>
+    latestByType.get(verificationType)?.status === "verified"
+  const governmentIdVerified = verified("government_id")
+  const linkedInVerified = verified("linkedin")
+  const githubVerified = verified("github")
+  const workDomainVerified = verified("work_domain")
+  const websiteVerified = verified("website")
+
+  return {
+    ...state,
+    profile: {
+      ...state.profile,
+      trustSignals: {
+        ...state.profile.trustSignals,
+        githubVerified,
+        governmentIdVerified,
+        identityVerified: verified("identity") || governmentIdVerified,
+        linkedInVerified,
+        phoneVerified: verified("phone"),
+        websiteVerified,
+        workDomainVerified,
+        workHistoryVerified: verified("work_history"),
+      },
+      verificationBadges: {
+        ...state.profile.verificationBadges,
+        emailVerified: state.user.verifiedEmail,
+        linkedAccounts: [linkedInVerified, githubVerified, workDomainVerified, websiteVerified].some(Boolean),
+      },
+    },
+  }
+}
+
+async function loadAuthoritativeTrustState(event: H3Event, state: MemberWorkspaceState) {
+  const targetIds = [state.user.id, state.profile.id]
+  if (!isSupabaseEnabled(event)) {
+    const events = await listLocalTrustVerificationEvents(targetIds)
+    return applyAuthoritativeTrustEvents(state, events)
+  }
+
+  const adminClient = createSupabaseAdminClient(event)
+  if (!adminClient)
+    throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
+
+  const { data, error } = await adminClient
+    .from("trust_verification_events")
+    .select("target_type,target_id,verification_type,status,occurred_at")
+    .in("target_id", targetIds)
+    .in("target_type", ["profile", "user"])
+    .order("occurred_at", { ascending: false })
+    .limit(100)
+
+  if (error)
+    throw error
+
+  return applyAuthoritativeTrustEvents(state, (data || []) as PersistedTrustVerificationRow[])
+}
+
 async function buildLocalRuntimeSeed(state: MemberWorkspaceState) {
   let seed = buildMergedSeed(state)
-  const collaborationState = await loadLocalCollaborationState(state.user.id)
+  const authoritativeSeed = await mergeLocalAdminAuditState(seed)
+  const authoritativeUser = authoritativeSeed.users.find(user => user.id === state.user.id)
+  const collaborationState = await loadLocalCollaborationState(state.user.id, {
+    includeAdministrativeData: authoritativeUser?.role === "admin" && !authoritativeUser.suspendedAt && authoritativeUser.verifiedEmail,
+  })
 
   if (collaborationState)
     seed = mergeServerCollaborationState(seed, collaborationState)
@@ -454,97 +568,6 @@ async function selectProfileStatesByUserIds(adminClient: NonNullable<ReturnType<
   return (data || []) as PersistedProfileStateRow[]
 }
 
-async function upsertUser(adminClient: NonNullable<ReturnType<typeof createSupabaseAdminClient>>, user: User) {
-  const { error } = await adminClient
-    .from("users")
-    .upsert(toUserRow(user), { onConflict: "id" })
-
-  if (error)
-    throw error
-}
-
-async function upsertProfileState(adminClient: NonNullable<ReturnType<typeof createSupabaseAdminClient>>, profile: Profile) {
-  const { error } = await adminClient
-    .from("member_profile_state")
-    .upsert({
-      user_id: profile.userId,
-      profile,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: "user_id" })
-
-  if (error)
-    throw error
-}
-
-async function upsertSubscription(adminClient: NonNullable<ReturnType<typeof createSupabaseAdminClient>>, subscription: Subscription) {
-  const { error } = await adminClient
-    .from("subscriptions")
-    .upsert(toSubscriptionRow(subscription), { onConflict: "user_id" })
-
-  if (error)
-    throw error
-}
-
-async function replaceBookmarks(adminClient: NonNullable<ReturnType<typeof createSupabaseAdminClient>>, userId: string, bookmarks: MemberWorkspaceState["bookmarks"]) {
-  const { error: deleteError } = await adminClient
-    .from("bookmarks")
-    .delete()
-    .eq("user_id", userId)
-
-  if (deleteError)
-    throw deleteError
-
-  if (!bookmarks.length)
-    return
-
-  const { error } = await adminClient
-    .from("bookmarks")
-    .insert(toBookmarkRows(userId, bookmarks))
-
-  if (error)
-    throw error
-}
-
-async function replaceSavedSearches(adminClient: NonNullable<ReturnType<typeof createSupabaseAdminClient>>, userId: string, savedSearches: MemberWorkspaceState["savedSearches"]) {
-  const { error: deleteError } = await adminClient
-    .from("saved_searches")
-    .delete()
-    .eq("user_id", userId)
-
-  if (deleteError)
-    throw deleteError
-
-  if (!savedSearches.length)
-    return
-
-  const { error } = await adminClient
-    .from("saved_searches")
-    .insert(toSavedSearchRows(userId, savedSearches))
-
-  if (error)
-    throw error
-}
-
-async function replaceOpportunities(adminClient: NonNullable<ReturnType<typeof createSupabaseAdminClient>>, userId: string, opportunities: StartupOpportunity[]) {
-  const { error: deleteError } = await adminClient
-    .from("startup_opportunities")
-    .delete()
-    .eq("owner_user_id", userId)
-
-  if (deleteError)
-    throw deleteError
-
-  if (!opportunities.length)
-    return
-
-  const { error } = await adminClient
-    .from("startup_opportunities")
-    .insert(toOpportunityRows(userId, opportunities))
-
-  if (error)
-    throw error
-}
-
 function mergeRowsById<T extends { id: string }>(primary: T[], fallback: T[]) {
   const primaryIds = new Set(primary.map(row => row.id))
   return [
@@ -558,6 +581,141 @@ function sortOpportunitiesByUpdate(opportunities: StartupOpportunity[]) {
     const rightTime = new Date(right.updatedAt || right.createdAt).getTime()
     const leftTime = new Date(left.updatedAt || left.createdAt).getTime()
     return rightTime - leftTime
+  })
+}
+
+const opportunitySlugPattern = /[^a-z0-9]+/g
+const opportunitySlugTrimPattern = /^-|-$/g
+
+function createServerId(prefix: string) {
+  return `${prefix}_${randomUUID().replaceAll("-", "")}`
+}
+
+function createOpportunitySlug(input: string) {
+  return input.toLowerCase().replaceAll(opportunitySlugPattern, "-").replaceAll(opportunitySlugTrimPattern, "")
+}
+
+function opportunitySecurityFingerprint(opportunity: StartupOpportunity) {
+  return JSON.stringify({
+    compensationStructure: opportunity.compensationStructure,
+    equityRange: opportunity.equityRange,
+    expectedCommitment: opportunity.expectedCommitment,
+    industries: opportunity.industries,
+    location: opportunity.location,
+    officialWebsite: opportunity.officialWebsite,
+    oneLinePitch: opportunity.oneLinePitch,
+    problem: opportunity.problem,
+    remotePreference: opportunity.remotePreference,
+    rolesNeeded: opportunity.rolesNeeded,
+    stage: opportunity.stage,
+    startupName: opportunity.startupName,
+    targetUsers: opportunity.targetUsers,
+    traction: opportunity.traction,
+    verificationMethod: opportunity.verificationMethod,
+  })
+}
+
+export function sanitizeProfileWrite(current: MemberWorkspaceState, incoming: Profile, updatedAt: string): Profile {
+  const profile: Profile = {
+    ...incoming,
+    id: current.profile.id,
+    userId: current.user.id,
+    trustSignals: {
+      ...current.profile.trustSignals,
+      builderProofs: current.profile.trustSignals.builderProofs,
+      lastActiveAt: updatedAt,
+    },
+    verificationBadges: {
+      ...current.profile.verificationBadges,
+      emailVerified: current.user.verifiedEmail,
+      linkedAccounts: Boolean(
+        current.profile.trustSignals.linkedInVerified
+        || current.profile.trustSignals.githubVerified
+        || current.profile.trustSignals.workDomainVerified
+        || current.profile.trustSignals.websiteVerified,
+      ),
+      profileComplete: false,
+    },
+  }
+
+  profile.verificationBadges.profileComplete = buildProfileReadiness(profile).profileComplete
+  return profile
+}
+
+export function sanitizeOpportunityWrites(current: MemberWorkspaceState, incoming: StartupOpportunity[], updatedAt: string) {
+  const seenIds = new Set<string>()
+
+  return incoming.map((candidate) => {
+    const existing = current.opportunities.find(opportunity => opportunity.id === candidate.id && !seenIds.has(opportunity.id))
+    if (existing)
+      seenIds.add(existing.id)
+
+    const editable: StartupOpportunity = {
+      ...candidate,
+      id: existing?.id || createServerId("opportunity"),
+      ownerUserId: current.user.id,
+      slug: createOpportunitySlug(candidate.startupName),
+      riskFlags: buildOpportunityRiskFlags(candidate),
+      verificationStatus: "unverified",
+      createdAt: existing?.createdAt || updatedAt,
+      updatedAt,
+    }
+    const changed = !existing || opportunitySecurityFingerprint(existing) !== opportunitySecurityFingerprint(editable)
+    editable.verificationStatus = changed
+      ? resolveNewOpportunityVerificationStatus(editable.verificationMethod, editable.riskFlags)
+      : existing.verificationStatus
+
+    return editable
+  })
+}
+
+function sanitizeBookmarkWrites(
+  current: Awaited<ReturnType<typeof loadMemberWorkspaceState>>,
+  incoming: MemberWorkspaceWritePayload["bookmarks"],
+  createdAt: string,
+) {
+  const visible = projectWorkspaceForSession(current.seed, current.session)
+  const visibleProfileIds = new Set(visible.profiles.map(profile => profile.id))
+  const visibleOpportunityIds = new Set(visible.opportunities.map(opportunity => opportunity.id))
+  const seenTargets = new Set<string>()
+
+  return incoming.flatMap((bookmark) => {
+    const targetKey = `${bookmark.targetType}:${bookmark.targetId}`
+    const validTarget = bookmark.targetType === "profile"
+      ? visibleProfileIds.has(bookmark.targetId)
+      : visibleOpportunityIds.has(bookmark.targetId)
+
+    if (!validTarget || seenTargets.has(targetKey))
+      return []
+
+    seenTargets.add(targetKey)
+    const existing = current.state.bookmarks.find(item =>
+      item.targetType === bookmark.targetType && item.targetId === bookmark.targetId,
+    )
+    return [{
+      id: existing?.id || createServerId("bookmark"),
+      userId: current.state.user.id,
+      targetType: bookmark.targetType,
+      targetId: bookmark.targetId,
+      createdAt: existing?.createdAt || createdAt,
+    }]
+  })
+}
+
+function sanitizeSavedSearchWrites(current: MemberWorkspaceState, incoming: SavedSearch[], createdAt: string) {
+  const seenIds = new Set<string>()
+
+  return incoming.map((search) => {
+    const existing = current.savedSearches.find(item => item.id === search.id && !seenIds.has(item.id))
+    if (existing)
+      seenIds.add(existing.id)
+
+    return {
+      ...search,
+      id: existing?.id || createServerId("saved_search"),
+      userId: current.user.id,
+      createdAt: existing?.createdAt || createdAt,
+    }
   })
 }
 
@@ -608,7 +766,18 @@ export async function listAdminOpportunityWorkspaceSlice(event: H3Event): Promis
   }
 }
 
-export async function persistWholeMemberWorkspaceState(event: H3Event, state: MemberWorkspaceState) {
+export async function persistWholeMemberWorkspaceState(
+  event: H3Event,
+  state: MemberWorkspaceState,
+  options: {
+    accessInvite?: {
+      acceptedAt: string
+      email: string
+      tokenHash: string
+    }
+    replaceSubscription?: boolean
+  } = {},
+) {
   const nextState = syncWorkspaceVerificationState(state)
 
   if (!isSupabaseEnabled(event)) {
@@ -620,22 +789,59 @@ export async function persistWholeMemberWorkspaceState(event: H3Event, state: Me
   if (!adminClient)
     throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
 
-  await upsertUser(adminClient, nextState.user)
-  await upsertProfileState(adminClient, nextState.profile)
-  await upsertSubscription(adminClient, nextState.subscription)
-  await replaceBookmarks(adminClient, nextState.user.id, nextState.bookmarks)
-  await replaceSavedSearches(adminClient, nextState.user.id, nextState.savedSearches)
-  await replaceOpportunities(adminClient, nextState.user.id, nextState.opportunities)
+  const workspacePayload = {
+    p_bookmarks: toBookmarkRows(nextState.user.id, nextState.bookmarks),
+    p_opportunities: toOpportunityRows(nextState.user.id, nextState.opportunities),
+    p_profile_state: {
+      profile: nextState.profile,
+      updated_at: new Date().toISOString(),
+      user_id: nextState.profile.userId,
+    },
+    p_replace_subscription: options.replaceSubscription === true,
+    p_saved_searches: toSavedSearchRows(nextState.user.id, nextState.savedSearches),
+    p_subscription: toSubscriptionRow(nextState.subscription),
+    p_user: toUserRow(nextState.user),
+  }
+  const { error } = options.accessInvite
+    ? await adminClient.rpc("cofoundry_accept_access_invite_and_replace_member_workspace", {
+        ...workspacePayload,
+        p_accepted_at: options.accessInvite.acceptedAt,
+        p_invite_email: options.accessInvite.email,
+        p_invite_token_hash: options.accessInvite.tokenHash,
+      })
+    : await adminClient.rpc("cofoundry_replace_member_workspace", workspacePayload)
+
+  if (error)
+    throw error
 }
 
-export async function loadMemberWorkspaceState(event: H3Event, identity: PersistedIdentityInput) {
+export async function loadMemberWorkspaceState(
+  event: H3Event,
+  identity: PersistedIdentityInput,
+  options: LoadMemberWorkspaceOptions = {},
+) {
   const baseSeed = createBaseSeed()
-  const fallbackSession = resolveSessionUserFromWorkspace(baseSeed, identity)
+  const seededState = buildMemberWorkspaceState(baseSeed, identity.id)
+  const fallbackSession = seededState
+    ? resolveSessionUserFromWorkspace(baseSeed, identity)
+    : buildBootstrapSession(identity)
+  const allowUserBootstrap = options.allowUserBootstrap !== false
 
   if (!isSupabaseEnabled(event)) {
-    const state = await readLocalMemberWorkspaceState(fallbackSession.id)
-      || buildMemberWorkspaceState(baseSeed, fallbackSession.id)
-      || buildDraftMemberWorkspaceState(fallbackSession)
+    const persistedState = await readLocalMemberWorkspaceState(fallbackSession.id)
+    if (!persistedState && !seededState && !allowUserBootstrap) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: "This account has not been provisioned for CoFoundry.",
+      })
+    }
+
+    const baseState = persistedState
+      || seededState
+      || buildBootstrapState(identity)
+    const state = persistedState
+      ? await loadAuthoritativeTrustState(event, baseState)
+      : baseState
     const seed = await buildLocalRuntimeSeed(state)
 
     return {
@@ -657,6 +863,13 @@ export async function loadMemberWorkspaceState(event: H3Event, identity: Persist
   }
 
   if (!userRow) {
+    if (!allowUserBootstrap) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: "This account has not been provisioned for CoFoundry.",
+      })
+    }
+
     const bootstrapState = buildBootstrapState(identity)
     await persistWholeMemberWorkspaceState(event, bootstrapState)
     const seed = buildMergedSeed(bootstrapState)
@@ -682,7 +895,7 @@ export async function loadMemberWorkspaceState(event: H3Event, identity: Persist
       onboardingCompleted: userRow.onboarding_completed,
       role: userRow.role,
       verifiedEmail: userRow.verified_email,
-    })
+    }, { preserveAuthoritativeRole: true })
     await persistWholeMemberWorkspaceState(event, bootstrapState)
     const seed = buildMergedSeed(bootstrapState)
 
@@ -700,16 +913,18 @@ export async function loadMemberWorkspaceState(event: H3Event, identity: Persist
     }
   }
 
-  const state: MemberWorkspaceState = syncWorkspaceVerificationState({
+  const state = await loadAuthoritativeTrustState(event, syncWorkspaceVerificationState({
     user: fromUserRow(userRow),
     profile: profileRow.profile,
     subscription: fromSubscriptionRow(subscriptionRow),
     opportunities: fromOpportunityRows(opportunities),
     bookmarks: fromBookmarkRows(bookmarks),
     savedSearches: fromSavedSearchRows(savedSearches),
-  })
+  }))
   const mergedSeed = buildMergedSeed(state)
-  const collaborationState = await loadServerCollaborationState(event, userRow.id)
+  const collaborationState = await loadServerCollaborationState(event, userRow.id, {
+    includeAdministrativeData: userRow.role === "admin" && !userRow.suspended_at && userRow.verified_email,
+  })
   const seed = mergeServerCollaborationState(mergedSeed, collaborationState)
 
   return {
@@ -728,7 +943,8 @@ export async function loadMemberWorkspaceState(event: H3Event, identity: Persist
 
 export async function persistMemberWorkspaceWritePayload(event: H3Event, identity: PersistedIdentityInput, payload: MemberWorkspaceWritePayload) {
   const current = await loadMemberWorkspaceState(event, identity)
-  const savedSearches = sanitizeUserOwnedSavedSearches(payload.savedSearches, current.state.user.id)
+  const updatedAt = new Date().toISOString()
+  const savedSearches = sanitizeSavedSearchWrites(current.state, payload.savedSearches, updatedAt)
   const savedSearchGate = checkSavedSearchCount(current.state.subscription, savedSearches.length)
 
   if (!savedSearchGate.allowed) {
@@ -742,12 +958,14 @@ export async function persistMemberWorkspaceWritePayload(event: H3Event, identit
     ...current.state,
     user: {
       ...current.state.user,
-      onboardingCompleted: payload.onboardingCompleted,
+      role: ["admin", "investor_admin"].includes(current.state.user.role)
+        ? current.state.user.role
+        : payload.profile.hasIdea ? "founder" : "collaborator",
       notificationPreferences: normalizeNotificationPreferences(payload.notificationPreferences),
     },
-    profile: sanitizeOwnedProfile(payload.profile, current.state.user.id),
-    opportunities: sanitizeUserOwnedOpportunities(payload.opportunities, current.state.user.id),
-    bookmarks: sanitizeUserOwnedBookmarks(payload.bookmarks, current.state.user.id),
+    profile: sanitizeProfileWrite(current.state, payload.profile, updatedAt),
+    opportunities: sanitizeOpportunityWrites(current.state, payload.opportunities, updatedAt),
+    bookmarks: sanitizeBookmarkWrites(current, payload.bookmarks, updatedAt),
     savedSearches,
   }
 
