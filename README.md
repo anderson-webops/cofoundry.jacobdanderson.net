@@ -160,7 +160,7 @@ npm run verify:release:local
 
 `npm run verify:standalone-installs` checks workspace package-lock files used by standalone deployment paths. It currently validates `back-end/package-lock.json` with a backend-local `npm ci --workspaces=false --dry-run`, rejects unreviewed standalone install-script warnings, and runs the backend audit at high severity or above.
 
-`npm run verify:toolchain` checks that `packageManager`, GitHub Actions, and Docker use the same reviewed npm version, that CI/Docker run on Node 24.18.0 LTS, and that Docker does not bypass the install-script policy with `--ignore-scripts`.
+`npm run verify:toolchain` checks that `packageManager`, GitHub Actions, and Docker use the same reviewed npm version, that CI/Docker run on Node 24.18.1 LTS, and that Docker does not bypass the install-script policy with `--ignore-scripts`.
 
 The public verifier also guards production-facing metadata and copy. Sitemap-listed public pages must render page-specific title, description, canonical, Open Graph, and Twitter metadata, and public pages plus linked noindex access pages fail verification if they expose mock/demo/sample/placeholder language that would make the live product feel unfinished.
 

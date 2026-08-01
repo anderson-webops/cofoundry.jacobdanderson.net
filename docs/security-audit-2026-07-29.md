@@ -59,7 +59,7 @@ The source now fails closed at each reviewed privilege boundary. Browser session
 
 ### Supply chain
 
-- Align local, CI, and container execution on Node 24.18.0 LTS and npm 11.16.0.
+- Align local, CI, and container execution on Node 24.18.1 LTS and npm 12.0.2.
 - Keep reviewed install scripts in the root allowlist and reject unreviewed lifecycle scripts.
 - Upgrade to Stripe 22.4.0 and the compatible Pinia 4.0.2 / `@pinia/nuxt` 1.0.1 pair.
 - Retain H3 1.15.11 because the registry's newer line is still a 2.0 release candidate.

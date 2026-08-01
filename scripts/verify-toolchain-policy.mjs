@@ -53,7 +53,7 @@ for (const workflowFile of workflowFiles) {
   assertNpmPinsMatch(workflowFile, contents, expectedNpmSpecifier)
 
   if (contents.includes("npm ci"))
-    assert(contents.includes("node-version: 24.18.0"), `${workflowFile} should run npm ci on Node 24.18.0`)
+    assert(contents.includes("node-version: 24.18.1"), `${workflowFile} should run npm ci on Node 24.18.1`)
 }
 
 const ciWorkflow = readRepoFile(".github/workflows/ci.yml")
@@ -64,10 +64,11 @@ assert(publicVerificationWorkflow.includes("npm run verify:install-scripts"), "P
 
 const dockerfile = readRepoFile("Dockerfile")
 assertNpmPinsMatch("Dockerfile", dockerfile, expectedNpmSpecifier)
-assert(dockerfile.includes("FROM node:24.18.0-alpine AS build-stage"), "Docker build stage should use Node 24.18.0 Alpine.")
-assert(dockerfile.includes("FROM node:24.18.0-alpine AS production-stage"), "Docker production stage should use Node 24.18.0 Alpine.")
+assert(dockerfile.includes("FROM node:24.18.1-alpine3.24@sha256:f70403e87646dc51b45295f4b8b70cdad0b63d2297c4c9899119b03f7af7a6b3 AS build-stage"), "Docker build stage should use the reviewed Node 24.18.1 Alpine digest.")
+assert(dockerfile.includes("FROM node:24.18.1-alpine3.24@sha256:f70403e87646dc51b45295f4b8b70cdad0b63d2297c4c9899119b03f7af7a6b3 AS production-stage"), "Docker production stage should use the reviewed Node 24.18.1 Alpine digest.")
 assert(dockerfile.includes("RUN npm ci"), "Docker build should use npm ci.")
 assert(!dockerfile.includes("--ignore-scripts"), "Docker build should not bypass the reviewed install-script policy with --ignore-scripts.")
 assert(dockerfile.includes("RUN npm run verify:install-scripts"), "Docker build should verify dependency install-script policy.")
+assert(dockerfile.includes("/usr/local/lib/node_modules/npm"), "Docker production stage should remove npm from the runtime image.")
 
-console.log(`Toolchain policy verified for ${basename(process.cwd())}: ${expectedNpmSpecifier}, Node 24.18.0 CI/Docker, reviewed install scripts.`)
+console.log(`Toolchain policy verified for ${basename(process.cwd())}: ${expectedNpmSpecifier}, Node 24.18.1 CI/Docker, reviewed install scripts.`)
