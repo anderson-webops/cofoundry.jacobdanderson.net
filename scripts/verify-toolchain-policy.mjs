@@ -46,12 +46,20 @@ const packageJson = JSON.parse(readRepoFile("package.json"))
 const npmVersion = extractNpmVersion(packageJson)
 const expectedNpmSpecifier = `npm@${npmVersion}`
 
-assert(packageJson.devEngines?.runtime?.name === "node", "devEngines must enforce the Node runtime.")
-assert(packageJson.devEngines?.runtime?.version === packageJson.engines?.node, "devEngines.runtime must match engines.node.")
-assert(packageJson.devEngines?.runtime?.onFail === "error", "Node devEngines drift must fail npm commands.")
-assert(packageJson.devEngines?.packageManager?.name === "npm", "devEngines must enforce npm as the package manager.")
-assert(packageJson.devEngines?.packageManager?.version === packageJson.engines?.npm, "devEngines.packageManager must match engines.npm.")
-assert(packageJson.devEngines?.packageManager?.onFail === "error", "npm devEngines drift must fail npm commands.")
+assert(packageJson.engines?.node === ">=24.18.1 <25", "engines.node must enforce the Node 24.18.1 LTS line.")
+assert(packageJson.engines?.npm === ">=12.0.2 <13", "engines.npm must enforce the npm 12.0.2 line.")
+assert(!Object.hasOwn(packageJson, "devEngines"), "devEngines must remain absent so bundled npm can bootstrap the pinned npm version.")
+
+const npmConfig = readRepoFile(".npmrc")
+assert(npmConfig.includes("engine-strict=true"), ".npmrc must enforce package engine requirements during installs.")
+
+const npmHelper = readRepoFile("scripts/run-pinned-npm.mjs")
+assert(npmHelper.includes("process.env.npm_execpath"), "Nested npm commands must reuse the selected npm executable.")
+assert(npmHelper.includes("delete env.npm_config_global_ignore_file"), "Nested npm commands must remove obsolete lowercase global-ignore config.")
+assert(npmHelper.includes("delete env.NPM_CONFIG_GLOBAL_IGNORE_FILE"), "Nested npm commands must remove obsolete uppercase global-ignore config.")
+
+for (const [name, script] of Object.entries(packageJson.scripts || {}))
+  assert(!/(?:^|&&|\|\|)\s*npm\s/u.test(script), `package script ${name} must not rediscover a different npm executable.`)
 
 const workflowFiles = listWorkflowFiles()
 for (const workflowFile of workflowFiles) {
@@ -71,6 +79,7 @@ assert(publicVerificationWorkflow.includes("npm run verify:install-scripts"), "P
 
 const netlifyConfig = readRepoFile("netlify.toml")
 assert(netlifyConfig.includes('NODE_VERSION = "24.18.1"'), "Netlify should build on Node 24.18.1.")
+assert(netlifyConfig.includes('NPM_VERSION = "12.0.2"'), "Netlify should select npm 12.0.2 before building.")
 
 const appService = readRepoFile("deploy/systemd/cofoundry-app.service")
 assert(appService.includes("ExecStart=/usr/bin/node front-end/.output/server/index.mjs"), "The direct production service should start the built Nuxt output with Node.")
@@ -79,4 +88,4 @@ assert(appService.includes("Environment=NITRO_HOST=127.0.0.1"), "The direct prod
 for (const retiredContainerPath of ["Dockerfile", ".dockerignore", "compose.yml", "compose.yaml", "docker-compose.yml", "docker-compose.yaml"])
   assert(!existsSync(new URL(retiredContainerPath, `${repoRoot}/`)), `${retiredContainerPath} should remain retired from the production deployment path.`)
 
-console.log(`Toolchain policy verified for ${basename(process.cwd())}: ${expectedNpmSpecifier}, enforced Node 24.18.1 source commands, aligned CI/Netlify/direct-host builds, reviewed install scripts, and no container deployment path.`)
+console.log(`Toolchain policy verified for ${basename(process.cwd())}: bootstrap-safe ${expectedNpmSpecifier}, Node 24.18.1 CI/Netlify/direct-host builds, reviewed install scripts, and no container deployment path.`)
