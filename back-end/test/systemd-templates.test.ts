@@ -14,6 +14,43 @@ async function readRepoFile(...segments: string[]) {
   return readFile(join(repoRoot, ...segments), "utf8")
 }
 
+test("application service uses a hardened direct Node loopback runtime", async () => {
+  const service = await readSystemdTemplate("cofoundry-app.service")
+  const envExample = await readSystemdTemplate("cofoundry-app.env.example")
+  const nginxProxy = await readRepoFile("deploy", "nginx", "cofoundry-proxy.conf.example")
+
+  assert.match(service, /User=cofoundry/)
+  assert.match(service, /Group=cofoundry/)
+  assert.match(service, /Environment=NITRO_HOST=127\.0\.0\.1/)
+  assert.match(service, /Environment=NITRO_PORT=3000/)
+  assert.match(service, /ExecStart=\/usr\/bin\/node front-end\/\.output\/server\/index\.mjs/)
+  assert.match(service, /NoNewPrivileges=true/)
+  assert.match(service, /ProtectSystem=strict/)
+  assert.match(service, /ReadWritePaths=\/var\/lib\/cofoundry \/run\/cofoundry/)
+  assert.doesNotMatch(service, /npm|docker|podman/i)
+  assert.match(envExample, /NUXT_PUBLIC_BACKEND_MODE=mock/)
+  assert.match(envExample, /COFOUNDRY_EXPECT_MULTI_INSTANCE=false/)
+  assert.match(envExample, /COFOUNDRY_APP_INSTANCE_COUNT=1/)
+  assert.match(nginxProxy, /proxy_pass http:\/\/127\.0\.0\.1:3000/)
+  assert.match(nginxProxy, /IPv4 and IPv6/)
+})
+
+test("application installer and promoter preserve atomic rollback", async () => {
+  const installer = await readSystemdTemplate("install-app-unit.sh")
+  const promoter = await readSystemdTemplate("promote-release.sh")
+
+  assert.match(installer, /--dry-run/)
+  assert.match(installer, /--force-env/)
+  assert.match(installer, /systemctl daemon-reload/)
+  assert.doesNotMatch(installer, /run systemctl enable/)
+  assert.match(promoter, /realpath -e/)
+  assert.match(promoter, /mv -Tf/)
+  assert.match(promoter, /\/api\/health/)
+  assert.match(promoter, /previous_target/)
+  assert.match(promoter, /systemctl restart/)
+  assert.doesNotMatch(promoter, /rm -rf|docker|podman/i)
+})
+
 test("systemd templates use canonical operations worker scripts", async () => {
   const heartbeat = await readSystemdTemplate("cofoundry-operations-heartbeat.service")
   const alertSmoke = await readSystemdTemplate("cofoundry-operations-alert-smoke.service")

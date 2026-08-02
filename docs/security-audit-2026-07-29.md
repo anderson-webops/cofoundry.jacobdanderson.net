@@ -2,7 +2,7 @@
 
 Date: 2026-07-29
 
-Scope: frontend SSR/API routes, authentication and session handling, full-admin and investor-admin authorization, promotion/demotion/suspension workflows, member and public data projections, billing, uploads, privacy and moderation queues, Supabase functions and migrations, the standalone backend, operations workers, Docker, systemd, CI, and the npm dependency graph.
+Scope: frontend SSR/API routes, authentication and session handling, full-admin and investor-admin authorization, promotion/demotion/suspension workflows, member and public data projections, billing, uploads, privacy and moderation queues, Supabase functions and migrations, the standalone backend, operations workers, direct systemd/Nginx deployment, CI, and the npm dependency graph.
 
 ## Outcome
 
@@ -52,14 +52,14 @@ The source now fails closed at each reviewed privilege boundary. Browser session
 - Derive source-build release identity from the current package version unless deployment metadata is explicitly injected, so a dirty build cannot inherit and advertise its parent tag.
 - Apply no-store/noindex defaults to protected routes, a nonce-based content-security policy, strict framing/referrer/permissions headers, and HSTS on production HTTPS origins.
 - Validate support mail configuration and reject `security.txt` contact or canonical-origin injection.
-- Run the production container as the unprivileged Node user and exclude source history, secrets, local data, test output, and dependency trees from the Docker context.
+- Retire the production container path. Run the built Nuxt server directly as the unprivileged `cofoundry` systemd user, bind it to loopback, keep writable state outside the release tree, and promote immutable release directories through an atomic symlink with health-checked rollback.
 - Run operations units as non-root with no new privileges, no capabilities, strict filesystem access, protected kernel/home/proc surfaces, and shell-free executable/argument parsing.
 - Pin GitHub Actions by commit, use read-only repository permissions, and disable persisted checkout credentials.
 - Keep multi-instance production disabled until a shared atomic rate limiter exists.
 
 ### Supply chain
 
-- Align local, CI, and container execution on Node 24.18.1 LTS and npm 12.0.2.
+- Align local, CI, Netlify, and direct-host builds on Node 24.18.1 LTS and npm 12.0.2.
 - Keep reviewed install scripts in the root allowlist and reject unreviewed lifecycle scripts.
 - Upgrade to Stripe 22.4.0 and the compatible Pinia 4.0.2 / `@pinia/nuxt` 1.0.1 pair.
 - Retain H3 1.15.11 because the registry's newer line is still a 2.0 release candidate.

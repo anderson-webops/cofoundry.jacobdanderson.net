@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs"
+import { existsSync, readFileSync, readdirSync } from "node:fs"
 import { basename, join } from "node:path"
 import process from "node:process"
 
@@ -62,13 +62,14 @@ assert(ciWorkflow.includes("npm run verify:install-scripts"), "CI should verify 
 const publicVerificationWorkflow = readRepoFile(".github/workflows/public-site-verification.yml")
 assert(publicVerificationWorkflow.includes("npm run verify:install-scripts"), "Public verification workflow should verify dependency install-script policy.")
 
-const dockerfile = readRepoFile("Dockerfile")
-assertNpmPinsMatch("Dockerfile", dockerfile, expectedNpmSpecifier)
-assert(dockerfile.includes("FROM node:24.18.1-alpine3.24@sha256:f70403e87646dc51b45295f4b8b70cdad0b63d2297c4c9899119b03f7af7a6b3 AS build-stage"), "Docker build stage should use the reviewed Node 24.18.1 Alpine digest.")
-assert(dockerfile.includes("FROM node:24.18.1-alpine3.24@sha256:f70403e87646dc51b45295f4b8b70cdad0b63d2297c4c9899119b03f7af7a6b3 AS production-stage"), "Docker production stage should use the reviewed Node 24.18.1 Alpine digest.")
-assert(dockerfile.includes("RUN npm ci"), "Docker build should use npm ci.")
-assert(!dockerfile.includes("--ignore-scripts"), "Docker build should not bypass the reviewed install-script policy with --ignore-scripts.")
-assert(dockerfile.includes("RUN npm run verify:install-scripts"), "Docker build should verify dependency install-script policy.")
-assert(dockerfile.includes("/usr/local/lib/node_modules/npm"), "Docker production stage should remove npm from the runtime image.")
+const netlifyConfig = readRepoFile("netlify.toml")
+assert(netlifyConfig.includes('NODE_VERSION = "24.18.1"'), "Netlify should build on Node 24.18.1.")
 
-console.log(`Toolchain policy verified for ${basename(process.cwd())}: ${expectedNpmSpecifier}, Node 24.18.1 CI/Docker, reviewed install scripts.`)
+const appService = readRepoFile("deploy/systemd/cofoundry-app.service")
+assert(appService.includes("ExecStart=/usr/bin/node front-end/.output/server/index.mjs"), "The direct production service should start the built Nuxt output with Node.")
+assert(appService.includes("Environment=NITRO_HOST=127.0.0.1"), "The direct production service must bind to loopback.")
+
+for (const retiredContainerPath of ["Dockerfile", ".dockerignore", "compose.yml", "compose.yaml", "docker-compose.yml", "docker-compose.yaml"])
+  assert(!existsSync(new URL(retiredContainerPath, `${repoRoot}/`)), `${retiredContainerPath} should remain retired from the production deployment path.`)
+
+console.log(`Toolchain policy verified for ${basename(process.cwd())}: ${expectedNpmSpecifier}, Node 24.18.1 CI/Netlify/direct-host builds, reviewed install scripts, and no container deployment path.`)

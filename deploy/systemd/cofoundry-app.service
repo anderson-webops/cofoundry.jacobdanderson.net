@@ -1,0 +1,53 @@
+[Unit]
+Description=CoFoundry web application
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=cofoundry
+Group=cofoundry
+WorkingDirectory=/srv/cofoundry/current
+EnvironmentFile=/etc/cofoundry/app.env
+Environment=NODE_ENV=production
+Environment=NITRO_HOST=127.0.0.1
+Environment=NITRO_PORT=3000
+Environment=COFOUNDRY_EXPECT_MULTI_INSTANCE=false
+Environment=COFOUNDRY_APP_INSTANCE_COUNT=1
+ExecStartPre=/usr/bin/test -f /srv/cofoundry/current/front-end/.output/server/index.mjs
+ExecStart=/usr/bin/node front-end/.output/server/index.mjs
+Restart=on-failure
+RestartSec=5s
+SyslogIdentifier=cofoundry-app
+AmbientCapabilities=
+CapabilityBoundingSet=
+LockPersonality=true
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateMounts=true
+PrivateTmp=true
+ProcSubset=pid
+ProtectClock=true
+ProtectControlGroups=true
+ProtectHome=true
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectProc=invisible
+ProtectSystem=strict
+ReadWritePaths=/var/lib/cofoundry /run/cofoundry
+RemoveIPC=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+RuntimeDirectory=cofoundry
+StateDirectory=cofoundry
+SystemCallArchitectures=native
+TimeoutStartSec=30s
+TimeoutStopSec=30s
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
