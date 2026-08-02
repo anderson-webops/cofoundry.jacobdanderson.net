@@ -160,7 +160,7 @@ npm run verify:release:local
 
 `npm run verify:standalone-installs` checks the production-only backend install used by deployment (`npm ci --workspace back-end --omit=dev --dry-run`). The backend inherits the authoritative root lockfile, npm configuration, and `allowScripts` policy; the verifier rejects duplicate nested lock/config files, workspace-level `allowScripts` declarations that npm would ignore, and unreviewed install-script warnings before running a production-only backend audit at high severity or above.
 
-`npm run verify:toolchain` checks that `packageManager`, npm `devEngines`, GitHub Actions, Netlify, and the direct systemd runtime stay on the reviewed Node 24.18.1/npm 12.0.2 baseline. Root install, CI, and script commands fail early when a deployment runner uses another Node or npm line; this prevents npm 11-only configuration warnings and install-policy drift. The verifier also rejects reintroducing Docker or Compose as a deployment path.
+`npm run verify:toolchain` checks that `packageManager`, `engines`, `.npmrc`, GitHub Actions, Netlify, and the direct systemd runtime stay on the reviewed Node 24.18.1/npm 12.0.2 baseline. Nested package scripts reuse the npm executable selected by the deployer instead of rediscovering the host's bundled npm, while installs remain protected by `engine-strict`. The verifier also rejects bootstrap-blocking root `devEngines`, obsolete inherited npm configuration, and reintroducing Docker or Compose as a deployment path.
 
 ### Direct production runtime
 
