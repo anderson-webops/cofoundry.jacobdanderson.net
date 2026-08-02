@@ -83,15 +83,15 @@
     "a11y:production": "A11Y_USE_BUILT_SERVER=true A11Y_FRONTEND_PORT=3345 node scripts/a11y-smoke.mjs"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^8.3.0",
+    "@antfu/eslint-config": "^9.2.0",
     "@unocss/eslint-plugin": "66.7.5",
     "axe-core": "^4.12.1",
-    "brace-expansion": "5.0.8",
+    "brace-expansion": "5.0.9",
     "eslint": "10.8.0",
     "eslint-plugin-format": "2.0.1",
     "globals": "^17.7.0",
     "js-beautify": "2.0.3",
-    "puppeteer": "^24.43.1",
+    "puppeteer": "^25.4.0",
     "typescript": "^6.0.3",
     "vue": "3.5.40"
   },
