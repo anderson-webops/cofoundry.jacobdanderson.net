@@ -160,7 +160,11 @@ npm run verify:release:local
 
 `npm run verify:standalone-installs` checks workspace package-lock files used by standalone deployment paths. It currently validates `back-end/package-lock.json` with a backend-local `npm ci --workspaces=false --dry-run`, rejects unreviewed standalone install-script warnings, and runs the backend audit at high severity or above.
 
-`npm run verify:toolchain` checks that `packageManager`, GitHub Actions, and Docker use the same reviewed npm version, that CI/Docker run on Node 24.18.1 LTS, and that Docker does not bypass the install-script policy with `--ignore-scripts`.
+`npm run verify:toolchain` checks that `packageManager`, GitHub Actions, Netlify, and the direct systemd runtime stay on the reviewed Node 24.18.1/npm 12.0.2 baseline. It also rejects reintroducing Docker or Compose as a deployment path.
+
+### Direct production runtime
+
+Production SSR runs directly with Node under `cofoundry-app.service`; Docker, Compose, Podman, and a container registry are not part of the supported topology. The checked-in files under `deploy/systemd/` install a hardened, unprivileged, loopback-only service and promote a prevalidated release atomically with automatic rollback when its health check fails. `deploy/nginx/cofoundry-proxy.conf.example` is an include for the existing TLS server block; it deliberately does not replace or remove the host's IPv4 or IPv6 listeners.
 
 The public verifier also guards production-facing metadata and copy. Sitemap-listed public pages must render page-specific title, description, canonical, Open Graph, and Twitter metadata, and public pages plus linked noindex access pages fail verification if they expose mock/demo/sample/placeholder language that would make the live product feel unfinished.
 
@@ -261,7 +265,7 @@ Provisioning after merge:
 
 1. Apply all SQL migrations in `back-end/supabase/migrations/` in timestamp order.
 2. Run `npm run seed` against the target Supabase project.
-3. Set `NODE_ENV=production` on the app server process. The Docker production stage already does this; systemd or other host-managed app units should do the same.
+3. Install or review `deploy/systemd/cofoundry-app.service`; it enforces `NODE_ENV=production`, a single process, and a loopback-only Nitro listener.
 4. Configure `SESSION_SIGNING_SECRET` in the server environment or Vault injection.
 5. Enable only the intended Supabase password/email account path first. Keep OAuth/external auth provider env markers blank until the provider app callback URLs, account linking, suspended-user rejection, role rehydration, and rollback have been smoke-tested. Provider sign-in buttons remain hidden unless Supabase mode and matching server-side OAuth markers are active.
 6. Assign the first real admin user server-side before using `/admin`: `BOOTSTRAP_ADMIN_EMAIL=operator@example.com npm run -w back-end bootstrap-admin`. The script requires Supabase mode and the Vault-injected `SUPABASE_SERVICE_ROLE_KEY`; it updates an existing user row and records an admin action that `/admin/readiness` uses as first-admin bootstrap evidence.
