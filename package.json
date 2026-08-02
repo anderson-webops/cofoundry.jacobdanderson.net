@@ -8,6 +8,18 @@
     "node": ">=24.18.1 <25",
     "npm": ">=12.0.2 <13"
   },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": ">=24.18.1 <25",
+      "onFail": "error"
+    },
+    "packageManager": {
+      "name": "npm",
+      "version": ">=12.0.2 <13",
+      "onFail": "error"
+    }
+  },
   "description": "Monorepo for the CoFoundry founder matching platform",
   "author": "Jacob Anderson",
   "license": "ISC",
