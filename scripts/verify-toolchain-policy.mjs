@@ -17,8 +17,7 @@ function assert(condition, message) {
     fail(message)
 }
 
-function extractNpmVersion() {
-  const packageJson = JSON.parse(readRepoFile("package.json"))
+function extractNpmVersion(packageJson) {
   const packageManager = String(packageJson.packageManager || "")
   const match = packageManager.match(/^npm@(\d+\.\d+\.\d+)$/)
 
@@ -43,8 +42,16 @@ function assertNpmPinsMatch(filePath, contents, expectedNpmSpecifier) {
     assert(pin === expectedNpmSpecifier, `${filePath} pins ${pin}, expected ${expectedNpmSpecifier}`)
 }
 
-const npmVersion = extractNpmVersion()
+const packageJson = JSON.parse(readRepoFile("package.json"))
+const npmVersion = extractNpmVersion(packageJson)
 const expectedNpmSpecifier = `npm@${npmVersion}`
+
+assert(packageJson.devEngines?.runtime?.name === "node", "devEngines must enforce the Node runtime.")
+assert(packageJson.devEngines?.runtime?.version === packageJson.engines?.node, "devEngines.runtime must match engines.node.")
+assert(packageJson.devEngines?.runtime?.onFail === "error", "Node devEngines drift must fail npm commands.")
+assert(packageJson.devEngines?.packageManager?.name === "npm", "devEngines must enforce npm as the package manager.")
+assert(packageJson.devEngines?.packageManager?.version === packageJson.engines?.npm, "devEngines.packageManager must match engines.npm.")
+assert(packageJson.devEngines?.packageManager?.onFail === "error", "npm devEngines drift must fail npm commands.")
 
 const workflowFiles = listWorkflowFiles()
 for (const workflowFile of workflowFiles) {
@@ -72,4 +79,4 @@ assert(appService.includes("Environment=NITRO_HOST=127.0.0.1"), "The direct prod
 for (const retiredContainerPath of ["Dockerfile", ".dockerignore", "compose.yml", "compose.yaml", "docker-compose.yml", "docker-compose.yaml"])
   assert(!existsSync(new URL(retiredContainerPath, `${repoRoot}/`)), `${retiredContainerPath} should remain retired from the production deployment path.`)
 
-console.log(`Toolchain policy verified for ${basename(process.cwd())}: ${expectedNpmSpecifier}, Node 24.18.1 CI/Netlify/direct-host builds, reviewed install scripts, and no container deployment path.`)
+console.log(`Toolchain policy verified for ${basename(process.cwd())}: ${expectedNpmSpecifier}, enforced Node 24.18.1 source commands, aligned CI/Netlify/direct-host builds, reviewed install scripts, and no container deployment path.`)
