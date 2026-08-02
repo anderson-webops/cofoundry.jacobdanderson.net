@@ -3,6 +3,10 @@ import { existsSync, readFileSync } from "node:fs"
 import process from "node:process"
 
 const repoRoot = new URL("..", import.meta.url)
+const npmExecPath = process.env.npm_execpath
+
+if (!npmExecPath)
+  throw new Error("Run workspace-install verification through npm so the selected npm executable is known.")
 
 const standaloneWorkspaces = [
   {
@@ -12,10 +16,15 @@ const standaloneWorkspaces = [
   },
 ]
 
-function run(command, args, cwd) {
-  const result = spawnSync(command, args, {
+function runNpm(args, cwd) {
+  const env = { ...process.env }
+  delete env.npm_config_global_ignore_file
+  delete env.NPM_CONFIG_GLOBAL_IGNORE_FILE
+
+  const result = spawnSync(process.execPath, [npmExecPath, ...args], {
     cwd,
     encoding: "utf8",
+    env,
     shell: false,
   })
 
@@ -23,7 +32,7 @@ function run(command, args, cwd) {
 
   if (result.status !== 0) {
     process.stdout.write(output)
-    throw new Error(`${command} ${args.join(" ")} failed with exit code ${result.status}.`)
+    throw new Error(`npm ${args.join(" ")} failed with exit code ${result.status}.`)
   }
 
   return output
@@ -41,7 +50,7 @@ for (const workspace of standaloneWorkspaces) {
       throw new Error(`${workspace.label}/${nestedConfig} must not duplicate the monorepo root install contract.`)
   }
 
-  const installOutput = run("npm", ["ci", "--workspace", workspace.dir, "--omit=dev", "--dry-run"], repoRoot)
+  const installOutput = runNpm(["ci", "--workspace", workspace.dir, "--omit=dev", "--dry-run"], repoRoot)
 
   if (/\bnot\s+yet\s+covered\s+by\s+allowScripts\b/i.test(installOutput)) {
     process.stdout.write(installOutput)
@@ -53,6 +62,9 @@ for (const workspace of standaloneWorkspaces) {
     throw new Error(`${workspace.label} standalone install emitted an ignored workspace install-script policy warning.`)
   }
 
-  run("npm", ["audit", "--workspace", workspace.dir, "--omit=dev", `--audit-level=${workspace.auditLevel}`], repoRoot)
+  if (/Unknown env config "global-ignore-file"/i.test(installOutput))
+    throw new Error(`${workspace.label} install inherited obsolete global-ignore-file configuration.`)
+
+  runNpm(["audit", "--workspace", workspace.dir, "--omit=dev", `--audit-level=${workspace.auditLevel}`], repoRoot)
   console.log(`${workspace.label} production-only root-lock workspace install and audit passed.`)
 }

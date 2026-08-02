@@ -212,41 +212,49 @@ function startFrontend() {
   const args = isNuxt
     ? ["exec", "-w", "front-end", "--", "nuxt", "dev", "--host", "127.0.0.1", "--port", String(frontendPort)]
     : ["exec", "-w", "front-end", "--", "vite", "--host", "127.0.0.1", "--port", String(frontendPort), "--strictPort"]
+  const npmExecPath = process.env.npm_execpath
 
-  const child = spawn("npm", args, {
+  if (!npmExecPath)
+    throw new Error("Run accessibility verification through npm so the selected npm executable is known.")
+
+  const env = {
+    ...process.env,
+    BROWSER: "none",
+    DISABLE_ANALYTICS: "true",
+    NUXT_DEVTOOLS_ENABLED: "false",
+    NUXT_TELEMETRY_DISABLED: "1",
+    NUXT_PUBLIC_APP_URL: baseUrl,
+    NUXT_PUBLIC_SITE_URL: baseUrl,
+    NUXT_PUBLIC_API_BASE: apiUrl,
+    NUXT_PUBLIC_API_BASE_URL: apiUrl,
+    PUBLIC_API_BASE: apiUrl,
+    INTERNAL_API_BASE: apiUrl,
+    API_INTERNAL_BASE: apiUrl,
+    ADMIN_API_BASE: apiUrl,
+    NUXT_ADMIN_API_BASE: apiUrl,
+    ADMIN_API_KEY: "a11y-smoke",
+    NUXT_ADMIN_API_KEY: "a11y-smoke",
+    ADMIN_SESSION_SECRET: "a11y-smoke-session-secret",
+    NUXT_ADMIN_SESSION_SECRET: "a11y-smoke-session-secret",
+    NUXT_SESSION_SIGNING_SECRET: "a11y-smoke-session-secret",
+    SESSION_SIGNING_SECRET: "a11y-smoke-session-secret",
+    NUXT_PUBLIC_BACKEND_MODE: "mock",
+    NUXT_PUBLIC_BILLING_MODE: "mock",
+    NUXT_PUBLIC_ENABLE_DEMO_ACCESS: "true",
+    NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE: "true",
+    NUXT_PUBLIC_PORTAL_URL: baseUrl,
+    VITE_API_BASE_URL: apiUrl,
+    VITE_API_URL: apiUrl,
+    VITE_SSG_API_BASE_URL: apiUrl,
+    VITE_PUBLIC_SITE_ORIGIN: baseUrl,
+    VITE_SHOW_AD_SLOTS: "false"
+  }
+  delete env.npm_config_global_ignore_file
+  delete env.NPM_CONFIG_GLOBAL_IGNORE_FILE
+
+  const child = spawn(process.execPath, [npmExecPath, ...args], {
     cwd: projectRoot,
-    env: {
-      ...process.env,
-      BROWSER: "none",
-      DISABLE_ANALYTICS: "true",
-      NUXT_DEVTOOLS_ENABLED: "false",
-      NUXT_TELEMETRY_DISABLED: "1",
-      NUXT_PUBLIC_APP_URL: baseUrl,
-      NUXT_PUBLIC_SITE_URL: baseUrl,
-      NUXT_PUBLIC_API_BASE: apiUrl,
-      NUXT_PUBLIC_API_BASE_URL: apiUrl,
-      PUBLIC_API_BASE: apiUrl,
-      INTERNAL_API_BASE: apiUrl,
-      API_INTERNAL_BASE: apiUrl,
-      ADMIN_API_BASE: apiUrl,
-      NUXT_ADMIN_API_BASE: apiUrl,
-      ADMIN_API_KEY: "a11y-smoke",
-      NUXT_ADMIN_API_KEY: "a11y-smoke",
-      ADMIN_SESSION_SECRET: "a11y-smoke-session-secret",
-      NUXT_ADMIN_SESSION_SECRET: "a11y-smoke-session-secret",
-      NUXT_SESSION_SIGNING_SECRET: "a11y-smoke-session-secret",
-      SESSION_SIGNING_SECRET: "a11y-smoke-session-secret",
-      NUXT_PUBLIC_BACKEND_MODE: "mock",
-      NUXT_PUBLIC_BILLING_MODE: "mock",
-      NUXT_PUBLIC_ENABLE_DEMO_ACCESS: "true",
-      NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE: "true",
-      NUXT_PUBLIC_PORTAL_URL: baseUrl,
-      VITE_API_BASE_URL: apiUrl,
-      VITE_API_URL: apiUrl,
-      VITE_SSG_API_BASE_URL: apiUrl,
-      VITE_PUBLIC_SITE_ORIGIN: baseUrl,
-      VITE_SHOW_AD_SLOTS: "false"
-    },
+    env,
     detached: process.platform !== "win32",
     stdio: ["ignore", "pipe", "pipe"]
   })

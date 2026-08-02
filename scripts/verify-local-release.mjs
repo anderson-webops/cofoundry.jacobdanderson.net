@@ -2,6 +2,11 @@ import { spawn } from "node:child_process"
 import { readFileSync } from "node:fs"
 import process from "node:process"
 
+const npmExecPath = process.env.npm_execpath
+
+if (!npmExecPath)
+  throw new Error("Run local release verification through npm so the selected npm executable is known.")
+
 const syntheticProductionHostEnv = {
   COFOUNDRY_COMMIT_SHA: "0000000000000000000000000000000000000000",
   COFOUNDRY_DEPLOYED_AT: "2026-01-01T00:00:00.000Z",
@@ -212,18 +217,25 @@ function formatDuration(startedAt) {
 }
 
 function runStep(step, index, total) {
-  const command = step.command || "npm"
+  const usesNpm = !step.command
+  const command = usesNpm ? process.execPath : step.command
+  const args = usesNpm ? [npmExecPath, ...step.args] : step.args
+  const displayCommand = step.command || "npm"
   const startedAt = Date.now()
   const env = {
     ...process.env,
     ...(step.env || {}),
   }
+  if (usesNpm) {
+    delete env.npm_config_global_ignore_file
+    delete env.NPM_CONFIG_GLOBAL_IGNORE_FILE
+  }
 
   console.log(`\n[${index + 1}/${total}] ${step.label}`)
-  console.log(`$ ${[command, ...step.args].join(" ")}`)
+  console.log(`$ ${[displayCommand, ...step.args].join(" ")}`)
 
   return new Promise((resolve, reject) => {
-    const child = spawn(command, step.args, {
+    const child = spawn(command, args, {
       env,
       shell: false,
       stdio: "inherit",
