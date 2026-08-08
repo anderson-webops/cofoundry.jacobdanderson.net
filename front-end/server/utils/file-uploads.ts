@@ -5,7 +5,8 @@ import type { adminFileScanResultSchema, fileScanResultSchema, fileUploadPolicyS
 import { randomUUID } from "node:crypto"
 import { createError } from "h3"
 import { resolveServerAppUrl } from "./app-url"
-import { hashLocalUploadToken, listLocalFileUploadsByRelated, listLocalPendingFileScans, recordLocalAdminFileScanResult, recordLocalFileScanResult, recordLocalFileUploadPolicy } from "./local-operations-store"
+import { findRawInvestmentWorkspaceDocumentByResourceId } from "./investment-workspace-persistence"
+import { getLocalFileUploadById, hashLocalUploadToken, listLocalFileUploadsByRelated, listLocalPendingFileScans, recordLocalAdminFileScanResult, recordLocalFileScanResult, recordLocalFileUploadPolicy } from "./local-operations-store"
 import { loadMemberWorkspaceState } from "./member-workspace"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
 
@@ -63,6 +64,7 @@ const unsafeFilenamePattern = /[^\w.-]+/g
 const leadingDotsPattern = /^\.+/
 const allowedRelatedTypesByPurpose: Record<FileUpload["purpose"], ReadonlySet<FileUploadRelatedType>> = {
   contract_attachment: new Set(["contract"]),
+  investment_document: new Set(["investment_workspace"]),
   message_attachment: new Set(["message"]),
   proposal_attachment: new Set(["proposal"]),
   trust_evidence: new Set(["opportunity", "profile"]),
@@ -192,7 +194,25 @@ export async function createFileUploadPolicy(event: H3Event, session: SessionUse
   }
 
   const workspace = await loadMemberWorkspaceState(event, buildIdentity(session))
-  assertFileUploadAuthorization(workspace.seed, workspace.session, payload)
+  if (payload.relatedType === "investment_workspace") {
+    if (useRuntimeConfig(event).public.featureInvestmentModule !== true)
+      throw createError({ statusCode: 404, statusMessage: "The investment workspace is not enabled." })
+    if (["admin", "investor_admin"].includes(session.role))
+      throw createError({ statusCode: 403, statusMessage: "Staff review accounts cannot upload applicant data-room records." })
+
+    const investmentWorkspace = payload.relatedId
+      ? await findRawInvestmentWorkspaceDocumentByResourceId(event, payload.relatedId)
+      : null
+    if (!investmentWorkspace || investmentWorkspace.applicantUserId !== session.id) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: "You cannot attach files to that investment workspace.",
+      })
+    }
+  }
+  else {
+    assertFileUploadAuthorization(workspace.seed, workspace.session, payload)
+  }
 
   const uploadId = randomUUID()
   const objectPath = objectPathFor(session, payload.filename)
@@ -301,6 +321,24 @@ export async function listFileUploadsByRelated(event: H3Event, relatedItems: Fil
   }
 
   return uploads.sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+}
+
+export async function getFileUploadById(event: H3Event, uploadId: string) {
+  if (!isSupabaseEnabled(event))
+    return getLocalFileUploadById(uploadId)
+
+  const adminClient = createSupabaseAdminClient(event)
+  if (!adminClient)
+    throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
+
+  const { data, error } = await adminClient
+    .from("file_uploads")
+    .select("*")
+    .eq("id", uploadId)
+    .maybeSingle()
+  if (error)
+    throw error
+  return data ? fileUploadRowToDomain(data as PersistedFileUploadRow) : null
 }
 
 export async function recordFileScanResult(event: H3Event, uploadId: string, payload: FileScanResultPayload) {

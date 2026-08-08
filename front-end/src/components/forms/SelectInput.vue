@@ -1,10 +1,13 @@
 <script setup lang="ts">
-defineProps<{
+const props = withDefaults(defineProps<{
   label: string
   options: { label: string, value: string }[]
   helper?: string
   error?: string
-}>()
+  disabled?: boolean
+}>(), {
+  disabled: false,
+})
 
 const model = defineModel<string>({ default: "" })
 </script>
@@ -14,8 +17,8 @@ const model = defineModel<string>({ default: "" })
     <span class="field-label">
       <span>{{ label }}</span>
     </span>
-    <select v-model="model" class="field-control">
-      <option disabled value="">
+    <select v-model="model" class="field-control" :disabled="disabled">
+      <option v-if="!props.options.some(option => option.value === '')" disabled value="">
         Select an option
       </option>
       <option v-for="option in options" :key="option.value" :value="option.value">

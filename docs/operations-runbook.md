@@ -15,6 +15,7 @@ For a paste-ready host catch-up prompt after source validation passes but the pu
 - Leave `COFOUNDRY_TRUST_PROXY_HEADERS=false` unless the app is behind a controlled reverse proxy. When enabled, set `COFOUNDRY_TRUSTED_PROXY_IPS` to the exact direct proxy IPs or CIDR ranges; unlisted peers cannot supply client identity headers.
 - `COFOUNDRY_LOCAL_DATA_DIR` should point at a durable, backed-up directory for member workspace state, collaboration workflow state, access requests, admin audit overlays, privacy/trust review requests, invited local accounts, operations telemetry, and local mock-mode file scan artifacts.
 - `COFOUNDRY_OPERATIONS_TOKEN` is required for hosted deployments and should be a long random secret distinct from `SESSION_SIGNING_SECRET`. It protects backend metadata and every `/api/operations/*` worker call.
+- Keep `NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE=false` until the investment workspace migration is applied, Supabase durability and file scanning have passed staging checks, and an accountable operator has authorized the program. Hosted startup fails closed when the feature is enabled without `NUXT_PUBLIC_BACKEND_MODE=supabase`, `COFOUNDRY_INVESTMENT_PROGRAM_APPROVED=true`, or `COFOUNDRY_FILE_SCANNER_COMMAND`.
 - Production must run exactly one Node app process with `COFOUNDRY_EXPECT_MULTI_INSTANCE=false` and `COFOUNDRY_APP_INSTANCE_COUNT=1`. Authentication, intake, worker, and upload rate limits are process-local, so environment validation and `/admin/readiness` fail closed for a declared multi-instance host. `COFOUNDRY_REALTIME_FANOUT_URL` is experimental until a shared atomic limiter is implemented; a relay alone does not make horizontal scaling safe. Isolated staging relays must use HTTPS and a distinct `COFOUNDRY_REALTIME_FANOUT_TOKEN` when the relay is cross-origin, so the operations token is never disclosed to that host.
 - `COFOUNDRY_ALERT_WEBHOOK_URL` is optional and should stay unset until an operator chooses the alerting destination. When set, operation workers post non-blocking JSON alerts for `error` and `warning` events by default. Use `COFOUNDRY_ALERT_WEBHOOK_TOKEN`, `COFOUNDRY_ALERT_SEVERITIES`, and `COFOUNDRY_ALERT_TIMEOUT_MS` only from server-side env.
 - `COFOUNDRY_EMAIL_SUPPRESSION_PROVIDER` is optional and should stay unset until the outbound mail provider's bounce, complaint, unsubscribe, and manual-suppression events are mapped into CoFoundry. When set, `/admin/readiness` expects recent suppression evidence reported through the worker-authenticated endpoint.
@@ -24,7 +25,7 @@ For a paste-ready host catch-up prompt after source validation passes but the pu
 
 ## Daily Checks
 
-- Visit `/admin/readiness` and resolve any fail or warning checks before treating the deployment as production-ready.
+- Visit `/admin/readiness` and resolve any fail or warning checks before treating the deployment as production-ready. When investment review is enabled, also sign in through `/investment-review`, confirm submitted cases exclude private applicant outreach, and verify a shared clean file can be downloaded while an unshared file cannot.
 - Before restarting a production service after env changes, run `npm run verify:host-env -- --production` from the host environment that will launch the app. It reads process env only, does not load `.env`, and reports secret presence without printing secret values.
 - Use `/admin/readiness`'s production cutover phases as the quick-read for which provider stages are active, intentionally disabled, blocked, or complete.
 - Use `/admin/readiness`'s server provisioning checklist as the canonical handoff for host-level secrets, durable storage, mail, worker timers, restore drills, monitoring, first-admin bootstrap, and Stripe cutover preparation.
@@ -99,7 +100,7 @@ The checked-in relay remains an experimental building block. Before production c
 
 1. Snapshot the durable local data directory or Supabase project before a deploy.
 2. Restore into a staging host or staging Supabase project.
-3. Confirm `/admin/operations`, `/admin/audit`, `/admin/access-requests`, `/admin/privacy`, `/app/inbox`, `/app/billing`, `/app/legal`, and `/app/settings` load from restored data. Open an agreement with legal-review history and confirm the request, exact version, status, and response were restored without restoring an invite token.
+3. Confirm `/admin/operations`, `/admin/audit`, `/admin/access-requests`, `/admin/privacy`, `/app/inbox`, `/app/billing`, `/app/legal`, and `/app/settings` load from restored data. Open an agreement with legal-review history and confirm the request, exact version, status, and response were restored without restoring an invite token. If the investment feature is enabled, confirm `/app/investment` and `/investment-review` restore the same aggregate versions while preserving applicant/staff projection boundaries and selected partner-sharing consent.
 4. Record the drill with `npm run operations:restore-drill -- --id restore-YYYYMMDD -- <restore verification command>` so the start and success/failure events appear in `/admin/operations`.
 
 ## Supabase Cutover

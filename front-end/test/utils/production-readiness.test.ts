@@ -117,6 +117,40 @@ const healthyAdminPosture = {
 }
 
 describe("production readiness snapshot", () => {
+  it("keeps the investment program as a separate fail-closed cutover", () => {
+    const input = {
+      accessRequests: [],
+      adminPosture: healthyAdminPosture,
+      contactMailConfigured: true,
+      environment: environmentSnapshot({
+        backendMode: "supabase" as const,
+        featureInvestmentModule: true,
+        supabaseAnonKey: "anon-key",
+        supabaseUrl: "https://cofoundry.supabase.co",
+      }),
+      generatedAt,
+      hasAlertWebhookConfigured: true,
+      hasDurableLocalDataDir: true,
+      hasOperationsWorkerToken: true,
+      hasSessionSigningSecret: true,
+      hasTrustVerificationProviderConfigured: false,
+      isLocalDevelopment: false,
+      operations: healthyOperations,
+      privacyRequests: [],
+    }
+    const blocked = buildProductionReadinessSnapshot({
+      ...input,
+      environmentValidationErrors: ["COFOUNDRY_FILE_SCANNER_COMMAND is required before the investment module is enabled outside local development."],
+    })
+    const ready = buildProductionReadinessSnapshot({ ...input, environmentValidationErrors: [] })
+    const checks = new Map(blocked.groups.flatMap(group => group.checks).map(check => [check.id, check]))
+
+    expect(checks.get("investment-program-gate")?.status).toBe("fail")
+    expect(blocked.provisioningTasks.find(task => task.id === "investment-program-provisioning")?.status).toBe("fail")
+    expect(blocked.cutoverPhases.find(phase => phase.id === "investment-program-cutover")?.status).toBe("fail")
+    expect(ready.groups.flatMap(group => group.checks).find(check => check.id === "investment-program-gate")?.status).toBe("pass")
+  })
+
   it("passes when deployment, secret, queue, and worker evidence is healthy", () => {
     const snapshot = buildProductionReadinessSnapshot({
       accessRequests: [],

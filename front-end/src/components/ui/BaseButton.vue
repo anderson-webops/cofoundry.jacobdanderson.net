@@ -4,6 +4,8 @@ import { computed, resolveComponent } from "vue"
 const props = withDefaults(defineProps<{
   to?: string
   href?: string
+  rel?: string
+  target?: "_blank" | "_parent" | "_self" | "_top"
   type?: "button" | "submit" | "reset"
   variant?: "primary" | "secondary" | "ghost" | "danger"
   size?: "sm" | "md" | "lg"
@@ -27,6 +29,10 @@ const componentTag = computed(() => {
   return "button"
 })
 
+const externalHttpLink = computed(() => Boolean(props.href && /^https?:\/\//i.test(props.href)))
+const linkRel = computed(() => props.rel || (externalHttpLink.value ? "noopener noreferrer" : undefined))
+const linkTarget = computed(() => props.target || (externalHttpLink.value ? "_blank" : undefined))
+
 const variantClasses = computed(() => ({
   primary: "bg-[var(--accent)] text-[var(--cta-accent-text)] hover:bg-[var(--accent-strong)] border-transparent",
   secondary: "bg-[var(--panel-strong)] text-[var(--text)] border-[var(--line)] hover:border-[var(--line-strong)]",
@@ -46,6 +52,8 @@ const sizeClasses = computed(() => ({
     :is="componentTag"
     :to="to"
     :href="href"
+    :rel="linkRel"
+    :target="linkTarget"
     :type="componentTag === 'button' ? type : undefined"
     :disabled="disabled"
     class="font-semibold border inline-flex gap-2 transition duration-150 ease-out items-center justify-center"

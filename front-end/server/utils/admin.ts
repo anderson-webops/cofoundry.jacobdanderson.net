@@ -28,6 +28,18 @@ export async function requireOpportunityReviewerSession(event: H3Event) {
   return session
 }
 
+export async function requireInvestmentReviewerSession(event: H3Event) {
+  const session = await requireAuthenticatedSession(event)
+  const runtimeConfig = useRuntimeConfig(event)
+  const allowed = runtimeConfig.public.featureInvestmentModule === true
+    && ["admin", "investor_admin"].includes(session.role)
+
+  if (!allowed)
+    throw createError({ statusCode: 403, statusMessage: "Investment-review access is required for this action." })
+
+  return session
+}
+
 export function validateAdminUserModerationPayload(payload: unknown) {
   return adminUserModerationSchema.parse(payload)
 }

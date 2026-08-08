@@ -5,6 +5,7 @@ import { createError } from "h3"
 import { checkSavedSearchCount } from "../../shared/utils/billing"
 import { buildOpportunityRiskFlags, buildProfileReadiness, resolveNewOpportunityVerificationStatus } from "../../shared/utils/formation"
 import { normalizeNotificationPreferences } from "../../shared/utils/notification-preferences"
+import { canAccessCoreMemberWorkspace } from "../../shared/utils/session-authority"
 import { projectWorkspaceForSession } from "../../shared/utils/workspace-authorization"
 import { buildDraftMemberWorkspaceState, buildMemberWorkspaceState, mergeMemberWorkspaceState, resolveSessionUserFromWorkspace } from "../../shared/utils/workspace-persistence"
 import { mergeLocalAdminAuditState } from "./local-admin-audit"
@@ -894,6 +895,13 @@ export async function loadMemberWorkspaceState(
   identity: PersistedIdentityInput,
   options: LoadMemberWorkspaceOptions = {},
 ) {
+  if (!canAccessCoreMemberWorkspace(identity)) {
+    throw createError({
+      statusCode: 403,
+      statusMessage: "Investment review accounts cannot access member workspaces.",
+    })
+  }
+
   const baseSeed = createBaseSeed()
   const seededState = buildMemberWorkspaceState(baseSeed, identity.id)
   const fallbackSession = seededState

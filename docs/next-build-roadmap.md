@@ -29,7 +29,7 @@ Status: implemented and locally release-validated; hosted promotion and deployme
 
 ### Team / Studio operating model
 
-Status: implemented in source; full local release validation, hosted promotion, and deployment-identity verification remain the completion gate.
+Status: implemented and locally release-validated; hosted promotion and deployment-identity verification remain the completion gate.
 
 - Organization workspaces with multiple seats and explicit owner, operator, member, reviewer, billing, and counsel roles
 - Venture portfolios, projects, tasks, decisions, shared searches, linked relationship resources, and organization-level audit history
@@ -50,12 +50,22 @@ Status: neutral referral resources and direct user-selected invitations implemen
 - Consider a vetted partner directory only after conflicts, licensing, geography, engagement, fee, endorsement, privacy, and support responsibilities have explicit product and legal ownership
 - Never imply that CoFoundry forms an attorney-client relationship, chooses counsel, or guarantees professional quality
 
-### Optional future investment path
+### Optional investment path
 
-Status: feature-flagged and deliberately separate from the core SaaS product.
+Status: implemented and locally release-validated behind a disabled-by-default feature flag; partner-specific compliance review, hosted infrastructure, promotion, and deployment-identity verification remain the enablement gates.
 
-- Do not mix investment applications into ordinary founder matching, agreement review, or billing
-- Require supplemental terms, eligibility controls, regulated-partner decisions, and a separate release benchmark before enabling any live investment workflow
+- Applicant fundraising readiness, round planning, private prospect and interaction tracking, secure data-room records, founder updates, and revisioned program applications
+- Strict projections that exclude applicant prospect and interaction records from staff, exclude unshared data-room records and updates from review, and exclude staff notes and internal rationale from applicant views and exports
+- Isolated admin and investor-admin review queue with assignment, priority, information requests, diligence, review notes, committee decisions, and status transitions
+- Separate applicant consent and selected-record controls for counsel, broker-dealer, funding-portal, investment-adviser, or other regulated-partner handoff preparation
+- Service-role-only Supabase aggregate persistence, durable local persistence, optimistic concurrency, private uploads, malware-review gates, authenticated downloads, realtime invalidation, notifications, and organization approval integration
+- CoFoundry does not discover or rank investors, recommend investments, handle funds or securities, execute transactions, or receive transaction-based compensation; program acceptance remains a next-stage workflow decision rather than a financing commitment
+
+Enablement work that remains partner- or deployment-specific:
+
+- Complete counsel review of the supplemental terms and the intended exemption/intermediary path for each live program
+- Contract with and technically integrate any registered intermediary required for actual securities activity; keep transaction execution outside CoFoundry
+- Apply migrations and provision durable private storage and scanning on the host, repeat applicant/reviewer browser evidence against that environment, deploy, and verify the exact live release before setting the feature flag in production
 
 ### External service depth
 

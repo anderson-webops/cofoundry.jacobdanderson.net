@@ -646,9 +646,10 @@ export const fileUploadPolicySchema = z
       "proposal_attachment",
       "contract_attachment",
       "trust_evidence",
+      "investment_document",
     ]),
     relatedType: z
-      .enum(["message", "proposal", "contract", "profile", "opportunity"])
+      .enum(["message", "proposal", "contract", "profile", "opportunity", "investment_workspace"])
       .nullable()
       .optional(),
     relatedId: z.string().trim().min(1).max(120).nullable().optional(),
@@ -678,6 +679,8 @@ export const fileUploadPolicySchema = z
         && payload.relatedType === "contract")
       || (payload.purpose === "trust_evidence"
         && ["profile", "opportunity"].includes(payload.relatedType))
+      || (payload.purpose === "investment_document"
+        && payload.relatedType === "investment_workspace")
 
     if (!validPair) {
       context.addIssue({

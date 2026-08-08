@@ -41,6 +41,7 @@ import {
 import { createEmptyWorkspaceSeed } from "~/shared/utils/empty-workspace"
 import { buildOpportunityRiskFlags, buildProfileReadiness, resolveNewOpportunityVerificationStatus } from "~/shared/utils/formation"
 import { normalizeNotificationPreferences } from "~/shared/utils/notification-preferences"
+import { canAccessCoreMemberWorkspace } from "~/shared/utils/session-authority"
 import {
   getContractById,
   getCurrentContractVersion,
@@ -147,7 +148,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   const lastSyncedAt = ref<string | null>(null)
   const loadedUserId = ref("")
   const lastAuthoritativeWriteSignature = ref<string | null>(null)
-  const serverBackedWorkspace = computed(() => Boolean(session.value))
+  const serverBackedWorkspace = computed(() => Boolean(session.value && canAccessCoreMemberWorkspace(session.value)))
   const typingPresenceSignatures = new Map<string, boolean>()
 
   function createWriteSignature(userId: string) {
@@ -281,6 +282,11 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       return data.value
     }
 
+    if (!canAccessCoreMemberWorkspace(session.value)) {
+      resetSessionState()
+      return data.value
+    }
+
     if (!serverBackedWorkspace.value) {
       ensureSessionUser(session.value)
       loadedUserId.value = session.value.id
@@ -315,7 +321,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   }
 
   async function persistWorkspace(force = false) {
-    if (!serverBackedWorkspace.value || !session.value || hydrating.value)
+    if (!serverBackedWorkspace.value || !session.value || !canAccessCoreMemberWorkspace(session.value) || hydrating.value)
       return data.value
 
     const payload = buildMemberWorkspaceWritePayload(data.value, session.value.id)
@@ -1311,31 +1317,13 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     applyReportResolution(response.report.id, response.action.adminUserId || adminUserId, response.action.notes, response.report.resolvedAt, response.action.id)
   }
 
-  async function createInvestmentApplication(opportunityId: string, payload: {
-    raiseAmount: string
-    traction: string
-    deckLink: string
-    teamSummary: string
-    reason: string
-  }) {
-    const response = await $fetch<{ application: WorkspaceSeed["investmentApplications"][number], data: WorkspaceSeed, session: SessionUser }>("/api/investment-applications", {
-      body: {
-        opportunityId,
-        ...payload,
-      },
-      method: "POST",
-    })
-    applyAuthoritativeWorkspace(response)
-    return response.application
-  }
-
   function getConversationPreview(conversationId: string) {
     return getMessagesForConversation(data.value, conversationId).at(-1)
   }
 
   if (import.meta.client) {
     watchDebounced(data, async () => {
-      if (!serverBackedWorkspace.value || !session.value || hydrating.value || loadedUserId.value !== session.value.id)
+      if (!serverBackedWorkspace.value || !session.value || !canAccessCoreMemberWorkspace(session.value) || hydrating.value || loadedUserId.value !== session.value.id)
         return
 
       await persistWorkspace()
@@ -1363,7 +1351,6 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     changeUserRole,
     createContractFromProposal,
     createDraftUserFromSignUp,
-    createInvestmentApplication,
     createOpportunity,
     createReport,
     createProposal,

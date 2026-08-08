@@ -50,8 +50,8 @@ export const termsKeyNotes = [
     body: "Subscriptions unlock product and visibility benefits. Paid plans do not give CoFoundry ownership in your company or a right to your cap table.",
   },
   {
-    title: "Future investment module is separate",
-    body: "If CoFoundry later enables an investment module, that feature will be gated behind supplemental terms and distinct product controls.",
+    title: "Optional investment workspace is separate",
+    body: "When enabled, fundraising planning and program review remain behind a separate feature gate, supplemental terms, explicit sharing choices, and isolated staff permissions.",
   },
 ]
 
@@ -73,7 +73,7 @@ export const termsSections: LegalSection[] = [
     paragraphs: [
       "CoFoundry helps founders and startup collaborators create profiles, evaluate fit, express interest, message after a mutual connection, exchange structured proposals, run trial collaboration steps, generate editable collaboration agreement templates, and coordinate approved work through role-controlled Team and Studio workspaces.",
       "CoFoundry is not a freelance marketplace, staffing firm, employment agency, broker-dealer, funding portal, investment adviser, venture fund, law firm, tax adviser, or fiduciary for user relationships.",
-      "The core service is subscription software. Any future investment-related feature is separate from the main SaaS product and may be subject to additional eligibility rules, product gates, and supplemental terms.",
+      "The core service is subscription software. The optional investment workspace is separate from the main SaaS product and is subject to an independent feature gate, supplemental terms, review permissions, and partner-sharing controls.",
     ],
   },
   {
@@ -170,12 +170,15 @@ export const termsSections: LegalSection[] = [
   },
   {
     id: "investment-module",
-    title: "10. Future Investment Module and Supplemental Terms",
-    summary: "Investment-related features, if ever enabled, are separate from the core matching product.",
+    title: "10. Optional Investment Workspace and Supplemental Terms",
+    summary: "Fundraising planning and program review remain separate from matching, subscriptions, and any securities transaction.",
     paragraphs: [
-      "The current core CoFoundry product is founder-and-collaborator SaaS. The future investment module is feature-flagged, disabled by default, and not part of the primary user experience unless CoFoundry expressly enables it.",
-      "If CoFoundry later offers investment-related features, those features may require additional eligibility checks, disclosures, approvals, regulated partners, or supplemental terms. CoFoundry may refuse access to those features at its sole discretion.",
-      "Nothing in these core Terms means CoFoundry is effecting securities transactions, soliciting investments, providing investment advice, guaranteeing financing, or acting as your broker, funding portal, or placement agent.",
+      "The core CoFoundry product is founder-and-collaborator SaaS. The optional investment workspace is feature-flagged, disabled by default, and available only when CoFoundry deliberately enables the separately governed workflow.",
+      "Applicants may record readiness, fundraising rounds, data-room materials, and investor contacts they already know or independently identify. CoFoundry does not discover, rank, recommend, endorse, or contact investor prospects for applicants, and applicant prospect and interaction records are excluded from program-staff views.",
+      "A program application requires the current supplemental terms and applicant attestations. Submission captures a revision-bound snapshot of the application, readiness checklist, and round plan. Later draft or planning changes remain outside that submitted snapshot unless the applicant submits a new revision. Self-attested formation, capitalization, financial, traction, identity, authority, or readiness information is not CoFoundry verification and may be tested through additional diligence or an outside provider.",
+      "Submission, review, committee advancement, acceptance, or referral means only the workflow status shown. None guarantees financing, commits CoFoundry or another person to invest, constitutes an offer or recommendation, or confirms that an offering complies with law.",
+      "CoFoundry does not handle investor funds or securities, execute securities transactions, provide investment advice, act as a broker-dealer, funding portal, placement agent, or investment adviser, or receive transaction-based compensation through this workspace. Any offering or transaction must occur outside CoFoundry with qualified counsel and a registered intermediary when required.",
+      "A regulated-partner handoff requires separate applicant consent and may include only data-room records the applicant explicitly shared with the program. The identified partner applies its own onboarding, engagement, conflicts, diligence, eligibility, disclosure, and regulatory controls, and may independently decline to proceed.",
     ],
   },
   {
@@ -277,6 +280,10 @@ export const privacyKeyNotes = [
     title: "Live vendors are conditional",
     body: "Some environments rely on CoFoundry-hosted internal services. When live vendors such as Supabase or Stripe are enabled, they process data only for the product functions described in this policy.",
   },
+  {
+    title: "Investment sharing is explicit",
+    body: "Applicant prospect and interaction records stay outside program-staff views. Reviewers receive a submitted application and only the data-room records or updates the applicant marks for program sharing.",
+  },
 ]
 
 export const privacyVisibilityTiers: PrivacyVisibilityTier[] = [
@@ -303,6 +310,18 @@ export const privacyVisibilityTiers: PrivacyVisibilityTier[] = [
     audience: "Visible to active organization members according to assigned role",
     details: "Organization identity, membership, ventures, projects, tasks, decisions, shared searches, linked resources, agreement policies, approval requests, counsel queues, and audit history are projected according to owner, operator, member, reviewer, billing, or counsel permissions.",
     notes: "Organization owners control membership and role assignments. Removing a member ends their in-product access but cannot recall copies they previously received or information they exported lawfully.",
+  },
+  {
+    title: "Applicant fundraising workspace",
+    audience: "Visible to the applicant, with limited linked-record visibility for authorized organization members",
+    details: "Readiness, rounds, applicant-created investor prospects, interactions, private data-room records, application drafts, and founder updates remain in the applicant workspace. Investor prospects and interactions are never projected to program staff.",
+    notes: "Linking an application to a Team or Studio permits authorized internal approvals and linked-record visibility but does not expose the applicant's private outreach pipeline.",
+  },
+  {
+    title: "Investment program review",
+    audience: "Visible only to assigned or authorized investment-review staff",
+    details: "Review staff can receive the revision-bound application, readiness, and round snapshot submitted by the applicant, applicant-shared data-room records and updates, information and diligence responses, and program workflow state. Staff-only notes, risk flags, internal rationale, and partner-preparation notes are excluded from applicant responses and account exports.",
+    notes: "A third-party handoff requires separate applicant consent and is limited to the selected records. A recipient may retain information already sent even if future sharing consent is later withdrawn.",
   },
   {
     title: "Internal operations",
@@ -344,6 +363,12 @@ export const privacyDataCategories: PrivacyDataCategory[] = [
     visibility: "Visible to active organization members according to assigned role, invited members for their own pending invitation, selected legal representatives for an exact agreement review, and authorized admins when operational or safety review is required.",
   },
   {
+    category: "Fundraising, application, and diligence data",
+    examples: "Readiness attestations, round plans, applicant-created prospects and interactions, data-room links and uploads, program applications, supplemental-term acceptance, information requests, diligence responses, founder updates, staff review notes, decisions, and regulated-partner handoffs.",
+    purposes: "Applicant fundraising planning, separately governed program review, diligence, consent records, internal decision controls, secure file delivery, and approved regulated-partner preparation.",
+    visibility: "Prospects, interactions, later application drafts, later private planning changes, and unshared records remain applicant-only. Review staff receive the application, readiness, and round snapshot for that revision plus explicitly shared records. Staff-only notes and internal rationale remain internal. Identified third parties receive only records covered by a consented handoff.",
+  },
+  {
     category: "Billing and subscription data",
     examples: "Plan tier, billing status, checkout events, invoice references, payment processor responses, and tax-related metadata when applicable.",
     purposes: "Charging for paid plans, preventing fraud, resolving billing issues, and keeping accounting records.",
@@ -372,6 +397,11 @@ export const privacyRetentionRows: PrivacyRetentionRow[] = [
     category: "Organization workspace and audit records",
     window: "While the organization is active, then generally up to 36 months after archival; visible audit history also follows the owner-configured workspace window",
     notes: "Workspace settings may shorten the ordinary audit-history view but do not override legal holds, billing, security, dispute, or compliance retention. Other organization records may remain available while needed to operate the workspace and preserve shared decisions.",
+  },
+  {
+    category: "Fundraising and investment-review records",
+    window: "While the workspace or review is active, then generally up to 5 years after closure or the last review or partner-handoff activity",
+    notes: "Private applicant outreach records, submitted materials, consent history, diligence, decisions, and staff audit records may have different visibility but follow the same ordinary retention window. Legal holds, securities or intermediary obligations, disputes, fraud review, or a recipient's independent duties may require longer retention.",
   },
   {
     category: "Security logs and session signals",
@@ -543,12 +573,14 @@ export const privacySections: LegalSection[] = [
   },
   {
     id: "investment-features",
-    title: "15. Future Investment Features",
-    summary: "The future investment module is treated as a separate privacy mode because it may require different data and vendors.",
+    title: "15. Optional Investment Workspace",
+    summary: "Fundraising planning and program review use separate applicant, staff, and third-party visibility boundaries.",
     paragraphs: [
-      "CoFoundry's investment module is currently feature-flagged and disabled by default. If it is ever enabled, CoFoundry may need to collect additional information such as enhanced identity, financial, diligence, or regulated-partner data that is not part of the core founder-matching product today.",
-      "If CoFoundry launches those features, it may segment the related data, introduce additional vendors or regulated partners, and provide a supplemental feature notice before collecting the new categories of information.",
-      "Nothing about the existence of that dormant feature changes the current privacy posture of the core matching product today.",
+      "The investment workspace is feature-flagged and disabled by default. When enabled, it stores fundraising readiness, round planning, applicant-owned outreach, data-room materials, program applications, diligence, staff review, decisions, consent history, and regulated-partner handoffs separately from ordinary founder matching.",
+      "Applicant-created investor prospects, contact details, notes, and interaction history are not available in program-staff projections. Review staff receive the application, readiness, and round snapshot captured for the latest submitted revision, and only the data-room records and founder updates that the applicant marks for program sharing.",
+      "Applicants do not receive staff-only review notes, risk flags, internal decision rationale, reviewer identities that are not needed for the workflow, or internal partner-preparation notes. Account exports follow the same applicant projection rather than exporting staff-only material.",
+      "CoFoundry records separate consent before staff can prepare a regulated-partner handoff. The handoff is limited to applicant-shared records selected for that partner. Withdrawing consent stops future unsent sharing but cannot recall information a partner already received or override that partner's independent legal retention duties.",
+      "Uploaded investment documents remain in private storage, are subject to file-scan controls, and are delivered through authenticated or short-lived download access. CoFoundry does not make data-room files publicly available.",
     ],
   },
   {

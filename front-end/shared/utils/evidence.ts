@@ -51,8 +51,8 @@ export interface AdminEvidencePackageInput {
 
 const fileScanStatuses = new Set<FileScanStatus>(["pending", "clean", "flagged", "failed", "skipped"])
 const fileUploadStatuses = new Set<FileUploadStatus>(["pending", "uploaded", "blocked", "deleted"])
-const fileUploadPurposes = new Set<FileUploadPurpose>(["message_attachment", "proposal_attachment", "contract_attachment", "trust_evidence"])
-const fileUploadRelatedTypes = new Set<FileUploadRelatedType>(["message", "proposal", "contract", "profile", "opportunity"])
+const fileUploadPurposes = new Set<FileUploadPurpose>(["message_attachment", "proposal_attachment", "contract_attachment", "trust_evidence", "investment_document"])
+const fileUploadRelatedTypes = new Set<FileUploadRelatedType>(["message", "proposal", "contract", "profile", "opportunity", "investment_workspace"])
 
 function stringValue(row: Record<string, unknown>, ...keys: string[]) {
   for (const key of keys) {

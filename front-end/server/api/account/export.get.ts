@@ -2,6 +2,8 @@ import { setHeader } from "h3"
 import { redactReportForReporter } from "~/shared/utils/workspace-authorization"
 import { requireAuthenticatedSession } from "../../utils/auth"
 import { listContractLegalReviewsForContracts } from "../../utils/contract-legal-reviews"
+import { listFileUploadsByRelated } from "../../utils/file-uploads"
+import { loadInvestmentApplicantExport } from "../../utils/investment-workspaces"
 import { loadMemberWorkspaceState } from "../../utils/member-workspace"
 import { loadOrganizationWorkspaceSnapshot } from "../../utils/organization-workspaces"
 import { listPrivacyRequestsForUser } from "../../utils/privacy-requests"
@@ -48,6 +50,27 @@ export default defineEventHandler(async (event) => {
     type: request.type,
   }))
   const organizationSnapshot = await loadOrganizationWorkspaceSnapshot(event, session)
+  const investmentWorkspaces = await loadInvestmentApplicantExport(event, session)
+  const investmentFileUploads = (await listFileUploadsByRelated(event, investmentWorkspaces.flatMap(investmentWorkspace => [
+    investmentWorkspace.id,
+    investmentWorkspace.application.id,
+  ].map(relatedId => ({
+    relatedId,
+    relatedType: "investment_workspace" as const,
+  }))))).filter(upload => upload.ownerUserId === session.id).map(upload => ({
+    createdAt: upload.createdAt,
+    deletedAt: upload.deletedAt,
+    id: upload.id,
+    mimeType: upload.mimeType,
+    originalFilename: upload.originalFilename,
+    purpose: upload.purpose,
+    relatedId: upload.relatedId,
+    relatedType: upload.relatedType,
+    scanStatus: upload.scanStatus,
+    sizeBytes: upload.sizeBytes,
+    status: upload.status,
+    updatedAt: upload.updatedAt,
+  }))
   const exportPayload = {
     account: state.user,
     bookmarks: state.bookmarks,
@@ -72,6 +95,8 @@ export default defineEventHandler(async (event) => {
       trialCollaborations: seed.trialCollaborations.filter(trial => matchIds.has(trial.matchId)),
     },
     exportedAt: new Date().toISOString(),
+    investmentWorkspaces,
+    investmentFileUploads,
     organizations: organizationSnapshot.workspaces,
     privacyRequests,
     profile: state.profile,

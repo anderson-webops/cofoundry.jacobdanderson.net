@@ -30,7 +30,7 @@ CoFoundry is not a freelance marketplace and not a Fiverr clone. It is centered 
 - Mutual interest unlocks messaging
 - Structured proposals and editable agreement templates are first-class workflow surfaces
 - Team and Studio workspaces coordinate seats, ventures, projects, decisions, searches, policies, approvals, and counsel queues
-- A future investment module exists behind a feature flag and is disabled by default
+- An optional fundraising and investment-review workspace exists behind a feature flag and is disabled by default
 
 ## Local setup
 
@@ -98,6 +98,8 @@ Server-only secrets:
 - `COFOUNDRY_ADMIN_AUDIT_RETENTION_LIMIT`
 - `COFOUNDRY_COLLABORATION_RETENTION_LIMIT`
 - `COFOUNDRY_CONTRACT_LEGAL_REVIEW_RETENTION_LIMIT`
+- `COFOUNDRY_INVESTMENT_PROGRAM_APPROVED`
+- `COFOUNDRY_FILE_SCANNER_COMMAND`
 - `COFOUNDRY_PRIVACY_REQUEST_RETENTION_LIMIT`
 - `CONTACT_FROM_EMAIL`
 - `CONTACT_FROM_NAME`
@@ -124,7 +126,7 @@ Agreement participants can negotiate from an accepted proposal into authoritativ
 
 Team-plan sponsors can create organization workspaces at `/app/studio`. Each workspace has explicit owner, operator, member, reviewer, billing, and counsel roles; invitation and seat controls; venture and project tracking; durable decisions; shared founder searches; reusable agreement policies; version-bound internal approvals; linked relationship resources; an in-house legal-review queue; and organization audit history. Agreement policies can require internal approval and/or completed legal review before a linked agreement may be signed, restrict outside counsel, and require a different approver from the requester. Organization writes use optimistic version checks so stale browser state cannot silently overwrite newer decisions. Member reads are projected by role, and invitees see only their own pending invitation until they accept.
 
-Public workspace access requests are durable in mock/access-request mode. `/auth/sign-up` submits access requests into `.data/access-requests.json` by default, admins can review them at `/admin/access-requests`, and issued invites create 30-day invite links that allow account creation without enabling public self-serve signup. Invited member workspace state is stored in `.data/member-workspace-state.json`, collaborative workflow state is stored in `.data/collaboration-state.json`, organization Team/Studio state is stored in `.data/organization-workspaces.json`, and legal-review requests and responses are stored separately in `.data/contract-legal-reviews.json`, so onboarding, profile edits, billing preview state, intros, messages, proposals, agreements, reviews, organization operations, and inbox read state can survive process restarts before Supabase is enabled. Admin moderation decisions are stored in `.data/admin-audit.json`, including audit rows plus user/report/opportunity/notification overlays used by the mock-mode admin console. Privacy and trust-review requests submitted from account settings are stored in `.data/privacy-requests.json` and reviewed at `/admin/privacy`. Invited local accounts are stored in `.data/local-auth-accounts.json` so sign-in survives server restarts while the site remains in mock backend mode. When Supabase mode is intentionally enabled later, the same route surface writes to the relevant Supabase tables after the latest migrations are applied.
+Public workspace access requests are durable in mock/access-request mode. `/auth/sign-up` submits access requests into `.data/access-requests.json` by default, admins can review them at `/admin/access-requests`, and issued invites create 30-day invite links that allow account creation without enabling public self-serve signup. Invited member workspace state is stored in `.data/member-workspace-state.json`, collaborative workflow state is stored in `.data/collaboration-state.json`, organization Team/Studio state is stored in `.data/organization-workspaces.json`, investment fundraising and review state is stored in `.data/investment-workspaces.json`, and legal-review requests and responses are stored separately in `.data/contract-legal-reviews.json`, so onboarding, profile edits, billing preview state, intros, messages, proposals, agreements, reviews, organization operations, fundraising planning, diligence, and inbox read state can survive process restarts before Supabase is enabled. Admin moderation decisions are stored in `.data/admin-audit.json`, including audit rows plus user/report/opportunity/notification overlays used by the mock-mode admin console. Privacy and trust-review requests submitted from account settings are stored in `.data/privacy-requests.json` and reviewed at `/admin/privacy`. Invited local accounts are stored in `.data/local-auth-accounts.json` so sign-in survives server restarts while the site remains in mock backend mode. When Supabase mode is intentionally enabled later, the same route surface writes to the relevant Supabase tables after the latest migrations are applied.
 
 Public contact and access-request intake is also screened before mail delivery or durable queue writes. The shared intake policy keeps the existing honeypot and rate-limit behavior, then rejects high-confidence abuse such as reserved or disposable email domains, URL stuffing, repeated filler, test text, and obvious unrelated solicitations.
 
@@ -135,6 +137,7 @@ The canonical shared model and utility source lives under `front-end/shared`. Fi
 - Founder review account: `olivia@cofoundry.dev` / `founder123`
 - Collaborator review account: `malik@cofoundry.dev` / `builder123`
 - Admin review account: `ava@cofoundry.dev` / `admin123`
+- Investment reviewer account: `priya@cofoundry.dev` / `reviewer123` (requires `NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE="true"`)
 
 Seeded review credentials are restricted to local development. Hosted environments reject the demo-access flag, and the credentials are not advertised as one-click shortcuts in the sign-in UI.
 
@@ -278,7 +281,7 @@ Provisioning after merge:
 6. Assign the first real admin user server-side before using `/admin`: `BOOTSTRAP_ADMIN_EMAIL=operator@example.com npm run -w back-end bootstrap-admin`. The script requires Supabase mode and the Vault-injected `SUPABASE_SERVICE_ROLE_KEY`; it updates an existing user row and records an admin action that `/admin/readiness` uses as first-admin bootstrap evidence.
 7. Turn on Stripe env only when checkout and webhook infrastructure are ready.
 8. Configure a distinct `COFOUNDRY_OPERATIONS_TOKEN` before starting any hosted deployment. It protects backend metadata and all scheduled digest, backup, event-ingestion, and file-scan worker calls. A non-loopback `BACKEND_HOST` is rejected unless the public-bind flag is explicit and this token is at least 32 characters.
-9. In mock/access-request mode, ensure the app process can write to `.data/operations-telemetry.json`, `.data/access-requests.json`, `.data/member-workspace-state.json`, `.data/collaboration-state.json`, `.data/organization-workspaces.json`, `.data/contract-legal-reviews.json`, `.data/admin-audit.json`, `.data/privacy-requests.json`, `.data/local-auth-accounts.json`, and `.data/local-file-uploads/`, or set `COFOUNDRY_LOCAL_DATA_DIR` to a durable writable host path.
+9. In mock/access-request mode, ensure the app process can write to `.data/operations-telemetry.json`, `.data/access-requests.json`, `.data/member-workspace-state.json`, `.data/collaboration-state.json`, `.data/organization-workspaces.json`, `.data/investment-workspaces.json`, `.data/contract-legal-reviews.json`, `.data/admin-audit.json`, `.data/privacy-requests.json`, `.data/local-auth-accounts.json`, and `.data/local-file-uploads/`, or set `COFOUNDRY_LOCAL_DATA_DIR` to a durable writable host path.
 
 ## Production control surfaces
 
@@ -297,7 +300,7 @@ Provisioning after merge:
 - Admins can mark member emails verified from `/admin/users` after invite, domain, or operator evidence review; the decision is persisted and auditable in mock/access-request mode and Supabase mode.
 - Access-request review has a mock-mode admin queue at `/admin/access-requests` and a Supabase-backed table path for later. Operators can approve, deny, reopen, and issue invite links while Supabase and Stripe remain disabled. Intake is serialized by normalized email, so simultaneous duplicate submissions reuse the existing active request and do not resend operator mail.
 - `/auth/recover` gives invited or existing members an intentional account-help path. It files a durable `auth-recovery` row into the access-request queue and sends the normal access-request notification when mail is configured; it does not expose automated password-reset tokens before the live auth/mail provider path is intentionally provisioned.
-- Account settings include a JSON data export, privacy-request submission, and trust-verification review requests. The export includes the member's own investment applications and privacy/trust requests without exposing internal operator notes or administrator identifiers. The settings UI no longer self-awards trust badges.
+- Account settings include a JSON data export, privacy-request submission, and trust-verification review requests. The export includes the member's applicant-projected investment workspaces and privacy/trust requests without exposing staff review notes, internal decision rationale, partner-preparation notes, internal operator notes, or administrator identifiers. The settings UI no longer self-awards trust badges.
 - Account exports include version-bound legal-review requests and responses for agreements in which the member participates. Reviewer links and signing material are never exported.
 - New startup opportunity posts cannot self-award owner or domain verification. Claimed proof methods put the listing under manual review until an operator or verification provider confirms the signal.
 - Admins can review privacy and trust-review requests at `/admin/privacy` from Supabase mode or the local mock-mode queue. A request can be marked reviewed with a handling note, but it can be marked resolved only after the operator explicitly confirms that the requested export, deletion, correction, visibility, or safety action was actually completed or documented outside CoFoundry. Both transitions create audit actions and user notifications.
@@ -331,7 +334,7 @@ Checked-in worker commands wrap those endpoints for systemd timers or cron:
 
 When Supabase is disabled, these endpoints write durable local telemetry rows to `operations-telemetry.json` with a default retention limit of 200 rows per collection. Local upload content is stored under `local-file-uploads/` in the same data directory and is not committed to source. Set `COFOUNDRY_OPERATIONS_RETENTION_LIMIT` to tune telemetry retention.
 
-Access-request rows are separately retained in `access-requests.json` with a default limit of 500. Collaboration workflow rows are retained in `collaboration-state.json` with a default per-collection limit of 1000. Version-bound legal-review rows are retained in `contract-legal-reviews.json` with a default limit of 5000. Admin audit rows and moderation overlays are retained in `admin-audit.json` with a default limit of 500. Privacy and trust-review requests are retained in `privacy-requests.json` with a default limit of 500. Set `COFOUNDRY_ACCESS_REQUEST_RETENTION_LIMIT`, `COFOUNDRY_COLLABORATION_RETENTION_LIMIT`, `COFOUNDRY_CONTRACT_LEGAL_REVIEW_RETENTION_LIMIT`, `COFOUNDRY_ADMIN_AUDIT_RETENTION_LIMIT`, and `COFOUNDRY_PRIVACY_REQUEST_RETENTION_LIMIT` to tune those queues, and keep `COFOUNDRY_LOCAL_DATA_DIR` on durable host storage if invite-only mock-mode accounts need to survive deployment restarts.
+Access-request rows are separately retained in `access-requests.json` with a default limit of 500. Collaboration workflow rows are retained in `collaboration-state.json` with a default per-collection limit of 1000. Team/Studio and investment aggregates use their own versioned local documents. Version-bound legal-review rows are retained in `contract-legal-reviews.json` with a default limit of 5000. Admin audit rows and moderation overlays are retained in `admin-audit.json` with a default limit of 500. Privacy and trust-review requests are retained in `privacy-requests.json` with a default limit of 500. Set `COFOUNDRY_ACCESS_REQUEST_RETENTION_LIMIT`, `COFOUNDRY_COLLABORATION_RETENTION_LIMIT`, `COFOUNDRY_CONTRACT_LEGAL_REVIEW_RETENTION_LIMIT`, `COFOUNDRY_ADMIN_AUDIT_RETENTION_LIMIT`, and `COFOUNDRY_PRIVACY_REQUEST_RETENTION_LIMIT` to tune those queues, and keep `COFOUNDRY_LOCAL_DATA_DIR` on durable host storage if invite-only mock-mode accounts need to survive deployment restarts.
 
 The server-side handoff prompt for wiring these jobs lives at `docs/server-ai-operations-prompt.md`; first-admin provisioning is covered in `docs/server-ai-admin-bootstrap-prompt.md`; live deploy catch-up is covered in `docs/server-ai-live-deploy-prompt.md` and can be rendered with exact release values through `npm run server:prompt:live-deploy`; the staged provider cutover prompt lives at `docs/server-ai-production-cutover-prompt.md`; the recurring operator checklist lives at `docs/operations-runbook.md`.
 
@@ -417,17 +420,20 @@ Environment-gated surfaces:
 - Review account helpers on `/auth/sign-in` appear only in local development or when `NUXT_PUBLIC_ENABLE_DEMO_ACCESS="true"`.
 - Development workspace reset controls on `/app/settings` appear only in local development or when `NUXT_PUBLIC_ENABLE_DEMO_ACCESS="true"`.
 - Mock billing mutations appear only in local development or deliberate staging demo access. Live accounts without Stripe use operator-managed billing.
-- `/app/investment` remains feature-flagged behind `NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE`.
+- `/app/investment`, `/app/investment/:id`, and the isolated `/investment-review` console remain feature-flagged behind `NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE`.
 - `/app/studio` and `/app/studio/:id` are Team-plan organization surfaces; creation and operational writes require a current Team sponsor, while an invited member can still accept or decline their own invitation.
 
-## Feature-flagged investment module
+## Feature-flagged fundraising and investment review
 
-The route exists at `front-end/src/pages/app/investment.vue`.
+Applicant routes live under `front-end/src/pages/app/investment`; staff routes live under the separate `front-end/src/pages/investment-review` layout and middleware boundary.
 
 - Disabled by default with `NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE="false"`
-- When enabled, startups can submit an investment application
-- The module is intentionally separated from the main paid SaaS workflow
-- It does not implement cap table management and does not force platform equity in V1
+- Hosted enablement fails closed unless Supabase persistence is active, `COFOUNDRY_INVESTMENT_PROGRAM_APPROVED="true"`, and `COFOUNDRY_FILE_SCANNER_COMMAND` is configured. Local development remains available for isolated workflow review without those production markers.
+- When enabled, founders can maintain readiness, rounds, a private applicant-owned prospect pipeline, interactions, secure data-room records, founder updates, and a supplemental-terms-backed program application.
+- Program staff receive the application, readiness, and round snapshot captured for the latest submitted revision plus records explicitly shared with the program. Later application drafts and private planning changes do not alter that snapshot. Applicant prospect and interaction records are excluded from staff projections; staff-only notes and internal rationale are excluded from applicant responses and exports.
+- Reviewers can assign cases, request information, open diligence, record internal and applicant-facing decisions, and prepare a regulated-partner handoff only after separate applicant consent.
+- CoFoundry does not discover or recommend investors, handle funds or securities, execute securities transactions, or receive transaction-based compensation. Program acceptance is not a financing commitment, and any offering or transaction proceeds outside CoFoundry through counsel and registered intermediaries when required.
+- The workflow does not implement cap-table management and does not force platform equity.
 
 ## Tests
 
@@ -435,7 +441,7 @@ Coverage includes:
 
 - utility tests for discovery filtering and contract generation
 - component tests for reusable UI primitives
-- organization transition, projection, permissions, concurrency, local persistence, legal-review queue, and migration tests
+- organization and investment transition, projection, permissions, concurrency, local persistence, legal-review queue, consent, privacy-boundary, and migration tests
 
 Run:
 

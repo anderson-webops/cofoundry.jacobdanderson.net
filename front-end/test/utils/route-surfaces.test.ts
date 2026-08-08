@@ -113,7 +113,7 @@ describe("route surfaces", () => {
   })
 
   it("keeps private layouts covered by noindex robots policy", () => {
-    for (const layout of ["admin", "app", "auth"]) {
+    for (const layout of ["admin", "app", "auth", "investment-review"]) {
       const source = readFileSync(resolve(layoutsRoot, `${layout}.vue`), "utf8")
 
       expect(source, `${layout} layout should set noindex`).toContain("noindex, nofollow")
@@ -129,6 +129,7 @@ describe("route surfaces", () => {
       const coveredByPrivateLayout = entry.route.startsWith("/admin")
         || entry.route.startsWith("/app")
         || entry.route.startsWith("/auth")
+        || entry.route.startsWith("/investment-review")
         || source.includes("layout: \"auth\"")
         || source.includes("layout: 'auth'")
 
@@ -183,7 +184,7 @@ describe("route surfaces", () => {
   })
 
   it("classifies private surfaces without hiding public health checks", () => {
-    for (const route of ["/admin/readiness", "/app/inbox", "/app/legal", "/auth/sign-in", "/auth/recover", "/legal-review/secret-token", "/onboarding", "/api/admin/readiness", "/api/legal-reviews/secret-token", "/api/operations/events", "/api/operations/mail-smoke", "/api/operations/realtime-events", "/api/workspace"])
+    for (const route of ["/admin/readiness", "/app/inbox", "/app/investment", "/app/legal", "/auth/sign-in", "/auth/recover", "/investment-review", "/investment-review/case-1", "/legal-review/secret-token", "/onboarding", "/api/admin/readiness", "/api/investment/workspaces", "/api/investment-review/workspaces", "/api/legal-reviews/secret-token", "/api/operations/events", "/api/operations/mail-smoke", "/api/operations/realtime-events", "/api/workspace"])
       expect(isPrivateSurfacePath(route), `${route} should be private`).toBe(true)
 
     const publicProfileRoute = getPublicRoutePaths(workspaceSeed).find(route => route.startsWith("/people/"))

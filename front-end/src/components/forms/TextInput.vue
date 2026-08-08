@@ -6,7 +6,9 @@ withDefaults(defineProps<{
   helper?: string
   error?: string
   required?: boolean
+  disabled?: boolean
 }>(), {
+  disabled: false,
   placeholder: "",
   type: "text",
   helper: "",
@@ -23,7 +25,7 @@ const model = defineModel<string>({ default: "" })
       <span>{{ label }}</span>
       <span v-if="required" class="muted text-xs">Required</span>
     </span>
-    <input v-model="model" :type="type" :placeholder="placeholder" class="field-control">
+    <input v-model="model" :type="type" :placeholder="placeholder" :disabled="disabled" :required="required" class="field-control">
     <p v-if="error" class="field-error">
       {{ error }}
     </p>

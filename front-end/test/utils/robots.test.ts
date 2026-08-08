@@ -26,6 +26,7 @@ describe("robots helpers", () => {
       expect(robotsTxt).toContain(`User-agent: ${userAgent}\nAllow: /`)
 
     expect(robotsTxt).toContain("Disallow: /email")
+    expect(robotsTxt).toContain("Disallow: /investment-review")
     expect(robotsTxt).toContain("Disallow: /api/admin")
     expect(robotsTxt).not.toContain("Disallow: /api\n")
     expect(robotsTxt).toContain("Sitemap: https://cofoundry.example/sitemap.xml")
