@@ -12,4 +12,5 @@ export const demoAuthAccounts: DemoAuthAccount[] = [
   { email: "malik@cofoundry.dev", password: "builder123", providers: ["email", "google"], userId: "user_malik" },
   { email: "ava@cofoundry.dev", password: "admin123", providers: ["email"], userId: "user_ava" },
   { email: "emma@cofoundry.dev", password: "operator123", providers: ["email"], userId: "user_emma" },
+  { email: "priya@cofoundry.dev", password: "reviewer123", providers: ["email"], userId: "user_priya" },
 ]

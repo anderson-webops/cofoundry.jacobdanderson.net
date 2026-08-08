@@ -15,6 +15,7 @@ import { resolveServerAppUrl } from "./app-url"
 import { sendPlainTextEmail } from "./contact"
 import { createContractLegalReviewUrl } from "./contract-legal-review-tokens"
 import { listContractLegalReviewsForReviewerEmail } from "./contract-legal-reviews"
+import { findRawInvestmentWorkspaceDocumentByResourceId } from "./investment-workspace-persistence"
 import { readLocalMemberWorkspaceStates } from "./local-member-workspace"
 import {
   createLocalOrganizationWorkspaceDocument,
@@ -336,7 +337,25 @@ export async function createOrganizationWorkspace(event: H3Event, session: Sessi
   return projectOrganizationWorkspaceForSession(created, session)!
 }
 
-function assertVisibleResource(seed: WorkspaceSeed, mutation: OrganizationMutation) {
+async function assertVisibleResource(
+  event: H3Event,
+  seed: WorkspaceSeed,
+  session: SessionUser,
+  organization: OrganizationWorkspaceDocument,
+  mutation: OrganizationMutation,
+) {
+  const investmentEnabled = useRuntimeConfig(event).public.featureInvestmentModule === true
+  const canonicalInvestmentResource = investmentEnabled && mutation.action === "link_resource" && mutation.resourceType === "investment_application"
+    ? await findRawInvestmentWorkspaceDocumentByResourceId(event, mutation.resourceId)
+    : investmentEnabled && mutation.action === "request_approval" && mutation.targetType === "investment_application"
+      ? await findRawInvestmentWorkspaceDocumentByResourceId(event, mutation.targetId)
+      : null
+  const canonicalInvestmentVisible = Boolean(canonicalInvestmentResource && (
+    canonicalInvestmentResource.applicantUserId === session.id
+    || canonicalInvestmentResource.organizationId === organization.organization.id
+    || organization.resourceLinks.some(link => link.resourceType === "investment_application" && [canonicalInvestmentResource.id, canonicalInvestmentResource.application.id].includes(link.resourceId))
+  ))
+
   if (mutation.action === "link_resource") {
     const visible = mutation.resourceType === "contract"
       ? seed.contracts.some(item => item.id === mutation.resourceId)
@@ -345,7 +364,7 @@ function assertVisibleResource(seed: WorkspaceSeed, mutation: OrganizationMutati
         : mutation.resourceType === "opportunity"
           ? seed.opportunities.some(item => item.id === mutation.resourceId)
           : mutation.resourceType === "investment_application"
-            ? seed.investmentApplications.some(item => item.id === mutation.resourceId)
+            ? canonicalInvestmentVisible || seed.investmentApplications.some(item => item.id === mutation.resourceId)
             : seed.matches.some(item => item.id === mutation.resourceId)
     if (!visible)
       throw createError({ statusCode: 404, statusMessage: "The selected workspace resource is not available to you." })
@@ -357,7 +376,7 @@ function assertVisibleResource(seed: WorkspaceSeed, mutation: OrganizationMutati
         ? seed.proposals.some(item => item.id === mutation.targetId)
         : mutation.targetType === "opportunity"
           ? seed.opportunities.some(item => item.id === mutation.targetId)
-          : seed.investmentApplications.some(item => item.id === mutation.targetId)
+          : canonicalInvestmentVisible || seed.investmentApplications.some(item => item.id === mutation.targetId)
     if (!visible)
       throw createError({ statusCode: 404, statusMessage: "The selected approval target is not available to you." })
   }
@@ -413,7 +432,7 @@ export async function mutateOrganizationWorkspace(
 
   if (["link_resource", "request_approval"].includes(mutation.action)) {
     const workspace = await loadMemberWorkspaceState(event, identity(session))
-    assertVisibleResource(projectWorkspaceForSession(workspace.seed, workspace.session), mutation)
+    await assertVisibleResource(event, projectWorkspaceForSession(workspace.seed, workspace.session), session, current, mutation)
   }
 
   let next: OrganizationWorkspaceDocument

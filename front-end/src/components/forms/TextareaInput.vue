@@ -5,7 +5,9 @@ withDefaults(defineProps<{
   helper?: string
   error?: string
   rows?: number
+  disabled?: boolean
 }>(), {
+  disabled: false,
   placeholder: "",
   helper: "",
   error: "",
@@ -20,7 +22,7 @@ const model = defineModel<string>({ default: "" })
     <span class="field-label">
       <span>{{ label }}</span>
     </span>
-    <textarea v-model="model" :rows="rows" :placeholder="placeholder" class="field-control resize-y" />
+    <textarea v-model="model" :rows="rows" :placeholder="placeholder" :disabled="disabled" class="field-control resize-y" />
     <p v-if="error" class="field-error">
       {{ error }}
     </p>

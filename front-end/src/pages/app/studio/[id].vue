@@ -16,6 +16,8 @@ const router = useRouter()
 const toastStore = useToastStore()
 const { authStore, workspaceStore } = useCurrentMember()
 const organizationStore = useOrganizationStore()
+const investmentStore = useInvestmentWorkspaceStore()
+const investmentEnabled = useFeatureFlag("featureInvestmentModule")
 const pending = ref(false)
 const dialog = ref<"" | "approval" | "decision" | "invite" | "link" | "policy" | "project" | "search" | "task" | "venture">("")
 const approvalToResolve = ref<OrganizationApprovalRequest | null>(null)
@@ -70,7 +72,15 @@ const availableResources = computed(() => [
     type: "opportunity" as const,
     versionId: null,
   })),
-  ...workspaceStore.data.investmentApplications.map(item => ({
+  ...(investmentEnabled.value
+    ? investmentStore.snapshot.workspaces.map(item => ({
+        id: item.application.id,
+        label: `Investment application · ${item.companyName}`,
+        type: "investment_application" as const,
+        versionId: null,
+      }))
+    : []),
+  ...workspaceStore.data.investmentApplications.filter(item => !investmentStore.snapshot.workspaces.some(workspace => workspace.opportunityId === item.opportunityId)).map(item => ({
     id: item.id,
     label: `Investment application · ${workspaceStore.data.opportunities.find(opportunity => opportunity.id === item.opportunityId)?.startupName || item.id}`,
     type: "investment_application" as const,
@@ -416,7 +426,10 @@ watch(workspace, (current) => {
 }, { immediate: true })
 
 onMounted(async () => {
-  await organizationStore.load(true)
+  await Promise.all([
+    organizationStore.load(true),
+    investmentEnabled.value ? investmentStore.load(true) : Promise.resolve(),
+  ])
 })
 </script>
 

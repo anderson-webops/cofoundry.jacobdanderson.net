@@ -52,10 +52,10 @@ export type LeadershipPreference = "wants_ceo_role" | "open_to_ceo_role" | "pref
 export type DecisionModelPreference = "ceo_decides_with_input" | "area_owner_decides" | "consensus_for_big_bets"
 export type DeadlockPreference = "advisor_tiebreaker" | "rotating_decider" | "board_mediator" | "neutral_operator"
 export type PriorObligationStatus = "none_known" | "possible_constraints" | "confirmed_constraints"
-export type FileUploadPurpose = "message_attachment" | "proposal_attachment" | "contract_attachment" | "trust_evidence"
+export type FileUploadPurpose = "message_attachment" | "proposal_attachment" | "contract_attachment" | "trust_evidence" | "investment_document"
 export type FileUploadStatus = "pending" | "uploaded" | "blocked" | "deleted"
 export type FileScanStatus = "pending" | "clean" | "flagged" | "failed" | "skipped"
-export type FileUploadRelatedType = "message" | "proposal" | "contract" | "profile" | "opportunity"
+export type FileUploadRelatedType = "message" | "proposal" | "contract" | "profile" | "opportunity" | "investment_workspace"
 
 export interface NotificationPreferences {
   unreadDigestEmail: boolean

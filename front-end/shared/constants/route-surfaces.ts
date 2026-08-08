@@ -24,6 +24,7 @@ export const privateWorkspaceRoutePrefixes = [
   "/admin",
   "/email",
   "/legal-review",
+  "/investment-review",
 ] as const
 
 export const privateApiRoutePrefixes = [
@@ -36,6 +37,8 @@ export const privateApiRoutePrefixes = [
   "/api/files",
   "/api/inbox",
   "/api/investment-applications",
+  "/api/investment",
+  "/api/investment-review",
   "/api/legal-reviews",
   "/api/notifications",
   "/api/operations",
@@ -56,9 +59,14 @@ export const environmentGatedSurfaces = [
     condition: "Shown only for local development or when NUXT_PUBLIC_ENABLE_DEMO_ACCESS=\"true\".",
   },
   {
-    label: "Investment module",
+    label: "Fundraising workspace",
     route: "/app/investment",
     condition: "Shown only when NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE=\"true\".",
+  },
+  {
+    label: "Investment review console",
+    route: "/investment-review",
+    condition: "Shown only to admin and investor-admin accounts when NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE=\"true\".",
   },
 ] as const
 

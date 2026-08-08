@@ -30,7 +30,7 @@ const investmentEnabled = useFeatureFlag("featureInvestmentModule")
         active-class="bg-[var(--accent-soft)] text-[var(--text)]"
       >
         <span class="i-carbon-currency" />
-        <span>Investment</span>
+        <span>Fundraising</span>
       </NuxtLink>
     </nav>
 

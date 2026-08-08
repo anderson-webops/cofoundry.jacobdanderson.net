@@ -16,6 +16,7 @@ usePageSeo("Sign in")
 const authStore = useAuthStore()
 const toastStore = useToastStore()
 const route = useRoute()
+const runtimeConfig = useRuntimeConfig()
 const { buildAccessRequestPath, policy } = useProductAccess()
 const accessRequestPath = buildAccessRequestPath("auth-sign-in", "access")
 const talkToTeamPath = buildAccessRequestPath("auth-sign-in", "contact")
@@ -60,7 +61,11 @@ async function submitForm() {
       message: `Welcome back, ${session.name}.`,
       tone: "success",
     })
-    await navigateTo(session.onboardingCompleted ? "/app" : "/onboarding")
+    await navigateTo(session.onboardingCompleted
+      ? session.role === "investor_admin"
+        ? runtimeConfig.public.featureInvestmentModule === true ? "/investment-review" : "/"
+        : "/app"
+      : "/onboarding")
   }
   catch {}
 }

@@ -465,6 +465,11 @@ export async function listLocalFileUploadsByRelated(relatedItems: Array<{ relate
     .map(localFileUploadToDomain)
 }
 
+export async function getLocalFileUploadById(uploadId: string) {
+  const row = (await readStore()).fileUploads.find(item => item.id === uploadId)
+  return row ? localFileUploadToDomain(row) : null
+}
+
 export async function recordLocalBackupRun(payload: OperationsBackupRunPayload) {
   return updateStore((store) => {
     const now = new Date().toISOString()

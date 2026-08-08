@@ -99,7 +99,7 @@ export const faqs = [
   },
   {
     question: "Does CoFoundry take equity in every relationship?",
-    answer: "No. V1 is subscription software. Teams may optionally apply for a future investment program if the feature is enabled, but platform equity is not part of the core product.",
+    answer: "No. The core product is subscription software. When the separate fundraising workspace is enabled, teams may optionally submit a program application, but platform equity is not part of the subscription product and no financing is guaranteed.",
   },
   {
     question: "Can I keep my profile private while browsing?",

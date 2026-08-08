@@ -9,7 +9,7 @@ import { isLocalDevelopmentEnvironment, readPublicEnvironment } from "~/shared/u
 import { isOAuthProviderEnabled, normalizeOAuthProvider } from "~/shared/utils/oauth-providers"
 import { resolveProductAccessPolicy, areSeededReviewCredentialsEnabled as resolveSeededReviewCredentialsEnabled } from "~/shared/utils/product-access"
 import { decodeSessionUser, encodeSessionUser, sessionCookieName, sessionSignatureCookieName } from "~/shared/utils/session"
-import { resolveActiveSessionFromSeed } from "~/shared/utils/session-authority"
+import { resolveActiveSessionFromSeed, resolveSeededStaffSessionFromSeed } from "~/shared/utils/session-authority"
 import { signInSchema, signUpSchema } from "~/shared/utils/validation"
 import { buildSessionUser } from "~/shared/utils/workspace"
 import { buildDraftMemberWorkspaceState, buildMemberWorkspaceState, resolveSessionUserFromWorkspace } from "~/shared/utils/workspace-persistence"
@@ -38,6 +38,29 @@ interface SupabaseSessionUserRow {
   role: SessionUser["role"]
   suspended_at: string | null
   verified_email: boolean
+}
+
+export function resolveProvisionedInvestmentReviewerSession(
+  persistedUser: SupabaseSessionUserRow | null,
+  input: SessionUser,
+) {
+  if (
+    !persistedUser
+    || persistedUser.role !== "investor_admin"
+    || persistedUser.suspended_at
+    || !persistedUser.verified_email
+    || persistedUser.email.trim().toLowerCase() !== input.email.trim().toLowerCase()
+  ) {
+    return null
+  }
+
+  return {
+    ...input,
+    email: persistedUser.email.trim().toLowerCase(),
+    id: persistedUser.id,
+    onboardingCompleted: persistedUser.onboarding_completed,
+    role: persistedUser.role,
+  } satisfies SessionUser
 }
 
 const registeredAccounts = new Map<string, RegisteredAccount>()
@@ -193,6 +216,10 @@ async function readSupabaseSessionUser(event: H3Event, decodedSession: SessionUs
 }
 
 async function requireActiveSessionFromWorkspace(event: H3Event, session: SessionUser) {
+  const seededStaffSession = resolveSeededStaffSessionFromSeed(workspaceSeed, session)
+  if (seededStaffSession)
+    return seededStaffSession
+
   const workspace = await loadMemberWorkspaceState(event, buildIdentityInput(session))
   const activeSession = resolveActiveSessionFromSeed(workspace.seed, workspace.session)
 
@@ -243,15 +270,30 @@ async function createSessionFromSupabaseAuthUser(event: H3Event, user: SupabaseA
     })
   }
 
+  const authSession: SessionUser = {
+    id: user.id,
+    email: normalizedEmail,
+    name: getSupabaseOAuthDisplayName(user, normalizedEmail),
+    onboardingCompleted: false,
+    role: "founder",
+    subscriptionPlan: "free",
+  }
+  const persistedUser = await readSupabaseSessionUser(event, authSession)
+  if (persistedUser?.role === "investor_admin") {
+    const reviewerSession = resolveProvisionedInvestmentReviewerSession(persistedUser, authSession)
+    if (!reviewerSession) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: "This account is not active.",
+      })
+    }
+    return reviewerSession
+  }
+
   const { seed, session, state } = await loadMemberWorkspaceState(
     event,
     {
-      id: user.id,
-      email: normalizedEmail,
-      name: getSupabaseOAuthDisplayName(user, normalizedEmail),
-      onboardingCompleted: false,
-      role: "founder",
-      subscriptionPlan: "free",
+      ...authSession,
       verifiedEmail,
     },
     {
@@ -360,6 +402,10 @@ export async function readAuthoritativeSession(event: H3Event) {
     if (!baseSession || baseSession.email !== decodedSession.email)
       return null
 
+    const seededStaffSession = resolveSeededStaffSessionFromSeed(workspaceSeed, baseSession)
+    if (seededStaffSession)
+      return seededStaffSession
+
     const { seed, session } = await loadMemberWorkspaceState(event, buildIdentityInput(baseSession))
     const activeSession = resolveActiveSessionFromSeed(seed, session)
     return activeSession?.email === decodedSession.email ? activeSession : null
@@ -368,6 +414,9 @@ export async function readAuthoritativeSession(event: H3Event) {
   const persistedUser = await readSupabaseSessionUser(event, decodedSession)
   if (!persistedUser || persistedUser.email !== decodedSession.email || persistedUser.suspended_at)
     return null
+
+  if (persistedUser.role === "investor_admin")
+    return resolveProvisionedInvestmentReviewerSession(persistedUser, decodedSession)
 
   const { seed, session } = await loadMemberWorkspaceState(event, {
     id: persistedUser.id,

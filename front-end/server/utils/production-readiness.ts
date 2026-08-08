@@ -117,6 +117,7 @@ export const productionReadinessCheckIds: ReadonlySet<string> = new Set([
   "environment-validation",
   "external-auth-provider",
   "file-scanning",
+  "investment-program-gate",
   "launch-mode",
   "local-durable-store",
   "mail-transport",
@@ -501,6 +502,17 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
       "COFOUNDRY_FILE_SCANNER_COMMAND=\"clamscan --no-summary\"\nsystemctl start cofoundry-operations-scan.service\n# Direct fallback: npm run operations:scan -- --limit 25",
     ),
     task(
+      "investment-program-provisioning",
+      "Investment program enablement",
+      checkById.get("investment-program-gate")?.status || "info",
+      checkById.get("investment-program-gate")?.summary || "Feature intentionally disabled",
+      "Hosted fundraising review requires service-role-only Supabase persistence, an approved program decision, private-file scanning, counsel-reviewed supplemental terms, and applicant/reviewer smoke evidence.",
+      publicEnvironment.featureInvestmentModule
+        ? "Resolve every investment program gate and verify applicant/staff data projections before keeping the feature enabled."
+        : "Keep the feature disabled until the separate investment release and operator approval are complete.",
+      "NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE=true\nNUXT_PUBLIC_BACKEND_MODE=supabase\nCOFOUNDRY_INVESTMENT_PROGRAM_APPROVED=true\nCOFOUNDRY_FILE_SCANNER_COMMAND=\"clamscan --no-summary\"",
+    ),
+    task(
       "contract-envelope-provisioning",
       "Contract envelope provider evidence",
       checkById.get("contract-envelope-evidence")?.status || "info",
@@ -632,6 +644,9 @@ function buildCutoverPhases(input: ProductionReadinessInput, checkById: Map<stri
         checkById.get("stripe-webhook-evidence"),
       ])
     : "info"
+  const investmentProgramStatus = publicEnvironment.featureInvestmentModule
+    ? checkById.get("investment-program-gate")?.status || "fail"
+    : "info"
 
   return [
     phase(
@@ -703,6 +718,17 @@ function buildCutoverPhases(input: ProductionReadinessInput, checkById: Map<stri
         : "Keep `NUXT_PUBLIC_BACKEND_MODE=mock` until staging proves Supabase migrations, auth, admin bootstrap, and rollback.",
     ),
     phase(
+      "investment-program-cutover",
+      "Investment program cutover",
+      investmentProgramStatus,
+      publicEnvironment.featureInvestmentModule ? "Feature enabled" : "Not enabled",
+      "Applicant fundraising tools and the isolated review console require a distinct legal, privacy, storage, scanning, role, and regulated-partner release boundary.",
+      publicEnvironment.featureInvestmentModule
+        ? "Confirm the environment gate, migration, applicant and reviewer browser evidence, file isolation, supplemental terms, and rollback path before public use."
+        : "Keep the feature flag off until counsel and the accountable operator approve the live program.",
+      "docs/operations-runbook.md",
+    ),
+    phase(
       "external-auth-cutover",
       "External auth cutover",
       externalAuthStatus,
@@ -741,6 +767,7 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
   const hasDeploymentIdentity = Boolean(input.deploymentMetadata.release || input.deploymentMetadata.commitSha)
   const deploymentIdentityStatus: ProductionReadinessStatus = hasDeploymentIdentity ? "pass" : input.isLocalDevelopment ? "info" : "warn"
   const stripeMode = publicEnvironment.billingMode === "stripe"
+  const investmentEnvironmentErrors = input.environmentValidationErrors.filter(error => /INVESTMENT|FILE_SCANNER|SUPABASE/.test(error))
   const accessQueue = openAccessQueueState(input.accessRequests, nowTime)
   const privacyQueue = openPrivacyQueueState(input.privacyRequests, nowTime)
   const latestBackup = latestRow(input.operations.backupRuns, ["started_at", "created_at"])
@@ -950,6 +977,24 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
         ? "The public deployment remains in the intended marketing/access-request shell unless demo access is deliberately enabled."
         : "At least one live service mode is enabled; the environment contract check must remain green.",
       "Keep Supabase and Stripe disabled until their provisioning, migrations, worker jobs, and rollback paths are verified.",
+    ),
+    check(
+      "investment-program-gate",
+      "Investment program gate",
+      !publicEnvironment.featureInvestmentModule
+        ? "info"
+        : investmentEnvironmentErrors.length
+          ? "fail"
+          : "pass",
+      publicEnvironment.featureInvestmentModule
+        ? investmentEnvironmentErrors.length ? "Enabled with incomplete safeguards" : "Enabled with required host markers"
+        : "Feature intentionally disabled",
+      publicEnvironment.featureInvestmentModule
+        ? investmentEnvironmentErrors.join(" ") || "Supabase durability, explicit program approval, and the file scanner are configured for the separately governed workflow."
+        : "The applicant and reviewer routes remain unavailable while the separate program release is not active.",
+      publicEnvironment.featureInvestmentModule
+        ? "Resolve any listed gate, then verify migration, legal approval, role isolation, and browser evidence."
+        : "Keep NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE=false until the separate cutover benchmark passes.",
     ),
     check(
       "public-app-url",

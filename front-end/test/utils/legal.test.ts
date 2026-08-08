@@ -26,6 +26,7 @@ describe("legal content", () => {
     expect(termsKeyNotes).toHaveLength(6)
     expect(termsKeyNotes.some(note => note.title === "Legal review stays user-directed")).toBe(true)
     expect(termsKeyNotes.some(note => note.title === "Team workspaces are role-controlled")).toBe(true)
+    expect(termsKeyNotes.some(note => note.title === "Optional investment workspace is separate")).toBe(true)
   })
 
   it("covers the core legal surfaces for CoFoundry", () => {
@@ -41,12 +42,13 @@ describe("legal content", () => {
 
   it("defines a current privacy update date and key privacy notes", () => {
     expect(privacyLastUpdated).toBe("August 8, 2026")
-    expect(privacyKeyNotes).toHaveLength(4)
-    expect(privacyVisibilityTiers).toHaveLength(5)
-    expect(privacyDataCategories).toHaveLength(7)
-    expect(privacyRetentionRows).toHaveLength(6)
+    expect(privacyKeyNotes).toHaveLength(5)
+    expect(privacyVisibilityTiers).toHaveLength(7)
+    expect(privacyDataCategories).toHaveLength(8)
+    expect(privacyRetentionRows).toHaveLength(7)
     expect(privacyDataCategories.find(row => row.category === "Messages, proposals, and contract data")?.examples).toContain("legal-review contact details")
     expect(privacyDataCategories.find(row => row.category === "Organization, project, and governance data")?.visibility).toContain("assigned role")
+    expect(privacyDataCategories.find(row => row.category === "Fundraising, application, and diligence data")?.visibility).toContain("application, readiness, and round snapshot for that revision")
   })
 
   it("covers the core privacy surfaces for CoFoundry", () => {

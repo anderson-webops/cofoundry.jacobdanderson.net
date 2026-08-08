@@ -1,8 +1,39 @@
 import { describe, expect, it } from "vitest"
-import { inferSupabaseOAuthProvider, validateSupabaseOAuthRedirectUrl } from "../../server/utils/auth"
+import { inferSupabaseOAuthProvider, resolveProvisionedInvestmentReviewerSession, validateSupabaseOAuthRedirectUrl } from "../../server/utils/auth"
 import { isOAuthProviderEnabled, normalizeOAuthProvider, readConfiguredOAuthProviders } from "../../shared/utils/oauth-providers"
 
 describe("oauth provider configuration", () => {
+  it("uses the provisioned Supabase role for verified investment reviewers", () => {
+    const input = {
+      email: "priya@cofoundry.dev",
+      id: "user_priya",
+      name: "Priya Shah",
+      onboardingCompleted: false,
+      role: "founder" as const,
+      subscriptionPlan: "free" as const,
+    }
+
+    expect(resolveProvisionedInvestmentReviewerSession({
+      email: input.email,
+      id: input.id,
+      onboarding_completed: true,
+      role: "investor_admin",
+      suspended_at: null,
+      verified_email: true,
+    }, input)).toMatchObject({
+      onboardingCompleted: true,
+      role: "investor_admin",
+    })
+    expect(resolveProvisionedInvestmentReviewerSession({
+      email: input.email,
+      id: input.id,
+      onboarding_completed: true,
+      role: "investor_admin",
+      suspended_at: null,
+      verified_email: false,
+    }, input)).toBeNull()
+  })
+
   it("normalizes only supported production OAuth providers", () => {
     expect(normalizeOAuthProvider("github")).toBe("github")
     expect(normalizeOAuthProvider("Google")).toBe("google")

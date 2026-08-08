@@ -255,9 +255,17 @@ try {
   assert([302, 303, 307, 308].includes(adminPage.response.status), "/admin/readiness should redirect unauthenticated users")
   assertPrivateResponsePolicy(adminPage.response, "/admin/readiness redirect")
 
+  const investmentReviewPage = await fetchText("/investment-review", { redirect: "manual" })
+  assert([302, 303, 307, 308].includes(investmentReviewPage.response.status), "/investment-review should redirect unauthenticated users")
+  assertPrivateResponsePolicy(investmentReviewPage.response, "/investment-review redirect")
+
   const adminApi = await fetchJson("/api/admin/readiness")
   assert(adminApi.response.status === 401, "/api/admin/readiness should fail closed without admin session")
   assertPrivateResponsePolicy(adminApi.response, "/api/admin/readiness unauthorized response")
+
+  const investmentReviewApi = await fetchJson("/api/investment-review/workspaces")
+  assert(investmentReviewApi.response.status === 401, "/api/investment-review/workspaces should fail closed without a reviewer session")
+  assertPrivateResponsePolicy(investmentReviewApi.response, "/api/investment-review/workspaces unauthorized response")
 
   const workspaceEvents = await fetchJson("/api/workspace/events")
   assert(workspaceEvents.response.status === 401, "/api/workspace/events should fail closed without a member session")
@@ -296,6 +304,7 @@ try {
   assert(robots.response.status === 200, "/robots.txt should return 200")
   assert(robots.text.includes("Disallow: /admin"), "robots.txt should disallow admin routes")
   assert(robots.text.includes("Disallow: /app"), "robots.txt should disallow app routes")
+  assert(robots.text.includes("Disallow: /investment-review"), "robots.txt should disallow investment-review routes")
   assertNoLocalUrlLeak(robots.text, "robots.txt")
   const sitemapUrl = extractSitemapUrl(robots.text)
   assert(sitemapUrl.endsWith("/sitemap.xml"), "robots.txt should advertise an absolute sitemap URL")
@@ -307,7 +316,7 @@ try {
   assertNoLocalUrlLeak(sitemap.text, "sitemap.xml")
   assert(sitemap.text.includes(`<loc>${canonicalBaseUrl}/</loc>`), "sitemap should include home page")
   assert(sitemap.text.includes(`<loc>${canonicalBaseUrl}/find-cofounder</loc>`), "sitemap should include public discovery page")
-  assert(includesNone(sitemap.text, ["/admin", "/app", "/api/admin", "/auth/sign-in"]), "sitemap should not include private/auth/admin routes")
+  assert(includesNone(sitemap.text, ["/admin", "/app", "/api/admin", "/auth/sign-in", "/investment-review"]), "sitemap should not include private/auth/admin routes")
 
   const securityTxt = await fetchText("/.well-known/security.txt")
   assert(securityTxt.response.status === 200, "/.well-known/security.txt should return 200")

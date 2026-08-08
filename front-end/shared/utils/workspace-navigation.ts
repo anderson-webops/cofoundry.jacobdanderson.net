@@ -204,8 +204,8 @@ const workspaceRouteMatchers: WorkspaceRouteMatcher[] = [
   {
     prefix: "/app/investment",
     areaLabel: "Workspace",
-    title: "Investment",
-    description: "Review the gated investment module without mixing it into the main team-formation path.",
+    title: "Fundraising",
+    description: "Manage the separately gated fundraising workspace without mixing it into the main team-formation path.",
   },
   {
     prefix: "/app",

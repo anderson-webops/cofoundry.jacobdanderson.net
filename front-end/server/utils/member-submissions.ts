@@ -1,10 +1,10 @@
 import type { H3Event } from "h3"
-import type { InvestmentApplication, Notification, Report, SessionUser } from "../../shared/types/domain"
+import type { Notification, Report, SessionUser } from "../../shared/types/domain"
 import { randomUUID } from "node:crypto"
 import { getReportPriority } from "../../shared/utils/formation"
 import { projectWorkspaceForSession } from "../../shared/utils/workspace-authorization"
 import { listAdminSecurityUsers } from "./admin-persistence"
-import { recordLocalInvestmentApplication, recordLocalReportSubmission } from "./local-collaboration-store"
+import { recordLocalReportSubmission } from "./local-collaboration-store"
 import { loadMemberWorkspaceState } from "./member-workspace"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
 
@@ -140,82 +140,5 @@ export async function createMemberReport(event: H3Event, session: SessionUser, p
   return {
     ...await reloadProjectedWorkspace(event, session),
     report,
-  }
-}
-
-export async function createMemberInvestmentApplication(event: H3Event, session: SessionUser, payload: {
-  deckLink: string
-  opportunityId: string
-  raiseAmount: string
-  reason: string
-  teamSummary: string
-  traction: string
-}) {
-  const workspace = await loadMemberWorkspaceState(event, buildIdentity(session))
-  const opportunity = workspace.seed.opportunities.find(item => item.id === payload.opportunityId)
-  if (!opportunity || opportunity.ownerUserId !== session.id)
-    throw createError({ statusCode: 404, statusMessage: "Choose one of your own startup opportunities." })
-  if (!opportunity.isOpen)
-    throw createError({ statusCode: 409, statusMessage: "Investment applications require an open opportunity." })
-  if (workspace.seed.investmentApplications.some(application =>
-    application.applicantUserId === session.id
-    && application.opportunityId === payload.opportunityId
-    && !["declined"].includes(application.status),
-  )) {
-    throw createError({ statusCode: 409, statusMessage: "An active investment application already exists for this opportunity." })
-  }
-
-  const application: InvestmentApplication = {
-    id: createId("investment_application"),
-    opportunityId: payload.opportunityId,
-    applicantUserId: session.id,
-    status: "submitted",
-    raiseAmount: payload.raiseAmount,
-    traction: payload.traction,
-    deckLink: payload.deckLink,
-    teamSummary: payload.teamSummary,
-    reason: payload.reason,
-    createdAt: new Date().toISOString(),
-  }
-
-  if (!isSupabaseEnabled(event)) {
-    await recordLocalInvestmentApplication(application)
-  }
-  else {
-    const adminClient = createSupabaseAdminClient(event)
-    if (!adminClient)
-      throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
-
-    const { error } = await adminClient.rpc("cofoundry_submit_investment_application", {
-      p_applicant_user_id: application.applicantUserId,
-      p_created_at: application.createdAt,
-      p_deck_link: application.deckLink,
-      p_id: application.id,
-      p_opportunity_id: application.opportunityId,
-      p_raise_amount: application.raiseAmount,
-      p_reason: application.reason,
-      p_team_summary: application.teamSummary,
-      p_traction: application.traction,
-    })
-    if (error) {
-      const duplicate = error.message.includes("active investment application")
-      const closed = error.message.includes("open opportunity")
-      const ownership = error.message.includes("own startup opportunities")
-      throw createError({
-        statusCode: duplicate || closed ? 409 : ownership ? 404 : 400,
-        statusMessage: duplicate
-          ? "An active investment application already exists for this opportunity."
-          : closed
-            ? "Investment applications require an open opportunity."
-            : ownership
-              ? "Choose one of your own startup opportunities."
-              : "The investment application could not be submitted.",
-      })
-    }
-  }
-
-  return {
-    application,
-    ...await reloadProjectedWorkspace(event, session),
   }
 }

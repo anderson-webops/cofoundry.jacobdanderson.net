@@ -242,6 +242,8 @@ export function collectEnvironmentValidationErrors(env: EnvironmentSource) {
   const parsedAppInstanceCount = Number.parseInt(appInstanceCount, 10)
   const realtimeFanoutUrl = readValue(env, "COFOUNDRY_REALTIME_FANOUT_URL")
   const realtimeFanoutToken = readValue(env, "COFOUNDRY_REALTIME_FANOUT_TOKEN")
+  const investmentProgramApproved = readValue(env, "COFOUNDRY_INVESTMENT_PROGRAM_APPROVED")
+  const fileScannerCommand = readValue(env, "COFOUNDRY_FILE_SCANNER_COMMAND")
   const backendHost = readValue(env, "BACKEND_HOST") || "127.0.0.1"
   const configuredSupportEmail = readValue(env, "NUXT_PUBLIC_SUPPORT_EMAIL")
 
@@ -264,6 +266,18 @@ export function collectEnvironmentValidationErrors(env: EnvironmentSource) {
 
   if (!isLocalDevelopmentEnvironment(env) && publicEnvironment.enableDemoAccess)
     errors.push("NUXT_PUBLIC_ENABLE_DEMO_ACCESS must be false outside local development.")
+
+  if (investmentProgramApproved && !["false", "true"].includes(investmentProgramApproved))
+    errors.push("COFOUNDRY_INVESTMENT_PROGRAM_APPROVED must be true or false when it is set.")
+
+  if (!isLocalDevelopmentEnvironment(env) && publicEnvironment.featureInvestmentModule) {
+    if (publicEnvironment.backendMode !== "supabase")
+      errors.push("NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE=\"true\" requires NUXT_PUBLIC_BACKEND_MODE=\"supabase\" outside local development.")
+    if (investmentProgramApproved !== "true")
+      errors.push("COFOUNDRY_INVESTMENT_PROGRAM_APPROVED must be true before the investment module is enabled outside local development.")
+    if (!fileScannerCommand)
+      errors.push("COFOUNDRY_FILE_SCANNER_COMMAND is required before the investment module is enabled outside local development.")
+  }
 
   if (trustProxyHeaders && !["false", "true"].includes(trustProxyHeaders))
     errors.push("COFOUNDRY_TRUST_PROXY_HEADERS must be true or false when it is set.")

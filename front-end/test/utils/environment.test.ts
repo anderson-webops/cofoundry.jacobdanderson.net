@@ -69,6 +69,32 @@ describe("environment helpers", () => {
     expect(isLocalDevelopmentEnvironment({ NUXT_PUBLIC_APP_URL: "http://127.0.0.1:3000" })).toBe(true)
   })
 
+  it("keeps the investment workspace available for isolated local review", () => {
+    const errors = collectEnvironmentValidationErrors({
+      NUXT_PUBLIC_APP_URL: "http://127.0.0.1:3000",
+      NUXT_PUBLIC_BACKEND_MODE: "mock",
+      NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE: "true",
+    })
+
+    expect(errors).not.toContain("NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE=\"true\" requires NUXT_PUBLIC_BACKEND_MODE=\"supabase\" outside local development.")
+    expect(errors).not.toContain("COFOUNDRY_INVESTMENT_PROGRAM_APPROVED must be true before the investment module is enabled outside local development.")
+    expect(errors).not.toContain("COFOUNDRY_FILE_SCANNER_COMMAND is required before the investment module is enabled outside local development.")
+  })
+
+  it("fails hosted investment enablement without durability, approval, and scanning", () => {
+    const errors = collectEnvironmentValidationErrors({
+      COFOUNDRY_INVESTMENT_PROGRAM_APPROVED: "pending",
+      NUXT_PUBLIC_APP_URL: "https://cofoundry.example",
+      NUXT_PUBLIC_BACKEND_MODE: "mock",
+      NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE: "true",
+    })
+
+    expect(errors).toContain("NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE=\"true\" requires NUXT_PUBLIC_BACKEND_MODE=\"supabase\" outside local development.")
+    expect(errors).toContain("COFOUNDRY_INVESTMENT_PROGRAM_APPROVED must be true or false when it is set.")
+    expect(errors).toContain("COFOUNDRY_INVESTMENT_PROGRAM_APPROVED must be true before the investment module is enabled outside local development.")
+    expect(errors).toContain("COFOUNDRY_FILE_SCANNER_COMMAND is required before the investment module is enabled outside local development.")
+  })
+
   it("reads safe deployment metadata from canonical or deploy-provider env", () => {
     expect(readDeploymentMetadata({
       BUILD_TIMESTAMP: "2026-06-12T11:55:00.000Z",

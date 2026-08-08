@@ -136,10 +136,24 @@ test("environment validation rejects malformed public support addresses", () => 
   assert.ok(errors.includes("NUXT_PUBLIC_SUPPORT_EMAIL must be a valid single email address."))
 })
 
+test("backend environment gates hosted investment review on durability, approval, and scanning", () => {
+  const errors = collectEnvironmentValidationErrors({
+    NUXT_PUBLIC_APP_URL: "https://cofoundry.example",
+    NUXT_PUBLIC_BACKEND_MODE: "mock",
+    NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE: "true",
+  })
+
+  assert.ok(errors.includes("NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE=\"true\" requires NUXT_PUBLIC_BACKEND_MODE=\"supabase\" outside local development."))
+  assert.ok(errors.includes("COFOUNDRY_INVESTMENT_PROGRAM_APPROVED must be true before the investment module is enabled outside local development."))
+  assert.ok(errors.includes("COFOUNDRY_FILE_SCANNER_COMMAND is required before the investment module is enabled outside local development."))
+})
+
 test("metadata endpoint reflects env-driven flags", async () => {
   const previousBackendMode = process.env.NUXT_PUBLIC_BACKEND_MODE
   const previousBillingMode = process.env.NUXT_PUBLIC_BILLING_MODE
   const previousInvestment = process.env.NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE
+  const previousInvestmentProgramApproved = process.env.COFOUNDRY_INVESTMENT_PROGRAM_APPROVED
+  const previousFileScannerCommand = process.env.COFOUNDRY_FILE_SCANNER_COMMAND
   const previousDemoAccess = process.env.NUXT_PUBLIC_ENABLE_DEMO_ACCESS
   const previousAppUrl = process.env.NUXT_PUBLIC_APP_URL
   const previousSupportEmail = process.env.NUXT_PUBLIC_SUPPORT_EMAIL
@@ -160,6 +174,8 @@ test("metadata endpoint reflects env-driven flags", async () => {
   process.env.NUXT_PUBLIC_ENABLE_DEMO_ACCESS = "false"
   process.env.NUXT_PUBLIC_APP_URL = "https://cofoundry.example"
   process.env.NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE = "true"
+  process.env.COFOUNDRY_INVESTMENT_PROGRAM_APPROVED = "true"
+  process.env.COFOUNDRY_FILE_SCANNER_COMMAND = "clamscan --no-summary"
   process.env.NUXT_PUBLIC_SUPPORT_EMAIL = "support@cofoundry.dev"
   process.env.NUXT_PUBLIC_SUPABASE_URL = "https://cofoundry.supabase.co"
   process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY = "public-anon-key"
@@ -199,6 +215,8 @@ test("metadata endpoint reflects env-driven flags", async () => {
     restoreEnvValue("NUXT_PUBLIC_ENABLE_DEMO_ACCESS", previousDemoAccess)
     restoreEnvValue("NUXT_PUBLIC_APP_URL", previousAppUrl)
     restoreEnvValue("NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE", previousInvestment)
+    restoreEnvValue("COFOUNDRY_INVESTMENT_PROGRAM_APPROVED", previousInvestmentProgramApproved)
+    restoreEnvValue("COFOUNDRY_FILE_SCANNER_COMMAND", previousFileScannerCommand)
     restoreEnvValue("NUXT_PUBLIC_SUPPORT_EMAIL", previousSupportEmail)
     restoreEnvValue("NUXT_PUBLIC_SUPABASE_URL", previousSupabaseUrl)
     restoreEnvValue("NUXT_PUBLIC_SUPABASE_ANON_KEY", previousSupabaseAnonKey)

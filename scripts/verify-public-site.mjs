@@ -39,7 +39,7 @@ const expectedDynamicSitemapPrefixes = [
   "/startups/",
   "/trust/",
 ]
-const privateSitemapNeedles = ["/admin", "/app", "/api/admin", "/auth/sign-in"]
+const privateSitemapNeedles = ["/admin", "/app", "/api/admin", "/auth/sign-in", "/investment-review"]
 const ignoredHrefSchemes = ["blob:", "data:", "javascript:", "mailto:", "sms:", "tel:"]
 const ignoredLinkedPathPrefixes = [
   "/_nuxt/",
@@ -51,7 +51,7 @@ const ignoredLinkedPathPrefixes = [
   "/sitemap.xml",
   "/.well-known/security.txt",
 ]
-const publicNavigationBlocklistPrefixes = ["/admin", "/app", "/api", "/email", "/onboarding"]
+const publicNavigationBlocklistPrefixes = ["/admin", "/app", "/api", "/email", "/investment-review", "/onboarding"]
 const allowedNoindexLinkedRoutePrefixes = ["/auth"]
 const localUrlNeedles = ["localhost", "127.0.0.1", "[::1]"]
 const forbiddenPublicCopyPatterns = [
@@ -513,6 +513,7 @@ assert(robots.response.status === 200, "/robots.txt should return 200")
 assert(robots.text.includes("Disallow: /admin"), "robots.txt should disallow admin routes")
 assert(robots.text.includes("Disallow: /app"), "robots.txt should disallow app routes")
 assert(robots.text.includes("Disallow: /auth"), "robots.txt should disallow auth routes")
+assert(robots.text.includes("Disallow: /investment-review"), "robots.txt should disallow investment-review routes")
 assertNoPublicLocalUrlLeak(robots.text, "robots.txt")
 const sitemapUrl = extractSitemapUrl(robots.text)
 assert(sitemapUrl, "robots.txt should advertise sitemap")
@@ -557,10 +558,19 @@ assert([302, 303, 307, 308].includes(appPage.response.status), "/app should redi
 assert(hasNoindex(appPage.response, appPage.text), "/app redirect should be noindex")
 assertPrivateResponsePolicy(appPage.response, "/app redirect")
 
+const investmentReviewPage = await fetchText("/investment-review", { redirect: "manual" })
+assert([302, 303, 307, 308].includes(investmentReviewPage.response.status), "/investment-review should redirect unauthenticated users")
+assert(hasNoindex(investmentReviewPage.response, investmentReviewPage.text), "/investment-review redirect should be noindex")
+assertPrivateResponsePolicy(investmentReviewPage.response, "/investment-review redirect")
+
 const adminApi = await fetchJson("/api/admin/readiness")
 assert(adminApi.response.status === 401, "/api/admin/readiness should fail closed without admin session")
 assert(header(adminApi.response, "x-robots-tag").toLowerCase().includes("noindex"), "/api/admin/readiness should be noindex")
 assertPrivateResponsePolicy(adminApi.response, "/api/admin/readiness unauthorized response")
+
+const investmentReviewApi = await fetchJson("/api/investment-review/workspaces")
+assert(investmentReviewApi.response.status === 401, "/api/investment-review/workspaces should fail closed without a reviewer session")
+assertPrivateResponsePolicy(investmentReviewApi.response, "/api/investment-review/workspaces unauthorized response")
 
 const workspaceEvents = await fetchJson("/api/workspace/events")
 assert(workspaceEvents.response.status === 401, "/api/workspace/events should fail closed without a member session")
