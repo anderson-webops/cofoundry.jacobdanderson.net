@@ -2,6 +2,7 @@ import type { H3Event } from "h3"
 import type {
   ConnectDeclineReason,
   ConnectRequestPayload,
+  ContractVersionPayload,
   ProposalPayload,
   ProposalSectionKey,
   RelationshipDecisionRecordStatus,
@@ -11,7 +12,7 @@ import type {
 import type { SubscriptionGateAction } from "../../shared/utils/billing"
 import type { LifecycleNotificationRequest } from "../../shared/utils/lifecycle-notifications"
 import { createError } from "h3"
-import { checkSubscriptionGate } from "../../shared/utils/billing"
+import { checkSubscriptionGate, hasPaidContractWorkflowSponsor } from "../../shared/utils/billing"
 import {
   acknowledgeTrialCollaborationTransition,
   addProposalCommentTransition,
@@ -21,6 +22,7 @@ import {
   canUserUpdateProposalStatus,
   createConnectRequestTransition,
   createContractFromProposalTransition,
+  createContractVersionTransition,
   createProposalCounterVersionTransition,
   createProposalTransition,
   isContractParticipant,
@@ -37,8 +39,10 @@ import {
   updateProposalStatusTransition,
 } from "../../shared/utils/collaboration"
 import { buildProfileReadiness } from "../../shared/utils/formation"
-import { getContractById, getCurrentProposalVersion, getProfileByUserId, getProposalById, getSubscriptionByUserId } from "../../shared/utils/workspace"
+import { hasBlockingContractLegalReview } from "../../shared/utils/legal-reviews"
+import { getContractById, getCurrentContractVersion, getCurrentProposalVersion, getProfileByUserId, getProposalById, getSubscriptionByUserId } from "../../shared/utils/workspace"
 import { projectWorkspaceForSession } from "../../shared/utils/workspace-authorization"
+import { listContractLegalReviews, supersedeContractLegalReviews } from "./contract-legal-reviews"
 import { buildContractSignatureEvent } from "./contract-signatures"
 import { emitLifecycleNotificationEvents } from "./lifecycle-notification-events"
 import { persistServerCollaborationState } from "./member-collaboration"
@@ -55,6 +59,7 @@ export type CollaborationMutationPayload
     | { action: "create_proposal_counter_version", payload: ProposalPayload, proposalId: string }
     | { action: "add_proposal_comment", body: string, proposalId: string, proposalVersionId: string, section: ProposalSectionKey }
     | { action: "create_contract_from_proposal", proposalId: string }
+    | { action: "update_contract_version", contractId: string, payload: ContractVersionPayload }
     | { action: "sign_contract", contractId: string, typedName: string }
     | { action: "start_trial", matchId: string }
     | { action: "acknowledge_trial", trialId: string }
@@ -367,6 +372,43 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
       break
     }
 
+    case "update_contract_version": {
+      const contract = getContractById(nextSeed, payload.contractId)
+      if (!contract)
+        throw createError({ statusCode: 404, statusMessage: "Contract not found." })
+      if (!isContractParticipant(nextSeed, contract, session.id))
+        throw createError({ statusCode: 403, statusMessage: "You are not part of this contract." })
+
+      if (!hasPaidContractWorkflowSponsor(nextSeed, contract)) {
+        throw createError({
+          statusCode: 402,
+          statusMessage: "Agreement revisions require an active Pro or Team sponsor among the participants.",
+        })
+      }
+      const transition = createContractVersionTransition(nextSeed, contract.id, session.id, payload.payload, actedAt)
+      if (!transition.version)
+        throw createError({ statusCode: 409, statusMessage: "The current agreement version is unavailable." })
+
+      nextSeed = transition.seed
+      const proposal = getProposalById(nextSeed, contract.proposalId)
+      affectedUsers = proposal ? [proposal.createdByUserId, proposal.recipientUserId] : [session.id]
+      result = { contractId: contract.id, contractVersionId: transition.version.id }
+      affectedUsers.forEach((userId) => {
+        lifecycleNotifications.push({
+          eventType: "contract.signature_required",
+          metadata: {
+            actorUserId: session.id,
+            action: payload.action,
+            contractVersionId: transition.version!.id,
+          },
+          targetId: contract.id,
+          targetType: "contract",
+          userId,
+        })
+      })
+      break
+    }
+
     case "sign_contract": {
       const contract = getContractById(nextSeed, payload.contractId)
       if (!contract)
@@ -383,7 +425,21 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
         throw createError({ statusCode: 409, statusMessage: "You have already signed the current contract version." })
       }
 
-      assertSubscriptionGate(nextSeed, session.id, "sign_contract")
+      const currentVersion = getCurrentContractVersion(nextSeed, contract)
+      const legalReviews = await listContractLegalReviews(event, contract.id)
+      if (currentVersion && hasBlockingContractLegalReview(legalReviews, currentVersion.id)) {
+        throw createError({
+          statusCode: 409,
+          statusMessage: "Signing is paused while the current agreement version has an active legal review. Complete or cancel that review first.",
+        })
+      }
+
+      if (!hasPaidContractWorkflowSponsor(nextSeed, contract)) {
+        throw createError({
+          statusCode: 402,
+          statusMessage: "Agreement signing requires an active Pro or Team sponsor among the participants.",
+        })
+      }
       const existingSignatureIds = new Set(nextSeed.signatures.map(signature => signature.id))
       nextSeed = signContractTransition(nextSeed, payload.contractId, session.id, payload.typedName, actedAt)
       const newSignature = nextSeed.signatures.find(signature => !existingSignatureIds.has(signature.id))
@@ -460,6 +516,10 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
     ? [buildContractSignatureEvent(event, signatureEvent.signature, signatureEvent.typedName)]
     : []
   await persistForUsers(event, affectedUsers, nextSeed, workspace.seed, signatureEvents)
+  if (payload.action === "update_contract_version" && result.contractVersionId) {
+    await supersedeContractLegalReviews(event, payload.contractId, result.contractVersionId, actedAt)
+      .catch(error => console.warn("[contract-legal-review] Superseding prior reviews failed.", error))
+  }
   await emitWorkspaceRealtimeChange(affectedUsers, {
     metadata: {
       action: payload.action,

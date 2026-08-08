@@ -18,6 +18,7 @@ describe("workspace route context", () => {
     expect(resolveWorkspaceRouteContext("/app/relationships/match_123").title).toBe("Relationship")
     expect(resolveWorkspaceRouteContext("/app/proposals/proposal_123").title).toBe("Deal room")
     expect(resolveWorkspaceRouteContext("/app/contracts/contract_123").title).toBe("Agreement")
+    expect(resolveWorkspaceRouteContext("/app/legal").title).toBe("Legal review")
   })
 
   it("maps admin routes independently from member workspace routes", () => {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { workspaceSeed } from "../../shared/data/seed"
+import { hasPaidContractWorkflowSponsor } from "../../shared/utils/billing"
 import { buildSessionUser } from "../../shared/utils/workspace"
 import { projectWorkspaceForSession } from "../../shared/utils/workspace-authorization"
 
@@ -20,6 +21,16 @@ describe("workspace response authorization", () => {
     expect(projected.users.find(user => user.id === "user_olivia")?.email).toBe("")
     expect(projected.users.find(user => user.id === "user_olivia")?.linkedProviders).toEqual([])
     expect(projected.profiles.find(profile => profile.userId === "user_olivia")?.photoUrl).toBe("")
+  })
+
+  it("projects agreement sponsorship without exposing a counterparty billing row", () => {
+    const session = buildSessionUser(workspaceSeed, "user_malik")!
+    const projected = projectWorkspaceForSession(workspaceSeed, session)
+    const contract = projected.contracts.find(item => item.id === "contract_ledgerloop")!
+
+    expect(projected.subscriptions.map(subscription => subscription.userId)).toEqual([session.id])
+    expect(contract.workflowSponsored).toBe(true)
+    expect(hasPaidContractWorkflowSponsor(projected, contract)).toBe(true)
   })
 
   it("retains the admin operating view", () => {

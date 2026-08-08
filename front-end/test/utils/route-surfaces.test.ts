@@ -183,7 +183,7 @@ describe("route surfaces", () => {
   })
 
   it("classifies private surfaces without hiding public health checks", () => {
-    for (const route of ["/admin/readiness", "/app/inbox", "/auth/sign-in", "/auth/recover", "/onboarding", "/api/admin/readiness", "/api/operations/events", "/api/operations/mail-smoke", "/api/operations/realtime-events", "/api/workspace"])
+    for (const route of ["/admin/readiness", "/app/inbox", "/app/legal", "/auth/sign-in", "/auth/recover", "/legal-review/secret-token", "/onboarding", "/api/admin/readiness", "/api/legal-reviews/secret-token", "/api/operations/events", "/api/operations/mail-smoke", "/api/operations/realtime-events", "/api/workspace"])
       expect(isPrivateSurfacePath(route), `${route} should be private`).toBe(true)
 
     const publicProfileRoute = getPublicRoutePaths(workspaceSeed).find(route => route.startsWith("/people/"))

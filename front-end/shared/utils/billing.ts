@@ -1,4 +1,4 @@
-import type { BillingCycle, Subscription, SubscriptionPlan, WorkspaceSeed } from "../types/domain"
+import type { BillingCycle, Contract, Subscription, SubscriptionPlan, WorkspaceSeed } from "../types/domain"
 
 export interface UsageQuota {
   used: number
@@ -109,6 +109,20 @@ export function getSubscriptionEntitlements(subscription?: Subscription): Subscr
     ...limits,
     hasVisibilityBoost: entitled && Boolean(subscription?.visibilityBoost || plan !== "free"),
   }
+}
+
+export function hasPaidContractWorkflowSponsor(seed: WorkspaceSeed, contract: Contract) {
+  if (typeof contract.workflowSponsored === "boolean")
+    return contract.workflowSponsored
+
+  const proposal = seed.proposals.find(item => item.id === contract.proposalId)
+  if (!proposal)
+    return false
+
+  return [proposal.createdByUserId, proposal.recipientUserId].some((userId) => {
+    const subscription = seed.subscriptions.find(item => item.userId === userId)
+    return getSubscriptionEntitlements(subscription).canSignContracts
+  })
 }
 
 export function buildSubscriptionUsage(seed: WorkspaceSeed, userId: string, subscription?: Subscription): SubscriptionUsage {

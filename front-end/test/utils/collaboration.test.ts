@@ -10,6 +10,7 @@ import {
   collaborationContractNeedsUserSignature,
   collaborationProposalNeedsUserResponse,
   createConnectRequestTransition,
+  createContractVersionTransition,
   createProposalTransition,
   deriveCollaborationTrustMetrics,
   isConnectRequestParticipant,
@@ -22,6 +23,7 @@ import {
   markNotificationReadTransition,
   respondToConnectRequestTransition,
   sendMessageTransition,
+  signContractTransition,
 } from "../../shared/utils/collaboration"
 import { getCurrentContractVersion, getCurrentProposalVersion, getProposalById } from "../../shared/utils/workspace"
 
@@ -198,6 +200,87 @@ describe("collaboration helpers", () => {
     const createdProposal = newProposal.seed.proposals.find(item => item.id === "proposal_trialwire_followup")
     expect(createdProposal).toBeDefined()
     expect(collaborationProposalNeedsUserResponse(createdProposal!, getCurrentProposalVersion(newProposal.seed, createdProposal!), "user_sofia")).toBe(true)
+  })
+
+  it("creates an authoritative agreement revision without treating old signatures as current", () => {
+    const currentContract = workspaceSeed.contracts.find(item => item.id === "contract_ledgerloop")!
+    const currentVersion = getCurrentContractVersion(workspaceSeed, currentContract)!
+    const transition = createContractVersionTransition(
+      workspaceSeed,
+      currentContract.id,
+      "user_olivia",
+      {
+        roleTitle: currentVersion.roleTitle,
+        scope: `${currentVersion.scope} The parties will also maintain a shared quarterly architecture roadmap.`,
+        timeCommitment: currentVersion.timeCommitment,
+        compensation: currentVersion.compensation,
+        equity: currentVersion.equity,
+        vesting: currentVersion.vesting,
+        ipAssignment: currentVersion.ipAssignment,
+        confidentiality: currentVersion.confidentiality,
+        decisionMaking: currentVersion.decisionMaking,
+        termination: currentVersion.termination,
+        disputeResolution: currentVersion.disputeResolution,
+        notes: "Version 2 adds the agreed quarterly architecture-roadmap obligation after participant review.",
+      },
+      "2026-04-17T12:00:00.000Z",
+      {
+        contractNotificationId: "notification_contract_v2",
+        contractVersionId: "contract_version_ledgerloop_2",
+        messageId: "message_contract_v2",
+      },
+    )
+
+    const revisedContract = transition.seed.contracts.find(item => item.id === currentContract.id)!
+    expect(transition.version).toMatchObject({
+      id: "contract_version_ledgerloop_2",
+      versionNumber: 2,
+    })
+    expect(revisedContract).toMatchObject({
+      currentVersionId: "contract_version_ledgerloop_2",
+      status: "pending_signature",
+    })
+    expect(transition.seed.signatures).toContainEqual(expect.objectContaining({
+      contractVersionId: currentVersion.id,
+      id: "signature_1",
+    }))
+    expect(collaborationContractNeedsUserSignature(
+      transition.seed,
+      revisedContract,
+      transition.version!,
+      transition.seed.signatures,
+      "user_olivia",
+    )).toBe(true)
+    expect(transition.seed.notifications).toContainEqual(expect.objectContaining({
+      id: "notification_contract_v2",
+      userId: "user_malik",
+    }))
+    expect(transition.seed.messages).toContainEqual(expect.objectContaining({
+      body: expect.stringContaining("Existing signatures and legal reviews apply only to their original versions"),
+      id: "message_contract_v2",
+      type: "system",
+    }))
+
+    const signedByOlivia = signContractTransition(
+      transition.seed,
+      currentContract.id,
+      "user_olivia",
+      "Olivia Chen",
+      "2026-04-17T12:15:00.000Z",
+      { signatureId: "signature_contract_v2_olivia" },
+    )
+    expect(signedByOlivia.contracts.find(item => item.id === currentContract.id)?.status).toBe("pending_signature")
+
+    const signedByBoth = signContractTransition(
+      signedByOlivia,
+      currentContract.id,
+      "user_malik",
+      "Malik Thompson",
+      "2026-04-17T12:20:00.000Z",
+      { signatureId: "signature_contract_v2_malik" },
+    )
+    expect(signedByBoth.contracts.find(item => item.id === currentContract.id)?.status).toBe("signed")
+    expect(signedByBoth.signatures.filter(signature => signature.contractVersionId === "contract_version_ledgerloop_2")).toHaveLength(2)
   })
 
   it("orders notifications newest-first and only marks the owner copy as read", () => {

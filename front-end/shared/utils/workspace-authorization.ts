@@ -1,4 +1,5 @@
 import type { FileUpload, Profile, Report, SessionUser, User, WorkspaceSeed } from "../types/domain"
+import { hasPaidContractWorkflowSponsor } from "./billing"
 import { cloneValue } from "./clone"
 import { sanitizeNotificationHref } from "./inbox"
 
@@ -247,7 +248,12 @@ export function projectWorkspaceForSession(seed: WorkspaceSeed, session: Session
     proposals: source.proposals.filter(proposal => proposalIds.has(proposal.id)),
     proposalVersions: source.proposalVersions.filter(version => proposalIds.has(version.proposalId)),
     proposalComments: source.proposalComments.filter(comment => proposalIds.has(comment.proposalId)),
-    contracts: source.contracts.filter(contract => contractIds.has(contract.id)),
+    contracts: source.contracts
+      .filter(contract => contractIds.has(contract.id))
+      .map(contract => ({
+        ...contract,
+        workflowSponsored: hasPaidContractWorkflowSponsor(source, contract),
+      })),
     contractVersions: source.contractVersions.filter(version => contractIds.has(version.contractId)),
     signatures: source.signatures.filter(signature => contractIds.has(signature.contractId)),
     trialCollaborations: source.trialCollaborations.filter(trial => matchIds.has(trial.matchId)),

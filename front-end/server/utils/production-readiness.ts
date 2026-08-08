@@ -403,7 +403,7 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
       mockMode
         ? input.hasDurableLocalDataDir ? "External data directory configured" : "Default .data path in use"
         : "Supabase mode stores primary data in the database",
-      "Mock/access-request mode persists invites, accounts, admin audit overlays, privacy requests, file metadata, and operations telemetry on disk.",
+      "Mock/access-request mode persists invites, accounts, collaboration and legal-review records, admin audit overlays, privacy requests, file metadata, and operations telemetry on disk.",
       mockMode
         ? "Mount a durable, backed-up host path and point CoFoundry at it before relying on mock/access-request production mode."
         : "Keep the local directory for operational scratch data only after Supabase cutover.",
@@ -1076,7 +1076,7 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
       input.hasDurableLocalDataDir ? "External data directory configured" : "Using default local .data path",
       publicEnvironment.backendMode === "supabase"
         ? "Supabase mode should persist operational queues in the database."
-        : "Mock/access-request mode stores access requests, invites, privacy requests, accounts, and telemetry on the server filesystem.",
+        : "Mock/access-request mode stores access requests, invites, accounts, collaboration and legal-review records, privacy requests, and telemetry on the server filesystem.",
       "Set COFOUNDRY_LOCAL_DATA_DIR to a durable, backed-up host path before relying on mock/access-request mode in production.",
     ),
   ]

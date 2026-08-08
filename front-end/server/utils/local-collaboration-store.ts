@@ -18,6 +18,7 @@ import type {
 import { rm } from "node:fs/promises"
 import { resolve } from "node:path"
 import process from "node:process"
+import { workspaceSeed } from "../../shared/data/seed"
 import { cloneValue } from "../../shared/utils/clone"
 import { readPrivateTextFile, writePrivateFileAtomic } from "./private-file-store"
 
@@ -99,6 +100,28 @@ function emptyStore(): LocalCollaborationStore {
   }
 }
 
+function seededStore(): LocalCollaborationStore {
+  return {
+    connectRequests: cloneValue(workspaceSeed.connectRequests),
+    contractVersions: cloneValue(workspaceSeed.contractVersions),
+    contracts: cloneValue(workspaceSeed.contracts),
+    conversations: cloneValue(workspaceSeed.conversations),
+    investmentApplications: cloneValue(workspaceSeed.investmentApplications),
+    matches: cloneValue(workspaceSeed.matches),
+    messages: cloneValue(workspaceSeed.messages),
+    notifications: cloneValue(workspaceSeed.notifications),
+    proposalComments: cloneValue(workspaceSeed.proposalComments),
+    proposalVersions: cloneValue(workspaceSeed.proposalVersions),
+    proposals: cloneValue(workspaceSeed.proposals),
+    relationshipDecisions: cloneValue(workspaceSeed.relationshipDecisions),
+    reports: cloneValue(workspaceSeed.reports),
+    signatures: cloneValue(workspaceSeed.signatures),
+    trialCollaborations: cloneValue(workspaceSeed.trialCollaborations),
+    updatedAt: new Date().toISOString(),
+    version: 1,
+  }
+}
+
 function newestFirst<T extends { createdAt?: string, lastMessageAt?: string, signedAt?: string, updatedAt?: string }>(rows: T[]) {
   return [...rows].sort((left, right) => {
     const leftTime = new Date(left.createdAt || left.updatedAt || left.lastMessageAt || left.signedAt || 0).getTime()
@@ -135,10 +158,10 @@ async function readStoreFile() {
   return readPrivateTextFile(storePath())
 }
 
-async function readStore() {
+async function readStore(seedForWrite = false) {
   const contents = await readStoreFile()
   if (!contents)
-    return emptyStore()
+    return seedForWrite ? seededStore() : emptyStore()
 
   return {
     ...emptyStore(),
@@ -152,7 +175,7 @@ async function writeStore(store: LocalCollaborationStore) {
 
 async function updateStore<T>(updater: (_store: LocalCollaborationStore) => T | Promise<T>) {
   const run = writeQueue.then(async () => {
-    const store = await readStore()
+    const store = await readStore(true)
     const result = await updater(store)
     await writeStore(store)
     return result
@@ -168,6 +191,39 @@ function upsertById<T extends { id: string }>(existing: T[], nextRows: T[]) {
     ...existing.filter(row => !nextIds.has(row.id)),
     ...cloneValue(nextRows),
   ]
+}
+
+function preserveUnobservedRows<T extends { id: string }>(current: T[], observed: T[], next: T[]) {
+  const observedIds = new Set(observed.map(row => row.id))
+  const nextIds = new Set(next.map(row => row.id))
+  return [
+    ...cloneValue(next),
+    ...cloneValue(current.filter(row => !observedIds.has(row.id) && !nextIds.has(row.id))),
+  ]
+}
+
+function mergeUnobservedRows(
+  current: PersistedCollaborationState,
+  observed: PersistedCollaborationState,
+  next: PersistedCollaborationState,
+): PersistedCollaborationState {
+  return {
+    connectRequests: preserveUnobservedRows(current.connectRequests, observed.connectRequests, next.connectRequests),
+    contractVersions: preserveUnobservedRows(current.contractVersions, observed.contractVersions, next.contractVersions),
+    contracts: preserveUnobservedRows(current.contracts, observed.contracts, next.contracts),
+    conversations: preserveUnobservedRows(current.conversations, observed.conversations, next.conversations),
+    investmentApplications: preserveUnobservedRows(current.investmentApplications, observed.investmentApplications, next.investmentApplications),
+    matches: preserveUnobservedRows(current.matches, observed.matches, next.matches),
+    messages: preserveUnobservedRows(current.messages, observed.messages, next.messages),
+    notifications: preserveUnobservedRows(current.notifications, observed.notifications, next.notifications),
+    proposalComments: preserveUnobservedRows(current.proposalComments, observed.proposalComments, next.proposalComments),
+    proposalVersions: preserveUnobservedRows(current.proposalVersions, observed.proposalVersions, next.proposalVersions),
+    proposals: preserveUnobservedRows(current.proposals, observed.proposals, next.proposals),
+    relationshipDecisions: preserveUnobservedRows(current.relationshipDecisions, observed.relationshipDecisions, next.relationshipDecisions),
+    reports: preserveUnobservedRows(current.reports, observed.reports, next.reports),
+    signatures: preserveUnobservedRows(current.signatures, observed.signatures, next.signatures),
+    trialCollaborations: preserveUnobservedRows(current.trialCollaborations, observed.trialCollaborations, next.trialCollaborations),
+  }
 }
 
 function extractLocalStateForUsers(state: PersistedCollaborationState, userIds: string[]): PersistedCollaborationState {
@@ -334,29 +390,35 @@ export async function persistLocalCollaborationStateForUsers(
   options: { expectedState?: PersistedCollaborationState } = {},
 ) {
   return updateStore((store) => {
-    if (options.expectedState)
-      assertExpectedCollaborationState(store, options.expectedState, userIds)
-
     const uniqueUserIds = [...new Set(userIds)]
+    let nextState = cloneValue(state)
+
+    if (options.expectedState) {
+      const currentState = extractLocalStateForUsers(pruneStore(store), uniqueUserIds)
+      const reconciledExpectedState = mergeUnobservedRows(currentState, options.expectedState, options.expectedState)
+      assertExpectedCollaborationState(store, reconciledExpectedState, uniqueUserIds)
+      nextState = mergeUnobservedRows(currentState, options.expectedState, nextState)
+    }
+
     for (const userId of uniqueUserIds)
       removeExistingUserState(store, userId)
 
-    store.connectRequests = upsertById(store.connectRequests, state.connectRequests)
-    store.matches = upsertById(store.matches, state.matches)
-    store.conversations = upsertById(store.conversations, state.conversations)
-    store.investmentApplications = upsertById(store.investmentApplications, state.investmentApplications)
-    store.messages = upsertById(store.messages, state.messages)
-    store.proposals = upsertById(store.proposals, state.proposals)
-    store.proposalVersions = upsertById(store.proposalVersions, state.proposalVersions)
-    store.proposalComments = upsertById(store.proposalComments, state.proposalComments)
-    store.contracts = upsertById(store.contracts, state.contracts)
-    store.contractVersions = upsertById(store.contractVersions, state.contractVersions)
-    store.signatures = upsertById(store.signatures, state.signatures)
-    store.trialCollaborations = upsertById(store.trialCollaborations, state.trialCollaborations)
-    store.relationshipDecisions = upsertById(store.relationshipDecisions, state.relationshipDecisions)
-    store.notifications = upsertById(store.notifications, state.notifications)
-    store.reports = upsertById(store.reports, state.reports)
-    return cloneValue(state)
+    store.connectRequests = upsertById(store.connectRequests, nextState.connectRequests)
+    store.matches = upsertById(store.matches, nextState.matches)
+    store.conversations = upsertById(store.conversations, nextState.conversations)
+    store.investmentApplications = upsertById(store.investmentApplications, nextState.investmentApplications)
+    store.messages = upsertById(store.messages, nextState.messages)
+    store.proposals = upsertById(store.proposals, nextState.proposals)
+    store.proposalVersions = upsertById(store.proposalVersions, nextState.proposalVersions)
+    store.proposalComments = upsertById(store.proposalComments, nextState.proposalComments)
+    store.contracts = upsertById(store.contracts, nextState.contracts)
+    store.contractVersions = upsertById(store.contractVersions, nextState.contractVersions)
+    store.signatures = upsertById(store.signatures, nextState.signatures)
+    store.trialCollaborations = upsertById(store.trialCollaborations, nextState.trialCollaborations)
+    store.relationshipDecisions = upsertById(store.relationshipDecisions, nextState.relationshipDecisions)
+    store.notifications = upsertById(store.notifications, nextState.notifications)
+    store.reports = upsertById(store.reports, nextState.reports)
+    return cloneValue(nextState)
   })
 }
 

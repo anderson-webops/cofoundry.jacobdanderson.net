@@ -2,7 +2,7 @@
 
 ## Product Decision
 
-The next milestone should not add more broad product surface area. It should make the existing product loop real and operational:
+CoFoundry's original product idea is a founder-formation system, not only a discovery directory. The complete primary loop is:
 
 1. discover
 2. send structured intro
@@ -10,9 +10,53 @@ The next milestone should not add more broad product surface area. It should mak
 4. message
 5. run trial
 6. negotiate proposal
-7. sign agreement
+7. create and revise an agreement
+8. optionally send an exact version to user-selected in-house or outside counsel
+9. resolve requested changes and collect version-specific signatures
 
-The work should now optimize for production realism, continuity, and operational clarity.
+The single-relationship loop is substantially implemented in source. Work should optimize for authoritative persistence, mutual visibility, privacy, security, operational continuity, and evidence that the hosted release is running the same code.
+
+## Expanded Completion Map
+
+### Primary founder-formation loop
+
+Status: implemented and locally release-validated; hosted promotion and deployment-identity verification remain the completion gate.
+
+- Intent-rich profiles, opportunities, matching, structured mutual intros, and messaging
+- Trial collaborations, relationship decisions, sectioned proposals, counters, comments, and acceptance
+- Proposal-derived agreements, authoritative revisions, field-level redlines, current-version signatures, printable exports, and execution certificates
+- Version-bound legal-review invitations, reviewer responses, signing holds, participant revocation, revision supersession, and account export
+
+### Team / Studio operating model
+
+Status: projected next product milestone, not represented as already available.
+
+- Organization workspaces with multiple seats and explicit owner, operator, reviewer, and billing roles
+- Shared searches, reusable agreement policies, internal approval routing, and organization-level audit history
+- In-house counsel queues spanning multiple relationships without turning outside counsel into ordinary network members
+- Consolidated relationship analytics, billing, and retention controls for the organization
+
+### Independent professional-help ecosystem
+
+Status: neutral referral resources and direct user-selected invitations implemented; a CoFoundry lawyer marketplace is intentionally not launched.
+
+- Keep official bar-association referral resources available for users who have not selected counsel
+- Consider a vetted partner directory only after conflicts, licensing, geography, engagement, fee, endorsement, privacy, and support responsibilities have explicit product and legal ownership
+- Never imply that CoFoundry forms an attorney-client relationship, chooses counsel, or guarantees professional quality
+
+### Optional future investment path
+
+Status: feature-flagged and deliberately separate from the core SaaS product.
+
+- Do not mix investment applications into ordinary founder matching, agreement review, or billing
+- Require supplemental terms, eligibility controls, regulated-partner decisions, and a separate release benchmark before enabling any live investment workflow
+
+### External service depth
+
+Status: source interfaces exist; host/provider proof remains separate.
+
+- Optional e-signature/PDF provider, transactional mail, OAuth, Stripe, file scanner, backup, monitoring, and multi-instance realtime
+- Each provider remains disabled or explicitly degraded until its own staging and hosted smoke evidence passes
 
 ## Now
 
@@ -88,6 +132,7 @@ Backend-owned entities:
 - proposal comments
 - contracts
 - contract versions
+- contract legal reviews
 - signatures
 - relationship decisions
 - notifications
@@ -233,7 +278,25 @@ The admin analytics page now reports:
 
 ## Later
 
-### 10. Realtime
+### 10. Version-bound legal review
+
+Status: implemented and locally release-validated; hosted promotion remains.
+
+The agreement workflow now supports:
+
+- paid-plan handoff to a named in-house or outside legal representative
+- a confidential HMAC-signed 14-day bearer link bound to one review, agreement, version, expiration, and reviewer-email digest
+- selectable review scopes and requester context
+- a reviewer-only page that exposes the selected agreement version without requiring a CoFoundry member account
+- recorded approval or requested changes with a typed responder name, authority attestation, and participant notifications, while making clear that identity and licensure are not verified
+- a server-enforced signature hold while review is requested, opened, or has unresolved requested changes
+- revocation by either agreement participant and automatic supersession when a new agreement version is created
+- email delivery through the existing server mail transport, with a manual share-link fallback
+- a dedicated local private store and Supabase table, account-export coverage, privacy disclosures, and neutral bar-association referral resources
+
+Migration and workflow tests, participant and external-reviewer browser coverage, responsive checks, the full local release gate, and Playwright end-to-end tests pass. Release completion now requires only hosted promotion, migration application in Supabase mode, provider/host configuration where enabled, and hosted identity verification.
+
+### 11. Realtime
 
 After persistence is stable:
 
@@ -257,7 +320,7 @@ Remaining work:
 - after that boundary passes, configure the host-side relay and run the checked-in realtime smoke worker against every staging instance
 - provider-level presence semantics if production needs richer online/offline state beyond typing presence
 
-### 11. Email and outbound system events
+### 12. Email and outbound system events
 
 Status: worker-authenticated mail smoke telemetry and `/admin/readiness` evidence checks are implemented; live provider setup remains.
 

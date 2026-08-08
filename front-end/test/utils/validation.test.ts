@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { accessInviteValidationSchema, accessRequestSchema, adminAccessInviteSchema, adminAccessRequestStatusSchema, adminCommandQueueActionSchema, adminFileScanResultSchema, adminOpportunityVerificationSchema, adminPrivacyRequestStatusSchema, adminReportStatusSchema, adminUserModerationSchema, adminUserRoleSchema, billingCheckoutSchema, collaborationMutationSchema, contactSchema, emailPreferenceApplySchema, minimumOnboardingSchema, oauthSignInSchema, onboardingSchema, operationsBackupRunSchema, operationsContractEnvelopeSchema, operationsDigestRunSchema, operationsEmailSuppressionSchema, operationsEventSchema, operationsTrustVerificationSchema, opportunitySchema, privacyRequestSchema, proposalSchema, reportSchema, signUpSchema, typingPresenceSchema } from "../../shared/utils/validation"
+import { accessInviteValidationSchema, accessRequestSchema, adminAccessInviteSchema, adminAccessRequestStatusSchema, adminCommandQueueActionSchema, adminFileScanResultSchema, adminOpportunityVerificationSchema, adminPrivacyRequestStatusSchema, adminReportStatusSchema, adminUserModerationSchema, adminUserRoleSchema, billingCheckoutSchema, collaborationMutationSchema, contactSchema, contractLegalReviewRequestSchema, contractLegalReviewResponseSchema, contractVersionSchema, emailPreferenceApplySchema, minimumOnboardingSchema, oauthSignInSchema, onboardingSchema, operationsBackupRunSchema, operationsContractEnvelopeSchema, operationsDigestRunSchema, operationsEmailSuppressionSchema, operationsEventSchema, operationsTrustVerificationSchema, opportunitySchema, privacyRequestSchema, proposalSchema, reportSchema, signUpSchema, typingPresenceSchema } from "../../shared/utils/validation"
 
 describe("validation schemas", () => {
   it("requires explicit completion confirmation before resolving privacy requests", () => {
@@ -364,6 +364,69 @@ describe("validation schemas", () => {
 
     expect(forgedSystemMessage.success).toBe(false)
     expect(oversizedMessage.success).toBe(false)
+  })
+
+  it("validates agreement revisions and explicit legal-review sharing authority", () => {
+    const agreementVersion = {
+      roleTitle: "Founder Collaboration Agreement for Technical Co-Founder Role",
+      scope: "Own technical architecture and engineering operations while collaborating on product and company strategy.",
+      timeCommitment: "Approximately forty hours each week beginning after the current trial period.",
+      compensation: "Founder salary after financing, subject to company cash position.",
+      equity: "Twenty-four percent common stock under definitive formation documents.",
+      vesting: "Four years with a one-year cliff and monthly vesting thereafter.",
+      ipAssignment: "Company-specific work product and inventions will be assigned to the formed company.",
+      confidentiality: "Each party will protect company, customer, diligence, and product information.",
+      decisionMaking: "Technical architecture belongs to the technical co-founder; material company decisions remain shared.",
+      termination: "Either party may terminate before incorporation by written notice, subject to surviving obligations.",
+      disputeResolution: "The parties will attempt good-faith resolution and then mediation before formal action.",
+      notes: "This revision records the terms agreed after the legal-review response and participant discussion.",
+    }
+    const reviewRequest = {
+      message: "Please review the selected areas and identify any changes or formation documents needed before signing.",
+      reviewerEmail: "counsel@example.com",
+      reviewerName: "Alex Counsel",
+      reviewerOrganization: "Example Startup Law",
+      reviewerType: "outside_counsel",
+      scope: ["equity_vesting", "ip_confidentiality"],
+      shareAuthorized: true,
+    }
+
+    expect(contractVersionSchema.safeParse(agreementVersion).success).toBe(true)
+    expect(collaborationMutationSchema.safeParse({
+      action: "update_contract_version",
+      contractId: "contract_ledgerloop",
+      payload: agreementVersion,
+    }).success).toBe(true)
+    expect(contractLegalReviewRequestSchema.safeParse(reviewRequest).success).toBe(true)
+    expect(contractLegalReviewRequestSchema.safeParse({
+      ...reviewRequest,
+      shareAuthorized: false,
+    }).success).toBe(false)
+    expect(contractLegalReviewRequestSchema.safeParse({
+      ...reviewRequest,
+      scope: [],
+    }).success).toBe(false)
+    expect(contractLegalReviewResponseSchema.safeParse({
+      action: "respond",
+      authorityConfirmed: true,
+      response: "Approve the requested scope subject to completing the identified formation documents.",
+      respondedByName: "Alex Counsel",
+      status: "approved",
+    }).success).toBe(true)
+    expect(contractLegalReviewResponseSchema.safeParse({
+      action: "respond",
+      authorityConfirmed: true,
+      response: "Looks good.",
+      respondedByName: "Alex Counsel",
+      status: "approved",
+    }).success).toBe(false)
+    expect(contractLegalReviewResponseSchema.safeParse({
+      action: "respond",
+      authorityConfirmed: false,
+      response: "Approve the requested scope subject to completing the identified formation documents.",
+      respondedByName: "Alex Counsel",
+      status: "approved",
+    }).success).toBe(false)
   })
 
   it("accepts audited admin role changes", () => {

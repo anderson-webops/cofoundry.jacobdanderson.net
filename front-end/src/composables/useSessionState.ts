@@ -1,20 +1,18 @@
 import type { SessionUser } from "~/shared/types/domain"
-import { decodeSessionUser, encodeSessionUser, sessionCookieName } from "~/shared/utils/session"
+import { decodeSessionUser, sessionCookieName } from "~/shared/utils/session"
 
 export function useSessionState() {
   const rawCookie = useCookie<string | null>(sessionCookieName, {
     sameSite: "lax",
-    watch: "shallow",
+    watch: false,
   })
-
-  const session = computed(() => decodeSessionUser(rawCookie.value))
+  const session = useState<SessionUser | null>("cofoundry-authoritative-session", () => decodeSessionUser(rawCookie.value))
 
   function setSession(nextSession: SessionUser | null) {
-    rawCookie.value = nextSession ? encodeSessionUser(nextSession) : null
+    session.value = nextSession
   }
 
   return {
-    rawCookie,
     session,
     setSession,
   }

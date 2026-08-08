@@ -1,10 +1,10 @@
 import type { H3Event } from "h3"
 import type { Contract, ContractVersion, Signature, WorkspaceSeed } from "../../shared/types/domain"
 import type { ContractProviderEvidence } from "../../shared/utils/contract-documents"
-import { getSubscriptionEntitlements } from "../../shared/utils/billing"
+import { hasPaidContractWorkflowSponsor } from "../../shared/utils/billing"
 import { isContractParticipant } from "../../shared/utils/collaboration"
 import { renderContractTextDocument } from "../../shared/utils/contract-documents"
-import { getContractById, getCurrentContractVersion, getSubscriptionByUserId } from "../../shared/utils/workspace"
+import { getContractById, getCurrentContractVersion } from "../../shared/utils/workspace"
 import { requireAuthenticatedSession } from "./auth"
 import { listContractProviderEvidence } from "./contract-envelope-events"
 import { loadMemberWorkspaceState } from "./member-workspace"
@@ -37,10 +37,8 @@ export async function loadContractArtifactContext(event: H3Event, contractId: st
   if (!isContractParticipant(workspace.seed, contract, workspace.session.id))
     throw createError({ statusCode: 403, statusMessage: "You are not part of this contract." })
 
-  const subscription = getSubscriptionByUserId(workspace.seed, workspace.session.id)
-  const entitlements = getSubscriptionEntitlements(subscription)
-  if (!entitlements.canPrintContracts)
-    throw createError({ statusCode: 402, statusMessage: "Contract export requires a paid plan." })
+  if (!hasPaidContractWorkflowSponsor(workspace.seed, contract))
+    throw createError({ statusCode: 402, statusMessage: "Agreement export requires an active Pro or Team sponsor among the participants." })
 
   const signatures = workspace.seed.signatures.filter(signature =>
     signature.contractId === contract.id && signature.contractVersionId === version.id,
