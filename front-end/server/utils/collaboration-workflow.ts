@@ -47,6 +47,7 @@ import { buildContractSignatureEvent } from "./contract-signatures"
 import { emitLifecycleNotificationEvents } from "./lifecycle-notification-events"
 import { persistServerCollaborationState } from "./member-collaboration"
 import { loadMemberWorkspaceState } from "./member-workspace"
+import { loadContractOrganizationGovernance } from "./organization-workspaces"
 import { emitWorkspaceRealtimeChange } from "./workspace-realtime"
 
 export type CollaborationMutationPayload
@@ -432,6 +433,16 @@ export async function applyCollaborationMutation(event: H3Event, session: Sessio
           statusCode: 409,
           statusMessage: "Signing is paused while the current agreement version has an active legal review. Complete or cancel that review first.",
         })
+      }
+      if (currentVersion) {
+        const organizationRequirements = await loadContractOrganizationGovernance(event, contract.id, currentVersion.id, legalReviews)
+        const blockers = organizationRequirements.flatMap(requirement => requirement.blockers)
+        if (blockers.length) {
+          throw createError({
+            statusCode: 409,
+            statusMessage: `Signing is paused by an organization agreement policy. ${blockers[0]}`,
+          })
+        }
       }
 
       if (!hasPaidContractWorkflowSponsor(nextSeed, contract)) {

@@ -5,6 +5,7 @@ import type {
   ContractLegalReviewScope,
   ContractVersionPayload,
 } from "~/shared/types/domain"
+import type { OrganizationContractGovernanceRequirement } from "~/shared/types/organizations"
 import type { ContractRedlineChange } from "~/shared/utils/contract-documents"
 import { hasPaidContractWorkflowSponsor } from "~/shared/utils/billing"
 import { formatDate } from "~/shared/utils/format"
@@ -14,6 +15,7 @@ import {
   formatContractLegalReviewStatus,
   hasBlockingContractLegalReview,
 } from "~/shared/utils/legal-reviews"
+import { canManageOrganization } from "~/shared/utils/organizations"
 import { buildProposalTermsSummary } from "~/shared/utils/proposals"
 import { getRelationshipHrefForContract } from "~/shared/utils/relationships"
 import { contractSignatureSchema } from "~/shared/utils/validation"
@@ -29,6 +31,7 @@ usePageSeo("Contract detail")
 const route = useRoute()
 const toastStore = useToastStore()
 const { authStore, workspaceStore } = useCurrentMember()
+const organizationStore = useOrganizationStore()
 
 const contract = computed(() => getContractById(workspaceStore.data, route.params.id as string))
 const version = computed(() => contract.value ? getCurrentContractVersion(workspaceStore.data, contract.value) : undefined)
@@ -46,6 +49,12 @@ const legalReviewDialogOpen = ref(false)
 const legalReviewPending = ref(false)
 const legalReviewsLoading = ref(true)
 const legalReviews = ref<ContractLegalReview[]>([])
+const organizationRequirements = ref<OrganizationContractGovernanceRequirement[]>([])
+const organizationGovernanceLoading = ref(true)
+const organizationLinkDialogOpen = ref(false)
+const organizationLinkPending = ref(false)
+const selectedOrganizationId = ref("")
+const selectedPolicyId = ref("")
 const lastInviteUrl = ref("")
 const redlineOpen = ref(false)
 const redlinePending = ref(false)
@@ -59,6 +68,12 @@ const hasCurrentUserSigned = computed(() => signatures.value.some(signature => s
 const blockingLegalReview = computed(() => version.value
   ? hasBlockingContractLegalReview(legalReviews.value, version.value.id)
   : false)
+const organizationBlockers = computed(() => organizationRequirements.value.flatMap(requirement => requirement.blockers))
+const organizationBlocking = computed(() => organizationBlockers.value.length > 0)
+const manageableOrganizations = computed(() => authStore.currentUser
+  ? organizationStore.snapshot.workspaces.filter(item => canManageOrganization(item, authStore.currentUser!.id))
+  : [])
+const selectedOrganization = computed(() => organizationStore.snapshot.workspaces.find(item => item.organization.id === selectedOrganizationId.value))
 
 interface LegalReviewRequestPayload {
   message: string
@@ -108,6 +123,95 @@ async function loadLegalReviews() {
   }
   finally {
     legalReviewsLoading.value = false
+  }
+  await loadOrganizationGovernance()
+}
+
+async function loadOrganizationGovernance() {
+  if (!contract.value)
+    return
+  organizationGovernanceLoading.value = true
+  try {
+    const response = await $fetch<{ requirements: OrganizationContractGovernanceRequirement[] }>(`/api/contracts/${contract.value.id}/organization-governance`)
+    organizationRequirements.value = response.requirements
+  }
+  catch (error: unknown) {
+    toastStore.push({
+      title: "Organization policy unavailable",
+      message: errorMessage(error, "The agreement loaded, but its organization policy status could not be refreshed."),
+      tone: "warning",
+    })
+  }
+  finally {
+    organizationGovernanceLoading.value = false
+  }
+}
+
+async function linkAgreementToOrganization() {
+  if (!contract.value || !version.value || !selectedOrganization.value)
+    return
+  organizationLinkPending.value = true
+  try {
+    await organizationStore.mutate(selectedOrganization.value, {
+      action: "link_resource",
+      label: contract.value.title,
+      policyId: selectedPolicyId.value || null,
+      resourceId: contract.value.id,
+      resourceType: "contract",
+    })
+    organizationLinkDialogOpen.value = false
+    await loadOrganizationGovernance()
+    toastStore.push({
+      title: "Agreement linked",
+      message: `${contract.value.title} now follows the selected organization agreement policy.`,
+      tone: "success",
+    })
+  }
+  catch (error: unknown) {
+    toastStore.push({
+      title: "Agreement not linked",
+      message: errorMessage(error, "The agreement could not be linked to that organization."),
+      tone: "danger",
+    })
+  }
+  finally {
+    organizationLinkPending.value = false
+  }
+}
+
+async function requestOrganizationApproval(requirement: OrganizationContractGovernanceRequirement) {
+  if (!contract.value || !version.value)
+    return
+  const organization = organizationStore.snapshot.workspaces.find(item => item.organization.id === requirement.organizationId)
+  if (!organization)
+    return
+  organizationLinkPending.value = true
+  try {
+    await organizationStore.mutate(organization, {
+      action: "request_approval",
+      policyId: requirement.policyId,
+      summary: `Review agreement version ${version.value.versionNumber} before participant signatures are collected.`,
+      targetId: contract.value.id,
+      targetType: "contract",
+      targetVersionId: version.value.id,
+      title: contract.value.title,
+    })
+    await loadOrganizationGovernance()
+    toastStore.push({
+      title: "Approval requested",
+      message: `${requirement.organizationName} reviewers can now resolve this agreement version.`,
+      tone: "success",
+    })
+  }
+  catch (error: unknown) {
+    toastStore.push({
+      title: "Approval not requested",
+      message: errorMessage(error, "The internal approval request could not be saved."),
+      tone: "danger",
+    })
+  }
+  finally {
+    organizationLinkPending.value = false
   }
 }
 
@@ -345,10 +449,10 @@ async function signContract() {
     return
   }
 
-  if (blockingLegalReview.value) {
+  if (blockingLegalReview.value || organizationBlocking.value) {
     toastStore.push({
-      title: "Legal review is active",
-      message: "Complete or cancel the current version's legal review before signing.",
+      title: organizationBlocking.value ? "Organization approval required" : "Legal review is active",
+      message: organizationBlockers.value[0] || "Complete or cancel the current version's legal review before signing.",
       tone: "warning",
     })
     return
@@ -376,7 +480,19 @@ async function signContract() {
   }
 }
 
-onMounted(loadLegalReviews)
+onMounted(async () => {
+  await organizationStore.load()
+  await loadLegalReviews()
+})
+watch(organizationLinkDialogOpen, (open) => {
+  if (open && !selectedOrganizationId.value)
+    selectedOrganizationId.value = manageableOrganizations.value[0]?.organization.id || ""
+})
+watch(selectedOrganization, (current) => {
+  selectedPolicyId.value = current?.agreementPolicies.find(policy => policy.isDefault)?.id
+    || current?.agreementPolicies[0]?.id
+    || ""
+})
 watch(() => workspaceStore.lastSyncedAt, (current, previous) => {
   if (current && current !== previous)
     void loadLegalReviews()
@@ -431,6 +547,66 @@ watch(() => workspaceStore.lastSyncedAt, (current, previous) => {
           </div>
         </div>
       </details>
+
+      <div class="panel p-5">
+        <div class="flex flex-wrap gap-4 items-start justify-between">
+          <div>
+            <h2 class="text-lg font-semibold">
+              Organization policy
+            </h2>
+            <p class="muted text-sm leading-6 mt-2 max-w-xl">
+              Team and Studio policies can require version-specific internal approval or completed legal review before signatures.
+            </p>
+          </div>
+          <BaseButton v-if="!organizationRequirements.length && manageableOrganizations.length" size="sm" variant="secondary" @click="organizationLinkDialogOpen = true">
+            <span class="i-carbon-link" />
+            Link organization
+          </BaseButton>
+        </div>
+
+        <p v-if="organizationGovernanceLoading" class="muted text-sm mt-5" role="status">
+          Checking organization policies...
+        </p>
+        <div v-else-if="organizationRequirements.length" class="surface-row-list mt-5">
+          <div v-for="requirement in organizationRequirements" :key="requirement.organizationId" class="surface-row">
+            <div class="flex flex-wrap gap-3 items-start justify-between">
+              <div>
+                <p class="font-semibold">
+                  {{ requirement.organizationName }}
+                </p>
+                <p class="muted text-sm mt-1">
+                  {{ requirement.policyName }}
+                </p>
+              </div>
+              <BaseBadge :tone="requirement.blockers.length ? 'warning' : 'success'">
+                {{ requirement.blockers.length ? "Policy hold" : "Policy satisfied" }}
+              </BaseBadge>
+            </div>
+            <div class="mt-4 flex flex-wrap gap-2">
+              <BaseBadge tone="neutral">
+                Approval: {{ requirement.approvalStatus.replaceAll("_", " ") }}
+              </BaseBadge>
+              <BaseBadge tone="neutral">
+                Legal review: {{ requirement.requiresLegalReview ? requirement.approvedLegalReview ? "approved" : "required" : "optional" }}
+              </BaseBadge>
+              <BaseBadge tone="neutral">
+                Outside counsel: {{ requirement.allowOutsideCounsel ? "allowed" : "restricted" }}
+              </BaseBadge>
+            </div>
+            <p v-for="blocker in requirement.blockers" :key="blocker" class="text-sm text-[var(--warning)] leading-6 mt-3">
+              {{ blocker }}
+            </p>
+            <div v-if="requirement.requiresInternalApproval && ['missing', 'changes_requested', 'rejected', 'canceled'].includes(requirement.approvalStatus) && organizationStore.snapshot.workspaces.some(item => item.organization.id === requirement.organizationId)" class="mt-4">
+              <BaseButton size="sm" :disabled="organizationLinkPending" @click="requestOrganizationApproval(requirement)">
+                {{ organizationLinkPending ? "Requesting..." : "Request internal approval" }}
+              </BaseButton>
+            </div>
+          </div>
+        </div>
+        <p v-else class="muted text-sm leading-6 mt-5">
+          This agreement is not linked to a Team or Studio policy.
+        </p>
+      </div>
 
       <div class="panel p-5">
         <div class="flex flex-wrap gap-4 items-start justify-between">
@@ -574,16 +750,16 @@ watch(() => workspaceStore.lastSyncedAt, (current, previous) => {
         </div>
 
         <div class="mt-5 gap-4 grid">
-          <p v-if="blockingLegalReview" class="text-sm leading-6 p-3 border border-amber-500/30 rounded-2xl bg-amber-500/10">
-            Signing is paused while the current legal review is active. Complete or cancel that review, or create a revised agreement version.
+          <p v-if="blockingLegalReview || organizationBlocking" class="text-sm leading-6 p-3 border border-amber-500/30 rounded-2xl bg-amber-500/10">
+            {{ organizationBlockers[0] || "Signing is paused while the current legal review is active. Complete or cancel that review, or create a revised agreement version." }}
           </p>
           <TextInput v-model="signatureName" label="Type your full name to sign" :error="signatureError" />
           <div class="flex flex-wrap gap-3">
             <BaseButton v-if="relationshipHref" :to="relationshipHref">
               Open relationship
             </BaseButton>
-            <BaseButton :disabled="previewOnly || blockingLegalReview || signaturePending || hasCurrentUserSigned || contract.status === 'signed'" @click="signContract">
-              {{ previewOnly ? "Paid sponsor required" : blockingLegalReview ? "Review must finish first" : signaturePending ? "Recording signature..." : contract.status === "signed" ? "Agreement fully signed" : hasCurrentUserSigned ? "Your signature is recorded" : "Sign agreement" }}
+            <BaseButton :disabled="previewOnly || blockingLegalReview || organizationBlocking || signaturePending || hasCurrentUserSigned || contract.status === 'signed'" @click="signContract">
+              {{ previewOnly ? "Paid sponsor required" : blockingLegalReview ? "Review must finish first" : organizationBlocking ? "Organization policy hold" : signaturePending ? "Recording signature..." : contract.status === "signed" ? "Agreement fully signed" : hasCurrentUserSigned ? "Your signature is recorded" : "Sign agreement" }}
             </BaseButton>
             <BaseButton variant="secondary" :disabled="previewOnly || editPending" @click="editDialogOpen = true">
               {{ previewOnly ? "Revision requires sponsor" : contract.status === "signed" ? "Create amendment version" : "Edit new version" }}
@@ -613,8 +789,8 @@ watch(() => workspaceStore.lastSyncedAt, (current, previous) => {
         <p class="muted text-sm">
           Version {{ version.versionNumber }} · Generated {{ formatDate(version.createdAt) }}
         </p>
-        <BaseBadge :tone="previewOnly || blockingLegalReview ? 'warning' : contract.status === 'signed' ? 'success' : 'neutral'">
-          {{ previewOnly ? "Preview only" : blockingLegalReview ? "Review hold" : contract.status === "signed" ? "Fully signed" : "Signature-ready" }}
+        <BaseBadge :tone="previewOnly || blockingLegalReview || organizationBlocking ? 'warning' : contract.status === 'signed' ? 'success' : 'neutral'">
+          {{ previewOnly ? "Preview only" : blockingLegalReview ? "Review hold" : organizationBlocking ? "Policy hold" : contract.status === "signed" ? "Fully signed" : "Signature-ready" }}
         </BaseBadge>
       </div>
       <div v-if="redlineOpen" class="panel-inset mt-5 p-4">
@@ -765,6 +941,26 @@ watch(() => workspaceStore.lastSyncedAt, (current, previous) => {
 
     <BaseDialog v-model="legalReviewDialogOpen" title="Request legal review" description="Invite a named legal representative to review only the current agreement version.">
       <ContractLegalReviewRequestForm :submitting="legalReviewPending" @submitted="requestLegalReview" />
+    </BaseDialog>
+
+    <BaseDialog v-model="organizationLinkDialogOpen" title="Link organization policy" description="The selected policy will be enforced against the current and future agreement versions until the record is unlinked.">
+      <form class="gap-4 grid" @submit.prevent="linkAgreementToOrganization">
+        <SelectInput
+          v-model="selectedOrganizationId"
+          label="Organization"
+          :options="manageableOrganizations.map(item => ({ label: item.organization.name, value: item.organization.id }))"
+        />
+        <SelectInput
+          v-model="selectedPolicyId"
+          label="Agreement policy"
+          :options="selectedOrganization?.agreementPolicies.map(item => ({ label: item.name, value: item.id })) || []"
+        />
+        <div class="flex justify-end">
+          <BaseButton type="submit" :disabled="organizationLinkPending || !selectedOrganizationId || !selectedPolicyId">
+            {{ organizationLinkPending ? "Linking..." : "Link agreement" }}
+          </BaseButton>
+        </div>
+      </form>
     </BaseDialog>
   </div>
 

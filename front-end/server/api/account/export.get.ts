@@ -3,6 +3,7 @@ import { redactReportForReporter } from "~/shared/utils/workspace-authorization"
 import { requireAuthenticatedSession } from "../../utils/auth"
 import { listContractLegalReviewsForContracts } from "../../utils/contract-legal-reviews"
 import { loadMemberWorkspaceState } from "../../utils/member-workspace"
+import { loadOrganizationWorkspaceSnapshot } from "../../utils/organization-workspaces"
 import { listPrivacyRequestsForUser } from "../../utils/privacy-requests"
 import { assertRateLimit, buildRateLimitKey } from "../../utils/rate-limit"
 
@@ -46,6 +47,7 @@ export default defineEventHandler(async (event) => {
     status: request.status,
     type: request.type,
   }))
+  const organizationSnapshot = await loadOrganizationWorkspaceSnapshot(event, session)
   const exportPayload = {
     account: state.user,
     bookmarks: state.bookmarks,
@@ -70,6 +72,7 @@ export default defineEventHandler(async (event) => {
       trialCollaborations: seed.trialCollaborations.filter(trial => matchIds.has(trial.matchId)),
     },
     exportedAt: new Date().toISOString(),
+    organizations: organizationSnapshot.workspaces,
     privacyRequests,
     profile: state.profile,
     savedSearches: state.savedSearches,

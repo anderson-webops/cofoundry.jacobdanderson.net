@@ -29,6 +29,7 @@ CoFoundry is not a freelance marketplace and not a Fiverr clone. It is centered 
 - Skilled builders and operators can discover companies to join
 - Mutual interest unlocks messaging
 - Structured proposals and editable agreement templates are first-class workflow surfaces
+- Team and Studio workspaces coordinate seats, ventures, projects, decisions, searches, policies, approvals, and counsel queues
 - A future investment module exists behind a feature flag and is disabled by default
 
 ## Local setup
@@ -121,7 +122,9 @@ The same server mail transport now powers on-demand unread workspace digests fro
 
 Agreement participants can negotiate from an accepted proposal into authoritative agreement versions, inspect field-level redlines, and collect version-specific signatures. When either participant has an active Pro or Team plan, that plan sponsors the shared agreement workflow so both participants can revise, request review, export, and sign that agreement without requiring two paid subscriptions. Sponsored agreements can invite a user-selected in-house or outside legal representative to one exact version through a confidential 14-day bearer link. The reviewer can approve the requested scope or request changes without receiving a member account; the response records a typed responder name and authority attestation but is not verified identity, licensure, engagement, or an electronic signature. Either agreement participant can revoke the link, and creating a revision supersedes earlier links. CoFoundry only transmits the version and response and does not select counsel or provide legal advice. When mail is unavailable, the requester receives the same link for manual delivery.
 
-Public workspace access requests are durable in mock/access-request mode. `/auth/sign-up` submits access requests into `.data/access-requests.json` by default, admins can review them at `/admin/access-requests`, and issued invites create 30-day invite links that allow account creation without enabling public self-serve signup. Invited member workspace state is stored in `.data/member-workspace-state.json`, collaborative workflow state is stored in `.data/collaboration-state.json`, and legal-review requests and responses are stored separately in `.data/contract-legal-reviews.json`, so onboarding, profile edits, billing preview state, intros, messages, proposals, agreements, reviews, and inbox read state can survive process restarts before Supabase is enabled. Admin moderation decisions are stored in `.data/admin-audit.json`, including audit rows plus user/report/opportunity/notification overlays used by the mock-mode admin console. Privacy and trust-review requests submitted from account settings are stored in `.data/privacy-requests.json` and reviewed at `/admin/privacy`. Invited local accounts are stored in `.data/local-auth-accounts.json` so sign-in survives server restarts while the site remains in mock backend mode. When Supabase mode is intentionally enabled later, the same route surface writes to the relevant Supabase tables after the latest migrations are applied.
+Team-plan sponsors can create organization workspaces at `/app/studio`. Each workspace has explicit owner, operator, member, reviewer, billing, and counsel roles; invitation and seat controls; venture and project tracking; durable decisions; shared founder searches; reusable agreement policies; version-bound internal approvals; linked relationship resources; an in-house legal-review queue; and organization audit history. Agreement policies can require internal approval and/or completed legal review before a linked agreement may be signed, restrict outside counsel, and require a different approver from the requester. Organization writes use optimistic version checks so stale browser state cannot silently overwrite newer decisions. Member reads are projected by role, and invitees see only their own pending invitation until they accept.
+
+Public workspace access requests are durable in mock/access-request mode. `/auth/sign-up` submits access requests into `.data/access-requests.json` by default, admins can review them at `/admin/access-requests`, and issued invites create 30-day invite links that allow account creation without enabling public self-serve signup. Invited member workspace state is stored in `.data/member-workspace-state.json`, collaborative workflow state is stored in `.data/collaboration-state.json`, organization Team/Studio state is stored in `.data/organization-workspaces.json`, and legal-review requests and responses are stored separately in `.data/contract-legal-reviews.json`, so onboarding, profile edits, billing preview state, intros, messages, proposals, agreements, reviews, organization operations, and inbox read state can survive process restarts before Supabase is enabled. Admin moderation decisions are stored in `.data/admin-audit.json`, including audit rows plus user/report/opportunity/notification overlays used by the mock-mode admin console. Privacy and trust-review requests submitted from account settings are stored in `.data/privacy-requests.json` and reviewed at `/admin/privacy`. Invited local accounts are stored in `.data/local-auth-accounts.json` so sign-in survives server restarts while the site remains in mock backend mode. When Supabase mode is intentionally enabled later, the same route surface writes to the relevant Supabase tables after the latest migrations are applied.
 
 Public contact and access-request intake is also screened before mail delivery or durable queue writes. The shared intake policy keeps the existing honeypot and rate-limit behavior, then rejects high-confidence abuse such as reserved or disposable email domains, URL stuffing, repeated filler, test text, and obvious unrelated solicitations.
 
@@ -275,7 +278,7 @@ Provisioning after merge:
 6. Assign the first real admin user server-side before using `/admin`: `BOOTSTRAP_ADMIN_EMAIL=operator@example.com npm run -w back-end bootstrap-admin`. The script requires Supabase mode and the Vault-injected `SUPABASE_SERVICE_ROLE_KEY`; it updates an existing user row and records an admin action that `/admin/readiness` uses as first-admin bootstrap evidence.
 7. Turn on Stripe env only when checkout and webhook infrastructure are ready.
 8. Configure a distinct `COFOUNDRY_OPERATIONS_TOKEN` before starting any hosted deployment. It protects backend metadata and all scheduled digest, backup, event-ingestion, and file-scan worker calls. A non-loopback `BACKEND_HOST` is rejected unless the public-bind flag is explicit and this token is at least 32 characters.
-9. In mock/access-request mode, ensure the app process can write to `.data/operations-telemetry.json`, `.data/access-requests.json`, `.data/member-workspace-state.json`, `.data/collaboration-state.json`, `.data/contract-legal-reviews.json`, `.data/admin-audit.json`, `.data/privacy-requests.json`, `.data/local-auth-accounts.json`, and `.data/local-file-uploads/`, or set `COFOUNDRY_LOCAL_DATA_DIR` to a durable writable host path.
+9. In mock/access-request mode, ensure the app process can write to `.data/operations-telemetry.json`, `.data/access-requests.json`, `.data/member-workspace-state.json`, `.data/collaboration-state.json`, `.data/organization-workspaces.json`, `.data/contract-legal-reviews.json`, `.data/admin-audit.json`, `.data/privacy-requests.json`, `.data/local-auth-accounts.json`, and `.data/local-file-uploads/`, or set `COFOUNDRY_LOCAL_DATA_DIR` to a durable writable host path.
 
 ## Production control surfaces
 
@@ -287,6 +290,7 @@ Provisioning after merge:
 - Scheduled unread workspace digest emails respect each member's account-level email notification preference; seeded review users remain enabled, while newly persisted Supabase users default to disabled until they opt in.
 - Member workspace changes, collaboration workflow updates, and billing preview state persist in Supabase mode and in durable local mock-mode stores.
 - Relationship workspaces support first-class decision notes before or alongside proposals, and those notes persist in durable mock mode and the future Supabase `relationship_decisions` table.
+- Team and Studio workspaces use a server-owned aggregate with optimistic concurrency, role-scoped projections, durable mock persistence, and a service-role-only Supabase table. Organization agreement policies are enforced again at contract-signing time so a client-side bypass cannot skip a required approval or legal review.
 - Signed sessions are revalidated against persisted user state on every protected request. Role changes take effect without requiring a new login, and suspended users are rejected in both durable mock/access-request mode and Supabase-backed mode. Missing workspace/subscription rows fail closed to a free member baseline rather than rebuilding privileges from stale cookie claims.
 - Seeded review account credentials are accepted only in local development. Hosted mock/access-request deployments can still sign in invited durable local accounts, but they never accept bundled demo credentials.
 - Admin moderation actions persist user suspension, role changes, report status changes, opportunity verification decisions, notifications, queue assignment/routing metadata, and audit actions in Supabase mode and in the durable local mock-mode admin audit store.
@@ -414,10 +418,11 @@ Environment-gated surfaces:
 - Development workspace reset controls on `/app/settings` appear only in local development or when `NUXT_PUBLIC_ENABLE_DEMO_ACCESS="true"`.
 - Mock billing mutations appear only in local development or deliberate staging demo access. Live accounts without Stripe use operator-managed billing.
 - `/app/investment` remains feature-flagged behind `NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE`.
+- `/app/studio` and `/app/studio/:id` are Team-plan organization surfaces; creation and operational writes require a current Team sponsor, while an invited member can still accept or decline their own invitation.
 
 ## Feature-flagged investment module
 
-The route exists at `front-end/app/pages/app/investment.vue`.
+The route exists at `front-end/src/pages/app/investment.vue`.
 
 - Disabled by default with `NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE="false"`
 - When enabled, startups can submit an investment application
@@ -426,10 +431,11 @@ The route exists at `front-end/app/pages/app/investment.vue`.
 
 ## Tests
 
-Included coverage is intentionally lightweight:
+Coverage includes:
 
 - utility tests for discovery filtering and contract generation
 - component tests for reusable UI primitives
+- organization transition, projection, permissions, concurrency, local persistence, legal-review queue, and migration tests
 
 Run:
 
@@ -441,8 +447,8 @@ npm run test:run
 
 Key areas:
 
-- `front-end/app/pages`: marketing, auth, app, and admin routes
-- `front-end/app/stores`: auth, workspace, and toast state
+- `front-end/src/pages`: marketing, auth, app, and admin routes
+- `front-end/src/stores`: auth, workspace, organization, and toast state
 - `front-end/shared`: typed domain model, marketing content, seed data, and shared utilities
 - `front-end/server`: auth, contact, and billing routes
 - `back-end/scripts/seed.ts`: seed snapshot plus optional Supabase seeding

@@ -42,6 +42,10 @@ export const termsKeyNotes = [
     body: "Members may invite their own in-house or outside legal representative to a specific agreement version. CoFoundry transmits the document and response but does not select, retain, supervise, endorse, or verify counsel.",
   },
   {
+    title: "Team workspaces are role-controlled",
+    body: "Organization owners control seats and roles. Members should only add people who are authorized to access the organization's ventures, projects, policies, approvals, and linked collaboration records.",
+  },
+  {
     title: "Paid SaaS, not automatic platform equity",
     body: "Subscriptions unlock product and visibility benefits. Paid plans do not give CoFoundry ownership in your company or a right to your cap table.",
   },
@@ -67,7 +71,7 @@ export const termsSections: LegalSection[] = [
     title: "2. What CoFoundry Is",
     summary: "CoFoundry is software for forming startup teams and documenting collaboration terms.",
     paragraphs: [
-      "CoFoundry helps founders and startup collaborators create profiles, evaluate fit, express interest, message after a mutual connection, exchange structured proposals, run trial collaboration steps, and generate editable collaboration agreement templates.",
+      "CoFoundry helps founders and startup collaborators create profiles, evaluate fit, express interest, message after a mutual connection, exchange structured proposals, run trial collaboration steps, generate editable collaboration agreement templates, and coordinate approved work through role-controlled Team and Studio workspaces.",
       "CoFoundry is not a freelance marketplace, staffing firm, employment agency, broker-dealer, funding portal, investment adviser, venture fund, law firm, tax adviser, or fiduciary for user relationships.",
       "The core service is subscription software. Any future investment-related feature is separate from the main SaaS product and may be subject to additional eligibility rules, product gates, and supplemental terms.",
     ],
@@ -81,6 +85,7 @@ export const termsSections: LegalSection[] = [
       "You may not impersonate another person, misstate your identity, create misleading trust signals, or present fabricated traction, role ownership, or availability.",
       "CoFoundry includes privacy controls such as public-lite visibility, member-only visibility, and gated contact-reveal rules. If you choose a public setting, profile or startup information may become visible on the public web and may be indexed by search engines or viewed by people outside the product.",
       "Verification badges and trust markers only mean that a specific signal or step was completed inside CoFoundry or through a linked account. They are not a guarantee of character, legal compliance, background checks, business quality, or future performance.",
+      "Organization owners are responsible for inviting only authorized people, assigning suitable owner, operator, member, reviewer, billing, and counsel roles, keeping those roles current, and transferring ownership before the original owner leaves. A workspace role is a software permission and does not establish employment, agency, fiduciary authority, professional licensure, or authority to bind a company.",
     ],
   },
   {
@@ -121,6 +126,7 @@ export const termsSections: LegalSection[] = [
       "CoFoundry may gate messaging behind mutual interest, structured intros, profile completion, or contact-reveal settings. Those controls are part of the product design and may change over time.",
       "CoFoundry is not a party to any conversation, proposal, negotiation, trial sprint, collaboration, incorporation decision, employment relationship, or company agreement between users.",
       "You are responsible for deciding what information to share, when to move a conversation off-platform, whether to run a trial project, and whether another user is credible enough for deeper collaboration.",
+      "When a relationship, proposal, agreement, opportunity, or investment application is linked to an organization workspace, authorized organization members may be able to view its workspace label, apply internal policies, request or resolve approvals, and review related audit history according to their role. You must have authority to make that link and share the related information.",
       "CoFoundry does not guarantee that another user's identity, funding claims, traction, responsiveness, or intentions are accurate, even if some verification or trust markers are present.",
     ],
   },
@@ -135,6 +141,7 @@ export const termsSections: LegalSection[] = [
       "If you invite an in-house or outside legal representative, you represent that you are authorized to share the selected agreement version, review scope, and context with that person. The invite is a confidential bearer link that may be revoked by either agreement participant and expires automatically.",
       "CoFoundry only transmits the selected material and records the invited reviewer's response. CoFoundry does not select, vet, verify, retain, supervise, endorse, or pay the reviewer, and a typed responder name is not proof of identity, licensure, authority, engagement, or an electronic signature. Any attorney-client relationship, conflicts check, engagement terms, fees, or professional duties exist separately between the reviewer and the applicable parties.",
       "You are responsible for obtaining qualified professional advice before relying on any proposal, agreement template, or negotiation summary for a real company, financing, employment, or ownership decision.",
+      "Organization agreement policies, approval states, clause requirements, signing holds, and audit events are coordination controls only. They do not establish that a document is complete, lawful, authorized under your formation documents, or approved by a qualified professional.",
     ],
   },
   {
@@ -147,6 +154,7 @@ export const termsSections: LegalSection[] = [
       "Subscriptions renew automatically at the end of each billing period unless you cancel before renewal through the billing settings flow or another method CoFoundry makes available.",
       "Unless CoFoundry states otherwise at the time of purchase, fees are non-refundable, subscription periods are not prorated, and cancellation takes effect at the end of the current paid term. Nothing in a subscription gives CoFoundry automatic equity, ownership, or governance rights in your venture.",
       "CoFoundry may suspend or downgrade paid features for failed payments, chargebacks, fraud concerns, or billing disputes.",
+      "A Team workspace may be sponsored by the subscription assigned to its billing owner. Seat limits and workspace operations may be restricted if that subscription expires, is canceled, or no longer includes the applicable Team features, without deleting already retained organization records solely because access is restricted.",
     ],
   },
   {
@@ -291,6 +299,12 @@ export const privacyVisibilityTiers: PrivacyVisibilityTier[] = [
     notes: "Counterparties and invited representatives may retain copies of information they already received even if you later revoke a link or close your account.",
   },
   {
+    title: "Organization workspaces",
+    audience: "Visible to active organization members according to assigned role",
+    details: "Organization identity, membership, ventures, projects, tasks, decisions, shared searches, linked resources, agreement policies, approval requests, counsel queues, and audit history are projected according to owner, operator, member, reviewer, billing, or counsel permissions.",
+    notes: "Organization owners control membership and role assignments. Removing a member ends their in-product access but cannot recall copies they previously received or information they exported lawfully.",
+  },
+  {
     title: "Internal operations",
     audience: "Visible only to CoFoundry admins or service providers with a need to know",
     details: "Authentication logs, device and session signals, billing metadata, abuse reports, moderation notes, support records, and security investigations are kept internal unless disclosure is required by law or necessary to protect users or the service.",
@@ -324,6 +338,12 @@ export const privacyDataCategories: PrivacyDataCategory[] = [
     visibility: "Visible to the relevant participants, a legal representative invited to the selected agreement version, and authorized admins when operational or safety review is required.",
   },
   {
+    category: "Organization, project, and governance data",
+    examples: "Organization identity, invitations, seats and roles, ventures, projects, tasks, decisions, shared searches, linked resources, agreement policies, approval requests, counsel queue entries, and organization audit events.",
+    purposes: "Operating Team and Studio workspaces, coordinating portfolio work, enforcing internal agreement controls, routing review, preserving accountability, and supporting organization billing and security.",
+    visibility: "Visible to active organization members according to assigned role, invited members for their own pending invitation, selected legal representatives for an exact agreement review, and authorized admins when operational or safety review is required.",
+  },
+  {
     category: "Billing and subscription data",
     examples: "Plan tier, billing status, checkout events, invoice references, payment processor responses, and tax-related metadata when applicable.",
     purposes: "Charging for paid plans, preventing fraud, resolving billing issues, and keeping accounting records.",
@@ -349,6 +369,11 @@ export const privacyRetentionRows: PrivacyRetentionRow[] = [
     notes: "Includes legal-review requests and responses. These records let counterparties preserve shared negotiation history and let CoFoundry investigate reports tied to a collaboration.",
   },
   {
+    category: "Organization workspace and audit records",
+    window: "While the organization is active, then generally up to 36 months after archival; visible audit history also follows the owner-configured workspace window",
+    notes: "Workspace settings may shorten the ordinary audit-history view but do not override legal holds, billing, security, dispute, or compliance retention. Other organization records may remain available while needed to operate the workspace and preserve shared decisions.",
+  },
+  {
     category: "Security logs and session signals",
     window: "Generally up to 12 months",
     notes: "Kept for fraud prevention, access troubleshooting, and incident response unless a live investigation requires longer retention.",
@@ -369,9 +394,9 @@ export const privacySections: LegalSection[] = [
   {
     id: "scope-contact",
     title: "1. Scope and Who This Policy Covers",
-    summary: "This policy covers CoFoundry's public website, application, and related founder-matching features.",
+    summary: "This policy covers CoFoundry's public website, application, founder-matching features, and Team and Studio workspaces.",
     paragraphs: [
-      "This Privacy Policy explains how CoFoundry collects, uses, stores, shares, and protects information when you visit the marketing site, create an account, build a profile, search for collaborators, message other members, exchange proposals, generate agreement templates, invite a legal representative, manage a subscription, contact support, or interact with the trust-and-safety process.",
+      "This Privacy Policy explains how CoFoundry collects, uses, stores, shares, and protects information when you visit the marketing site, create an account, build a profile, search for collaborators, message other members, exchange proposals, generate agreement templates, invite a legal representative, operate a Team or Studio workspace, manage a subscription, contact support, or interact with the trust-and-safety process.",
       "It applies to both public pages and authenticated product pages. It also applies when CoFoundry processes information through service providers or through its internal service layer in environments where live third-party services are not enabled.",
       "For privacy questions, rights requests, or trust-and-safety escalation, use CoFoundry's support contact listed on this page.",
     ],
@@ -384,6 +409,7 @@ export const privacySections: LegalSection[] = [
       "CoFoundry is a discovery platform, so some profile and startup information may be deliberately visible to other people. Members can choose public-lite, member-only, or private settings for key profile surfaces, and some startup opportunities can also be published publicly.",
       "When you select a public setting, information such as your display name, headline, photo, broad location, role context, startup interests, public links, or startup listing details may appear on public directory pages and may be indexed by search engines.",
       "CoFoundry keeps direct contact information gated. Email addresses, messages, proposal drafts, agreement data, and similar collaboration materials are not intended for public display and are only revealed according to connection state, product permissions, a participant's deliberate legal-review invite, and admin review rules.",
+      "Organization workspace information is not public by default. Active members receive a role-scoped view, pending invitees receive only their own invitation, and reviewer or counsel roles receive the organization and review information needed for their assigned work rather than unrestricted access to unrelated private account data.",
       "Because public content can be copied by search engines, aggregators, or other users, changing a visibility setting later may not remove every historical copy that exists outside CoFoundry.",
     ],
   },
@@ -392,7 +418,7 @@ export const privacySections: LegalSection[] = [
     title: "3. Information We Collect",
     summary: "We collect account, profile, collaboration, billing, and safety data needed to operate the network.",
     paragraphs: [
-      "CoFoundry collects information you provide directly, including account credentials, profile details, startup opportunity listings, values and work-style inputs, links to external profiles, messages, proposals, agreement-template inputs, legal-review contact details and context, support requests, and report submissions.",
+      "CoFoundry collects information you provide directly, including account credentials, profile details, startup opportunity listings, values and work-style inputs, links to external profiles, messages, proposals, agreement-template inputs, legal-review contact details and context, organization membership and governance records, projects and tasks, support requests, and report submissions.",
       "We also collect information generated by your use of the product, including search filters, bookmarks, saved searches, connect requests, matches, collaboration events, subscription activity, and trust-signal completion events.",
       "Certain technical and security data are collected automatically, such as session state, device and browser metadata, IP-based security signals, and logs tied to authentication, rate limiting, or abuse detection.",
       "CoFoundry may also receive limited information from third-party providers when enabled, such as payment status from Stripe-backed billing, authentication state from live identity providers, or storage and database metadata from a Supabase-backed environment.",
@@ -403,7 +429,7 @@ export const privacySections: LegalSection[] = [
     title: "4. How We Use Information",
     summary: "We use personal information to operate the service, rank relevant results, protect the network, and support billing.",
     paragraphs: [
-      "CoFoundry uses information to create and maintain accounts, render profiles, power search and discovery, recommend relevant people or opportunities, manage structured intros, enable messaging after a mutual connection, support proposals and agreements, and deliver version-bound legal-review invitations requested by members.",
+      "CoFoundry uses information to create and maintain accounts, render profiles, power search and discovery, recommend relevant people or opportunities, manage structured intros, enable messaging after a mutual connection, support proposals and agreements, operate role-controlled Team and Studio workspaces, route internal approvals, and deliver version-bound legal-review invitations requested by members.",
       "We also use information for trust and safety, including fraud detection, scam prevention, moderation, support, debugging, enforcing the Terms of Service, and protecting members from spam, impersonation, harassment, and data harvesting.",
       "Subscription and billing information is used to determine plan access, process checkout events, prevent chargeback abuse, and maintain accounting records.",
       "CoFoundry may also use aggregated or de-identified product data to understand usage patterns, improve ranking quality, refine onboarding, and operate internal analytics for the service.",
@@ -426,6 +452,7 @@ export const privacySections: LegalSection[] = [
     paragraphs: [
       "CoFoundry shares information with other members according to profile visibility settings, startup listing settings, mutual-connection state, and product permissions. That includes profile content, intros, messages, proposals, agreement drafts, and signatures when the relevant step calls for it.",
       "When a participant requests legal review, CoFoundry shares the selected agreement version, requested review scope, requester context, and reviewer-facing product notice with the named representative through an expiring bearer link. The parties receive the reviewer's recorded outcome and response. CoFoundry does not share the requester's account email as part of that handoff.",
+      "When an authorized member adds or links information to an organization workspace, CoFoundry shares the applicable organization record with other active members according to their assigned roles. Invitation emails disclose the organization name and proposed role to the invited address. CoFoundry does not make an organization's private workspace public merely because the organization has a public website or opportunity listing.",
       "We share information with service providers that help us operate the product, such as infrastructure, storage, authentication, billing, email delivery, and security vendors. In some environments, equivalent functionality may be handled by CoFoundry's internal service layer instead of live third-party processors.",
       "We may disclose information to comply with law, respond to lawful requests, protect the rights or safety of members, investigate fraud or abuse, or support a merger, acquisition, financing, or similar business transaction.",
       "CoFoundry's current configuration does not use third-party advertising pixels or cross-context behavioral advertising, and CoFoundry does not currently sell or share personal information for that purpose. If that changes, CoFoundry will update this policy and any required opt-out controls before rollout.",
@@ -461,6 +488,7 @@ export const privacySections: LegalSection[] = [
     paragraphs: [
       "CoFoundry retains information for as long as necessary to operate the service, preserve collaboration history, enforce the Terms, handle trust-and-safety reports, meet legal obligations, and protect against fraud or abuse.",
       "Account closure or deletion requests do not always erase every record immediately. Other members and legal representatives they invited may still retain copies of messages, proposal drafts, agreement materials, or review responses they previously received, and CoFoundry may keep limited records for billing, security, legal compliance, or repeat-offender review.",
+      "Organization owners may configure the ordinary audit-history window and archive a workspace, but those controls do not unilaterally delete records shared with other members or override legal, billing, security, dispute, or compliance retention. Members should ask their organization owner to correct workspace-controlled records and may also contact CoFoundry for privacy support.",
       "CoFoundry generally follows the retention windows summarized on this page, but may retain information for a shorter or longer period where a live investigation, legal hold, tax requirement, or dispute makes that necessary.",
     ],
   },
@@ -472,6 +500,7 @@ export const privacySections: LegalSection[] = [
       "CoFoundry uses technical and organizational safeguards designed to protect account data, collaboration history, and payment-related metadata, including access controls, scoped service-provider access, and server-side handling for secret-backed integrations when enabled.",
       "No internet service is perfectly secure, and CoFoundry cannot guarantee absolute security. Members should still use strong passwords, protect their devices, and avoid oversharing sensitive data before they have enough trust in another party.",
       "Authorized admins may review messages, attachments, proposals, contracts, reports, and associated logs when needed for support, trust and safety, fraud prevention, technical troubleshooting, or legal compliance. CoFoundry does not promise that every interaction is proactively monitored, but it reserves the right to investigate when warranted.",
+      "Organization writes use role checks and version controls intended to prevent unauthorized or stale updates. Those controls reduce risk but do not replace an organization's own access reviews, confidentiality practices, device security, or legal recordkeeping obligations.",
     ],
   },
   {

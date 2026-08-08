@@ -29,12 +29,18 @@ Status: implemented and locally release-validated; hosted promotion and deployme
 
 ### Team / Studio operating model
 
-Status: projected next product milestone, not represented as already available.
+Status: implemented in source; full local release validation, hosted promotion, and deployment-identity verification remain the completion gate.
 
-- Organization workspaces with multiple seats and explicit owner, operator, reviewer, and billing roles
-- Shared searches, reusable agreement policies, internal approval routing, and organization-level audit history
+- Organization workspaces with multiple seats and explicit owner, operator, member, reviewer, billing, and counsel roles
+- Venture portfolios, projects, tasks, decisions, shared searches, linked relationship resources, and organization-level audit history
+- Reusable agreement policies, version-bound internal approval routing, separation-of-duties controls, required legal review, and signing-time enforcement
 - In-house counsel queues spanning multiple relationships without turning outside counsel into ordinary network members
-- Consolidated relationship analytics, billing, and retention controls for the organization
+- Team-plan sponsorship, seat limits, retention settings, role-scoped projections, stale-write protection, durable local persistence, and service-role-only Supabase persistence
+
+Still staged for later depth after the operating foundation:
+
+- Consolidated cross-relationship analytics and richer portfolio reporting
+- External identity-directory or single-sign-on provisioning for larger studios
 
 ### Independent professional-help ecosystem
 
