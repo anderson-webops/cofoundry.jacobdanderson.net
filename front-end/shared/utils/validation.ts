@@ -1249,6 +1249,178 @@ export const investmentApplicationSubmissionSchema = z
   })
   .strict()
 
+const organizationMemberRoleSchema = z.enum(["owner", "operator", "member", "reviewer", "billing", "counsel"])
+const organizationAssignableRoleSchema = z.enum(["operator", "member", "reviewer", "billing", "counsel"])
+const nullableIdentifierSchema = identifierSchema.nullable()
+const nullableDateTimeSchema = z.string().datetime("Use an ISO timestamp.").nullable()
+
+export const organizationCreateSchema = z.object({
+  description: boundedText(3000).min(20, "Add a concise organization description."),
+  kind: z.enum(["startup_team", "venture_studio"]),
+  name: boundedText(120).min(2, "Organization name is required."),
+  website: safeHttpUrlSchema,
+}).strict()
+
+export const organizationMutationEnvelopeSchema = z.object({
+  expectedVersion: z.number().int().positive(),
+  mutation: z.discriminatedUnion("action", [
+    z.object({
+      action: z.literal("update_organization"),
+      description: boundedText(3000).min(20),
+      name: boundedText(120).min(2),
+      website: safeHttpUrlSchema,
+    }).strict(),
+    z.object({
+      action: z.literal("update_settings"),
+      allowOperatorInvites: z.boolean(),
+      dataRetentionDays: z.number().int().min(30).max(3650),
+      seatLimit: z.number().int().min(2).max(100),
+    }).strict(),
+    z.object({ action: z.literal("archive_organization") }).strict(),
+    z.object({
+      action: z.literal("invite_member"),
+      displayName: boundedText(120).min(2),
+      email: z.string().trim().email("Enter a valid email address.").max(254),
+      role: organizationAssignableRoleSchema,
+      title: boundedText(160).min(2),
+    }).strict(),
+    z.object({
+      action: z.literal("respond_invitation"),
+      invitationId: identifierSchema,
+      response: z.enum(["accepted", "declined"]),
+    }).strict(),
+    z.object({ action: z.literal("revoke_invitation"), invitationId: identifierSchema }).strict(),
+    z.object({
+      action: z.literal("update_member"),
+      membershipId: identifierSchema,
+      role: organizationAssignableRoleSchema,
+      title: boundedText(160).min(2),
+    }).strict(),
+    z.object({ action: z.literal("remove_member"), membershipId: identifierSchema }).strict(),
+    z.object({ action: z.literal("transfer_ownership"), membershipId: identifierSchema }).strict(),
+    z.object({
+      action: z.literal("create_venture"),
+      leadUserId: nullableIdentifierSchema,
+      name: boundedText(160).min(2),
+      opportunityId: nullableIdentifierSchema,
+      stage: z.enum(["idea", "prototype", "mvp", "revenue", "growth"]),
+      summary: boundedText(3000).min(20),
+    }).strict(),
+    z.object({
+      action: z.literal("update_venture"),
+      leadUserId: nullableIdentifierSchema,
+      stage: z.enum(["idea", "prototype", "mvp", "revenue", "growth"]),
+      status: z.enum(["incubating", "active", "paused", "graduated", "archived"]),
+      summary: boundedText(3000).min(20),
+      ventureId: identifierSchema,
+    }).strict(),
+    z.object({
+      action: z.literal("create_project"),
+      description: boundedText(4000).min(10),
+      dueAt: nullableDateTimeSchema,
+      ownerUserId: nullableIdentifierSchema,
+      title: boundedText(200).min(2),
+      ventureId: nullableIdentifierSchema,
+    }).strict(),
+    z.object({
+      action: z.literal("update_project"),
+      description: boundedText(4000).min(10),
+      dueAt: nullableDateTimeSchema,
+      ownerUserId: nullableIdentifierSchema,
+      projectId: identifierSchema,
+      status: z.enum(["planned", "active", "blocked", "completed", "archived"]),
+      title: boundedText(200).min(2),
+    }).strict(),
+    z.object({
+      action: z.literal("create_task"),
+      assigneeUserId: nullableIdentifierSchema,
+      dueAt: nullableDateTimeSchema,
+      projectId: identifierSchema,
+      title: boundedText(240).min(2),
+    }).strict(),
+    z.object({
+      action: z.literal("update_task"),
+      assigneeUserId: nullableIdentifierSchema,
+      dueAt: nullableDateTimeSchema,
+      status: z.enum(["todo", "in_progress", "blocked", "done"]),
+      taskId: identifierSchema,
+      title: boundedText(240).min(2),
+    }).strict(),
+    z.object({
+      action: z.literal("create_decision"),
+      context: boundedText(4000).min(10),
+      decision: boundedText(4000).min(5),
+      ownerUserId: identifierSchema,
+      projectId: nullableIdentifierSchema,
+      title: boundedText(240).min(2),
+      ventureId: nullableIdentifierSchema,
+    }).strict(),
+    z.object({
+      action: z.literal("resolve_decision"),
+      decision: boundedText(4000).min(5),
+      decisionId: identifierSchema,
+      status: z.enum(["approved", "superseded"]),
+    }).strict(),
+    z.object({
+      action: z.literal("create_policy"),
+      allowOutsideCounsel: z.boolean(),
+      approvalRoles: z.array(organizationMemberRoleSchema).min(1).max(6),
+      description: boundedText(3000).min(10),
+      isDefault: z.boolean(),
+      name: boundedText(160).min(2),
+      requiredClauses: boundedTextArray(30, 240),
+      requiresInternalApproval: z.boolean(),
+      requiresLegalReview: z.boolean(),
+      separationOfDuties: z.boolean(),
+    }).strict(),
+    z.object({
+      action: z.literal("update_policy"),
+      allowOutsideCounsel: z.boolean(),
+      approvalRoles: z.array(organizationMemberRoleSchema).min(1).max(6),
+      description: boundedText(3000).min(10),
+      isDefault: z.boolean(),
+      name: boundedText(160).min(2),
+      policyId: identifierSchema,
+      requiredClauses: boundedTextArray(30, 240),
+      requiresInternalApproval: z.boolean(),
+      requiresLegalReview: z.boolean(),
+      separationOfDuties: z.boolean(),
+    }).strict(),
+    z.object({
+      action: z.literal("request_approval"),
+      policyId: nullableIdentifierSchema,
+      summary: boundedText(4000).min(10),
+      targetId: identifierSchema,
+      targetType: z.enum(["contract", "proposal", "venture", "project", "opportunity", "investment_application", "policy_exception"]),
+      targetVersionId: nullableIdentifierSchema,
+      title: boundedText(240).min(2),
+    }).strict(),
+    z.object({
+      action: z.literal("resolve_approval"),
+      approvalId: identifierSchema,
+      decisionNote: boundedText(4000).min(8),
+      status: z.enum(["approved", "changes_requested", "rejected"]),
+    }).strict(),
+    z.object({ action: z.literal("cancel_approval"), approvalId: identifierSchema }).strict(),
+    z.object({
+      action: z.literal("share_search"),
+      filters: searchFiltersSchema,
+      label: boundedText(160).min(2),
+      scope: z.enum(["profiles", "opportunities"]),
+      sourceSavedSearchId: nullableIdentifierSchema,
+    }).strict(),
+    z.object({ action: z.literal("remove_shared_search"), sharedSearchId: identifierSchema }).strict(),
+    z.object({
+      action: z.literal("link_resource"),
+      label: boundedText(240).min(2),
+      policyId: nullableIdentifierSchema,
+      resourceId: identifierSchema,
+      resourceType: z.enum(["relationship", "proposal", "contract", "opportunity", "investment_application"]),
+    }).strict(),
+    z.object({ action: z.literal("unlink_resource"), resourceLinkId: identifierSchema }).strict(),
+  ]),
+}).strict()
+
 export const adminUserModerationSchema = z.object({
   action: z.enum(["suspend", "reinstate"]),
   notes: z

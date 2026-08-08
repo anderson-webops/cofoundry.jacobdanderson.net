@@ -10,6 +10,7 @@ import { notifyContractLegalReviewParticipants } from "../../../utils/contract-l
 import { createContractLegalReviewUrl } from "../../../utils/contract-legal-review-tokens"
 import { createContractLegalReview, listContractLegalReviews } from "../../../utils/contract-legal-reviews"
 import { loadMemberWorkspaceState } from "../../../utils/member-workspace"
+import { loadContractOrganizationGovernance } from "../../../utils/organization-workspaces"
 import { assertRateLimit, buildRateLimitKey } from "../../../utils/rate-limit"
 
 const reviewInviteLifetimeMs = 14 * 24 * 60 * 60 * 1000
@@ -55,6 +56,13 @@ export default defineEventHandler(async (event) => {
   }
 
   const existingReviews = await listContractLegalReviews(event, contract.id)
+  const organizationRequirements = await loadContractOrganizationGovernance(event, contract.id, version.id, existingReviews)
+  if (payload.reviewerType === "outside_counsel" && organizationRequirements.some(requirement => !requirement.allowOutsideCounsel)) {
+    throw createError({
+      statusCode: 409,
+      statusMessage: "The linked organization agreement policy restricts this version to in-house counsel. Update the policy or choose an in-house reviewer.",
+    })
+  }
   if (existingReviews.filter(review => review.contractVersionId === version.id).length >= 5) {
     throw createError({
       statusCode: 409,

@@ -213,6 +213,35 @@ export async function listContractLegalReviewsForContracts(event: H3Event, contr
   return ((data || []) as PersistedContractLegalReviewRow[]).map(fromRow)
 }
 
+export async function listContractLegalReviewsForReviewerEmail(event: H3Event, reviewerEmail: string) {
+  const normalizedEmail = reviewerEmail.trim().toLowerCase()
+  if (!normalizedEmail)
+    return []
+
+  if (!isSupabaseEnabled(event)) {
+    const store = await readStore()
+    return store.reviews
+      .filter(review => review.reviewerEmail.trim().toLowerCase() === normalizedEmail)
+      .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+  }
+
+  const adminClient = createSupabaseAdminClient(event)
+  if (!adminClient)
+    throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
+
+  const { data, error } = await adminClient
+    .from("contract_legal_reviews")
+    .select("*")
+    .eq("reviewer_email", normalizedEmail)
+    .order("created_at", { ascending: false })
+    .limit(500)
+
+  if (error)
+    throw error
+
+  return ((data || []) as PersistedContractLegalReviewRow[]).map(fromRow)
+}
+
 export async function getContractLegalReview(event: H3Event, reviewId: string) {
   if (!isSupabaseEnabled(event)) {
     const store = await readStore()

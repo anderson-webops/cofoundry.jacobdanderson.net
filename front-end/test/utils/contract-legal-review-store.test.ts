@@ -11,6 +11,7 @@ import {
   getContractLegalReview,
   listContractLegalReviews,
   listContractLegalReviewsForContracts,
+  listContractLegalReviewsForReviewerEmail,
   supersedeContractLegalReviews,
   updateContractLegalReview,
 } from "../../server/utils/contract-legal-reviews"
@@ -70,6 +71,9 @@ describe("contract legal-review persistence", () => {
     ])
     expect(await listContractLegalReviewsForContracts(event, ["contract_other"])).toEqual([])
     expect(await listContractLegalReviewsForContracts(event, ["contract_ledgerloop"])).toHaveLength(1)
+    expect(await listContractLegalReviewsForReviewerEmail(event, "COUNSEL@example.com")).toEqual([
+      expect.objectContaining({ id: created.id }),
+    ])
   })
 
   it("uses optimistic status checks and supersedes records from earlier agreement versions", async () => {

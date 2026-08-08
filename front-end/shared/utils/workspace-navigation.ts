@@ -148,6 +148,18 @@ const workspaceRouteMatchers: WorkspaceRouteMatcher[] = [
     description: "Manage agreement drafts, signatures, and the legal handoff before work begins.",
   },
   {
+    prefix: "/app/studio/",
+    areaLabel: "Team / Studio",
+    title: "Organization workspace",
+    description: "Run ventures, projects, governance, approvals, legal review, and shared operating controls.",
+  },
+  {
+    prefix: "/app/studio",
+    areaLabel: "Team / Studio",
+    title: "Organizations",
+    description: "Manage Team and Studio workspaces, invitations, seats, and operating portfolios.",
+  },
+  {
     prefix: "/app/legal",
     areaLabel: "Workspace",
     title: "Legal review",

@@ -21,6 +21,7 @@ export const appNavigation = [
   { label: "Messages", to: "/app/messages", icon: "i-carbon-chat" },
   { label: "Proposals", to: "/app/proposals", icon: "i-carbon-document-signed" },
   { label: "Contracts", to: "/app/contracts", icon: "i-carbon-license-global" },
+  { label: "Studio", to: "/app/studio", icon: "i-carbon-workspace" },
   { label: "Legal review", to: "/app/legal", icon: "i-carbon-collaborate" },
   { label: "Billing", to: "/app/billing", icon: "i-carbon-wallet" },
   { label: "Settings", to: "/app/settings", icon: "i-carbon-settings" },
