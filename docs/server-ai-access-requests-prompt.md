@@ -10,7 +10,7 @@ Current app behavior:
 - `/auth/recover` submits account-help requests into the same durable queue for invited or existing users who cannot sign in.
 - Admins review requests at `/admin/access-requests`.
 - Admin invite generation creates 30-day invite links for `/auth/sign-up?invite=...&email=...`.
-- Invited member workspace state and collaboration workflow updates are stored locally so profile, inbox, billing preview, intro, message, proposal, and agreement state can survive restarts before Supabase is enabled.
+- Invited member workspace state, collaboration workflow updates, and version-bound legal-review records are stored locally so profile, inbox, billing preview, intro, message, proposal, agreement, and reviewer-response state can survive restarts before Supabase is enabled.
 - Admin moderation, role, report, privacy-request, and notification overlays are stored locally so `/admin/audit` remains durable in mock mode.
 - Invited accounts are stored locally so sign-in persists across Node process restarts.
 - The same access-request server utility is Supabase-ready, but production should stay in mock mode until the operator intentionally applies migrations and flips the backend mode.
@@ -21,11 +21,12 @@ Please configure the host/runtime:
 3. Verify paid-plan changes route to the CoFoundry team instead of granting paid entitlements when Stripe is not enabled.
 4. Set `SESSION_SIGNING_SECRET` to a long random server-only value from Vault/host env.
 5. Set `COFOUNDRY_LOCAL_DATA_DIR` to a durable writable host path owned by the app user.
-6. Optionally set `COFOUNDRY_ACCESS_REQUEST_RETENTION_LIMIT` for the request queue, `COFOUNDRY_COLLABORATION_RETENTION_LIMIT` for local workflow rows, and `COFOUNDRY_ADMIN_AUDIT_RETENTION_LIMIT` for local admin audit rows.
+6. Optionally set `COFOUNDRY_ACCESS_REQUEST_RETENTION_LIMIT` for the request queue, `COFOUNDRY_COLLABORATION_RETENTION_LIMIT` for local workflow rows, `COFOUNDRY_CONTRACT_LEGAL_REVIEW_RETENTION_LIMIT` for legal-review records, and `COFOUNDRY_ADMIN_AUDIT_RETENTION_LIMIT` for local admin audit rows.
 7. Verify the app user can create and update:
    - `access-requests.json`
    - `member-workspace-state.json`
    - `collaboration-state.json`
+   - `contract-legal-reviews.json`
    - `admin-audit.json`
    - `local-auth-accounts.json`
    - `operations-telemetry.json`

@@ -35,6 +35,11 @@ function getTopicDefaults(topic: string) {
         subject: "Account access help",
         message: "I need help accessing an existing CoFoundry account or invite.",
       }
+    case "legal-review":
+      return {
+        subject: "Agreement review workflow help",
+        message: "I need product or document-sharing help with an agreement review. I understand CoFoundry does not provide legal advice or select counsel.",
+      }
     default:
       return {
         subject: "",

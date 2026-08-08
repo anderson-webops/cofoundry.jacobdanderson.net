@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import {
   clearLocalCollaborationStoreForTests,
   filterCollaborationStateForUser,
+  loadLocalCollaborationState,
   persistLocalCollaborationStateForUsers,
   recordLocalInvestmentApplication,
 } from "../../server/utils/local-collaboration-store"
@@ -110,5 +111,44 @@ describe("local collaboration security boundaries", () => {
     })).rejects.toMatchObject({
       statusCode: 409,
     })
+  })
+
+  it("preserves private counterparty rows that the actor did not observe", async () => {
+    const malikExpected = extractUsersCollaborationState(workspaceSeed, ["user_malik"])
+    const malikNext = structuredClone(malikExpected)
+    malikNext.notifications.unshift({
+      body: "Private counterparty update",
+      createdAt: "2026-07-29T18:00:00.000Z",
+      href: "/app/contracts/contract_1",
+      id: "notification_private_malik",
+      readAt: null,
+      title: "Agreement revision ready",
+      type: "contract",
+      userId: "user_malik",
+    })
+    await persistLocalCollaborationStateForUsers(["user_malik"], malikNext, {
+      expectedState: malikExpected,
+    })
+
+    const oliviaExpected = extractUsersCollaborationState(workspaceSeed, ["user_olivia"])
+    const oliviaNext = structuredClone(oliviaExpected)
+    const contract = oliviaNext.contracts[0]
+    expect(contract).toBeDefined()
+    contract!.updatedAt = "2026-07-29T18:05:00.000Z"
+
+    await persistLocalCollaborationStateForUsers(["user_olivia", "user_malik"], oliviaNext, {
+      expectedState: oliviaExpected,
+    })
+
+    const malikState = await loadLocalCollaborationState("user_malik")
+    expect(malikState).not.toBeNull()
+    expect(malikState!.notifications).toContainEqual(expect.objectContaining({
+      id: "notification_private_malik",
+      title: "Agreement revision ready",
+    }))
+    expect(malikState!.contracts).toContainEqual(expect.objectContaining({
+      id: contract!.id,
+      updatedAt: "2026-07-29T18:05:00.000Z",
+    }))
   })
 })

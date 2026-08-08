@@ -16,9 +16,9 @@ const isOpen = defineModel<boolean>({ default: false })
       leave-from-class="opacity-100"
       leave-to-class="opacity-0"
     >
-      <div v-if="isOpen" class="p-4 bg-black/45 flex items-center inset-0 justify-center fixed z-80">
-        <div class="panel max-w-2xl w-full overflow-hidden">
-          <div class="p-6 flex gap-4 items-start justify-between">
+      <div v-if="isOpen" class="p-4 bg-black/45 flex items-start inset-0 justify-center fixed z-80 overflow-y-auto sm:items-center" @keydown.esc="isOpen = false">
+        <div class="panel flex flex-col max-h-[calc(100dvh-2rem)] max-w-2xl w-full overflow-hidden" role="dialog" aria-modal="true" :aria-label="title">
+          <div class="p-6 flex shrink-0 gap-4 items-start justify-between">
             <div>
               <h2 class="text-xl font-semibold">
                 {{ title }}
@@ -27,12 +27,12 @@ const isOpen = defineModel<boolean>({ default: false })
                 {{ description }}
               </p>
             </div>
-            <button class="text-lg p-2 rounded-full hover:bg-[var(--accent-soft)]" @click="isOpen = false">
+            <button type="button" aria-label="Close dialog" class="text-lg p-2 rounded-full hover:bg-[var(--accent-soft)]" @click="isOpen = false">
               <span class="i-carbon-close" />
             </button>
           </div>
-          <div class="hairline" />
-          <div class="p-6">
+          <div class="hairline shrink-0" />
+          <div class="p-6 overscroll-contain overflow-y-auto">
             <slot />
           </div>
         </div>

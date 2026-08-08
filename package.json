@@ -1,7 +1,7 @@
 {
   "name": "cofoundry-monorepo",
   "type": "module",
-  "version": "1.1.108",
+  "version": "1.1.109",
   "private": true,
   "packageManager": "npm@12.0.2",
   "engines": {
@@ -24,7 +24,8 @@
     "brace-expansion": "$brace-expansion",
     "fast-uri": "3.1.4",
     "js-beautify": "$js-beautify",
-    "js-yaml": "4.3.0",
+    "js-yaml": "4.3.1",
+    "nanoid": "3.3.17",
     "postcss": "8.5.24",
     "shell-quote": "1.10.0",
     "svgo": "4.0.2",
@@ -90,10 +91,11 @@
     "eslint": "10.8.0",
     "eslint-plugin-format": "2.0.1",
     "globals": "^17.7.0",
+    "happy-dom": "20.11.2",
     "js-beautify": "2.0.3",
     "puppeteer": "^25.4.0",
     "typescript": "^6.0.3",
-    "vue": "3.5.40"
+    "vue": "3.5.41"
   },
   "allowScripts": {
     "esbuild@0.28.1": true,

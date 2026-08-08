@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   clearWorkspaceRealtimeSubscribersForTests,
   deliverWorkspaceRealtimeEnvelope,
@@ -13,6 +13,10 @@ import {
 describe("workspace realtime hub", () => {
   beforeEach(() => {
     clearWorkspaceRealtimeSubscribersForTests()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it("delivers workspace invalidation events only to affected users", async () => {
@@ -64,6 +68,24 @@ describe("workspace realtime hub", () => {
     })
 
     expect(delivered).toBe(0)
+    expect(getWorkspaceRealtimeSubscriberCount("user_one")).toBe(0)
+  })
+
+  it("drops a realtime sink that never settles instead of blocking a workspace write", async () => {
+    vi.useFakeTimers()
+    const close = vi.fn()
+    subscribeWorkspaceRealtime("user_one", {
+      close,
+      push: () => new Promise<void>(() => {}),
+    })
+
+    const delivery = emitWorkspaceRealtimeChange(["user_one"], {
+      source: "workspace.member",
+    })
+    await vi.advanceTimersByTimeAsync(1_000)
+
+    expect(await delivery).toBe(0)
+    expect(close).toHaveBeenCalledOnce()
     expect(getWorkspaceRealtimeSubscriberCount("user_one")).toBe(0)
   })
 

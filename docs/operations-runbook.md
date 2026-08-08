@@ -99,7 +99,7 @@ The checked-in relay remains an experimental building block. Before production c
 
 1. Snapshot the durable local data directory or Supabase project before a deploy.
 2. Restore into a staging host or staging Supabase project.
-3. Confirm `/admin/operations`, `/admin/audit`, `/admin/access-requests`, `/admin/privacy`, `/app/inbox`, `/app/billing`, and `/app/settings` load from restored data.
+3. Confirm `/admin/operations`, `/admin/audit`, `/admin/access-requests`, `/admin/privacy`, `/app/inbox`, `/app/billing`, `/app/legal`, and `/app/settings` load from restored data. Open an agreement with legal-review history and confirm the request, exact version, status, and response were restored without restoring an invite token.
 4. Record the drill with `npm run operations:restore-drill -- --id restore-YYYYMMDD -- <restore verification command>` so the start and success/failure events appear in `/admin/operations`.
 
 ## Supabase Cutover

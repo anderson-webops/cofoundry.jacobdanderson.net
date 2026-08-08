@@ -1,5 +1,5 @@
 import type { H3Event } from "h3"
-import type { MemberWorkspaceState, MemberWorkspaceWritePayload, Profile, SavedSearch, SessionUser, StartupOpportunity, Subscription, User } from "../../shared/types/domain"
+import type { MemberWorkspaceState, MemberWorkspaceWritePayload, Profile, SavedSearch, SessionUser, StartupOpportunity, Subscription, User, WorkspaceSeed } from "../../shared/types/domain"
 import { randomUUID } from "node:crypto"
 import { createError } from "h3"
 import { checkSavedSearchCount } from "../../shared/utils/billing"
@@ -162,6 +162,53 @@ function buildMergedSeed(state: MemberWorkspaceState) {
   return mergeMemberWorkspaceState(createBaseSeed(), syncWorkspaceVerificationState(state))
 }
 
+function contractParticipantUserIds(seed: WorkspaceSeed) {
+  const participantIds = new Set<string>()
+
+  for (const contract of seed.contracts) {
+    const proposal = seed.proposals.find(item => item.id === contract.proposalId)
+    if (!proposal)
+      continue
+
+    participantIds.add(proposal.createdByUserId)
+    participantIds.add(proposal.recipientUserId)
+  }
+
+  return participantIds
+}
+
+function replaceParticipantSubscriptions(
+  seed: WorkspaceSeed,
+  participantIds: Set<string>,
+  subscriptions: Subscription[],
+) {
+  return {
+    ...seed,
+    subscriptions: [
+      ...seed.subscriptions.filter(subscription => !participantIds.has(subscription.userId)),
+      ...subscriptions,
+    ],
+  }
+}
+
+async function mergeLocalParticipantSubscriptions(seed: WorkspaceSeed) {
+  const participantIds = contractParticipantUserIds(seed)
+  if (!participantIds.size)
+    return seed
+
+  const subscriptionsByUserId = new Map(
+    seed.subscriptions
+      .filter(subscription => participantIds.has(subscription.userId))
+      .map(subscription => [subscription.userId, subscription]),
+  )
+  for (const state of await readLocalMemberWorkspaceStates()) {
+    if (participantIds.has(state.user.id))
+      subscriptionsByUserId.set(state.user.id, state.subscription)
+  }
+
+  return replaceParticipantSubscriptions(seed, participantIds, [...subscriptionsByUserId.values()])
+}
+
 function syncWorkspaceVerificationState(state: MemberWorkspaceState): MemberWorkspaceState {
   return {
     ...state,
@@ -257,7 +304,7 @@ async function buildLocalRuntimeSeed(state: MemberWorkspaceState) {
   if (collaborationState)
     seed = mergeServerCollaborationState(seed, collaborationState)
 
-  return mergeLocalAdminAuditState(seed)
+  return mergeLocalParticipantSubscriptions(await mergeLocalAdminAuditState(seed))
 }
 
 function toUserRow(user: User): PersistedUserRow {
@@ -484,6 +531,33 @@ async function selectSubscription(adminClient: NonNullable<ReturnType<typeof cre
     throw error
 
   return data
+}
+
+async function selectSubscriptions(adminClient: NonNullable<ReturnType<typeof createSupabaseAdminClient>>, userIds: string[]) {
+  if (!userIds.length)
+    return []
+
+  const { data, error } = await adminClient
+    .from("subscriptions")
+    .select("*")
+    .in("user_id", userIds)
+
+  if (error)
+    throw error
+
+  return (data || []) as PersistedSubscriptionRow[]
+}
+
+async function mergeSupabaseParticipantSubscriptions(
+  adminClient: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
+  seed: WorkspaceSeed,
+) {
+  const participantIds = contractParticipantUserIds(seed)
+  if (!participantIds.size)
+    return seed
+
+  const rows = await selectSubscriptions(adminClient, [...participantIds])
+  return replaceParticipantSubscriptions(seed, participantIds, rows.map(fromSubscriptionRow))
 }
 
 async function selectBookmarks(adminClient: NonNullable<ReturnType<typeof createSupabaseAdminClient>>, userId: string) {
@@ -872,7 +946,7 @@ export async function loadMemberWorkspaceState(
 
     const bootstrapState = buildBootstrapState(identity)
     await persistWholeMemberWorkspaceState(event, bootstrapState)
-    const seed = buildMergedSeed(bootstrapState)
+    const seed = await mergeSupabaseParticipantSubscriptions(adminClient, buildMergedSeed(bootstrapState))
 
     return {
       seed,
@@ -897,7 +971,7 @@ export async function loadMemberWorkspaceState(
       verifiedEmail: userRow.verified_email,
     }, { preserveAuthoritativeRole: true })
     await persistWholeMemberWorkspaceState(event, bootstrapState)
-    const seed = buildMergedSeed(bootstrapState)
+    const seed = await mergeSupabaseParticipantSubscriptions(adminClient, buildMergedSeed(bootstrapState))
 
     return {
       seed,
@@ -925,7 +999,10 @@ export async function loadMemberWorkspaceState(
   const collaborationState = await loadServerCollaborationState(event, userRow.id, {
     includeAdministrativeData: userRow.role === "admin" && !userRow.suspended_at && userRow.verified_email,
   })
-  const seed = mergeServerCollaborationState(mergedSeed, collaborationState)
+  const seed = await mergeSupabaseParticipantSubscriptions(
+    adminClient,
+    mergeServerCollaborationState(mergedSeed, collaborationState),
+  )
 
   return {
     seed,

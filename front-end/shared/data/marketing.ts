@@ -68,7 +68,8 @@ export const pricingTiers: PricingTier[] = [
       "Stronger visibility for proof, activity, and trust signals",
       "12 proposal sends and 8 agreement drafts each month",
       "Deal room with clause-level comments and version history",
-      "Signature-ready agreements and export",
+      "Signature-ready agreements and export for both participants",
+      "Version-bound handoff to your in-house or outside counsel",
       "Clear renewal date and in-product cancellation",
       "Deeper search controls and visibility",
     ],
@@ -84,6 +85,7 @@ export const pricingTiers: PricingTier[] = [
       "Higher-volume intros, proposals, and agreement drafts",
       "Multiple startup opportunities",
       "Shared proposal and agreement management across several searches",
+      "Shared in-house and outside-counsel review handoffs",
       "Team-level review and moderation tools",
       "Priority setup for repeat searches and studios",
     ],
@@ -116,6 +118,10 @@ export const faqs = [
     answer: "No. Messaging after a mutual match stays available on every plan. Limits apply to new outbound intros and later-stage proposal and agreement actions.",
   },
   {
+    question: "Does each agreement participant need a paid plan?",
+    answer: "No. When either participant has an active Pro or Team plan, that plan sponsors the shared agreement workflow so both people can revise, request legal review, export, and sign that agreement.",
+  },
+  {
     question: "How does the trial collaboration step work?",
     answer: "It is a short, structured working sprint that helps both sides pressure-test cadence, ownership, and communication before they finalize a proposal or agreement.",
   },
@@ -125,7 +131,7 @@ export const faqs = [
   },
   {
     question: "Are the contracts legally binding?",
-    answer: "The contracts are editable templates with typed signatures and timestamps. They are not legal advice and should be reviewed by qualified counsel before execution.",
+    answer: "The agreements are editable templates with typed signatures and timestamps. They are not legal advice. You can invite your own in-house or outside legal representative to one exact version before execution.",
   },
   {
     question: "How easy is it to cancel a paid plan?",
@@ -152,7 +158,7 @@ export const trustPillars = [
   },
   {
     title: "Structured negotiation",
-    body: "The product moves from first call to trial sprint to proposal and agreement draft, surfacing the important terms early.",
+    body: "The product moves from first call to trial sprint, proposal negotiation, versioned agreement, optional counsel review, and signatures.",
   },
   {
     title: "Moderation and review",

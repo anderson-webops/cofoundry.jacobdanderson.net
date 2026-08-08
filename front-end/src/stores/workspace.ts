@@ -6,7 +6,7 @@ import type {
   ConnectRequestPayload,
   ConnectRequestStatus,
   ContactRevealStage,
-  ContractVersion,
+  ContractVersionPayload,
   NotificationPreferences,
   ProposalPayload,
   ProposalSectionKey,
@@ -27,6 +27,7 @@ import {
   addRelationshipDecisionTransition,
   createConnectRequestTransition,
   createContractFromProposalTransition,
+  createContractVersionTransition,
   createProposalCounterVersionTransition,
   createProposalTransition,
   markConversationReadTransition,
@@ -834,23 +835,24 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     return transition.contractId
   }
 
-  function updateContractVersion(contractId: string, partial: Partial<ContractVersion>) {
+  async function updateContractVersion(contractId: string, payload: ContractVersionPayload, actorUserId: string) {
     const contract = getContractById(data.value, contractId)
     const currentVersion = contract && getCurrentContractVersion(data.value, contract)
     if (!contract || !currentVersion)
-      return
+      return null
 
-    const nextVersion: ContractVersion = {
-      ...currentVersion,
-      ...partial,
-      id: crypto.randomUUID(),
-      versionNumber: currentVersion.versionNumber + 1,
-      createdAt: now(),
+    if (serverBackedWorkspace.value) {
+      const result = await runCollaborationMutation<{ contractId: string | null, contractVersionId: string | null }>({
+        action: "update_contract_version",
+        contractId,
+        payload,
+      })
+      return result?.contractVersionId || null
     }
 
-    data.value.contractVersions.unshift(nextVersion)
-    contract.currentVersionId = nextVersion.id
-    contract.updatedAt = now()
+    const transition = createContractVersionTransition(data.value, contractId, actorUserId, payload, now())
+    data.value = transition.seed
+    return transition.version?.id || null
   }
 
   async function signContract(contractId: string, userId: string, typedName: string) {

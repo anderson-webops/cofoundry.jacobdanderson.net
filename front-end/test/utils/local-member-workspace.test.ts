@@ -10,10 +10,11 @@ import { persistMockCheckoutSubscription, updateMockSubscriptionRenewal } from "
 import { applyCollaborationMutation } from "../../server/utils/collaboration-workflow"
 import { clearLocalAdminAuditStoreForTests } from "../../server/utils/local-admin-audit"
 import { clearLocalCollaborationStoreForTests } from "../../server/utils/local-collaboration-store"
-import { clearLocalMemberWorkspaceStoreForTests } from "../../server/utils/local-member-workspace"
+import { clearLocalMemberWorkspaceStoreForTests, persistLocalMemberWorkspaceState } from "../../server/utils/local-member-workspace"
 import { listAdminOpportunityWorkspaceSlice, loadMemberWorkspaceState, persistMemberWorkspaceWritePayload } from "../../server/utils/member-workspace"
 import { workspaceSeed } from "../../shared/data/seed"
 import { buildSessionUser } from "../../shared/utils/workspace"
+import { projectWorkspaceForSession } from "../../shared/utils/workspace-authorization"
 
 let dataDirectory: string
 
@@ -81,6 +82,36 @@ describe("local member workspace persistence", () => {
     })
     expect(reloaded.state.user.notificationPreferences.unreadDigestEmail).toBe(true)
     expect(reloaded.state.user.notificationPreferences.workflowEmail).toBe(true)
+  })
+
+  it("uses authoritative counterparty billing state for agreement sponsorship", async () => {
+    const oliviaSession = buildSessionUser(workspaceSeed, "user_olivia")!
+    const oliviaWorkspace = await loadMemberWorkspaceState(event, oliviaSession)
+    await persistLocalMemberWorkspaceState({
+      ...oliviaWorkspace.state,
+      subscription: {
+        ...oliviaWorkspace.state.subscription,
+        status: "canceled",
+      },
+    })
+
+    const malikSession = buildSessionUser(workspaceSeed, "user_malik")!
+    const unsponsoredWorkspace = await loadMemberWorkspaceState(event, malikSession)
+    const unsponsoredProjection = projectWorkspaceForSession(unsponsoredWorkspace.seed, unsponsoredWorkspace.session)
+    expect(unsponsoredProjection.contracts.find(contract => contract.id === "contract_ledgerloop")?.workflowSponsored).toBe(false)
+    expect(unsponsoredProjection.subscriptions.map(subscription => subscription.userId)).toEqual([malikSession.id])
+
+    await persistLocalMemberWorkspaceState({
+      ...oliviaWorkspace.state,
+      subscription: {
+        ...oliviaWorkspace.state.subscription,
+        status: "active",
+      },
+    })
+    const sponsoredWorkspace = await loadMemberWorkspaceState(event, malikSession)
+    const sponsoredProjection = projectWorkspaceForSession(sponsoredWorkspace.seed, sponsoredWorkspace.session)
+    expect(sponsoredProjection.contracts.find(contract => contract.id === "contract_ledgerloop")?.workflowSponsored).toBe(true)
+    expect(sponsoredProjection.subscriptions.map(subscription => subscription.userId)).toEqual([malikSession.id])
   })
 
   it("does not bootstrap an unprovisioned member when bootstrap is disabled", async () => {

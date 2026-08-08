@@ -5,6 +5,7 @@ import type {
   ConnectRequestStatus,
   Contract,
   ContractVersion,
+  ContractVersionPayload,
   Conversation,
   Match,
   Message,
@@ -40,6 +41,7 @@ interface IdOverrides {
   proposalNotificationId?: string
   proposalCommentId?: string
   contractId?: string
+  contractVersionId?: string
   contractNotificationId?: string
   signatureId?: string
   trialId?: string
@@ -649,6 +651,67 @@ export function createContractFromProposalTransition(
     contract,
     contractId,
     seed: nextSeed,
+  }
+}
+
+export function createContractVersionTransition(
+  seed: WorkspaceSeed,
+  contractId: string,
+  actorUserId: string,
+  payload: ContractVersionPayload,
+  createdAt: string,
+  ids: IdOverrides = {},
+) {
+  const nextSeed = cloneValue(seed)
+  const contract = getContractById(nextSeed, contractId)
+  const currentVersion = contract && getCurrentContractVersion(nextSeed, contract)
+  if (!contract || !currentVersion)
+    return { seed: nextSeed, version: null }
+
+  const version: ContractVersion = {
+    ...currentVersion,
+    ...payload,
+    id: nextId(ids.contractVersionId),
+    versionNumber: currentVersion.versionNumber + 1,
+    createdAt,
+  }
+
+  nextSeed.contractVersions = [version, ...nextSeed.contractVersions]
+  contract.currentVersionId = version.id
+  contract.status = "pending_signature"
+  contract.updatedAt = createdAt
+  touchProfileActivity(nextSeed, actorUserId, createdAt)
+
+  const proposal = getProposalById(nextSeed, contract.proposalId)
+  if (!proposal)
+    return { seed: nextSeed, version }
+
+  const counterpartyId = proposal.createdByUserId === actorUserId ? proposal.recipientUserId : proposal.createdByUserId
+  createNotification(
+    nextSeed,
+    counterpartyId,
+    "contract",
+    "Agreement revision ready",
+    `${contract.title} is now version ${version.versionNumber}. Review the redline before signing.`,
+    `/app/contracts/${contract.id}`,
+    createdAt,
+    ids.contractNotificationId,
+  )
+
+  const withSystemMessage = sendMessageTransition(
+    nextSeed,
+    proposal.conversationId,
+    null,
+    `Agreement updated to version ${version.versionNumber}. Existing signatures and legal reviews apply only to their original versions.`,
+    [],
+    createdAt,
+    "system",
+    ids,
+  )
+
+  return {
+    seed: withSystemMessage.seed,
+    version,
   }
 }
 

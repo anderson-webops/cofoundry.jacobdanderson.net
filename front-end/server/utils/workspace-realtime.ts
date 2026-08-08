@@ -18,6 +18,7 @@ export interface WorkspaceTypingRealtimePayload {
 }
 
 export interface WorkspaceRealtimeSink {
+  close?: () => Promise<void> | void
   push: (_message: WorkspaceRealtimePushMessage) => Promise<void> | void
 }
 
@@ -68,6 +69,7 @@ const maxFanoutMessages = 500
 const maxRealtimeDataLength = 16_384
 const maxRealtimeSubscribersPerUser = 5
 const maxRealtimeSubscribersPerProcess = 1_000
+const realtimeSinkPushTimeoutMs = 1_000
 
 function isBoundedString(value: unknown, maximum: number, minimum = 1): value is string {
   return typeof value === "string" && value.length >= minimum && value.length <= maximum
@@ -282,15 +284,29 @@ export async function safePushWorkspaceRealtimeSink(
   if (state?.closed)
     return false
 
+  let timeout: ReturnType<typeof setTimeout> | undefined
   try {
-    await sink.push(message)
+    await Promise.race([
+      Promise.resolve(sink.push(message)),
+      new Promise<never>((_resolve, reject) => {
+        timeout = setTimeout(() => reject(new Error("Realtime sink push timed out.")), realtimeSinkPushTimeoutMs)
+      }),
+    ])
     return true
   }
   catch {
     if (state)
       state.closed = true
 
+    if (sink.close) {
+      Promise.resolve(sink.close()).catch(() => undefined)
+    }
+
     return false
+  }
+  finally {
+    if (timeout)
+      clearTimeout(timeout)
   }
 }
 

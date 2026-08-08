@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { workspaceSeed } from "../../shared/data/seed"
-import { buildSubscriptionUsage, checkSavedSearchCount, checkSubscriptionGate, getPlanPriceLabel, getSubscriptionEntitlements } from "../../shared/utils/billing"
+import { buildSubscriptionUsage, checkSavedSearchCount, checkSubscriptionGate, getPlanPriceLabel, getSubscriptionEntitlements, hasPaidContractWorkflowSponsor } from "../../shared/utils/billing"
 
 describe("billing helpers", () => {
   it("keeps matched messaging free while metering higher-intent actions", () => {
@@ -23,6 +23,19 @@ describe("billing helpers", () => {
     expect(entitlements.savedSearchLimit).toBe(1)
     expect(entitlements.proposalSendLimit).toBe(2)
     expect(entitlements.canSignContracts).toBe(false)
+  })
+
+  it("lets one paid participant sponsor the shared agreement workflow", () => {
+    const seed = structuredClone(workspaceSeed)
+    const contract = seed.contracts.find(item => item.id === "contract_ledgerloop")!
+
+    expect(seed.subscriptions.find(item => item.userId === "user_olivia")?.plan).toBe("pro")
+    expect(seed.subscriptions.find(item => item.userId === "user_malik")?.plan).toBe("free")
+    expect(hasPaidContractWorkflowSponsor(seed, contract)).toBe(true)
+
+    const sponsor = seed.subscriptions.find(item => item.userId === "user_olivia")!
+    sponsor.status = "canceled"
+    expect(hasPaidContractWorkflowSponsor(seed, contract)).toBe(false)
   })
 
   it("counts current-cycle usage against the active plan limits", () => {

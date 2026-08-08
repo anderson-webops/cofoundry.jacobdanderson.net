@@ -11,7 +11,8 @@ const route = useRoute()
 const canonicalAppUrl = useCanonicalAppUrl()
 const { scheme } = useThemeScheme()
 const noindexRoute = computed(() => isPrivateWorkspaceRoutePath(route.path))
-const analyticsScripts = import.meta.env.PROD
+const sensitiveBearerRoute = computed(() => route.path.startsWith("/legal-review/"))
+const analyticsScripts = computed(() => import.meta.env.PROD && !sensitiveBearerRoute.value
   ? [
       {
         "defer": true,
@@ -26,11 +27,14 @@ const analyticsScripts = import.meta.env.PROD
         "data-website-id": "89771691-ddd3-439b-bf75-7b62c50c41c2",
       },
     ]
-  : []
+  : [])
 const siteUrl = computed(() => {
+  if (sensitiveBearerRoute.value)
+    return null
+
   return buildSiteUrl(canonicalAppUrl, route.path || "/")
 })
-const structuredData = computed(() => buildSiteStructuredData(canonicalAppUrl))
+const structuredData = computed(() => sensitiveBearerRoute.value ? [] : buildSiteStructuredData(canonicalAppUrl))
 
 useHead(() => ({
   htmlAttrs: {
@@ -56,7 +60,7 @@ useHead(() => ({
       : []),
   ],
   script: [
-    ...analyticsScripts,
+    ...analyticsScripts.value,
     ...structuredData.value.map((entry, index) => ({
       innerHTML: serializeJsonForHtml(entry),
       key: `structured-data-${index}`,

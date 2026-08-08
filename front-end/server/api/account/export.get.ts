@@ -1,6 +1,7 @@
 import { setHeader } from "h3"
 import { redactReportForReporter } from "~/shared/utils/workspace-authorization"
 import { requireAuthenticatedSession } from "../../utils/auth"
+import { listContractLegalReviewsForContracts } from "../../utils/contract-legal-reviews"
 import { loadMemberWorkspaceState } from "../../utils/member-workspace"
 import { listPrivacyRequestsForUser } from "../../utils/privacy-requests"
 import { assertRateLimit, buildRateLimitKey } from "../../utils/rate-limit"
@@ -35,6 +36,7 @@ export default defineEventHandler(async (event) => {
   const proposalIds = new Set(proposals.map(proposal => proposal.id))
   const contracts = seed.contracts.filter(contract => proposalIds.has(contract.proposalId))
   const contractIds = new Set(contracts.map(contract => contract.id))
+  const contractLegalReviews = await listContractLegalReviewsForContracts(event, [...contractIds])
   const privacyRequests = (await listPrivacyRequestsForUser(event, session.id)).map(request => ({
     createdAt: request.createdAt,
     details: request.details,
@@ -49,6 +51,7 @@ export default defineEventHandler(async (event) => {
     bookmarks: state.bookmarks,
     collaboration: {
       connectRequests: seed.connectRequests.filter(request => request.fromUserId === session.id || request.toUserId === session.id),
+      contractLegalReviews,
       contractVersions: seed.contractVersions.filter(version => contractIds.has(version.contractId)),
       contracts,
       conversations,

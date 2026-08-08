@@ -22,8 +22,9 @@ function readPageSource(page: "privacy" | "terms") {
 
 describe("legal content", () => {
   it("defines a current terms update date and key platform notes", () => {
-    expect(termsLastUpdated).toBe("April 11, 2026")
-    expect(termsKeyNotes).toHaveLength(4)
+    expect(termsLastUpdated).toBe("August 8, 2026")
+    expect(termsKeyNotes).toHaveLength(5)
+    expect(termsKeyNotes.some(note => note.title === "Legal review stays user-directed")).toBe(true)
   })
 
   it("covers the core legal surfaces for CoFoundry", () => {
@@ -38,11 +39,12 @@ describe("legal content", () => {
   })
 
   it("defines a current privacy update date and key privacy notes", () => {
-    expect(privacyLastUpdated).toBe("April 11, 2026")
+    expect(privacyLastUpdated).toBe("August 8, 2026")
     expect(privacyKeyNotes).toHaveLength(4)
     expect(privacyVisibilityTiers).toHaveLength(4)
     expect(privacyDataCategories).toHaveLength(6)
     expect(privacyRetentionRows).toHaveLength(5)
+    expect(privacyDataCategories.find(row => row.category === "Messages, proposals, and contract data")?.examples).toContain("legal-review contact details")
   })
 
   it("covers the core privacy surfaces for CoFoundry", () => {

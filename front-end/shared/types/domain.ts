@@ -16,6 +16,9 @@ export type ProposalRelationshipType = "cofounder" | "founding_team" | "advisor"
 export type ProposalSectionKey = "partnership" | "scope" | "trial" | "economics" | "decision_rights" | "ip_confidentiality" | "exit"
 export type ProposalSectionState = "proposed" | "countered" | "agreed"
 export type ContractStatus = "draft" | "pending_signature" | "signed"
+export type ContractLegalReviewerType = "in_house_counsel" | "outside_counsel"
+export type ContractLegalReviewScope = "full_agreement" | "equity_vesting" | "ip_confidentiality" | "governance" | "employment_tax" | "formation"
+export type ContractLegalReviewStatus = "requested" | "opened" | "changes_requested" | "approved" | "canceled" | "superseded" | "expired"
 export type SubscriptionPlan = "free" | "pro" | "team"
 export type SubscriptionStatus = "inactive" | "trialing" | "active" | "past_due" | "canceled"
 export type BillingCycle = "monthly" | "annual"
@@ -426,6 +429,7 @@ export interface Contract {
   status: ContractStatus
   currentVersionId: string
   disclaimerAcknowledged: boolean
+  workflowSponsored?: boolean
   createdAt: string
   updatedAt: string
 }
@@ -451,6 +455,21 @@ export interface ContractVersion {
   createdAt: string
 }
 
+export interface ContractVersionPayload {
+  roleTitle: string
+  scope: string
+  timeCommitment: string
+  compensation: string
+  equity: string
+  vesting: string
+  ipAssignment: string
+  confidentiality: string
+  decisionMaking: string
+  termination: string
+  disputeResolution: string
+  notes: string
+}
+
 export interface Signature {
   id: string
   contractId: string
@@ -458,6 +477,28 @@ export interface Signature {
   userId: string
   typedName: string
   signedAt: string
+}
+
+export interface ContractLegalReview {
+  id: string
+  contractId: string
+  contractVersionId: string
+  requestedByUserId: string
+  reviewerType: ContractLegalReviewerType
+  reviewerName: string
+  reviewerEmail: string
+  reviewerOrganization: string
+  scope: ContractLegalReviewScope[]
+  message: string
+  status: ContractLegalReviewStatus
+  reviewerResponse: string | null
+  respondedByName: string | null
+  openedAt: string | null
+  respondedAt: string | null
+  canceledAt: string | null
+  expiresAt: string
+  createdAt: string
+  updatedAt: string
 }
 
 export interface TrialCollaboration {

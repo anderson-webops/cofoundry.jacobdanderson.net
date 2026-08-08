@@ -412,6 +412,55 @@ export const contractSignatureSchema = z.object({
   typedName: boundedText(160).min(2, "Type your full name to sign."),
 }).strict()
 
+export const contractVersionSchema = z
+  .object({
+    roleTitle: boundedText(240).min(3, "Agreement title is required."),
+    scope: boundedText(8000).min(20, "Describe the agreement scope in more detail."),
+    timeCommitment: boundedText(3000).min(10, "Describe the time commitment."),
+    compensation: boundedText(3000).min(2, "Describe the compensation terms."),
+    equity: boundedText(3000).min(2, "Describe the equity terms."),
+    vesting: boundedText(3000).min(5, "Describe the vesting and cliff terms."),
+    ipAssignment: boundedText(5000).min(10, "Describe the IP assignment terms."),
+    confidentiality: boundedText(5000).min(10, "Describe the confidentiality terms."),
+    decisionMaking: boundedText(5000).min(10, "Describe decision-making responsibilities."),
+    termination: boundedText(5000).min(10, "Describe termination and off-ramp terms."),
+    disputeResolution: boundedText(5000).min(10, "Describe the dispute-resolution process."),
+    notes: boundedText(5000).min(10, "Summarize this revision and any remaining context."),
+  })
+  .strict()
+
+export const contractLegalReviewRequestSchema = z
+  .object({
+    reviewerType: z.enum(["in_house_counsel", "outside_counsel"]),
+    reviewerName: boundedText(160).min(2, "Reviewer name is required."),
+    reviewerEmail: z.string().trim().email("Enter a valid reviewer email address.").max(254),
+    reviewerOrganization: boundedText(240).min(2, "Organization or firm is required."),
+    scope: z
+      .array(z.enum(["full_agreement", "equity_vesting", "ip_confidentiality", "governance", "employment_tax", "formation"]))
+      .min(1, "Choose at least one review area.")
+      .max(6),
+    message: boundedText(3000).min(10, "Add enough context for the reviewer."),
+    shareAuthorized: z.literal(true, {
+      error: "Confirm that you are authorized to share this agreement with the reviewer.",
+    }),
+  })
+  .strict()
+
+export const contractLegalReviewResponseSchema = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("open") }).strict(),
+  z
+    .object({
+      action: z.literal("respond"),
+      authorityConfirmed: z.literal(true, {
+        error: "Confirm that you are authorized to respond for the named reviewer or organization.",
+      }),
+      response: boundedText(5000).min(20, "Provide enough detail for the parties to act on the review."),
+      respondedByName: boundedText(160).min(2, "Type your name as the person recording this response."),
+      status: z.enum(["approved", "changes_requested"]),
+    })
+    .strict(),
+])
+
 const connectRequestPayloadSchema = z
   .object({
     note: boundedText(2000),
@@ -519,6 +568,13 @@ export const collaborationMutationSchema = z.discriminatedUnion("action", [
     .object({
       action: z.literal("create_contract_from_proposal"),
       proposalId: identifierSchema,
+    })
+    .strict(),
+  z
+    .object({
+      action: z.literal("update_contract_version"),
+      contractId: identifierSchema,
+      payload: contractVersionSchema,
     })
     .strict(),
   z
