@@ -1,4 +1,5 @@
 import type { ThemeSchemeId } from "~/shared/utils/theme"
+import { getPreferenceCookieOptions } from "~/shared/utils/cookie-policy"
 import { defaultThemeScheme, normalizeThemeScheme, themeSchemeOptions } from "~/shared/utils/theme"
 
 const themeSchemeCookieName = "cofoundry-theme-scheme"
@@ -6,8 +7,7 @@ const themeSchemeCookieName = "cofoundry-theme-scheme"
 export function useThemeScheme() {
   const themeSchemeCookie = useCookie<string>(themeSchemeCookieName, {
     default: () => defaultThemeScheme,
-    maxAge: 60 * 60 * 24 * 365,
-    sameSite: "lax",
+    ...getPreferenceCookieOptions(!import.meta.dev, 60 * 60 * 24 * 365),
   })
 
   const scheme = computed<ThemeSchemeId>({
