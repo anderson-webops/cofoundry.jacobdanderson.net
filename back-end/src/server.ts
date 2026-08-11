@@ -92,7 +92,7 @@ export function handleRequest(request: IncomingMessage, response: ServerResponse
   }
   const method = request.method || "GET"
   const pathname = new URL(request.url || "/", "http://127.0.0.1").pathname
-  const knownPath = pathname === "/health" || pathname === "/metadata"
+  const knownPath = ["/health", "/healthz", "/readyz", "/metadata"].includes(pathname)
 
   if (knownPath && method !== "GET" && method !== "HEAD") {
     response.writeHead(405, {
@@ -112,6 +112,12 @@ export function handleRequest(request: IncomingMessage, response: ServerResponse
       now: new Date().toISOString(),
     })
     response.end(method === "HEAD" ? undefined : body)
+    return
+  }
+
+  if (pathname === "/healthz" || pathname === "/readyz") {
+    response.writeHead(200, headers)
+    response.end(method === "HEAD" ? undefined : JSON.stringify({ ok: true }))
     return
   }
 

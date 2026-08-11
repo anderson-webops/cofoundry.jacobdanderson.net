@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { buildHealthPayload } from "../../server/utils/health"
+import { buildHealthPayload, buildProbePayload, determineReadiness } from "../../server/utils/health"
 import { readPublicEnvironment } from "../../shared/utils/environment"
 
 describe("health payload", () => {
@@ -36,5 +36,18 @@ describe("health payload", () => {
     })
     expect(JSON.stringify(payload)).not.toContain("SECRET")
     expect(JSON.stringify(payload)).not.toContain("KEY")
+  })
+
+  it("keeps standard monitoring payloads minimal and fails readiness closed", async () => {
+    expect(buildProbePayload(true)).toEqual({ ok: true })
+    expect(buildProbePayload(false)).toEqual({ ok: false })
+    expect(await determineReadiness("mock", () => {
+      throw new Error("must not run")
+    })).toBe(true)
+    expect(await determineReadiness("supabase", () => true)).toBe(true)
+    expect(await determineReadiness("supabase", () => false)).toBe(false)
+    expect(await determineReadiness("supabase", () => {
+      throw new Error("postgresql://operator:secret@internal-host/private-db")
+    })).toBe(false)
   })
 })

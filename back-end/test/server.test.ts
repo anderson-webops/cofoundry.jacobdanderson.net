@@ -54,6 +54,26 @@ test("health endpoint reports service status", async () => {
   })
 })
 
+test("standard probes are minimal, bodyless for HEAD, and unauthenticated", async () => {
+  await withServer(async (baseUrl) => {
+    for (const path of ["/healthz", "/readyz"]) {
+      const get = await fetch(`${baseUrl}${path}`, { redirect: "manual" })
+      const head = await fetch(`${baseUrl}${path}`, { method: "HEAD", redirect: "manual" })
+
+      assert.equal(get.status, 200)
+      assert.deepEqual(await get.json(), { ok: true })
+      assert.equal(head.status, 200)
+      assert.equal(await head.text(), "")
+      for (const response of [get, head]) {
+        assert.equal(response.headers.get("cache-control"), "no-store")
+        assert.equal(response.headers.get("set-cookie"), null)
+        assert.equal(response.headers.get("location"), null)
+        assert.equal(response.headers.get("www-authenticate"), null)
+      }
+    }
+  })
+})
+
 test("backend metadata allows only GET and HEAD", async () => {
   await withServer(async (baseUrl) => {
     const head = await fetch(`${baseUrl}/metadata`, { method: "HEAD" })
