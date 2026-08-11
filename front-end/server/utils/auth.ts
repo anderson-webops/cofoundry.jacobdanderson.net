@@ -5,6 +5,7 @@ import type { SupportedOAuthProvider } from "~/shared/utils/oauth-providers"
 import { randomBytes } from "node:crypto"
 import process from "node:process"
 import { workspaceSeed } from "~/shared/data/seed"
+import { getSessionCookieSecurityOptions, getSessionCookieWriteOptions } from "~/shared/utils/cookie-policy"
 import { isLocalDevelopmentEnvironment, readPublicEnvironment } from "~/shared/utils/environment"
 import { isOAuthProviderEnabled, normalizeOAuthProvider } from "~/shared/utils/oauth-providers"
 import { resolveProductAccessPolicy, areSeededReviewCredentialsEnabled as resolveSeededReviewCredentialsEnabled } from "~/shared/utils/product-access"
@@ -446,27 +447,17 @@ export async function requireAuthenticatedSession(event: H3Event) {
 export function writeSession(event: H3Event, session: SessionUser) {
   const encodedSession = encodeSessionUser(session)
   const signature = createSessionSignature(encodedSession)
+  const secure = !isLocalDevelopmentEnvironment(process.env)
 
-  setCookie(event, sessionCookieName, encodedSession, {
-    maxAge: sessionCookieMaxAgeSeconds,
-    path: "/",
-    sameSite: "lax",
-    httpOnly: true,
-    secure: !isLocalDevelopmentEnvironment(process.env),
-  })
-
-  setCookie(event, sessionSignatureCookieName, signature, {
-    maxAge: sessionCookieMaxAgeSeconds,
-    path: "/",
-    sameSite: "lax",
-    httpOnly: true,
-    secure: !isLocalDevelopmentEnvironment(process.env),
-  })
+  setCookie(event, sessionCookieName, encodedSession, getSessionCookieWriteOptions(secure, sessionCookieMaxAgeSeconds))
+  setCookie(event, sessionSignatureCookieName, signature, getSessionCookieWriteOptions(secure, sessionCookieMaxAgeSeconds))
 }
 
 export function clearSessionCookie(event: H3Event) {
-  deleteCookie(event, sessionCookieName, { path: "/" })
-  deleteCookie(event, sessionSignatureCookieName, { path: "/" })
+  const options = getSessionCookieSecurityOptions(!isLocalDevelopmentEnvironment(process.env))
+
+  deleteCookie(event, sessionCookieName, options)
+  deleteCookie(event, sessionSignatureCookieName, options)
 }
 
 export function getMockSessionByUserId(userId: string) {
