@@ -3,6 +3,7 @@ import { Buffer } from "node:buffer"
 import process from "node:process"
 import { createClient } from "@supabase/supabase-js"
 import { deleteCookie, getCookie, setCookie } from "h3"
+import { getSessionCookieSecurityOptions, getSessionCookieWriteOptions } from "../../shared/utils/cookie-policy"
 import { isLocalDevelopmentEnvironment } from "../../shared/utils/environment"
 
 const oauthCookiePrefix = "cf_oauth_"
@@ -12,13 +13,7 @@ function getCookieNameForStorageKey(key: string) {
 }
 
 function getCookieOptions() {
-  return {
-    httpOnly: true,
-    maxAge: 10 * 60,
-    path: "/",
-    sameSite: "lax" as const,
-    secure: !isLocalDevelopmentEnvironment(process.env),
-  }
+  return getSessionCookieWriteOptions(!isLocalDevelopmentEnvironment(process.env), 10 * 60)
 }
 
 export function isSupabaseEnabled(event?: H3Event) {
@@ -80,7 +75,11 @@ export function createSupabaseOAuthClient(event: H3Event) {
             return getCookie(event, getCookieNameForStorageKey(key)) || null
           },
           removeItem(key: string) {
-            deleteCookie(event, getCookieNameForStorageKey(key), { path: "/" })
+            deleteCookie(
+              event,
+              getCookieNameForStorageKey(key),
+              getSessionCookieSecurityOptions(!isLocalDevelopmentEnvironment(process.env)),
+            )
           },
           setItem(key: string, value: string) {
             setCookie(event, getCookieNameForStorageKey(key), value, getCookieOptions())
