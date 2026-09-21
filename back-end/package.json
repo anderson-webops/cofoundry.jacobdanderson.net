@@ -1,6 +1,6 @@
 {
   "name": "back-end",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Operational backend workspace for CoFoundry",
   "type": "module",
   "private": true,
@@ -36,11 +36,11 @@
     "verify:host-env": "node --import tsx scripts/verify-host-env.ts"
   },
   "dependencies": {
-    "@supabase/supabase-js": "2.112.2"
+    "@supabase/supabase-js": "2.116.0"
   },
   "devDependencies": {
-    "@types/node": "^24.13.3",
-    "tsx": "4.23.11",
+    "@types/node": "^24.13.6",
+    "tsx": "4.23.15",
     "typescript": "^6.0.3"
   }
 }

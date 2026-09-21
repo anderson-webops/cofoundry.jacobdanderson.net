@@ -3,8 +3,9 @@ import { Buffer } from "node:buffer"
 import { spawn } from "node:child_process"
 import { mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
-import { basename, join } from "node:path"
+import { basename, join, resolve } from "node:path"
 import process from "node:process"
+import { fileURLToPath } from "node:url"
 
 type EnvironmentSource = Record<string, string | undefined>
 type FetchLike = typeof fetch
@@ -1163,4 +1164,13 @@ export async function runOperationsWorker(argv: string[], options: WorkerCommand
         "Use one of: alert-smoke, backup, contract-envelope, digest, email-suppression, event, heartbeat, lifecycle-notification, mail-smoke, realtime-smoke, restore-drill, scan, trust-verification.",
       ].join(" "))
   }
+}
+
+const isMainModule = process.argv[1] ? resolve(process.argv[1]) === fileURLToPath(import.meta.url) : false
+
+if (isMainModule) {
+  runOperationsWorker(process.argv.slice(2)).catch((error) => {
+    console.error(error)
+    process.exitCode = 1
+  })
 }

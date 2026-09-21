@@ -25,13 +25,6 @@ import { recordOperationalEvent } from "./operations-persistence"
 import { createTimedSessionSignature, sessionCookieMaxAgeSeconds, verifyTimedSessionSignature } from "./session-signature"
 import { createSupabaseAdminClient, createSupabaseOAuthClient, createSupabaseServerClient, isSupabaseEnabled } from "./supabase"
 
-interface RegisteredAccount {
-  email: string
-  name: string
-  providers: AuthProvider[]
-  userId: string
-}
-
 interface SupabaseSessionUserRow {
   email: string
   id: string
@@ -64,8 +57,6 @@ export function resolveProvisionedInvestmentReviewerSession(
   } satisfies SessionUser
 }
 
-const registeredAccounts = new Map<string, RegisteredAccount>()
-const registeredSessions = new Map<string, SessionUser>()
 const localSessionSigningSecret = randomBytes(32).toString("base64url")
 
 function formatOAuthCallbackUrl(event: H3Event, provider: SupportedOAuthProvider) {
@@ -185,7 +176,7 @@ function verifySessionSignature(encodedSession: string, signature?: string | nul
 }
 
 function getMockSessionBySeedUserId(userId: string) {
-  return registeredSessions.get(userId) || buildSessionUser(workspaceSeed, userId)
+  return buildSessionUser(workspaceSeed, userId)
 }
 
 function buildIdentityInput(session: SessionUser) {
@@ -471,10 +462,6 @@ export function getSessionForEmail(email: string) {
   if (seededAccount)
     return getMockSessionBySeedUserId(seededAccount.userId)
 
-  const registeredAccount = registeredAccounts.get(normalizedEmail)
-  if (registeredAccount)
-    return registeredSessions.get(registeredAccount.userId) || null
-
   return null
 }
 
@@ -718,14 +705,6 @@ export async function createMockAccount(event: H3Event, payload: { email: string
   if (!session)
     throw createError({ statusCode: 400, statusMessage: "Unable to create the account. Sign in or use account recovery if this email is already registered." })
 
-  registeredAccounts.set(normalizedEmail, {
-    email: normalizedEmail,
-    providers: ["email"],
-    userId: session.id,
-    name: payload.name,
-  })
-  registeredSessions.set(session.id, session)
-
   try {
     await persistWholeMemberWorkspaceState(event, buildDraftMemberWorkspaceState(session, undefined, { verifiedEmail }))
     if (payload.inviteToken && !await markLocalAccessInviteAccepted(payload.inviteToken, normalizedEmail)) {
@@ -736,8 +715,6 @@ export async function createMockAccount(event: H3Event, payload: { email: string
     }
   }
   catch (error) {
-    registeredAccounts.delete(normalizedEmail)
-    registeredSessions.delete(session.id)
     try {
       await deleteLocalAuthAccount(session.id)
       await deleteLocalMemberWorkspaceState(session.id)
@@ -783,7 +760,6 @@ export async function completeOnboarding(event: H3Event, currentSession: Session
     return session
   }
 
-  registeredSessions.set(updatedSession.id, updatedSession)
   await updateLocalAuthOnboarding(updatedSession)
   await persistWholeMemberWorkspaceState(event, {
     ...current.state,

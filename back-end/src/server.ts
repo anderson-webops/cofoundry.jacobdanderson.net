@@ -1,4 +1,4 @@
-import type { IncomingMessage, ServerResponse } from "node:http"
+import type { IncomingMessage, Server, ServerResponse } from "node:http"
 import { Buffer } from "node:buffer"
 import { timingSafeEqual } from "node:crypto"
 import { createServer } from "node:http"
@@ -6,6 +6,13 @@ import { resolve } from "node:path"
 import process from "node:process"
 import { fileURLToPath } from "node:url"
 import { assertEnvironmentIsValid, isLocalDevelopmentEnvironment, isLoopbackBackendHost, readBackendDeploymentMetadata, readPublicEnvironment, readSecretEnvironment } from "./environment.js"
+
+interface BackendServerState {
+  ready: boolean
+  shutdownPromise?: Promise<void>
+}
+
+const backendServerStates = new WeakMap<Server, BackendServerState>()
 
 export function resolveBackendPort() {
   const configuredPort = Number(process.env.BACKEND_PORT)
@@ -79,7 +86,7 @@ function isMetadataAuthorized(request: IncomingMessage) {
   return configuredToken.length >= 32 && tokensMatch(readMetadataToken(request), configuredToken)
 }
 
-export function handleRequest(request: IncomingMessage, response: ServerResponse) {
+export function handleRequest(request: IncomingMessage, response: ServerResponse, ready = true) {
   const headers = {
     "cache-control": "no-store",
     "content-security-policy": "default-src 'none'; frame-ancestors 'none'",
@@ -115,9 +122,15 @@ export function handleRequest(request: IncomingMessage, response: ServerResponse
     return
   }
 
-  if (pathname === "/healthz" || pathname === "/readyz") {
+  if (pathname === "/healthz") {
     response.writeHead(200, headers)
     response.end(method === "HEAD" ? undefined : JSON.stringify({ ok: true }))
+    return
+  }
+
+  if (pathname === "/readyz") {
+    response.writeHead(ready ? 200 : 503, headers)
+    response.end(method === "HEAD" ? undefined : JSON.stringify({ ok: ready }))
     return
   }
 
@@ -144,14 +157,56 @@ export function handleRequest(request: IncomingMessage, response: ServerResponse
 
 export function createBackendServer() {
   assertEnvironmentIsValid(process.env, "back-end server startup")
+  const state: BackendServerState = { ready: true }
   const server = createServer({
     headersTimeout: 5_000,
     keepAliveTimeout: 5_000,
     requestTimeout: 10_000,
-  }, handleRequest)
+  }, (request, response) => handleRequest(request, response, state.ready))
+  server.maxConnections = 256
   server.maxHeadersCount = 100
   server.maxRequestsPerSocket = 1_000
+  backendServerStates.set(server, state)
   return server
+}
+
+export function beginBackendDrain(server: Server) {
+  const state = backendServerStates.get(server)
+  if (!state)
+    throw new Error("Cannot drain a server that was not created by createBackendServer().")
+
+  const wasReady = state.ready
+  state.ready = false
+  return wasReady
+}
+
+export function closeBackendServer(server: Server, gracePeriodMs = 10_000) {
+  const state = backendServerStates.get(server)
+  if (!state)
+    return Promise.reject(new Error("Cannot close a server that was not created by createBackendServer()."))
+  if (state.shutdownPromise)
+    return state.shutdownPromise
+  if (!Number.isInteger(gracePeriodMs) || gracePeriodMs < 0)
+    return Promise.reject(new Error("The backend shutdown grace period must be a non-negative integer."))
+
+  state.ready = false
+  state.shutdownPromise = new Promise<void>((resolvePromise, rejectPromise) => {
+    const forceCloseTimer = setTimeout(() => {
+      server.closeAllConnections()
+    }, gracePeriodMs)
+    forceCloseTimer.unref()
+
+    server.close((error) => {
+      clearTimeout(forceCloseTimer)
+      if (error && (error as NodeJS.ErrnoException).code !== "ERR_SERVER_NOT_RUNNING")
+        rejectPromise(error)
+      else
+        resolvePromise()
+    })
+    server.closeIdleConnections()
+  })
+
+  return state.shutdownPromise
 }
 
 export async function startBackendServer(port = resolveBackendPort(), host = resolveBackendHost()) {
@@ -171,8 +226,27 @@ export async function startBackendServer(port = resolveBackendPort(), host = res
 const isMainModule = process.argv[1] ? resolve(process.argv[1]) === fileURLToPath(import.meta.url) : false
 
 if (isMainModule) {
-  startBackendServer().catch((error) => {
-    console.error(error)
-    process.exitCode = 1
-  })
+  startBackendServer()
+    .then((server) => {
+      let shuttingDown = false
+      const shutdown = () => {
+        if (shuttingDown) {
+          server.closeAllConnections()
+          return
+        }
+
+        shuttingDown = true
+        void closeBackendServer(server).catch((error) => {
+          console.error(error)
+          process.exitCode = 1
+        })
+      }
+
+      process.once("SIGINT", shutdown)
+      process.once("SIGTERM", shutdown)
+    })
+    .catch((error) => {
+      console.error(error)
+      process.exitCode = 1
+    })
 }

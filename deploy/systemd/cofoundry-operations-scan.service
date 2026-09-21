@@ -9,13 +9,15 @@ User=cofoundry
 Group=cofoundry
 WorkingDirectory=/srv/cofoundry/current
 EnvironmentFile=/etc/cofoundry/operations.env
-Environment=NPM_CONFIG_CACHE=/var/lib/cofoundry/npm-cache
-Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
-ExecStart=/usr/bin/env npm run operations:scan
+Environment=PATH=/opt/node-24.18.1/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+Environment=NODE_OPTIONS=--max-old-space-size=192
+ExecStart=/opt/node-24.18.1/bin/node back-end/dist/operations-worker.js scan
 SyslogIdentifier=cofoundry-operations-scan
 AmbientCapabilities=
 CapabilityBoundingSet=
 LockPersonality=true
+MemoryHigh=320M
+MemoryMax=384M
 NoNewPrivileges=true
 PrivateDevices=true
 PrivateMounts=true
@@ -39,6 +41,7 @@ RestrictSUIDSGID=true
 RuntimeDirectory=cofoundry
 StateDirectory=cofoundry
 SystemCallArchitectures=native
+TasksMax=64
 TimeoutStartSec=1h
 TimeoutStopSec=30s
 UMask=0077

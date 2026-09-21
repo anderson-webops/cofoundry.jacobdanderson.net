@@ -157,13 +157,14 @@ npm run lint
 npm run lint-fix
 npm run typecheck
 npm run test:run
+npm run test:runtime-artifact
 npm run a11y
 npm run a11y:production
 npm run verify:host-env -- --production
 npm run verify:release:local
 ```
 
-`npm run verify:release:local` is the full local release gate. It runs exact install, dependency audit, dependency install-script policy verification, standalone workspace install verification, Node/npm toolchain policy verification, synthetic production host-env verification, lint, typecheck, unit/backend tests, build, deployment identity, shared-shim, analytics, production smoke, local public crawl, accessibility, public-verification dispatch dry-run, live-deploy handoff prompt rendering, diagnostic syntax, and diff whitespace checks.
+`npm run verify:release:local` is the full local release gate. It runs exact install, dependency audit, dependency install-script policy verification, standalone workspace install verification, Node/npm toolchain policy verification, synthetic production host-env verification, lint, typecheck, unit/backend tests, runtime-artifact security tests, build, deployment identity, shared-shim, analytics, production smoke, local public crawl, accessibility, public-verification dispatch dry-run, live-deploy handoff prompt rendering, diagnostic syntax, and diff whitespace checks.
 
 `npm run verify:install-scripts` checks npm's `allowScripts` review state. If a dependency adds or changes an install script, review the package and pin an approval or denial with `npm approve-scripts` or `npm deny-scripts` before shipping the dependency change.
 
@@ -173,7 +174,9 @@ npm run verify:release:local
 
 ### Direct production runtime
 
-Production SSR runs directly with Node under `cofoundry-app.service`; Docker, Compose, Podman, and a container registry are not part of the supported topology. The checked-in files under `deploy/systemd/` install a hardened, unprivileged, loopback-only service and promote a prevalidated release atomically with automatic rollback when its health check fails. `deploy/nginx/cofoundry-proxy.conf.example` is an include for the existing TLS server block; it deliberately does not replace or remove the host's IPv4 or IPv6 listeners.
+Production SSR runs directly with Node under `cofoundry-app.service`; Docker, Compose, Podman, and a container registry are not part of the supported topology. Production units invoke compiled JavaScript with `/opt/node-24.18.1/bin/node`, so npm, tsx, and development dependencies are not runtime requirements. The checked-in files under `deploy/systemd/` install a hardened, unprivileged, loopback-only service and a digest-bound, versioned root-control bundle. Privileged installation reads one immutable archive snapshot and atomically switches the root-owned control activation symlink instead of copying several files independently from a mutable checkout.
+
+`npm run package:runtime -- .ai-work/runs/<empty-run>` is the Linux ARM64 artifact gate. It publishes an explicit contract for the Nuxt output, compiled backend entrypoints, production dependencies, static assets, hashes, source identity, and external writable-state paths, plus a separate host-control archive and digest. It then runs the exact unpacked tree in a network-isolated sandbox without source or development dependencies, including the frontend, backend, compiled operations worker, health/readiness, graceful shutdown, post-copy verification, a deliberately missing-module regression, immutable control installation, and promotion recovery. Promotion requires the independently reviewed archive SHA-256 and commit, and it revalidates both the candidate and retained rollback artifact before changing `/srv/cofoundry/current`. See `deploy/systemd/README.md` for the protected host procedure. `deploy/nginx/cofoundry-proxy.conf.example` is an include for the existing TLS server block; it deliberately does not replace or remove the host's IPv4 or IPv6 listeners.
 
 The public verifier also guards production-facing metadata and copy. Sitemap-listed public pages must render page-specific title, description, canonical, Open Graph, and Twitter metadata, and public pages plus linked noindex access pages fail verification if they expose mock/demo/sample/placeholder language that would make the live product feel unfinished.
 

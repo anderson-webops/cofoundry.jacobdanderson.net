@@ -2,7 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import process from "node:process"
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   applyLocalAdminAccessRequestStatus,
   clearLocalAccessRequestStoreForTests,
@@ -30,6 +30,8 @@ const basePayload = {
 
 describe("local access request store", () => {
   beforeEach(async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2026-07-29T18:00:00.000Z"))
     dataDirectory = await mkdtemp(join(tmpdir(), "cofoundry-access-requests-"))
     process.env.COFOUNDRY_LOCAL_DATA_DIR = dataDirectory
     process.env.COFOUNDRY_ACCESS_REQUEST_RETENTION_LIMIT = "5"
@@ -41,6 +43,7 @@ describe("local access request store", () => {
     await rm(dataDirectory, { force: true, recursive: true })
     delete process.env.COFOUNDRY_LOCAL_DATA_DIR
     delete process.env.COFOUNDRY_ACCESS_REQUEST_RETENTION_LIMIT
+    vi.useRealTimers()
   })
 
   it("reviews requests, issues invite tokens, and invalidates accepted invites", async () => {

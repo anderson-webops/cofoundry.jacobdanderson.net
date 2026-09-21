@@ -9,9 +9,8 @@ User=cofoundry
 Group=cofoundry
 WorkingDirectory=/srv/cofoundry/current
 EnvironmentFile=/etc/cofoundry/operations.env
-Environment=NPM_CONFIG_CACHE=/var/lib/cofoundry/npm-cache
-Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
-ExecStart=/usr/bin/env npm run operations:heartbeat -- --metadata schedule=hourly --metadata timer=cofoundry-operations-heartbeat
+Environment=PATH=/opt/node-24.18.1/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+ExecStart=/opt/node-24.18.1/bin/node back-end/dist/operations-worker.js heartbeat --metadata schedule=hourly --metadata timer=cofoundry-operations-heartbeat
 SyslogIdentifier=cofoundry-operations-heartbeat
 AmbientCapabilities=
 CapabilityBoundingSet=

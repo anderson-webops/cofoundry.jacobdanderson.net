@@ -53,7 +53,7 @@ onBeforeUnmount(() => {
 
 <template>
   <header
-    class="bg-[color:color-mix(in_srgb,var(--bg)_84%,transparent)] will-change-transform border-b border-[var(--line)] transition-transform duration-250 ease-out top-0 sticky z-40 backdrop-blur-xl"
+    class="will-change-transform border-b border-[var(--line)] bg-[color:color-mix(in_srgb,var(--bg)_84%,transparent)] transition-transform duration-250 ease-out top-0 sticky z-40 backdrop-blur-xl"
     :class="headerVisible ? 'translate-y-0' : '-translate-y-full'"
   >
     <div class="page-shell py-4 flex items-center justify-between">
