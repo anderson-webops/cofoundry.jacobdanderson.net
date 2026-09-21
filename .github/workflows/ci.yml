@@ -107,6 +107,15 @@ jobs:
       - name: Unit tests
         run: npm run test:run
 
+      - name: Runtime artifact security tests
+        run: npm run test:runtime-artifact
+
+      - name: Install promotion isolation dependency
+        run: sudo apt-get update && sudo apt-get install --yes bubblewrap
+
+      - name: Promotion interruption and rollback tests
+        run: npm run test:promotion-recovery
+
   test-e2e:
     runs-on: ubuntu-latest
     steps:
@@ -202,6 +211,17 @@ jobs:
         run: npm run verify:host-env -- --production --fail-on-warnings
 
       - name: Build
+        env:
+          COFOUNDRY_COMMIT_SHA: ${{ github.sha }}
+          COFOUNDRY_DEPLOYED_AT: "2026-01-01T00:00:00.000Z"
+          COFOUNDRY_OPERATIONS_TOKEN: synthetic-ci-build-operations-token-0001
+          COFOUNDRY_RELEASE: ci
+          NODE_ENV: production
+          NUXT_PUBLIC_APP_URL: https://cofoundry.example.com
+          NUXT_PUBLIC_BACKEND_MODE: mock
+          NUXT_PUBLIC_BILLING_MODE: mock
+          NUXT_PUBLIC_ENABLE_DEMO_ACCESS: "false"
+          SESSION_SIGNING_SECRET: synthetic-ci-build-session-secret-000001
         run: npm run build
 
       - name: Deployment identity fallback verification

@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs"
 import test from "node:test"
 import { resolveBootstrapAdminEnvironment, resolveBootstrapAdminInput } from "../src/bootstrap-admin"
 import { collectEnvironmentValidationErrors, isLocalDevelopmentEnvironment, isLoopbackBackendHost, readBackendDeploymentMetadata, readDeploymentMetadata, readPublicEnvironment, readSecretEnvironment, releaseTagFromPackageVersion } from "../src/environment"
-import { createBackendServer, resolveBackendHost } from "../src/server"
+import { beginBackendDrain, closeBackendServer, createBackendServer, resolveBackendHost } from "../src/server"
 
 function restoreEnvValue(key: string, value: string | undefined) {
   if (typeof value === "undefined")
@@ -13,7 +13,7 @@ function restoreEnvValue(key: string, value: string | undefined) {
     process.env[key] = value
 }
 
-async function withServer(run: (_baseUrl: string) => Promise<void>) {
+async function withServer(run: (_baseUrl: string, _server: ReturnType<typeof createBackendServer>) => Promise<void>) {
   const server = createBackendServer()
 
   await new Promise<void>((resolve, reject) => {
@@ -25,17 +25,10 @@ async function withServer(run: (_baseUrl: string) => Promise<void>) {
   const baseUrl = `http://127.0.0.1:${address.port}`
 
   try {
-    await run(baseUrl)
+    await run(baseUrl, server)
   }
   finally {
-    await new Promise<void>((resolve, reject) => {
-      server.close((error) => {
-        if (error)
-          reject(error)
-        else
-          resolve()
-      })
-    })
+    await closeBackendServer(server)
   }
 }
 
@@ -72,6 +65,42 @@ test("standard probes are minimal, bodyless for HEAD, and unauthenticated", asyn
       }
     }
   })
+})
+
+test("readiness drops during a drain while health remains available", async () => {
+  await withServer(async (baseUrl, server) => {
+    assert.equal(beginBackendDrain(server), true)
+    assert.equal(beginBackendDrain(server), false)
+
+    const health = await fetch(`${baseUrl}/healthz`)
+    const readiness = await fetch(`${baseUrl}/readyz`)
+    const readinessHead = await fetch(`${baseUrl}/readyz`, { method: "HEAD" })
+
+    assert.equal(health.status, 200)
+    assert.deepEqual(await health.json(), { ok: true })
+    assert.equal(readiness.status, 503)
+    assert.deepEqual(await readiness.json(), { ok: false })
+    assert.equal(readinessHead.status, 503)
+    assert.equal(await readinessHead.text(), "")
+    assert.equal(readiness.headers.get("cache-control"), "no-store")
+    assert.equal(readiness.headers.get("set-cookie"), null)
+  })
+})
+
+test("backend bounds connections and shares one graceful shutdown", async () => {
+  const server = createBackendServer()
+  assert.equal(server.maxConnections, 256)
+
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject)
+    server.listen(0, "127.0.0.1", () => resolve())
+  })
+
+  const firstShutdown = closeBackendServer(server)
+  const secondShutdown = closeBackendServer(server)
+  assert.equal(firstShutdown, secondShutdown)
+  await firstShutdown
+  assert.equal(server.listening, false)
 })
 
 test("backend metadata allows only GET and HEAD", async () => {

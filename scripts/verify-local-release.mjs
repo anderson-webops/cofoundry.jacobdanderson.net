@@ -100,6 +100,11 @@ const steps = [
     label: "Run unit and backend tests",
   },
   {
+    args: ["run", "test:runtime-artifact"],
+    id: "runtime-artifact-tests",
+    label: "Run runtime artifact and protected-path tests",
+  },
+  {
     args: ["run", "build"],
     env: syntheticProductionBuildEnv,
     id: "build",

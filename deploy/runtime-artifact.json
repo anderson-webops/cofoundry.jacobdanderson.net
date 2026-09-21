@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "entrypoints": [
+    "front-end/.output/server/index.mjs",
+    "back-end/dist/server.js",
+    "back-end/dist/operations-worker.js"
+  ],
+  "required": [
+    "package.json",
+    "package-lock.json",
+    "front-end/package.json",
+    "back-end/package.json",
+    ".cofoundry-release-prepared.json",
+    "front-end/.output/server/index.mjs",
+    "front-end/.output/server/package.json",
+    "front-end/.output/public/index.html",
+    "back-end/dist/server.js",
+    "back-end/dist/environment.js",
+    "back-end/dist/operations-worker.js",
+    "node_modules/@supabase/supabase-js/package.json"
+  ],
+  "allowedRoots": [
+    "front-end/.output",
+    "back-end/dist",
+    "node_modules"
+  ],
+  "allowedFiles": [
+    "package.json",
+    "package-lock.json",
+    "front-end/package.json",
+    "back-end/package.json",
+    ".cofoundry-release-prepared.json"
+  ],
+  "allowedExecutables": [],
+  "runtime": {
+    "os": "linux",
+    "arch": "arm64",
+    "node": "24.18.1",
+    "npmBuildOnly": "12.0.2"
+  },
+  "modulesOutsideBuildDirectories": [],
+  "generatedClients": [],
+  "nativeBindings": [],
+  "staticAssets": [
+    "front-end/.output/public"
+  ],
+  "dependencyRoots": [
+    "back-end"
+  ],
+  "writableState": [
+    {
+      "name": "local application data",
+      "location": "/var/lib/cofoundry",
+      "rollback": "Preserve outside immutable releases during promotion and rollback."
+    },
+    {
+      "name": "runtime state",
+      "location": "/run/cofoundry",
+      "rollback": "Ephemeral systemd RuntimeDirectory; never package it."
+    },
+    {
+      "name": "backup evidence",
+      "location": "/var/backups/cofoundry",
+      "rollback": "Preserve independently of application releases."
+    }
+  ],
+  "privateConfiguration": "Protected host environment files remain outside the artifact. Credentials, provider configuration, databases, uploads, caches, queues, and writable state must never be archived.",
+  "topology": "One loopback-only Nuxt Node service plus isolated compiled operations workers. Preserve the installed /srv/cofoundry paths, service user, port 3000, Nginx policy, IPv4/IPv6 listeners, external environment files, and writable-state directories."
+}

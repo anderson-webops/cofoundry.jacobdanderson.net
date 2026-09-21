@@ -1,7 +1,7 @@
 {
   "name": "front-end",
   "type": "module",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "private": true,
   "description": "Nuxt frontend for CoFoundry",
   "author": "Jacob Anderson",
@@ -27,35 +27,35 @@
     "verify:analytics": "node scripts/verify-analytics-output.mjs"
   },
   "dependencies": {
-    "@supabase/supabase-js": "2.112.2",
+    "@supabase/supabase-js": "2.116.0",
     "nuxt-security": "2.6.0",
-    "stripe": "22.4.0",
-    "zod": "4.4.3"
+    "stripe": "22.6.2",
+    "zod": "4.6.5"
   },
   "devDependencies": {
-    "@iconify-json/carbon": "1.2.25",
+    "@iconify-json/carbon": "1.2.27",
     "@iconify-json/twemoji": "1.2.5",
     "@nuxt/devtools": "3.4.1",
     "@nuxt/eslint": "1.17.0",
     "@nuxtjs/color-mode": "4.0.1",
-    "@pinia/nuxt": "1.0.1",
-    "@playwright/test": "1.62.1",
-    "@types/node": "^24.13.3",
-    "@unocss/nuxt": "66.7.5",
-    "@vitejs/plugin-vue": "^6.0.6",
-    "@vue/test-utils": "2.4.11",
+    "@pinia/nuxt": "1.0.2",
+    "@playwright/test": "1.63.0",
+    "@types/node": "^24.13.6",
+    "@unocss/nuxt": "66.10.5",
+    "@vitejs/plugin-vue": "^6.0.9",
+    "@vue/test-utils": "2.5.1",
     "@vueuse/core": "14.4.0",
     "@vueuse/nuxt": "14.4.0",
     "h3": "1.15.11",
-    "happy-dom": "^20.11.2",
+    "happy-dom": "^20.14.5",
     "nuxt": "4.5.2",
-    "pinia": "4.0.2",
-    "tsx": "4.23.11",
+    "pinia": "4.0.3",
+    "tsx": "4.23.15",
     "typescript": "^6.0.3",
-    "unocss": "66.7.5",
-    "vitest": "4.1.10",
-    "vue": "3.5.41",
-    "vue-router": "^5.1.0",
-    "vue-tsc": "3.3.9"
+    "unocss": "66.10.5",
+    "vitest": "4.1.11",
+    "vue": "3.5.43",
+    "vue-router": "^5.3.1",
+    "vue-tsc": "3.3.11"
   }
 }

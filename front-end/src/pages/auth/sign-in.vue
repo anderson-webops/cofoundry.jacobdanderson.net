@@ -97,7 +97,7 @@ async function submitProvider(provider: SupportedOAuthProvider) {
         : "Use your account credentials to continue discovery, messaging, proposals, and agreements." }}
     </p>
 
-    <div v-if="oauthErrorMessage" class="bg-[color:color-mix(in_srgb,var(--danger)_10%,transparent)] text-sm text-[var(--danger)] mt-5 p-4 border border-[color:color-mix(in_srgb,var(--danger)_28%,transparent)] rounded-3xl">
+    <div v-if="oauthErrorMessage" class="text-sm text-[var(--danger)] mt-5 p-4 border border-[color:color-mix(in_srgb,var(--danger)_28%,transparent)] rounded-3xl bg-[color:color-mix(in_srgb,var(--danger)_10%,transparent)]">
       {{ oauthErrorMessage }}
     </div>
 

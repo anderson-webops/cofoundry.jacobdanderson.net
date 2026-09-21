@@ -52,7 +52,7 @@ export function createStripeClient(event?: H3Event) {
   }
 
   return new Stripe(secretKey, {
-    apiVersion: "2026-07-29.dahlia",
+    apiVersion: "2026-08-26.dahlia",
   })
 }
 

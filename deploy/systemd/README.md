@@ -4,21 +4,42 @@ The production application runs directly with Node. Docker, Compose, Podman, and
 
 ## Application service
 
-1. Create the unprivileged `cofoundry` user and the release root `/srv/cofoundry/releases` using the host's normal account-management process.
-2. Build and fully validate each release in a new immutable directory under `/srv/cofoundry/releases/<release>-<commit>`. The directory must contain `front-end/.output/server/index.mjs`.
-3. Preview and install the application unit and protected env-file template:
+1. Create the unprivileged `cofoundry` user, `/srv/cofoundry/releases`, `/var/lib/cofoundry`, `/run/cofoundry`, and `/var/backups/cofoundry` using the host's normal account-management process. Writable state remains outside immutable releases and must survive both promotion and rollback.
+2. On a clean Linux ARM64 checkout, run `npm run package:runtime -- .ai-work/runs/<empty-run>`. The packager requires Node 24.18.1/npm 12.0.2, uses the full locked graph to build the exact commit, stages only the backend production dependency closure, writes a source-bound manifest, and exercises the unpacked frontend, backend, operations worker, probes, graceful shutdown, post-copy verification, and missing-module failure in a network-isolated sandbox without the source checkout or development dependencies. It also emits a separate digest-bound host-control bundle containing the systemd unit, installer, promoter, and verifiers.
+3. Transfer both archives, both SHA-256 values, the exact commit, and the accepted unpacked runtime tree through the protected release intake. Make the staged tree and archives root-owned and not group/world writable. Never copy credentials, host env files, local databases, uploads, caches, or writable queues into a release.
+4. Preview and install the host controls from the immutable Git object and reviewed control archive. Do not run a privileged multi-file copy directly from a mutable checkout:
 
 ```sh
-sudo deploy/systemd/install-app-unit.sh --dry-run
-sudo deploy/systemd/install-app-unit.sh
+/usr/bin/git show <commit>:deploy/systemd/install-app-unit.sh \
+  | sudo /bin/bash -s -- \
+      --bundle /srv/cofoundry/artifacts/<release>-host-controls.tar.gz \
+      --sha256 <control-bundle-sha256> \
+      --commit <commit> \
+      --dry-run
+
+/usr/bin/git show <commit>:deploy/systemd/install-app-unit.sh \
+  | sudo /bin/bash -s -- \
+      --bundle /srv/cofoundry/artifacts/<release>-host-controls.tar.gz \
+      --sha256 <control-bundle-sha256> \
+      --commit <commit>
 ```
 
-4. Fill `/etc/cofoundry/app.env` with host-managed values. Blank secret placeholders are intentional so production validation fails until real values are injected.
-5. Include `deploy/nginx/cofoundry-proxy.conf.example` inside the existing HTTPS `server` block. Preserve both the existing IPv4 and `[::]` listeners, certificate directives, and HTTP-to-HTTPS redirect.
-6. Promote the validated directory. The script changes only the `/srv/cofoundry/current` symlink, restarts the direct Node service, checks `/api/health`, and restores the previous target automatically if the candidate is unhealthy:
+The installer copies the archive once into root-only staging, verifies the reviewed digest and manifest, creates a versioned root-owned control directory, and atomically switches `/usr/local/libexec/cofoundry/current`. Later upgrades may invoke the installed `current/install-app-unit.sh`; previously installed control bundles remain available for recovery.
+
+5. Fill `/etc/cofoundry/app.env` with host-managed values. Blank secret placeholders are intentional so production validation fails until real values are injected. Deployment identity values must match the candidate or remain blank so the built fallback is authoritative.
+6. Include `deploy/nginx/cofoundry-proxy.conf.example` inside the existing HTTPS `server` block. Preserve both the existing IPv4 and `[::]` listeners, certificate directives, and HTTP-to-HTTPS redirect.
+7. Promote with the installed root-owned helper. Supply the independently reviewed archive digest and exact commit. If a current release exists, its retained archive, digest, and commit are mandatory so rollback is revalidated before mutation and again before restoration:
 
 ```sh
-sudo deploy/systemd/promote-release.sh /srv/cofoundry/releases/<release>-<commit>
+sudo env \
+  ROLLBACK_ARCHIVE=/srv/cofoundry/artifacts/<previous>.tar.gz \
+  ROLLBACK_SHA256=<previous-sha256> \
+  ROLLBACK_COMMIT=<previous-commit> \
+  /usr/local/libexec/cofoundry/current/promote-release.sh \
+  /srv/cofoundry/releases/<release>-<commit> \
+  /srv/cofoundry/artifacts/<release>.tar.gz \
+  <release-sha256> \
+  <release-commit>
 ```
 
 Verify the service and loopback boundary before running the public release verifier:
@@ -26,10 +47,12 @@ Verify the service and loopback boundary before running the public release verif
 ```sh
 systemctl status cofoundry-app.service
 curl --fail --silent --show-error http://127.0.0.1:3000/api/health
+curl --fail --silent --show-error http://127.0.0.1:3000/healthz
+curl --fail --silent --show-error http://127.0.0.1:3000/readyz
 ss -ltnp | grep '127.0.0.1:3000'
 ```
 
-To roll back manually, promote the preceding immutable release directory with the same command. Do not edit an already validated release directory in place.
+The promoter checks the trusted archive against the staged manifest and every runtime hash, rejects mutable ownership/modes, links, hard links, unexpected executables, development dependencies, and identity drift, serializes promotion, and restores only a separately verified rollback artifact after failed readiness or interruption. A rollback failure retains a root-only JSON record containing both archive paths, digests, commits, targets, timestamps, and state. The app and attacker-facing scan worker use a measured 192 MiB V8 heap ceiling, 320 MiB soft memory boundary, 384 MiB hard cgroup boundary, and 64-task ceiling; change those only after repeating the checked-in workload and high-cardinality rate-limit measurements. To roll back manually, promote the preceding immutable artifact with the same evidence contract. Never edit a validated release directory in place.
 
 ## Operations workers
 
@@ -88,7 +111,7 @@ journalctl -u cofoundry-operations-mail-smoke.service -n 100 --no-pager
 
 ### Notes
 
-- The application uses the checked-in `cofoundry-app.service`; the worker templates remain separate so a worker failure cannot replace or broaden the public listener.
+- The application uses the checked-in `cofoundry-app.service`; the worker templates remain separate so a worker failure cannot replace or broaden the public listener. Production units invoke the pinned Node 24.18.1 binary and compiled JavaScript directly, without npm, tsx, or development dependencies.
 - `COFOUNDRY_OPERATIONS_TOKEN` must match the token injected into the Nuxt server process.
 - `COFOUNDRY_BACKUP_COMMAND`, `COFOUNDRY_RESTORE_DRILL_COMMAND`, and `COFOUNDRY_FILE_SCANNER_COMMAND` are parsed into an executable plus arguments and are never passed to a shell. Put pipes, redirects, or other compound logic inside a reviewed, host-owned wrapper executable instead of the env value.
 - The service sandbox allows writes only under `/var/lib/cofoundry`, `/run/cofoundry`, and the optional `/var/backups/cofoundry` path. Keep provider caches and generated artifacts in those locations.
