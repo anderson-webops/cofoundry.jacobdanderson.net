@@ -22,6 +22,7 @@ import { cloneValue } from "../../shared/utils/clone"
 import { deriveCollaborationTrustMetrics } from "../../shared/utils/collaboration"
 import { loadLocalCollaborationState, persistLocalCollaborationStateForUsers } from "./local-collaboration-store"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
+import { collectStablePages } from "./supabase-pagination"
 
 type AdminClient = NonNullable<ReturnType<typeof createSupabaseAdminClient>>
 
@@ -805,16 +806,16 @@ async function selectProposalVersions(adminClient: AdminClient, proposalIds: str
   if (!proposalIds.length)
     return [] as PersistedProposalVersionRow[]
 
-  const { data, error } = await adminClient
-    .from("proposal_versions")
-    .select("*")
-    .in("proposal_id", proposalIds)
-    .order("version_number", { ascending: false })
-
-  if (error)
-    throw error
-
-  return (data || []) as PersistedProposalVersionRow[]
+  return collectStablePages<PersistedProposalVersionRow>(async (start, end) => {
+    const { count, data, error } = await adminClient
+      .from("proposal_versions")
+      .select("*", { count: "exact" })
+      .in("proposal_id", proposalIds)
+      .order("version_number", { ascending: false })
+      .order("id", { ascending: true })
+      .range(start, end)
+    return { count, data: data as PersistedProposalVersionRow[] | null, error }
+  })
 }
 
 async function selectProposalComments(adminClient: AdminClient, proposalIds: string[]) {
@@ -853,16 +854,16 @@ async function selectContractVersions(adminClient: AdminClient, contractIds: str
   if (!contractIds.length)
     return [] as PersistedContractVersionRow[]
 
-  const { data, error } = await adminClient
-    .from("contract_versions")
-    .select("*")
-    .in("contract_id", contractIds)
-    .order("version_number", { ascending: false })
-
-  if (error)
-    throw error
-
-  return (data || []) as PersistedContractVersionRow[]
+  return collectStablePages<PersistedContractVersionRow>(async (start, end) => {
+    const { count, data, error } = await adminClient
+      .from("contract_versions")
+      .select("*", { count: "exact" })
+      .in("contract_id", contractIds)
+      .order("version_number", { ascending: false })
+      .order("id", { ascending: true })
+      .range(start, end)
+    return { count, data: data as PersistedContractVersionRow[] | null, error }
+  })
 }
 
 async function selectSignatures(adminClient: AdminClient, contractIds: string[]) {
