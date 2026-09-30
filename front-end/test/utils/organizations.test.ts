@@ -219,4 +219,260 @@ describe("organization workspaces", () => {
     )
     expect(satisfied[0]).toMatchObject({ approvalStatus: "approved", blockers: [] })
   })
+
+  it("does not let policy-less self-approval satisfy a linked contract", () => {
+    const document = inviteAndAccept(createDocument())
+    const policy = document.agreementPolicies[0]!
+    const requested = apply(document, reviewer, {
+      action: "request_approval",
+      policyId: null,
+      summary: "Review this agreement before either participant signs it.",
+      targetId: "contract_1",
+      targetType: "contract",
+      targetVersionId: "contract_version_1",
+      title: "Founder agreement",
+    }, 3)
+    const selfApproved = apply(requested, reviewer, {
+      action: "resolve_approval",
+      approvalId: requested.approvalRequests[0]!.id,
+      decisionNote: "Approved without a policy or independent review.",
+      status: "approved",
+    }, 4)
+    const linked = apply(selfApproved, owner, {
+      action: "link_resource",
+      label: "Founder agreement",
+      policyId: policy.id,
+      resourceId: "contract_1",
+      resourceType: "contract",
+    }, 5)
+
+    expect(getOrganizationContractGovernanceRequirements([linked], "contract_1", "contract_version_1", new Set())[0])
+      .toMatchObject({ approvalStatus: "missing", blockers: ["Internal approval has not been requested for this version."] })
+
+    const validRequest = apply(linked, owner, {
+      action: "request_approval",
+      policyId: policy.id,
+      summary: "Request independent review under the linked agreement policy.",
+      targetId: "contract_1",
+      targetType: "contract",
+      targetVersionId: "contract_version_1",
+      title: "Founder agreement",
+    }, 6)
+    const approved = apply(validRequest, reviewer, {
+      action: "resolve_approval",
+      approvalId: validRequest.approvalRequests[0]!.id,
+      decisionNote: "Independently reviewed under the linked policy.",
+      status: "approved",
+    }, 7)
+    expect(getOrganizationContractGovernanceRequirements([approved], "contract_1", "contract_version_1", new Set())[0])
+      .toMatchObject({ approvalStatus: "approved", blockers: [] })
+    expect(getOrganizationContractGovernanceRequirements([approved], "contract_1", "contract_version_2", new Set())[0])
+      .toMatchObject({ approvalStatus: "missing" })
+  })
+
+  it("rejects requests for a linked contract under no policy or a different policy", () => {
+    const document = createDocument()
+    const otherPolicyDocument = apply(document, owner, {
+      action: "create_policy",
+      allowOutsideCounsel: true,
+      approvalRoles: ["owner"],
+      description: "Alternate policy for another agreement workflow.",
+      isDefault: false,
+      name: "Alternate agreement policy",
+      requiredClauses: [],
+      requiresInternalApproval: true,
+      requiresLegalReview: false,
+      separationOfDuties: false,
+    }, 1)
+    const linked = apply(otherPolicyDocument, owner, {
+      action: "link_resource",
+      label: "Founder agreement",
+      policyId: document.agreementPolicies[0]!.id,
+      resourceId: "contract_1",
+      resourceType: "contract",
+    }, 2)
+    const request = (policyId: string | null): OrganizationMutation => ({
+      action: "request_approval",
+      policyId,
+      summary: "Review this agreement before either participant signs it.",
+      targetId: "contract_1",
+      targetType: "contract",
+      targetVersionId: "contract_version_1",
+      title: "Founder agreement",
+    })
+
+    expect(() => apply(linked, owner, request(null), 3)).toThrow("linked agreement policy")
+    expect(() => apply(linked, owner, request(otherPolicyDocument.agreementPolicies[0]!.id), 3)).toThrow("linked agreement policy")
+    expect(() => apply(linked, owner, request(document.agreementPolicies[0]!.id), 3)).not.toThrow()
+    expect(() => apply(linked, owner, { ...request(null), targetType: "venture" }, 3)).not.toThrow()
+
+    const defaultLinked = apply(document, owner, {
+      action: "link_resource",
+      label: "Founder agreement",
+      policyId: null,
+      resourceId: "contract_1",
+      resourceType: "contract",
+    }, 1)
+    expect(() => apply(defaultLinked, owner, request(null), 2)).toThrow("linked agreement policy")
+    expect(() => apply(defaultLinked, owner, request(document.agreementPolicies[0]!.id), 2)).not.toThrow()
+  })
+
+  it("lets a linked contract replace a legacy pending policy-less request", () => {
+    const document = createDocument()
+    const oldRequest = apply(document, owner, {
+      action: "request_approval",
+      policyId: null,
+      summary: "Old request without a linked policy selection.",
+      targetId: "contract_1",
+      targetType: "contract",
+      targetVersionId: "contract_version_1",
+      title: "Founder agreement",
+    }, 1)
+    const linked = apply(oldRequest, owner, {
+      action: "link_resource",
+      label: "Founder agreement",
+      policyId: document.agreementPolicies[0]!.id,
+      resourceId: "contract_1",
+      resourceType: "contract",
+    }, 2)
+    const newRequest = apply(linked, owner, {
+      action: "request_approval",
+      policyId: document.agreementPolicies[0]!.id,
+      summary: "New request under the linked agreement policy.",
+      targetId: "contract_1",
+      targetType: "contract",
+      targetVersionId: "contract_version_1",
+      title: "Founder agreement",
+    }, 3)
+
+    expect(newRequest.approvalRequests).toMatchObject([
+      { policyId: document.agreementPolicies[0]!.id, status: "pending" },
+      { policyId: null, status: "pending" },
+    ])
+    expect(getOrganizationContractGovernanceRequirements([newRequest], "contract_1", "contract_version_1", new Set())[0])
+      .toMatchObject({ approvalStatus: "pending" })
+  })
+
+  it("ignores an approval granted under a different policy before linking", () => {
+    const document = createDocument()
+    const withAlternatePolicy = apply(document, owner, {
+      action: "create_policy",
+      allowOutsideCounsel: true,
+      approvalRoles: ["owner"],
+      description: "Independent policy for a different agreement.",
+      isDefault: false,
+      name: "Alternate policy",
+      requiredClauses: [],
+      requiresInternalApproval: true,
+      requiresLegalReview: false,
+      separationOfDuties: false,
+    }, 1)
+    const requested = apply(withAlternatePolicy, owner, {
+      action: "request_approval",
+      policyId: withAlternatePolicy.agreementPolicies[0]!.id,
+      summary: "Approve this agreement under the alternate policy.",
+      targetId: "contract_1",
+      targetType: "contract",
+      targetVersionId: "contract_version_1",
+      title: "Founder agreement",
+    }, 2)
+    const approved = apply(requested, owner, {
+      action: "resolve_approval",
+      approvalId: requested.approvalRequests[0]!.id,
+      decisionNote: "Self approval is allowed under the alternate policy.",
+      status: "approved",
+    }, 3)
+    const linked = apply(approved, owner, {
+      action: "link_resource",
+      label: "Founder agreement",
+      policyId: document.agreementPolicies[0]!.id,
+      resourceId: "contract_1",
+      resourceType: "contract",
+    }, 4)
+
+    expect(getOrganizationContractGovernanceRequirements([linked], "contract_1", "contract_version_1", new Set())[0])
+      .toMatchObject({ approvalStatus: "missing", blockers: ["Internal approval has not been requested for this version."] })
+  })
+
+  it("keeps signing blocked when a linked contract loses its default policy", () => {
+    const document = createDocument()
+    const policy = document.agreementPolicies[0]!
+    const linked = apply(document, owner, {
+      action: "link_resource",
+      label: "Founder agreement",
+      policyId: null,
+      resourceId: "contract_1",
+      resourceType: "contract",
+    }, 1)
+    const withoutDefault = apply(linked, owner, {
+      action: "update_policy",
+      allowOutsideCounsel: policy.allowOutsideCounsel,
+      approvalRoles: policy.approvalRoles,
+      description: policy.description,
+      isDefault: false,
+      name: policy.name,
+      policyId: policy.id,
+      requiredClauses: policy.requiredClauses,
+      requiresInternalApproval: policy.requiresInternalApproval,
+      requiresLegalReview: policy.requiresLegalReview,
+      separationOfDuties: policy.separationOfDuties,
+    }, 2)
+
+    expect(getOrganizationContractGovernanceRequirements([withoutDefault], "contract_1", "contract_version_1", new Set())[0])
+      .toMatchObject({ approvalStatus: "missing", blockers: ["The linked agreement policy is unavailable. An organization owner must restore it before signing."] })
+    expect(() => apply(withoutDefault, owner, {
+      action: "request_approval",
+      policyId: null,
+      summary: "Review the agreement while its policy is missing.",
+      targetId: "contract_1",
+      targetType: "contract",
+      targetVersionId: "contract_version_1",
+      title: "Founder agreement",
+    }, 3)).toThrow("linked agreement policy is unavailable")
+
+    const staleExplicitLink = structuredClone(linked)
+    staleExplicitLink.resourceLinks[0]!.policyId = "organization_policy_unavailable"
+    expect(getOrganizationContractGovernanceRequirements([staleExplicitLink], "contract_1", "contract_version_1", new Set())[0])
+      .toMatchObject({ policyId: "organization_policy_unavailable", blockers: ["The linked agreement policy is unavailable. An organization owner must restore it before signing."] })
+  })
+
+  it("requires a currently eligible independent approver under the linked policy", () => {
+    const document = inviteAndAccept(createDocument())
+    const policy = document.agreementPolicies[0]!
+    const linked = apply(document, owner, {
+      action: "link_resource",
+      label: "Founder agreement",
+      policyId: policy.id,
+      resourceId: "contract_1",
+      resourceType: "contract",
+    }, 3)
+    const requested = apply(linked, owner, {
+      action: "request_approval",
+      policyId: policy.id,
+      summary: "Review the current agreement before either participant signs it.",
+      targetId: "contract_1",
+      targetType: "contract",
+      targetVersionId: "contract_version_1",
+      title: "Founder agreement",
+    }, 4)
+    const approved = apply(requested, reviewer, {
+      action: "resolve_approval",
+      approvalId: requested.approvalRequests[0]!.id,
+      decisionNote: "Approved as an independent reviewer.",
+      status: "approved",
+    }, 5)
+    const downgraded = apply(approved, owner, {
+      action: "update_member",
+      membershipId: approved.memberships.find(item => item.userId === reviewer.id)!.id,
+      role: "member",
+      title: "Team member",
+    }, 6)
+    expect(getOrganizationContractGovernanceRequirements([downgraded], "contract_1", "contract_version_1", new Set())[0])
+      .toMatchObject({ approvalStatus: "missing", blockers: ["Internal approval has not been requested for this version."] })
+
+    const legacySelfApproved = structuredClone(approved)
+    legacySelfApproved.approvalRequests[0]!.decidedByUserId = owner.id
+    expect(getOrganizationContractGovernanceRequirements([legacySelfApproved], "contract_1", "contract_version_1", new Set())[0])
+      .toMatchObject({ approvalStatus: "missing" })
+  })
 })

@@ -260,9 +260,15 @@ async function requestApproval() {
     || workspace.value?.ventures.map(item => ({ id: item.id, label: item.name, type: "venture" as const, versionId: null })).find(item => `venture|${item.id}|` === approvalForm.target)
   if (!target)
     return
+  const linkedContract = target.type === "contract"
+    ? workspace.value?.resourceLinks.find(link => link.resourceType === "contract" && link.resourceId === target.id)
+    : null
+  const policyId = approvalForm.policyId || (linkedContract
+    ? linkedContract.policyId || workspace.value?.agreementPolicies.find(policy => policy.isDefault)?.id || null
+    : null)
   if (!await mutate({
     action: "request_approval",
-    policyId: approvalForm.policyId || null,
+    policyId,
     summary: approvalForm.summary,
     targetId: target.id,
     targetType: target.type,
