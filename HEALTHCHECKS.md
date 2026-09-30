@@ -9,7 +9,10 @@ Use the following unauthenticated, no-redirect endpoints for monitoring.
 - `GET` or `HEAD /readyz` checks the configured persistent backend when one is
   enabled. It returns `200` with exactly `{"ok":true}` when ready, otherwise
   `503` with exactly `{"ok":false}`. `HEAD` returns the same status with an
-  empty body.
+  empty body. In Supabase mode, concurrent probes share one bounded table check;
+  its result is cached within the server process for at most one second. A
+  dependency-state change can be delayed by that cache and the two-second
+  probe deadline.
 
 ## Operations back-end service
 
