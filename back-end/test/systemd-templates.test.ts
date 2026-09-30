@@ -34,9 +34,12 @@ test("application service uses a hardened direct Node loopback runtime", async (
   assert.match(service, /TasksMax=64/)
   assert.doesNotMatch(service, /npm|docker|podman/i)
   assert.match(envExample, /NUXT_PUBLIC_BACKEND_MODE=mock/)
+  assert.match(envExample, /^COFOUNDRY_TRUST_PROXY_HEADERS=true$/m)
+  assert.match(envExample, /^COFOUNDRY_TRUSTED_PROXY_IPS=127\.0\.0\.1$/m)
   assert.match(envExample, /COFOUNDRY_EXPECT_MULTI_INSTANCE=false/)
   assert.match(envExample, /COFOUNDRY_APP_INSTANCE_COUNT=1/)
   assert.match(nginxProxy, /proxy_pass http:\/\/127\.0\.0\.1:3000/)
+  assert.match(nginxProxy, /proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;/)
   assert.match(nginxProxy, /IPv4 and IPv6/)
 })
 

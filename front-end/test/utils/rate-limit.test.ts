@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { BoundedRateLimitStore } from "../../server/utils/bounded-rate-limit-store"
 import { resolveRequesterIp } from "../../server/utils/rate-limit"
 
 describe("rate-limit requester identity", () => {
@@ -48,6 +49,25 @@ describe("rate-limit requester identity", () => {
       trustedProxyIps: "127.0.0.1,10.0.0.0/8",
       trustProxyHeaders: true,
     })).toBe("198.51.100.5")
+  })
+
+  it("keeps one proxied client's exhausted bucket separate from another client", () => {
+    const proxy = {
+      directIp: "127.0.0.1",
+      trustedProxyIps: "127.0.0.1",
+      trustProxyHeaders: true,
+    }
+    const attacker = resolveRequesterIp({ ...proxy, forwardedFor: "198.51.100.77, 203.0.113.8" })
+    const legitimate = resolveRequesterIp({ ...proxy, forwardedFor: "192.0.2.9" })
+    const store = new BoundedRateLimitStore()
+
+    expect(attacker).toBe("203.0.113.8")
+    expect(legitimate).toBe("192.0.2.9")
+    for (let attempt = 0; attempt < 20; attempt += 1)
+      expect(store.consume(`access-requests:ip:${attacker}`, "access-requests:ip", 20, 3_600_000).allowed).toBe(true)
+
+    expect(store.consume(`access-requests:ip:${attacker}`, "access-requests:ip", 20, 3_600_000).allowed).toBe(false)
+    expect(store.consume(`access-requests:ip:${legitimate}`, "access-requests:ip", 20, 3_600_000).allowed).toBe(true)
   })
 
   it("fails closed when the proxy allowlist is malformed", () => {

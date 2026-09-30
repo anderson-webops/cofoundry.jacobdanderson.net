@@ -16,6 +16,8 @@ const syntheticProductionHostEnv = {
   COFOUNDRY_OAUTH_PROVIDER: "",
   COFOUNDRY_OPERATIONS_TOKEN: "synthetic-release-worker-token-000001",
   COFOUNDRY_RELEASE: "local-release",
+  COFOUNDRY_TRUST_PROXY_HEADERS: "true",
+  COFOUNDRY_TRUSTED_PROXY_IPS: "127.0.0.1",
   NODE_ENV: "production",
   NUXT_PUBLIC_APP_URL: "https://cofoundry.example.com",
   NUXT_PUBLIC_BACKEND_MODE: "mock",
