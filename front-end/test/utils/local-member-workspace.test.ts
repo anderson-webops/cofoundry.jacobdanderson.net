@@ -9,8 +9,9 @@ import { listAdminSecurityUsers, persistAdminUserSecurityAction, persistOpportun
 import { persistMockCheckoutSubscription, updateMockSubscriptionRenewal } from "../../server/utils/billing-persistence"
 import { applyCollaborationMutation } from "../../server/utils/collaboration-workflow"
 import { clearLocalAdminAuditStoreForTests } from "../../server/utils/local-admin-audit"
-import { clearLocalCollaborationStoreForTests } from "../../server/utils/local-collaboration-store"
+import { clearLocalCollaborationStoreForTests, loadLocalCollaborationState, persistLocalCollaborationStateForUsers } from "../../server/utils/local-collaboration-store"
 import { clearLocalMemberWorkspaceStoreForTests, persistLocalMemberWorkspaceState } from "../../server/utils/local-member-workspace"
+import { extractUsersCollaborationState } from "../../server/utils/member-collaboration"
 import { listAdminOpportunityWorkspaceSlice, loadMemberWorkspaceState, persistMemberWorkspaceWritePayload } from "../../server/utils/member-workspace"
 import { workspaceSeed } from "../../shared/data/seed"
 import { buildSessionUser } from "../../shared/utils/workspace"
@@ -49,6 +50,7 @@ describe("local member workspace persistence", () => {
     await clearLocalMemberWorkspaceStoreForTests()
     await rm(dataDirectory, { force: true, recursive: true })
     delete process.env.COFOUNDRY_LOCAL_DATA_DIR
+    delete process.env.COFOUNDRY_COLLABORATION_RETENTION_LIMIT
     vi.unstubAllGlobals()
   })
 
@@ -277,6 +279,53 @@ describe("local member workspace persistence", () => {
     })
 
     expect(reloaded.seed.conversations.find(item => item.id === conversation.id)?.unreadCountByUser[session.id]).toBe(0)
+  })
+
+  it("rejects only a new agreement revision beyond the local per-agreement limit", async () => {
+    process.env.COFOUNDRY_COLLABORATION_RETENTION_LIMIT = "100"
+    const userIds = ["user_olivia", "user_malik"]
+    const expected = extractUsersCollaborationState(workspaceSeed, userIds)
+    const state = structuredClone(expected)
+    const sourceVersion = state.contractVersions.find(version => version.contractId === "contract_ledgerloop")!
+    state.contractVersions.push(...Array.from({ length: 98 }, (_, index) => ({
+      ...sourceVersion,
+      id: `contract_version_ledgerloop_${index + 2}`,
+      versionNumber: index + 2,
+      createdAt: "2026-09-29T12:00:00.000Z",
+    })))
+    state.contracts.find(contract => contract.id === "contract_ledgerloop")!.currentVersionId = "contract_version_ledgerloop_99"
+    await persistLocalCollaborationStateForUsers(userIds, state, { expectedState: expected })
+
+    const session = buildSessionUser(workspaceSeed, "user_malik")!
+    const payload = {
+      roleTitle: sourceVersion.roleTitle,
+      scope: sourceVersion.scope,
+      timeCommitment: sourceVersion.timeCommitment,
+      compensation: sourceVersion.compensation,
+      equity: sourceVersion.equity,
+      vesting: sourceVersion.vesting,
+      ipAssignment: sourceVersion.ipAssignment,
+      confidentiality: sourceVersion.confidentiality,
+      decisionMaking: sourceVersion.decisionMaking,
+      termination: sourceVersion.termination,
+      disputeResolution: sourceVersion.disputeResolution,
+      notes: sourceVersion.notes,
+    }
+    const allowed = await applyCollaborationMutation(event, session, {
+      action: "update_contract_version",
+      contractId: "contract_ledgerloop",
+      payload,
+    })
+    expect(allowed.result.contractVersionId).toEqual(expect.any(String))
+
+    await expect(applyCollaborationMutation(event, session, {
+      action: "update_contract_version",
+      contractId: "contract_ledgerloop",
+      payload,
+    })).rejects.toMatchObject({ statusCode: 409 })
+    const saved = await loadLocalCollaborationState(session.id)
+    expect(saved?.contractVersions).toHaveLength(100)
+    expect(saved?.contracts.find(contract => contract.id === "contract_ledgerloop")?.currentVersionId).toBe(allowed.result.contractVersionId)
   })
 
   it("keeps proposal comments open during negotiation and contracts gated on acceptance", async () => {

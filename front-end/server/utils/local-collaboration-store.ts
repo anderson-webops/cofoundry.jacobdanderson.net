@@ -130,25 +130,88 @@ function newestFirst<T extends { createdAt?: string, lastMessageAt?: string, sig
   })
 }
 
+function assertVersionGrowthLimit<T>(
+  previous: T[],
+  next: T[],
+  getParentId: (version: T) => string,
+  label: string,
+) {
+  const previousCounts = new Map<string, number>()
+  const nextCounts = new Map<string, number>()
+  const limit = retentionLimit()
+
+  for (const version of previous) {
+    const parentId = getParentId(version)
+    previousCounts.set(parentId, (previousCounts.get(parentId) || 0) + 1)
+  }
+  for (const version of next) {
+    const parentId = getParentId(version)
+    nextCounts.set(parentId, (nextCounts.get(parentId) || 0) + 1)
+  }
+
+  for (const [parentId, count] of nextCounts) {
+    if (count > limit && count > (previousCounts.get(parentId) || 0)) {
+      const statusMessage = `${label} revision limit reached. Contact support before adding another revision.`
+      throw Object.assign(new Error(statusMessage), { statusCode: 409, statusMessage })
+    }
+  }
+}
+
+function assertMemberGrowthLimit<T>(
+  previous: T[],
+  next: T[],
+  previousMembers: (row: T) => string[],
+  nextMembers: (row: T) => string[],
+  label: string,
+) {
+  const previousCounts = new Map<string, number>()
+  const nextCounts = new Map<string, number>()
+  const limit = retentionLimit()
+
+  for (const row of previous) {
+    for (const memberId of new Set(previousMembers(row)))
+      previousCounts.set(memberId, (previousCounts.get(memberId) || 0) + 1)
+  }
+  for (const row of next) {
+    for (const memberId of new Set(nextMembers(row)))
+      nextCounts.set(memberId, (nextCounts.get(memberId) || 0) + 1)
+  }
+
+  for (const [memberId, count] of nextCounts) {
+    if (count > limit && count > (previousCounts.get(memberId) || 0)) {
+      const statusMessage = `${label} limit reached. Contact support before adding another record.`
+      throw Object.assign(new Error(statusMessage), { statusCode: 409, statusMessage })
+    }
+  }
+}
+
+function proposalMemberIds(proposal: Proposal | undefined) {
+  return proposal ? [proposal.createdByUserId, proposal.recipientUserId] : []
+}
+
+function contractMemberIds(contract: Contract | undefined, proposals: Map<string, Proposal>) {
+  return proposalMemberIds(contract && proposals.get(contract.proposalId))
+}
+
 function pruneStore(store: LocalCollaborationStore): LocalCollaborationStore {
   const limit = retentionLimit()
 
   return {
     ...store,
     connectRequests: newestFirst(store.connectRequests).slice(0, limit),
-    contractVersions: newestFirst(store.contractVersions).slice(0, limit),
-    contracts: newestFirst(store.contracts).slice(0, limit),
+    contractVersions: newestFirst(store.contractVersions),
+    contracts: newestFirst(store.contracts),
     conversations: newestFirst(store.conversations).slice(0, limit),
     investmentApplications: newestFirst(store.investmentApplications).slice(0, limit),
     matches: newestFirst(store.matches).slice(0, limit),
     messages: newestFirst(store.messages).slice(0, limit),
     notifications: newestFirst(store.notifications).slice(0, limit),
     proposalComments: newestFirst(store.proposalComments).slice(0, limit),
-    proposalVersions: newestFirst(store.proposalVersions).slice(0, limit),
-    proposals: newestFirst(store.proposals).slice(0, limit),
+    proposalVersions: newestFirst(store.proposalVersions),
+    proposals: newestFirst(store.proposals),
     relationshipDecisions: newestFirst(store.relationshipDecisions).slice(0, limit),
     reports: newestFirst(store.reports).slice(0, limit),
-    signatures: newestFirst(store.signatures).slice(0, limit),
+    signatures: newestFirst(store.signatures),
     trialCollaborations: newestFirst(store.trialCollaborations).slice(0, limit),
     updatedAt: new Date().toISOString(),
   }
@@ -392,6 +455,11 @@ export async function persistLocalCollaborationStateForUsers(
   return updateStore((store) => {
     const uniqueUserIds = [...new Set(userIds)]
     let nextState = cloneValue(state)
+    const previousContractVersions = store.contractVersions
+    const previousProposalVersions = store.proposalVersions
+    const previousContracts = store.contracts
+    const previousProposals = store.proposals
+    const previousSignatures = store.signatures
 
     if (options.expectedState) {
       const currentState = extractLocalStateForUsers(pruneStore(store), uniqueUserIds)
@@ -418,6 +486,21 @@ export async function persistLocalCollaborationStateForUsers(
     store.relationshipDecisions = upsertById(store.relationshipDecisions, nextState.relationshipDecisions)
     store.notifications = upsertById(store.notifications, nextState.notifications)
     store.reports = upsertById(store.reports, nextState.reports)
+    assertVersionGrowthLimit(previousContractVersions, store.contractVersions, version => version.contractId, "Agreement")
+    assertVersionGrowthLimit(previousProposalVersions, store.proposalVersions, version => version.proposalId, "Proposal")
+    const previousProposalById = new Map(previousProposals.map(proposal => [proposal.id, proposal]))
+    const nextProposalById = new Map(store.proposals.map(proposal => [proposal.id, proposal]))
+    const previousContractById = new Map(previousContracts.map(contract => [contract.id, contract]))
+    const nextContractById = new Map(store.contracts.map(contract => [contract.id, contract]))
+    const previousProposalVersionMembers = (version: ProposalVersion) => proposalMemberIds(previousProposalById.get(version.proposalId))
+    const nextProposalVersionMembers = (version: ProposalVersion) => proposalMemberIds(nextProposalById.get(version.proposalId))
+    const previousContractVersionMembers = (version: ContractVersion) => contractMemberIds(previousContractById.get(version.contractId), previousProposalById)
+    const nextContractVersionMembers = (version: ContractVersion) => contractMemberIds(nextContractById.get(version.contractId), nextProposalById)
+    assertMemberGrowthLimit(previousProposals, store.proposals, proposal => proposalMemberIds(proposal), proposal => proposalMemberIds(proposal), "Proposal")
+    assertMemberGrowthLimit(previousContracts, store.contracts, contract => contractMemberIds(contract, previousProposalById), contract => contractMemberIds(contract, nextProposalById), "Agreement")
+    assertMemberGrowthLimit(previousProposalVersions, store.proposalVersions, previousProposalVersionMembers, nextProposalVersionMembers, "Proposal revision")
+    assertMemberGrowthLimit(previousContractVersions, store.contractVersions, previousContractVersionMembers, nextContractVersionMembers, "Agreement revision")
+    assertMemberGrowthLimit(previousSignatures, store.signatures, signature => [signature.userId], signature => [signature.userId], "Agreement signature")
     return cloneValue(nextState)
   })
 }
