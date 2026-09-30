@@ -121,6 +121,12 @@ function requirePolicy(document: OrganizationWorkspaceDocument, policyId: string
   return policy
 }
 
+function linkedAgreementPolicy(document: OrganizationWorkspaceDocument, policyId: string | null) {
+  return policyId
+    ? getPolicy(document, policyId)
+    : document.agreementPolicies.find(policy => policy.isDefault) || null
+}
+
 function validateApprovalRoles(roles: OrganizationMemberRole[]) {
   const allowed = roles.filter(role => reviewingRoles.has(role))
   if (!allowed.length)
@@ -593,10 +599,19 @@ export function applyOrganizationMutation(
       requireMembership(document, session.id)
       if (mutation.policyId)
         requirePolicy(document, mutation.policyId)
+      const contractLink = mutation.targetType === "contract"
+        ? document.resourceLinks.find(link => link.resourceType === "contract" && link.resourceId === mutation.targetId)
+        : null
+      const linkedPolicy = contractLink ? linkedAgreementPolicy(document, contractLink.policyId) : null
+      if (contractLink && !linkedPolicy)
+        fail("The linked agreement policy is unavailable.", 409)
+      if (linkedPolicy && mutation.policyId !== linkedPolicy.id)
+        fail("Contract approval must use the linked agreement policy.", 409)
       const duplicate = document.approvalRequests.some(approval =>
         approval.targetType === mutation.targetType
         && approval.targetId === mutation.targetId
         && approval.targetVersionId === mutation.targetVersionId
+        && (!linkedPolicy || approval.policyId === linkedPolicy.id)
         && approval.status === "pending",
       )
       if (duplicate)
@@ -731,15 +746,34 @@ export function getOrganizationContractGovernanceRequirements(
     const link = document.resourceLinks.find(resource => resource.resourceType === "contract" && resource.resourceId === contractId)
     if (!link)
       return []
-    const policy = getPolicy(document, link.policyId) || document.agreementPolicies.find(item => item.isDefault)
-    if (!policy)
-      return []
+    const policy = linkedAgreementPolicy(document, link.policyId)
+    if (!policy) {
+      return [{
+        allowOutsideCounsel: false,
+        approvalStatus: "missing",
+        approvedLegalReview: approvedLegalReviewVersionIds.has(contractVersionId),
+        blockers: ["The linked agreement policy is unavailable. An organization owner must restore it before signing."],
+        organizationId: document.organization.id,
+        organizationName: document.organization.name,
+        policyId: link.policyId || "",
+        policyName: "Unavailable agreement policy",
+        requiresInternalApproval: false,
+        requiresLegalReview: false,
+      }]
+    }
     const approval = document.approvalRequests
-      .filter(item => item.targetType === "contract" && item.targetId === contractId && item.targetVersionId === contractVersionId)
+      .filter(item => item.targetType === "contract" && item.targetId === contractId && item.targetVersionId === contractVersionId && item.policyId === policy.id)
       .sort((left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime())[0]
     const approvedLegalReview = approvedLegalReviewVersionIds.has(contractVersionId)
     const blockers: string[] = []
-    const approvalStatus = approval?.status || "missing"
+    const decidedBy = approval?.decidedByUserId ? activeMembership(document, approval.decidedByUserId) : null
+    const approvalStatus = approval?.status === "approved" && (
+      !decidedBy
+      || !policy.approvalRoles.includes(decidedBy.role)
+      || (policy.separationOfDuties && approval.requestedByUserId === decidedBy.userId)
+    )
+      ? "missing"
+      : approval?.status || "missing"
     if (policy.requiresInternalApproval && approvalStatus !== "approved")
       blockers.push(approvalStatus === "missing" ? "Internal approval has not been requested for this version." : `Internal approval is ${approvalStatus.replaceAll("_", " ")}.`)
     if (policy.requiresLegalReview && !approvedLegalReview)
