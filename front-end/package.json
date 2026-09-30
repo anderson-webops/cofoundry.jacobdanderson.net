@@ -1,7 +1,7 @@
 {
   "name": "front-end",
   "type": "module",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "private": true,
   "description": "Nuxt frontend for CoFoundry",
   "author": "Jacob Anderson",
