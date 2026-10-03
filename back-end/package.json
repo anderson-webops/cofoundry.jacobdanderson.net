@@ -1,6 +1,6 @@
 {
   "name": "back-end",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "Operational backend workspace for CoFoundry",
   "type": "module",
   "private": true,
