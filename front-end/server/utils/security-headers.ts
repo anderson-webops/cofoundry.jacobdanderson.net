@@ -12,7 +12,6 @@ export type SecurityHeaders = Record<string, string>
 
 const analyticsOrigins = [
   "https://analytics.cofoundry.jacobdanderson.net",
-  "https://analytics.jacobdanderson.net",
 ]
 
 const stripeOrigins = [

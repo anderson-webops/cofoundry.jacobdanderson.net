@@ -20,12 +20,6 @@ const analyticsScripts = computed(() => import.meta.env.PROD && !sensitiveBearer
         "src": "https://analytics.cofoundry.jacobdanderson.net/script.js",
         "data-website-id": "82564e10-5962-49df-8332-50e0c04c7485",
       },
-      {
-        "defer": true,
-        "key": "cofoundry-analytics-central",
-        "src": "https://analytics.jacobdanderson.net/script.js",
-        "data-website-id": "89771691-ddd3-439b-bf75-7b62c50c41c2",
-      },
     ]
   : [])
 const siteUrl = computed(() => {

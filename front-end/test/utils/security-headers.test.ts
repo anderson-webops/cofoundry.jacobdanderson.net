@@ -29,7 +29,7 @@ describe("security headers", () => {
       .find(value => value.startsWith("script-src "))
     expect(scriptDirective).not.toContain("'unsafe-inline'")
     expect(headers["Content-Security-Policy"]).toContain("https://analytics.cofoundry.jacobdanderson.net")
-    expect(headers["Content-Security-Policy"]).toContain("https://analytics.jacobdanderson.net")
+    expect(headers["Content-Security-Policy"]).not.toContain("https://analytics.jacobdanderson.net")
   })
 
   it("does not emit production-only headers for local development", () => {
