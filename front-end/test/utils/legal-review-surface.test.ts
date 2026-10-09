@@ -7,6 +7,13 @@ function source(path: string) {
 }
 
 describe("external legal-review surface", () => {
+  it("collects ordinary pageviews with one canonical tracker only", () => {
+    const appSource = source("src/app.vue")
+    expect(appSource.match(/"data-website-id":/g)).toHaveLength(1)
+    expect(appSource).toContain("82564e10-5962-49df-8332-50e0c04c7485")
+    expect(appSource).not.toContain("89771691-ddd3-439b-bf75-7b62c50c41c2")
+  })
+
   it("keeps bearer tokens out of analytics, canonical metadata, and referrer headers", () => {
     const appSource = source("src/app.vue")
     const pageSource = source("src/pages/legal-review/[token].vue")

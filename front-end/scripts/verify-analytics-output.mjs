@@ -10,11 +10,6 @@ const expectedTrackers = [
     src: "https://analytics.cofoundry.jacobdanderson.net/script.js",
     websiteId: "82564e10-5962-49df-8332-50e0c04c7485",
   },
-  {
-    label: "central",
-    src: "https://analytics.jacobdanderson.net/script.js",
-    websiteId: "89771691-ddd3-439b-bf75-7b62c50c41c2",
-  },
 ]
 const readableExtensions = new Set([".html", ".js", ".json", ".mjs"])
 
@@ -35,6 +30,10 @@ if (!existsSync(outputDir)) {
 }
 
 const buildText = collectFiles(outputDir).map(file => readFileSync(file, "utf8")).join("\n")
+if (buildText.includes("89771691-ddd3-439b-bf75-7b62c50c41c2")) {
+  console.error("Obsolete duplicate analytics tracker is present in build output.")
+  process.exit(1)
+}
 const renderedTrackers = expectedTrackers.map(tracker => ({
   ...tracker,
   hasSrc: buildText.includes(tracker.src),
