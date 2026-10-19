@@ -92,19 +92,19 @@
   },
   "devDependencies": {
     "@antfu/eslint-config": "^9.5.1",
-    "@unocss/eslint-plugin": "66.10.5",
-    "axe-core": "^4.13.0",
+    "@unocss/eslint-plugin": "66.11.0",
+    "axe-core": "^4.14.0",
     "braces": "file:vendor/braces",
     "brace-expansion": "5.0.12",
-    "eslint": "10.11.0",
+    "eslint": "10.12.0",
     "eslint-plugin-format": "2.0.1",
-    "globals": "^17.12.0",
-    "happy-dom": "20.14.5",
+    "globals": "^17.13.0",
+    "happy-dom": "21.0.3",
     "js-beautify": "2.0.3",
     "listhen": "file:vendor/listhen",
-    "puppeteer": "^25.11.0",
+    "puppeteer": "^25.14.0",
     "typescript": "^6.0.3",
-    "vue": "3.5.43"
+    "vue": "3.5.44"
   },
   "allowScripts": {
     "esbuild@0.28.1": true,
