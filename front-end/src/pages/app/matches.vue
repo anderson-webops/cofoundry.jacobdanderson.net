@@ -174,7 +174,7 @@ async function acknowledgeTrial(match: ReturnType<typeof getMatchesForUser>[numb
 
     <EmptyState
       v-else
-      icon="i-carbon-ibm-cloud-direct-link-1"
+      icon="i-carbon-partnership"
       title="No matches yet"
       description="Send a few focused connect requests or express interest in an opportunity to start opening conversations."
     >

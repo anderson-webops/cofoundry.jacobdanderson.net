@@ -354,7 +354,7 @@ async function addDecisionLogEntry() {
 
     <EmptyState
       v-if="pending && !relationship"
-      icon="i-carbon-ibm-cloud-direct-link-1"
+      icon="i-carbon-partnership"
       title="Loading relationship"
       description="Pulling the latest conversation, trial sprint, proposal, agreement, and next-action state."
     />
