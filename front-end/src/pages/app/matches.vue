@@ -72,8 +72,7 @@ async function acknowledgeTrial(match: ReturnType<typeof getMatchesForUser>[numb
   <div class="gap-6 grid">
     <PageIntro
       eyebrow="Matches"
-      title="Mutual interest unlocks messaging."
-      description="Founders and collaborators only get direct access after both sides opt in. From there, CoFoundry helps you run the first call, start a short trial, and only then move into proposal terms."
+      title="Mutual matches"
     />
 
     <div v-if="matches.length" class="gap-5 grid">

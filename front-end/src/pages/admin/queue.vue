@@ -372,7 +372,6 @@ async function recordOpportunityVerification(item: AdminCommandQueueItem, status
           v-model="filters.query"
           label="Search queue"
           placeholder="Surface, source, detail, or status"
-          helper="Use this as the operator's starting point before opening specialized admin views."
         />
         <SelectInput v-model="filters.kind" label="Work type" :options="kindOptions" />
         <SelectInput v-model="filters.priority" label="Priority" :options="priorityOptions" />

@@ -341,7 +341,6 @@ async function addDecisionLogEntry() {
     <PageIntro
       eyebrow="Relationship"
       :title="relationship ? relationship.counterpartProfile.displayName : 'Relationship workspace'"
-      description="One working surface for the conversation, trial sprint, proposals, agreement draft, and next action."
     >
       <template #actions>
         <BaseBadge v-if="lastRelationshipRefreshAt" tone="neutral">
@@ -380,9 +379,6 @@ async function addDecisionLogEntry() {
                 <h2 class="text-xl font-semibold">
                   Relationship timeline
                 </h2>
-                <p class="muted text-sm leading-6 mt-2">
-                  A chronological view of messages, proposal movement, comments, files, trial events, and signatures.
-                </p>
               </div>
               <BaseBadge tone="neutral">
                 {{ relationship.timeline.length }} events
@@ -521,9 +517,6 @@ async function addDecisionLogEntry() {
                 <h2 class="text-xl font-semibold">
                   Decision log
                 </h2>
-                <p class="muted text-sm leading-6 mt-2">
-                  The terms and open questions that define who decides what before the relationship becomes harder to unwind.
-                </p>
               </div>
               <BaseBadge tone="neutral">
                 {{ relationship.decisionLog.length }} entries
@@ -560,9 +553,6 @@ async function addDecisionLogEntry() {
                   <h3 class="text-base font-semibold">
                     Add a decision note
                   </h3>
-                  <p class="muted text-sm leading-6 mt-2">
-                    Record ownership, governance boundaries, and unresolved calls before they become proposal or agreement terms.
-                  </p>
                 </div>
                 <BaseBadge tone="accent">
                   Relationship-level
@@ -602,7 +592,6 @@ async function addDecisionLogEntry() {
                   v-model="decisionLogBody"
                   label="Decision note"
                   placeholder="Example: Malik owns architecture decisions unless the choice changes financing, compliance, or company strategy."
-                  helper="Use this for unresolved decision rights, governance boundaries, and terms counsel should see later."
                   :error="decisionLogError"
                   :rows="3"
                 />

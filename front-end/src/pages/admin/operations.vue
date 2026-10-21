@@ -114,7 +114,7 @@ function rowDetail(row: OpsRow) {
     <PageIntro
       eyebrow="Operations"
       title="Production control surfaces"
-      description="Read-only admin visibility into delivery, file scanning, backups, and operational events from Supabase mode or the local mock-mode operations store."
+      description="Delivery, file scanning, backups, trust verification, and operational events."
     >
       <template #actions>
         <BaseBadge :tone="data?.mode === 'supabase' ? 'success' : 'neutral'">
@@ -174,7 +174,7 @@ function rowDetail(row: OpsRow) {
           class="mt-5"
           icon="i-carbon-cloud-monitoring"
           title="No records yet"
-          description="This table will populate after the matching production worker or webhook begins writing records."
+          description="No records are available for this category."
         />
       </section>
     </div>

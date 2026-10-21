@@ -175,7 +175,7 @@ async function issueInvite(request: AccessRequest) {
     <PageIntro
       eyebrow="Admin"
       title="Access requests"
-      description="Review workspace-access requests, record the decision, and issue invite links without enabling Supabase or Stripe."
+      description="Review workspace-access requests, record decisions, and issue invite links."
     >
       <template #actions>
         <BaseBadge :tone="data?.mode === 'mock' ? 'neutral' : 'success'">
@@ -209,7 +209,6 @@ async function issueInvite(request: AccessRequest) {
           v-model="filters.query"
           label="Search requests"
           placeholder="Name, email, company, role, or request detail"
-          helper="Use this queue for fit, setup, and prioritization review before sending an invite."
         />
         <SelectInput v-model="filters.status" label="Status" :options="statusOptions" />
       </div>

@@ -221,9 +221,6 @@ function shortCommit(value?: string) {
           <h2 class="text-lg font-semibold">
             Server provisioning checklist
           </h2>
-          <p class="muted text-sm leading-6 mt-2">
-            Copy these into the server handoff when an operator or server AI is wiring host-level secrets, timers, workers, and cutovers.
-          </p>
         </div>
         <BaseBadge tone="neutral">
           {{ provisioningTasks.length }} tasks

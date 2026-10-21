@@ -203,7 +203,6 @@ function removeFilterChip(chip: { type: string, value?: string }) {
     <PageIntro
       eyebrow="Discover"
       title="Search founders, collaborators, and startup opportunities."
-      description="Everything here is filtered for startup team formation, not gig work. Save searches, bookmark strong fits, and unlock contact through mutual interest."
     >
       <template #actions>
         <BaseBadge v-if="usage" tone="accent">
@@ -239,7 +238,7 @@ function removeFilterChip(chip: { type: string, value?: string }) {
       </div>
 
       <div v-if="scope === 'profiles'" class="gap-4 grid md:grid-cols-3">
-        <TextInput v-model="filters.minimumWeeklyHours" label="Minimum hours/week" type="number" helper="Filter for the amount of weekly bandwidth you need." />
+        <TextInput v-model="filters.minimumWeeklyHours" label="Minimum hours/week" type="number" />
         <SelectInput v-model="filters.runwayBucket" label="Runway" :options="[{ label: 'Any runway', value: 'any' }, ...runwayBucketOptions]" />
         <SelectInput v-model="filters.equityPhilosophy" label="Equity philosophy" :options="[{ label: 'Any philosophy', value: 'any' }, ...equityPhilosophyOptions]" />
       </div>
@@ -255,11 +254,6 @@ function removeFilterChip(chip: { type: string, value?: string }) {
         <div>
           <p class="text-sm font-semibold">
             {{ resultLabel }} in view
-          </p>
-          <p class="muted text-sm leading-6 mt-2">
-            {{ activeFilterChips.length
-              ? "These are the filters actively shaping the current result set. Remove the ones that are over-constraining the search."
-              : "No filters are active yet. Start narrow enough to be credible, then widen only if the result set is too thin." }}
           </p>
         </div>
         <div class="flex flex-wrap gap-2 items-center">

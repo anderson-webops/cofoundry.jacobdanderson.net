@@ -10,8 +10,7 @@ usePageSeo("Trust & Safety", "Designed to reduce spam, ambiguity, and bad-faith 
   <div class="reading-shell page-section">
     <PageIntro
       eyebrow="Trust & Safety"
-      title="Designed to reduce spam, ambiguity, and bad-faith founder behavior."
-      description="The platform keeps contact gated until interest is mutual, exposes moderation tooling early, and treats structured negotiation as a safety feature rather than a growth tactic."
+      title="Trust and safety controls."
     />
 
     <div class="process-list mt-10">
@@ -51,7 +50,7 @@ usePageSeo("Trust & Safety", "Designed to reduce spam, ambiguity, and bad-faith 
             Level C
           </p>
           <p class="muted text-sm leading-6">
-            Higher-assurance identity checks for higher-risk actions like contract signing or sensitive-role claims. This is step-up trust, not mandatory signup friction.
+            Higher-assurance identity checks for higher-risk actions like contract signing or sensitive-role claims.
           </p>
         </article>
       </div>
@@ -59,7 +58,7 @@ usePageSeo("Trust & Safety", "Designed to reduce spam, ambiguity, and bad-faith 
 
     <section class="mt-12">
       <h2 class="text-2xl font-semibold">
-        Enforcement in the MVP
+        Enforcement
       </h2>
       <ul class="text-sm leading-7 mt-6 gap-4 grid">
         <li class="flex gap-3">
@@ -76,7 +75,7 @@ usePageSeo("Trust & Safety", "Designed to reduce spam, ambiguity, and bad-faith 
         </li>
         <li class="flex gap-3">
           <span class="i-carbon-checkmark-filled text-[var(--accent)] mt-1" />
-          <span>Responsiveness and recent-activity signals so dead inventory is easier to spot and lower quality discovery does not silently poison the marketplace.</span>
+          <span>Responsiveness and recent-activity signals make inactive accounts easier to identify.</span>
         </li>
         <li class="flex gap-3">
           <span class="i-carbon-checkmark-filled text-[var(--accent)] mt-1" />
@@ -156,7 +155,7 @@ usePageSeo("Trust & Safety", "Designed to reduce spam, ambiguity, and bad-faith 
         Appeals and redress
       </h2>
       <p class="muted text-sm leading-7 mt-4">
-        Reports, restrictions, and suspensions are meant to be reviewable. CoFoundry tracks moderation actions, keeps report context attached to the case, and expects an appeal path for users who believe a decision was incorrect.
+        Moderation actions and report context are retained for review.
       </p>
     </section>
   </div>

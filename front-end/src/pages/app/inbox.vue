@@ -64,8 +64,7 @@ async function sendDigest() {
   <div class="gap-5 grid md:gap-6">
     <PageIntro
       eyebrow="Inbox"
-      title="Work the queue, not just the tools"
-      description="This is the operating surface for structured intros, replies, proposal terms, signatures, and system updates that still need action."
+      title="Items needing action"
     >
       <template #actions>
         <BaseBadge tone="accent">
@@ -80,9 +79,6 @@ async function sendDigest() {
           <h2 class="text-xl font-semibold">
             Action queue
           </h2>
-          <p class="muted text-sm leading-6 mt-2">
-            Work these from top to bottom before opening more surface area. The order favors direct replies, explicit terms, and signatures over passive browsing.
-          </p>
         </div>
         <div class="flex flex-wrap gap-3">
           <BaseButton variant="secondary" :disabled="digestPending || !hasInboxActions" @click="sendDigest">
@@ -128,7 +124,7 @@ async function sendDigest() {
         class="mt-6"
         icon="i-carbon-task"
         title="The queue is clear"
-        description="There is nothing urgent on you right now. This is the moment to search deliberately or tighten one live relationship instead of opening too many threads."
+        description="There are no items requiring action."
       >
         <BaseButton to="/app/discover">
           Open discover

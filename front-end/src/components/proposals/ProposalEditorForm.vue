@@ -169,7 +169,6 @@ function submitForm() {
       <TextareaInput
         v-model="form.notes"
         label="Notes"
-        helper="Use this for decision logs, unresolved terms, or context counsel should see later."
         :error="errors.notes"
         :rows="4"
       />

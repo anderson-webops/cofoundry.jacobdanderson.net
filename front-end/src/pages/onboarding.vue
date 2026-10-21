@@ -74,15 +74,9 @@ async function submitProfile(payload: any) {
 
 <template>
   <div>
-    <p class="section-kicker">
-      Onboarding
-    </p>
-    <h1 class="text-3xl tracking-tight font-semibold mt-3">
-      Start with a strong profile.
+    <h1 class="text-3xl tracking-tight font-semibold">
+      Build your profile.
     </h1>
-    <p class="muted text-sm leading-6 mt-4">
-      Add enough detail to unlock your first recommendations, then finish the deeper fields before you send intros.
-    </p>
 
     <div v-if="!previewUnlocked" class="mt-8">
       <MinimumOnboardingForm
@@ -98,9 +92,6 @@ async function submitProfile(payload: any) {
           <div>
             <p class="text-sm font-semibold">
               Match preview ready
-            </p>
-            <p class="muted text-sm leading-6 mt-2">
-              {{ shouldShowProfilePreview ? "These are the collaborators you would see first." : "These are the founder opportunities you would see first." }}
             </p>
           </div>
           <BaseBadge :tone="readiness?.trustReady ? 'success' : 'accent'">

@@ -77,7 +77,7 @@ async function downloadDataExport() {
     URL.revokeObjectURL(href)
     toastStore.push({
       title: "Export prepared",
-      message: "Your account export was generated locally as a JSON file.",
+      message: "Your account export was downloaded as a JSON file.",
       tone: "success",
     })
   }
@@ -103,7 +103,7 @@ async function submitPrivacyRequest() {
     privacyRequestDetails.value = ""
     toastStore.push({
       title: "Request recorded",
-      message: "The privacy request was recorded for operator follow-up.",
+      message: "We received your privacy request.",
       tone: "success",
     })
   }
@@ -218,7 +218,6 @@ async function requestTrustVerification(type: TrustVerificationType, label: stri
     <PageIntro
       eyebrow="Settings"
       title="Workspace settings"
-      description="Manage profile visibility, contact rules, and trust verification."
     />
 
     <div class="gap-6 grid xl:grid-cols-2">

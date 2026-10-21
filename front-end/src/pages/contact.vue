@@ -78,7 +78,7 @@ async function submitForm() {
     })
     toastStore.push({
       title: "Message sent",
-      message: "Thanks. We received your note and the team will follow up shortly.",
+      message: "We received your message.",
       tone: "success",
     })
     Object.assign(form, {
@@ -108,16 +108,11 @@ async function submitForm() {
 <template>
   <div class="page-shell py-16 md:py-20">
     <PageIntro
-      eyebrow="Contact"
       title="Contact CoFoundry."
-      description="Use this form for support, access, pricing, or partnership questions."
     />
 
     <div class="mt-10 max-w-3xl">
-      <div class="muted text-sm leading-6 mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p class="max-w-xl">
-          Use the form below, or email the team directly. We reply through the address you provide.
-        </p>
+      <div class="mb-5 flex justify-end">
         <BaseButton variant="secondary" :href="`mailto:${runtimeConfig.public.supportEmail}`">
           {{ runtimeConfig.public.supportEmail }}
         </BaseButton>

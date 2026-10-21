@@ -23,7 +23,6 @@ usePageSeo(`${hub.label} startup searches`, hub.description, {
     <PageIntro
       eyebrow="Stage hub"
       :title="hub.label"
-      :description="hub.description"
     >
       <template #actions>
         <BaseButton variant="secondary" to="/stage">
@@ -37,7 +36,6 @@ usePageSeo(`${hub.label} startup searches`, hub.description, {
         eyebrow="Profiles"
         :heading-level="2"
         :title="`${hub.label} collaborators and founders`"
-        description="People who explicitly opted into public discovery for this stage of company-building."
       />
       <div class="mt-8 gap-5 grid xl:grid-cols-3">
         <ProfileCard
@@ -59,7 +57,6 @@ usePageSeo(`${hub.label} startup searches`, hub.description, {
         eyebrow="Startup searches"
         :heading-level="2"
         :title="`${hub.label} startup opportunities`"
-        description="Public startup searches at this stage, with enough structure to evaluate whether the company shape is worth a call."
       />
       <div class="mt-8 gap-5 grid xl:grid-cols-3">
         <OpportunityCard

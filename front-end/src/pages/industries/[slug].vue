@@ -24,7 +24,6 @@ usePageSeo(`${hub.label} founder searches`, hub.description, {
     <PageIntro
       eyebrow="Industry hub"
       :title="hub.label"
-      :description="hub.description"
     >
       <template #actions>
         <BaseButton variant="secondary" to="/industries">
@@ -38,7 +37,6 @@ usePageSeo(`${hub.label} founder searches`, hub.description, {
         eyebrow="Profiles"
         :heading-level="2"
         :title="`${hub.label} people`"
-        description="Public profiles who already operate in this market and opted into public discovery."
       />
       <div class="mt-8 gap-5 grid xl:grid-cols-3">
         <ProfileCard
@@ -60,7 +58,6 @@ usePageSeo(`${hub.label} founder searches`, hub.description, {
         eyebrow="Startup searches"
         :heading-level="2"
         :title="`${hub.label} startup opportunities`"
-        description="Founders in this market using CoFoundry to fill real ownership gaps."
       />
       <div class="mt-8 gap-5 grid xl:grid-cols-3">
         <OpportunityCard

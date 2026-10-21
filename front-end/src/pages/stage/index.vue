@@ -9,9 +9,7 @@ usePageSeo("Stage hubs", "Browse public founder and startup searches organized b
 <template>
   <div class="page-shell py-16 md:py-20">
     <PageIntro
-      eyebrow="Stage hubs"
-      title="Choose the ambiguity level you actually want to work inside."
-      description="Public stage pages make it easier to find idea-stage searches, MVP-stage roles, or more validated companies without pretending they are all the same problem."
+      title="Browse founders and startup searches by stage."
     />
 
     <div class="mt-10 gap-5 grid md:grid-cols-2 xl:grid-cols-3">
@@ -26,9 +24,6 @@ usePageSeo("Stage hubs", "Browse public founder and startup searches organized b
             <h2 class="text-xl font-semibold">
               {{ hub.label }}
             </h2>
-            <p class="muted text-sm leading-6 mt-3">
-              {{ hub.description }}
-            </p>
           </div>
           <BaseBadge tone="accent">
             {{ hub.profileCount + hub.opportunityCount }}

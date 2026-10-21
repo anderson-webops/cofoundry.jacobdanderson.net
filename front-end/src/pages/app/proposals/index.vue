@@ -17,8 +17,7 @@ const proposals = computed(() => authStore.currentUser ? getProposalsForUser(wor
   <div class="gap-6 grid">
     <PageIntro
       eyebrow="Deal rooms"
-      title="Run the negotiation in one place"
-      description="These proposal rooms hold the real formation work: trial scope, economics, decision rights, IP, and the off-ramp before either side reaches for a formal agreement."
+      title="Proposal negotiations"
     />
 
     <div v-if="proposals.length" class="gap-4 grid lg:grid-cols-2">

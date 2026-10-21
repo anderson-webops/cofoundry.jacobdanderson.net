@@ -87,9 +87,7 @@ async function createOpportunityPost() {
 <template>
   <div class="gap-6 grid">
     <PageIntro
-      eyebrow="Startup opportunities"
-      title="Founders can publish exactly what kind of partner they need."
-      description="Opportunity posts carry the startup context, role scope, stage, traction, commitment, and compensation structure that collaborators need to evaluate fit."
+      title="Startup opportunities"
     >
       <template #actions>
         <BaseButton @click="dialogOpen = true">

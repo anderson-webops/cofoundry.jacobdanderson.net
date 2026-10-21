@@ -13,9 +13,7 @@ usePageSeo(
 <template>
   <div class="reading-shell page-section">
     <PageIntro
-      eyebrow="Process"
       title="From first intro to working agreement."
-      description="CoFoundry keeps the early steps clear: profile, fit, first call, trial sprint, proposal, and agreement."
     />
 
     <div class="mt-10 gap-6 grid">
@@ -35,9 +33,5 @@ usePageSeo(
         </div>
       </article>
     </div>
-
-    <p class="muted text-sm leading-6 mt-8 max-w-3xl">
-      The order is deliberate: scan fit, test working cadence, then write terms once the relationship has signal.
-    </p>
   </div>
 </template>

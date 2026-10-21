@@ -135,7 +135,7 @@ export const faqs = [
   },
   {
     question: "How easy is it to cancel a paid plan?",
-    answer: "Cancellation is handled in-product with the renewal date shown clearly. CoFoundry does not treat billing friction as a growth tactic.",
+    answer: "Cancellation is handled in-product with the renewal date shown clearly.",
   },
   {
     question: "Do you support remote-first teams?",

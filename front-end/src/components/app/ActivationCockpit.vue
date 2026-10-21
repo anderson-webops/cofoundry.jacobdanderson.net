@@ -14,9 +14,6 @@ defineProps<{
         <h2 class="text-lg font-semibold">
           Activation path
         </h2>
-        <p class="muted text-sm leading-6 mt-2">
-          {{ plan.stageDescription }}
-        </p>
       </div>
       <BaseBadge :tone="plan.percent === 100 ? 'success' : 'accent'">
         {{ plan.percent }}%
@@ -41,9 +38,6 @@ defineProps<{
         <div>
           <p class="text-sm font-semibold">
             {{ step.title }}
-          </p>
-          <p class="muted text-sm leading-6 mt-2">
-            {{ step.description }}
           </p>
           <p v-if="step.missingItems.length" class="muted text-xs leading-5 mt-2">
             Missing: {{ step.missingItems.join(", ") }}

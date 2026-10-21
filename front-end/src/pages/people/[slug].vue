@@ -66,21 +66,12 @@ usePageSeo(`${profile.displayName} founder profile`, profile.headline, {
 
     <div class="mt-10 gap-6 grid xl:grid-cols-[0.95fr_1.05fr]">
       <section class="panel p-6">
-        <div class="flex gap-4 items-start">
+        <div class="flex gap-4 items-center">
           <ProfileAvatar :display-name="profile.displayName" :photo-url="profile.photoUrl" size="lg" />
-          <div>
-            <p class="text-sm text-[var(--accent)] font-semibold">
-              Public discovery profile
-            </p>
-            <p class="muted text-sm leading-6 mt-3">
-              Evidence, fit, and verified context are shown before private contact details unlock.
-            </p>
-          </div>
+          <p class="muted text-sm">
+            {{ formatRemotePreference(profile.remotePreference) }} · {{ profile.location }} · {{ profile.roleScope.primaryRole || profile.roles[0] }}
+          </p>
         </div>
-
-        <p class="muted text-sm mt-4">
-          {{ formatRemotePreference(profile.remotePreference) }} · {{ profile.location }} · {{ profile.roleScope.primaryRole || profile.roles[0] }}
-        </p>
 
         <div class="mt-4">
           <TrustSignalStrip :profile="profile" :trust-summary="entry.trustSummary" />
@@ -167,9 +158,6 @@ usePageSeo(`${profile.displayName} founder profile`, profile.headline, {
           <summary class="disclosure-summary text-lg font-semibold cursor-pointer">
             External proof links
           </summary>
-          <p class="muted text-sm leading-6 mt-3">
-            Optional public links and venture context for extra diligence.
-          </p>
           <div class="surface-row-list mt-4">
             <a
               v-for="link in publicLinks"

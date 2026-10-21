@@ -85,7 +85,7 @@ function decline(requestId: string) {
       </div>
 
       <div v-else-if="mode === 'outgoing' && item.request.status === 'pending'" class="muted text-sm leading-6">
-        Waiting on a reply. High-signal intros tend to convert faster when the role scope and next step are concrete.
+        Waiting on a reply.
       </div>
     </article>
   </div>

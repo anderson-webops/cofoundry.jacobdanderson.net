@@ -11,9 +11,7 @@ usePageSeo("Role hubs", "Browse public founder and collaborator searches organiz
 <template>
   <div class="page-shell py-16 md:py-20">
     <PageIntro
-      eyebrow="Role hubs"
-      title="Search by the job-to-be-done inside the founding team."
-      description="Every role hub is backed by live public inventory. If a role does not have enough real profiles or startup searches to be useful, it does not get a page."
+      title="Browse founder and collaborator searches by role."
     />
 
     <div class="mt-10 gap-5 grid md:grid-cols-2 xl:grid-cols-3">
@@ -28,9 +26,6 @@ usePageSeo("Role hubs", "Browse public founder and collaborator searches organiz
             <h2 class="text-xl font-semibold">
               {{ hub.label }}
             </h2>
-            <p class="muted text-sm leading-6 mt-3">
-              {{ hub.description }}
-            </p>
           </div>
           <BaseBadge tone="accent">
             {{ hub.profileCount + hub.opportunityCount }}

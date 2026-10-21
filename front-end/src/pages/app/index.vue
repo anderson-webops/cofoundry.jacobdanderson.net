@@ -56,29 +56,10 @@ const outgoingRequests = computed(() => {
     })
     .filter((value): value is NonNullable<typeof value> => Boolean(value))
 })
-const workspaceStage = computed(() => {
-  if (contracts.value.length)
-    return { label: "Agreement stage", tone: "success" as const, summary: "Finish the open agreement before starting more conversations." }
-
-  if (proposals.value.length)
-    return { label: "Terms taking shape", tone: "accent" as const, summary: "A proposal is live. Close the open sections first." }
-
-  if (matches.value.length || trials.value.length)
-    return { label: "Qualified conversations", tone: "accent" as const, summary: "You have a real match or trial. Test the fit before widening the search." }
-
-  if (incomingRequests.value.length || outgoingRequests.value.length)
-    return { label: "Active search", tone: "warning" as const, summary: "You have intros in flight. Reply quickly." }
-
-  if (readiness.value?.readyForOutreach)
-    return { label: "Ready to reach out", tone: "success" as const, summary: "Your profile is ready. Send a small number of strong intros." }
-
-  return { label: "Profile still gating outreach", tone: "warning" as const, summary: "Finish the missing profile details before you send intros." }
-})
 const primaryAction = computed(() => {
   if (inboxSnapshot.value?.counts.pendingIntros) {
     return {
       title: `Review ${inboxSnapshot.value.counts.pendingIntros} inbound intro${inboxSnapshot.value.counts.pendingIntros === 1 ? "" : "s"}`,
-      description: "Reply while the context is still fresh.",
       href: "/app/inbox",
       ctaLabel: "Open intro queue",
     }
@@ -87,7 +68,6 @@ const primaryAction = computed(() => {
   if (inboxSnapshot.value?.counts.contractsNeedingSignature) {
     return {
       title: "Finish the waiting agreement signature",
-      description: "The terms are already in writing. Do not let the last step stall.",
       href: "/app/inbox",
       ctaLabel: "Open inbox",
     }
@@ -96,7 +76,6 @@ const primaryAction = computed(() => {
   if (inboxSnapshot.value?.counts.proposalsNeedingResponse || inboxSnapshot.value?.counts.unreadConversations) {
     return {
       title: "Clear the active response queue",
-      description: "The highest-leverage work is inside live conversations and proposals.",
       href: "/app/inbox",
       ctaLabel: "Open inbox",
     }
@@ -107,7 +86,7 @@ const primaryAction = computed(() => {
       title: "Finish the missing profile signals",
       description: readiness.value.missingOutreachItems.length
         ? `Still missing: ${readiness.value.missingOutreachItems.join(", ")}.`
-        : "Finish the remaining profile details so outreach unlocks cleanly.",
+        : "Outreach requires a completed profile.",
       href: "/app/profile/edit",
       ctaLabel: "Finish profile",
     }
@@ -116,7 +95,6 @@ const primaryAction = computed(() => {
   if (matches.value.length) {
     return {
       title: "Move one match into a trial sprint",
-      description: "Test cadence, ownership, and decision style before negotiating long-term terms.",
       href: "/app/matches",
       ctaLabel: "Open matches",
     }
@@ -125,17 +103,13 @@ const primaryAction = computed(() => {
   if (proposals.value.length) {
     return {
       title: "Close open proposal sections",
-      description: "Move the live deal room forward before opening another one.",
       href: "/app/proposals",
       ctaLabel: "Open proposals",
     }
   }
 
   return {
-    title: "Pick the next high-fit conversation",
-    description: showProfileRecommendations.value
-      ? "Your recommended collaborators are already ranked and ready to review."
-      : "Your recommended opportunities are already ranked and ready to review.",
+    title: "Recommended matches",
     href: "/app/discover",
     ctaLabel: "Open discover",
   }
@@ -158,7 +132,7 @@ async function acceptConnectRequest(requestId: string) {
   const conversationId = await workspaceStore.respondToConnectRequest(requestId, "accepted")
   toastStore.push({
     title: "Intro accepted",
-    message: "Messaging is unlocked. Move straight into the proposed next step while intent is still fresh.",
+    message: "Messaging is unlocked.",
     tone: "success",
   })
 
@@ -170,7 +144,7 @@ async function declineConnectRequest(requestId: string, reason: "timing" | "doma
   await workspaceStore.respondToConnectRequest(requestId, "declined", reason)
   toastStore.push({
     title: "Intro closed",
-    message: "The other side now gets an explicit reason instead of silence.",
+    message: "Your decline reason was shared with the sender.",
     tone: "info",
   })
 }
@@ -179,9 +153,7 @@ async function declineConnectRequest(requestId: string, reason: "timing" | "doma
 <template>
   <div class="gap-5 grid md:gap-6">
     <PageIntro
-      eyebrow="Workspace"
-      :title="`Welcome back, ${profile?.displayName || authStore.currentUser?.name || 'there'}.`"
-      description="Your intros, conversations, proposals, and agreements."
+      title="Overview"
     >
       <template #actions>
         <BaseBadge tone="accent">
@@ -190,35 +162,17 @@ async function declineConnectRequest(requestId: string, reason: "timing" | "doma
       </template>
     </PageIntro>
 
-    <div>
-      <div class="panel p-6">
-        <div class="flex flex-wrap gap-3 items-center justify-between">
-          <div>
-            <p class="text-sm font-semibold">
-              Next up
-            </p>
-            <p class="muted text-sm leading-6 mt-2">
-              {{ workspaceStage.summary }}
-            </p>
-          </div>
-          <BaseBadge :tone="workspaceStage.tone">
-            {{ workspaceStage.label }}
-          </BaseBadge>
-        </div>
-
-        <div class="surface-divider mt-5">
-          <p class="text-lg font-semibold">
-            {{ primaryAction.title }}
-          </p>
-          <p class="muted text-sm leading-6 mt-3">
-            {{ primaryAction.description }}
-          </p>
-          <div class="mt-5">
-            <BaseButton :to="primaryAction.href">
-              {{ primaryAction.ctaLabel }}
-            </BaseButton>
-          </div>
-        </div>
+    <div class="panel p-6">
+      <h2 class="text-lg font-semibold">
+        {{ primaryAction.title }}
+      </h2>
+      <p v-if="primaryAction.description" class="muted text-sm leading-6 mt-3">
+        {{ primaryAction.description }}
+      </p>
+      <div class="mt-5">
+        <BaseButton :to="primaryAction.href">
+          {{ primaryAction.ctaLabel }}
+        </BaseButton>
       </div>
     </div>
 
@@ -231,9 +185,6 @@ async function declineConnectRequest(requestId: string, reason: "timing" | "doma
             :eyebrow="showProfileRecommendations ? 'Recommended collaborators' : 'Recommended opportunities'"
             :heading-level="2"
             title="Best next conversations"
-            :description="showProfileRecommendations
-              ? 'These people are ranked for fit, commitment, and likely reply.'
-              : 'These opportunities are ranked for role, stage, and compensation fit.'"
           />
 
           <div v-if="showProfileRecommendations && profileRecommendations.length" class="gap-4 grid lg:grid-cols-2">

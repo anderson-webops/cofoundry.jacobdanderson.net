@@ -148,7 +148,7 @@ async function submitAccessRequest() {
     accessSubmitted.value = true
     toastStore.push({
       title: "Request received",
-      message: "The team can review this request from the admin workspace.",
+      message: "Workspace access is subject to review.",
       tone: "success",
     })
   }
@@ -165,16 +165,10 @@ async function submitAccessRequest() {
 
 <template>
   <div>
-    <p class="section-kicker">
-      Create account
-    </p>
     <template v-if="!shouldShowAccountForm">
-      <h2 class="text-3xl tracking-tight font-semibold mt-3">
+      <h1 class="text-3xl tracking-tight font-semibold">
         Request workspace access.
-      </h2>
-      <p class="muted text-sm leading-6 mt-3">
-        Workspace access is reviewed directly so new members start with the right setup before discovery, messaging, proposals, and agreements open.
-      </p>
+      </h1>
 
       <div v-if="inviteToken" class="panel-inset mt-8 p-5 border border-[var(--warning)]">
         <p class="text-sm text-[var(--warning)] font-semibold">
@@ -190,7 +184,7 @@ async function submitAccessRequest() {
           Request received.
         </p>
         <p class="muted text-sm leading-6 mt-2">
-          An operator can review this from the admin access-request queue and issue an invite if the workspace is a fit.
+          Workspace access is subject to review.
         </p>
         <div class="mt-5 flex flex-wrap gap-3">
           <BaseButton variant="secondary" to="/auth/sign-in">
@@ -241,24 +235,22 @@ async function submitAccessRequest() {
       </div>
     </template>
     <template v-else-if="verificationPending">
-      <h2 class="text-3xl tracking-tight font-semibold mt-3">
+      <h1 class="text-3xl tracking-tight font-semibold">
         Check your email.
-      </h2>
+      </h1>
       <p class="muted text-sm leading-6 mt-3">
-        Use the confirmation link we sent before signing in. No workspace session is created until the email address is verified.
+        Confirm your email address using the link we sent before signing in.
       </p>
       <BaseButton class="mt-8" to="/auth/sign-in">
         Go to sign in
       </BaseButton>
     </template>
     <template v-else>
-      <h2 class="text-3xl tracking-tight font-semibold mt-3">
+      <h1 class="text-3xl tracking-tight font-semibold">
         {{ inviteValidation.valid ? "Create your invited account." : "Create your account." }}
-      </h2>
-      <p class="muted text-sm leading-6 mt-3">
-        {{ inviteValidation.valid
-          ? "This invite is tied to the approved email below. Finish account setup, then complete onboarding."
-          : "Start with the basics now. You can finish the rest of your profile during onboarding." }}
+      </h1>
+      <p v-if="inviteValidation.valid" class="muted text-sm leading-6 mt-3">
+        This invite is tied to the approved email below.
       </p>
 
       <form class="mt-8 gap-4 grid" @submit.prevent="submitForm">

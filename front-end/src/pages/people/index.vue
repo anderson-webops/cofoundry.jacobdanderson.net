@@ -9,9 +9,8 @@ usePageSeo("Public founder profiles", "Browse opt-in public founder and collabor
 <template>
   <div class="page-shell py-16 md:py-20">
     <PageIntro
-      eyebrow="Public profiles"
       title="Public founder and collaborator profiles."
-      description="These pages show enough signal to evaluate fit without exposing direct contact details or turning the network into a scraped directory."
+      description="Direct contact details remain private until the member's contact-reveal rule is met."
     />
 
     <div class="mt-10 gap-5 grid xl:grid-cols-3">

@@ -32,7 +32,6 @@ function conversationTitle(conversationId: string) {
     <PageIntro
       eyebrow="Messages"
       title="Matched conversations"
-      description="Messages unlock after mutual interest. Safety warnings, proposal updates, and contract events all stay attached to the conversation so trust does not disappear once the match happens."
     />
 
     <div v-if="conversations.length" class="gap-4 grid lg:grid-cols-2">
@@ -51,7 +50,7 @@ function conversationTitle(conversationId: string) {
       v-else
       icon="i-carbon-chat"
       title="No conversations yet"
-      description="Matches unlock messaging. Start by browsing profiles or startup opportunities and sending a connect request."
+      description="Messaging requires a mutual match."
     >
       <BaseButton to="/app/discover">
         Find people

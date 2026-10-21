@@ -75,7 +75,6 @@ async function submitProfile(payload: any) {
     <PageIntro
       eyebrow="Profile"
       title="Edit your profile"
-      description="Keep your founder signal current so recommendations, visibility, and contract context stay accurate."
     />
     <div class="panel p-6">
       <ProfileEditorForm :initial-values="initialValues" submit-label="Save profile" @submitted="submitProfile" />
