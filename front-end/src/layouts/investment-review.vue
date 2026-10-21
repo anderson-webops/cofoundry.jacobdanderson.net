@@ -102,7 +102,7 @@ async function signOut() {
           </nav>
         </aside>
 
-        <main class="gap-6 grid">
+        <main id="main-content" tabindex="-1" class="pb-10 outline-none gap-6 grid">
           <slot />
         </main>
       </div>

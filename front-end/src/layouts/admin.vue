@@ -2,6 +2,18 @@
 import { adminNavigation } from "~/shared/constants/app"
 
 const mobileNavOpen = ref(false)
+const route = useRoute()
+
+function isActive(to: string) {
+  if (to === "/admin")
+    return route.path === "/admin" || route.path === "/admin/"
+
+  return route.path === to || route.path.startsWith(`${to}/`)
+}
+
+watch(() => route.path, () => {
+  mobileNavOpen.value = false
+})
 
 useHead({
   meta: [
@@ -14,67 +26,76 @@ useHead({
 </script>
 
 <template>
-  <div class="py-4 min-h-screen lg:py-5">
-    <div class="workspace-shell gap-5 grid min-h-[calc(100vh-2rem)] lg:grid-cols-[272px_minmax(0,1fr)] lg:min-h-[calc(100vh-2.5rem)]">
+  <div class="py-3 min-h-screen lg:py-4">
+    <a href="#main-content" class="skip-link">Skip to content</a>
+    <div class="workspace-shell gap-6 grid lg:grid-cols-[256px_minmax(0,1fr)]">
       <div class="hidden lg:block">
-        <aside class="panel p-4 h-full">
-          <div class="mb-6 flex items-center justify-between">
+        <aside class="panel p-3 flex flex-col h-[calc(100vh-2rem)] top-4 sticky">
+          <div class="mb-4 px-1 flex items-center justify-between">
             <AppLogo />
             <ThemeToggle />
           </div>
-          <nav class="gap-1 grid">
+          <p class="nav-group-label mb-1">
+            Admin
+          </p>
+          <nav aria-label="Admin" class="pr-1 flex-1 gap-1 grid content-start overflow-y-auto">
             <NuxtLink
               v-for="item in adminNavigation"
               :key="item.to"
               :to="item.to"
-              class="text-sm text-[var(--muted)] font-medium px-3 py-2.5 rounded-2xl flex gap-3 transition items-center hover:text-[var(--text)] hover:bg-[var(--accent-soft)]"
-              active-class="bg-[var(--accent-soft)] text-[var(--text)]"
+              class="nav-link"
+              :class="isActive(item.to) ? 'nav-link-active' : ''"
+              :aria-current="isActive(item.to) ? 'page' : undefined"
             >
-              <span :class="item.icon" />
+              <span :class="item.icon" class="text-lg shrink-0" aria-hidden="true" />
               <span>{{ item.label }}</span>
             </NuxtLink>
           </nav>
-          <div class="mt-6">
+          <div class="mt-4 pt-4 border-t border-[var(--line)]">
             <ThemeSchemePicker align="start" compact />
           </div>
         </aside>
       </div>
 
-      <div class="gap-5 grid">
+      <div class="gap-5 grid min-w-0 content-start">
         <div class="flex items-center justify-between lg:hidden">
           <AppLogo />
           <div class="flex gap-3 items-center">
             <ThemeToggle />
-            <button class="p-2 border border-[var(--line)] rounded-full inline-flex items-center justify-center" aria-label="Toggle admin navigation" @click="mobileNavOpen = !mobileNavOpen">
-              <span :class="mobileNavOpen ? 'i-carbon-close' : 'i-carbon-menu'" />
+            <button
+              type="button"
+              class="border border-[var(--line)] rounded-full bg-[var(--panel-strong)] inline-flex h-11 w-11 items-center justify-center"
+              aria-controls="admin-mobile-navigation"
+              :aria-expanded="mobileNavOpen"
+              aria-label="Toggle admin navigation"
+              @click="mobileNavOpen = !mobileNavOpen"
+            >
+              <span class="text-lg" :class="mobileNavOpen ? 'i-carbon-close' : 'i-carbon-menu'" aria-hidden="true" />
             </button>
           </div>
         </div>
 
-        <aside v-if="mobileNavOpen" class="panel p-4 lg:hidden">
-          <div class="mb-6 flex items-center justify-between">
-            <AppLogo />
-            <ThemeToggle />
-          </div>
-          <nav class="gap-1 grid">
+        <aside v-if="mobileNavOpen" id="admin-mobile-navigation" class="panel p-3 lg:hidden">
+          <nav aria-label="Admin" class="gap-1 grid">
             <NuxtLink
               v-for="item in adminNavigation"
               :key="item.to"
               :to="item.to"
-              class="text-sm text-[var(--muted)] font-medium px-3 py-2.5 rounded-2xl flex gap-3 transition items-center hover:text-[var(--text)] hover:bg-[var(--accent-soft)]"
-              active-class="bg-[var(--accent-soft)] text-[var(--text)]"
+              class="nav-link"
+              :class="isActive(item.to) ? 'nav-link-active' : ''"
+              :aria-current="isActive(item.to) ? 'page' : undefined"
             >
-              <span :class="item.icon" />
+              <span :class="item.icon" class="text-lg shrink-0" aria-hidden="true" />
               <span>{{ item.label }}</span>
             </NuxtLink>
           </nav>
-          <div class="mt-6">
+          <div class="mt-4 pt-4 border-t border-[var(--line)]">
             <ThemeSchemePicker align="start" compact />
           </div>
         </aside>
 
         <AppTopbar />
-        <main class="gap-6 grid">
+        <main id="main-content" tabindex="-1" class="pb-10 outline-none gap-6 grid">
           <slot />
         </main>
       </div>
