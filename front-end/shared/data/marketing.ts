@@ -3,37 +3,43 @@ import type { PricingTier } from "../types/domain"
 export const howItWorksSteps = [
   {
     id: "intent",
-    eyebrow: "1. Start with a clear search",
+    name: "Define your search",
+    icon: "i-carbon-search-locate",
     title: "Say what you want to build, join, and commit to right now.",
     body: "Profiles start with role, timing, weekly availability, stage preferences, and the company shapes you are actually open to.",
   },
   {
     id: "trust",
-    eyebrow: "2. Show real proof",
+    name: "Show real proof",
+    icon: "i-carbon-certificate-check",
     title: "Give people enough context to decide whether a conversation is worth having.",
     body: "Use links, visible work, and recent activity to show that you are real, current, and worth replying to.",
   },
   {
     id: "match",
-    eyebrow: "3. Match with context",
+    name: "Match with context",
+    icon: "i-carbon-partnership",
     title: "Filter by role, stage, industry, commitment, compensation, and work style.",
     body: "Discovery helps you narrow the list quickly, while direct contact stays gated until both sides opt in.",
   },
   {
     id: "call",
-    eyebrow: "4. Use the first call well",
+    name: "Have a focused first call",
+    icon: "i-carbon-phone-voice",
     title: "Focus early on motivation, commitment, scope, and decision-making.",
     body: "The early conversation should answer whether the fit is real, not just whether the energy is good.",
   },
   {
     id: "trial",
-    eyebrow: "5. Run a short trial",
+    name: "Run a short trial sprint",
+    icon: "i-carbon-timer",
     title: "Test how you work together before you formalize the relationship.",
     body: "Use a small working sprint to check pace, communication, ownership, and follow-through before you negotiate long-term terms.",
   },
   {
     id: "agreement",
-    eyebrow: "6. Put the terms in writing",
+    name: "Agree in writing",
+    icon: "i-carbon-document-signed",
     title: "Move from trial notes to a proposal and an agreement draft.",
     body: "Keep role scope, commitment, vesting, IP, cash, equity, and decision rights in one versioned record.",
   },
@@ -146,22 +152,45 @@ export const faqs = [
 export const trustPillars = [
   {
     title: "Mutual contact rules",
+    icon: "i-carbon-locked",
     body: "Direct contact details stay hidden until both sides opt into a connection.",
   },
   {
     title: "Visible proof",
+    icon: "i-carbon-certificate-check",
     body: "Profiles surface linked accounts, real work, and verification signals so members can judge credibility faster.",
   },
   {
     title: "Activity signals",
+    icon: "i-carbon-activity",
     body: "Recent activity and reply behavior help keep discovery focused on people who are actually active.",
   },
   {
     title: "Structured negotiation",
+    icon: "i-carbon-document-signed",
     body: "The product moves from first call to trial sprint, proposal negotiation, versioned agreement, optional counsel review, and signatures.",
   },
   {
     title: "Moderation and review",
+    icon: "i-carbon-flag",
     body: "Profiles, opportunities, and messages can be flagged and reviewed when something looks unsafe or misleading.",
+  },
+]
+
+export const formationRisks = [
+  {
+    title: "Commitment",
+    icon: "i-carbon-time",
+    body: "Hours per week, runway, and timing are asked up front, so you know whether both people can actually show up.",
+  },
+  {
+    title: "Control",
+    icon: "i-carbon-decision-tree",
+    body: "Role scope and decision rights are discussed on the first call and written into the proposal, not discovered later.",
+  },
+  {
+    title: "Ownership",
+    icon: "i-carbon-chart-pie",
+    body: "Equity, vesting, cash, and IP live in one versioned agreement both sides can review with their own counsel.",
   },
 ]

@@ -10,14 +10,21 @@ useHead({
 </script>
 
 <template>
-  <div class="py-8 min-h-screen">
-    <div class="page-shell">
-      <div class="mb-8 flex items-center justify-between">
+  <div class="py-6 flex flex-col min-h-screen md:py-8">
+    <a href="#main-content" class="skip-link">Skip to content</a>
+    <div class="page-shell flex flex-1 flex-col">
+      <div class="mb-10 flex gap-3 items-center justify-between">
         <AppLogo />
-        <ThemeToggle />
+        <div class="flex gap-2 items-center">
+          <BaseButton variant="ghost" to="/" class="hidden sm:inline-flex">
+            <span class="i-carbon-arrow-left" aria-hidden="true" />
+            Back to site
+          </BaseButton>
+          <ThemeToggle />
+        </div>
       </div>
-      <main>
-        <div class="panel mx-auto p-6 max-w-xl w-full md:p-8">
+      <main id="main-content" tabindex="-1" class="outline-none flex flex-1 items-start justify-center md:pt-6">
+        <div class="panel p-6 max-w-lg w-full md:p-10">
           <slot />
         </div>
       </main>
