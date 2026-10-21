@@ -59,9 +59,9 @@ const form = reactive({
 })
 
 const steps = [
-  { title: "Intent", description: "Choose the path that matches what you want right now." },
-  { title: "Commitment", description: "Show the role, timing, and working shape you can support." },
-  { title: "Fit", description: "Add enough context to preview the right people." },
+  { title: "Intent" },
+  { title: "Commitment" },
+  { title: "Fit" },
 ]
 
 const fieldsByStep = [
@@ -74,17 +74,14 @@ const intentOptions = [
   {
     value: "start",
     title: "Start a company",
-    body: "You have an idea or wedge and need a cofounder or early operator.",
   },
   {
     value: "join",
     title: "Join a founding team",
-    body: "You want to evaluate strong founders and high-conviction startup opportunities.",
   },
   {
     value: "explore",
     title: "Explore both paths",
-    body: "You are open to starting with someone or joining the right company if the fit is strong.",
   },
 ] as const
 
@@ -169,9 +166,6 @@ function submitForm() {
         <p class="text-sm font-semibold">
           {{ item.title }}
         </p>
-        <p class="muted text-xs leading-5 mt-2">
-          {{ item.description }}
-        </p>
       </div>
     </div>
 
@@ -188,9 +182,6 @@ function submitForm() {
           <p class="text-sm font-semibold">
             {{ option.title }}
           </p>
-          <p class="muted text-sm leading-6 mt-3">
-            {{ option.body }}
-          </p>
         </button>
       </div>
       <div class="gap-4 grid md:grid-cols-2">
@@ -201,7 +192,6 @@ function submitForm() {
         v-model="form.photoUrl"
         label="Profile photo URL"
         type="url"
-        helper="Use a clear headshot or another profile image people can recognize."
         :error="errors.photoUrl"
         required
       />
@@ -222,20 +212,18 @@ function submitForm() {
       <TextInput
         v-model="form.headline"
         label="One-line summary"
-        helper="Example: Technical co-founder ready to join a compliance startup."
         :error="errors.headline"
         required
       />
       <TextareaInput
         v-model="form.bio"
         label="What are you building or looking for?"
-        helper="Keep it specific: customer, role, market, or company shape."
         :rows="5"
         :error="errors.bio"
       />
       <div class="gap-4 grid md:grid-cols-2">
         <SelectInput v-model="form.primaryRole" label="Primary role" :options="roleOptions.map(role => ({ label: role, value: role }))" :error="errors.primaryRole" />
-        <PillPicker v-model="form.roles" label="Role coverage" :options="roleOptions" helper="Choose the other roles you can realistically own in the first year." :error="errors.roles" />
+        <PillPicker v-model="form.roles" label="Other roles" :options="roleOptions" :error="errors.roles" />
       </div>
       <div class="gap-4 grid md:grid-cols-3">
         <SelectInput v-model="form.timeCommitment" label="Commitment" :options="commitmentOptions" :error="errors.timeCommitment" />
@@ -250,7 +238,6 @@ function submitForm() {
       <SelectInput
         v-model="form.equityPhilosophy"
         label="Equity philosophy"
-        helper="This helps avoid obvious mismatch before the first proposal."
         :options="equityPhilosophyOptions"
         :error="errors.equityPhilosophy"
       />
@@ -261,24 +248,17 @@ function submitForm() {
         v-model="form.industries"
         label="Industries"
         :options="industryOptions"
-        helper="These tags drive your first match preview."
         :error="errors.industries"
       />
       <PillPicker
         v-model="form.companyPreferences"
         label="Company preferences"
         :options="companyPreferenceOptions"
-        helper="Choose the company shapes you are actually open to right now."
         :error="errors.companyPreferences"
       />
-      <div class="panel-inset p-5">
-        <p class="text-sm font-semibold">
-          What happens next
-        </p>
-        <p class="muted text-sm leading-6 mt-3">
-          You will get a match preview right away. Intros unlock after you finish the remaining profile and verification details.
-        </p>
-      </div>
+      <p class="muted text-sm leading-6">
+        Intros require a completed profile and verification.
+      </p>
     </section>
 
     <div class="flex flex-wrap gap-3 items-center justify-between">

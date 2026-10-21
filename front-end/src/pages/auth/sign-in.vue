@@ -83,18 +83,13 @@ async function submitProvider(provider: SupportedOAuthProvider) {
 
 <template>
   <div>
-    <p class="section-kicker">
-      Sign in
-    </p>
-    <h2 class="text-3xl tracking-tight font-semibold mt-3">
+    <h1 class="text-3xl tracking-tight font-semibold">
       {{ policy.marketingShellOnly
         ? "Sign in to an existing workspace."
         : "Sign in to your workspace." }}
-    </h2>
-    <p class="muted text-sm leading-6 mt-3">
-      {{ policy.marketingShellOnly
-        ? "Use the email already attached to your approved account or invitation."
-        : "Use your account credentials to continue discovery, messaging, proposals, and agreements." }}
+    </h1>
+    <p v-if="policy.marketingShellOnly" class="muted text-sm leading-6 mt-3">
+      Use the email already attached to your approved account or invitation.
     </p>
 
     <div v-if="oauthErrorMessage" class="text-sm text-[var(--danger)] mt-5 p-4 border border-[color:color-mix(in_srgb,var(--danger)_28%,transparent)] rounded-3xl bg-[color:color-mix(in_srgb,var(--danger)_10%,transparent)]">
@@ -127,7 +122,6 @@ async function submitProvider(provider: SupportedOAuthProvider) {
         v-model="form.email"
         label="Email"
         type="email"
-        :helper="policy.marketingShellOnly ? 'Use the email on your existing account or invitation.' : undefined"
         :error="errors.email || authStore.error"
       />
       <TextInput v-model="form.password" label="Password" type="password" :error="errors.password" />
@@ -143,17 +137,6 @@ async function submitProvider(provider: SupportedOAuthProvider) {
     </p>
 
     <template v-if="policy.marketingShellOnly">
-      <div class="panel-inset mt-8 p-5">
-        <p class="text-sm font-semibold">
-          Need access first?
-        </p>
-        <div class="muted text-sm leading-6 mt-3 gap-3 grid">
-          <div>Browse public profiles, startup searches, trust pages, and founder guides first.</div>
-          <div>Request access when you want discovery, messaging, proposals, and agreements inside the workspace.</div>
-          <div>Contact the team for pricing or studio setup.</div>
-        </div>
-      </div>
-
       <div class="mt-8 flex flex-wrap gap-3">
         <BaseButton variant="secondary" :to="accessRequestPath">
           Request access

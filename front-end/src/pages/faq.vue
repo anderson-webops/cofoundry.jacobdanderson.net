@@ -16,9 +16,7 @@ usePageSeo(
 <template>
   <div class="page-shell py-16 md:py-20">
     <PageIntro
-      eyebrow="FAQ"
-      title="Questions founders ask before they trust a matching platform."
-      description="Direct answers about how CoFoundry works."
+      title="Frequently asked questions"
     />
 
     <div class="mt-10 gap-4 grid">

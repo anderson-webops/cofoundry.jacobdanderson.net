@@ -21,8 +21,7 @@ const openProfileItems = computed(() => readiness.value?.checklist.filter(item =
   <div class="gap-5 grid md:gap-6">
     <PageIntro
       eyebrow="Activation"
-      title="Make the first relationship work."
-      description="A production account should not just enter the app. It should reach a trustworthy profile, one focused intro, and a clear follow-up queue."
+      title="Activation checklist"
     >
       <template #actions>
         <BaseButton to="/app/profile/edit">
@@ -51,9 +50,6 @@ const openProfileItems = computed(() => readiness.value?.checklist.filter(item =
               <h2 class="text-lg font-semibold">
                 Profile blockers
               </h2>
-              <p class="muted text-sm leading-6 mt-2">
-                These determine whether recommendations and outreach are credible enough for a production member.
-              </p>
             </div>
             <BaseBadge :tone="openProfileItems.length ? 'warning' : 'success'">
               {{ openProfileItems.length ? `${openProfileItems.length} open` : "Clear" }}
@@ -73,7 +69,7 @@ const openProfileItems = computed(() => readiness.value?.checklist.filter(item =
               v-if="!openProfileItems.length"
               icon="i-carbon-checkmark-outline"
               title="Profile blockers are clear"
-              description="The full profile checklist is complete enough for production matching."
+              description="The profile checklist is complete."
             />
           </div>
         </section>

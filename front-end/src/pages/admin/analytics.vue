@@ -94,7 +94,6 @@ function bottleneckTone(severity: "high" | "medium" | "low") {
     <PageIntro
       eyebrow="Admin"
       title="Analytics"
-      description="Baseline growth, activation, monetization, and moderation coverage for the CoFoundry MVP."
     />
 
     <div class="gap-4 grid md:grid-cols-2 xl:grid-cols-4">
@@ -110,9 +109,6 @@ function bottleneckTone(severity: "high" | "medium" | "low") {
           <h2 class="text-lg font-semibold">
             Relationship loop
           </h2>
-          <p class="muted text-sm leading-6 mt-2 max-w-3xl">
-            Measures whether members are moving from discovery into working relationships, concrete terms, and signed agreements.
-          </p>
         </div>
       </div>
 
@@ -166,9 +162,6 @@ function bottleneckTone(severity: "high" | "medium" | "low") {
           <h2 class="text-lg font-semibold">
             Relationship bottlenecks
           </h2>
-          <p class="muted text-sm leading-6 mt-2 max-w-3xl">
-            Concrete workflow stalls that should become product nudges, support playbooks, or inbox tasks before acquisition volume increases.
-          </p>
         </div>
       </div>
 
@@ -236,9 +229,6 @@ function bottleneckTone(severity: "high" | "medium" | "low") {
               <p class="text-sm font-semibold">
                 {{ formatPlanName(item.plan) }}
               </p>
-              <p class="muted text-xs mt-1">
-                Current active workspace accounts on this tier.
-              </p>
             </div>
             <span class="text-xl font-semibold">{{ item.count }}</span>
           </div>
@@ -254,9 +244,6 @@ function bottleneckTone(severity: "high" | "medium" | "low") {
             <div>
               <p class="text-sm font-semibold capitalize">
                 {{ item.role.replaceAll("_", " ") }}
-              </p>
-              <p class="muted text-xs mt-1">
-                Current workspace users in this role bucket.
               </p>
             </div>
             <span class="text-xl font-semibold">{{ item.count }}</span>

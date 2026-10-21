@@ -9,9 +9,7 @@ usePageSeo("Public startup searches", "Browse public startup opportunity pages o
 <template>
   <div class="page-shell py-16 md:py-20">
     <PageIntro
-      eyebrow="Public startup searches"
-      title="Founder searches with enough detail to judge whether the role is real."
-      description="CoFoundry's public startup pages center on role expectations, company stage, and trust markers instead of loose hype or hidden assumptions."
+      title="Public startup searches."
     />
 
     <div class="mt-10 gap-5 grid xl:grid-cols-3">

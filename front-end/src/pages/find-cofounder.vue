@@ -26,14 +26,11 @@ usePageSeo(
     <section class="page-section">
       <div class="page-shell gap-8 grid lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
         <div>
-          <p class="section-kicker">
-            Public founder directory
-          </p>
-          <h1 class="text-4xl tracking-tight font-semibold mt-4 max-w-3xl md:text-6xl">
+          <h1 class="text-4xl tracking-tight font-semibold max-w-3xl md:text-6xl">
             Browse founders, cofounders, and startup searches by role, stage, and market.
           </h1>
           <p class="muted text-lg leading-8 mt-6 max-w-2xl">
-            Browse opt-in public profiles and startup searches. Direct contact stays inside CoFoundry until both sides opt in.
+            Direct contact details stay inside CoFoundry until both sides opt in.
           </p>
           <div class="mt-8 flex flex-wrap gap-3">
             <BaseButton size="lg" :to="directoryAccessCta.to">
@@ -69,14 +66,6 @@ usePageSeo(
               </div>
             </div>
           </div>
-          <div class="surface-row">
-            <p class="text-sm font-semibold">
-              Private until mutual
-            </p>
-            <p class="muted text-sm leading-6 mt-3">
-              Direct email, phone, and member-only details stay inside CoFoundry until both sides opt in.
-            </p>
-          </div>
         </div>
       </div>
     </section>
@@ -84,10 +73,8 @@ usePageSeo(
     <section class="page-section-tight">
       <div class="page-shell">
         <PageIntro
-          eyebrow="Directory shortcuts"
           :heading-level="2"
-          title="Narrow by role, market, or stage."
-          description="Use these shortcuts to jump into the part of the network that is most relevant to your search."
+          title="Browse by role, industry, or stage."
         >
           <template #actions>
             <BaseButton variant="secondary" to="/roles">

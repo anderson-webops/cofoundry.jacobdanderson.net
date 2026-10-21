@@ -11,7 +11,6 @@ usePageSeo("Founder agreement resources", "Learn how CoFoundry approaches propos
     <PageIntro
       eyebrow="Contracts & Proposals"
       title="Guides for proposals, trials, vesting, and IP."
-      description="These pages explain the founder decisions that usually show up before an agreement is signed."
     />
 
     <div class="mt-10 gap-5 grid lg:grid-cols-2">
@@ -21,10 +20,7 @@ usePageSeo("Founder agreement resources", "Learn how CoFoundry approaches propos
         :to="`/contracts/${page.slug}`"
         class="panel p-6 transition hover:border-[var(--accent)] hover:bg-[var(--accent-soft)]"
       >
-        <p class="section-kicker">
-          {{ page.eyebrow }}
-        </p>
-        <h2 class="text-2xl font-semibold mt-3">
+        <h2 class="text-2xl font-semibold">
           {{ page.title }}
         </h2>
         <p class="muted text-sm leading-6 mt-4">

@@ -258,7 +258,6 @@ function contractQuotaText() {
           <TextareaInput
             v-model="commentBody"
             label="Add comment"
-            helper="Keep comments attached to a real section so the version history stays useful."
             :rows="4"
           />
           <div class="flex justify-end">
@@ -348,7 +347,7 @@ function contractQuotaText() {
       </div>
     </section>
 
-    <BaseDialog v-model="counterDialogOpen" title="Counter proposal" description="Create a new version while preserving the full negotiation history.">
+    <BaseDialog v-model="counterDialogOpen" title="Counter proposal">
       <ProposalEditorForm
         :initial-values="version"
         submit-label="Create counter"

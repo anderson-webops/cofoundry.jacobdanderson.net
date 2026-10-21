@@ -78,7 +78,6 @@ async function turnOffEmail() {
     <PageIntro
       eyebrow="Email preferences"
       title="Manage optional CoFoundry email."
-      description="Use this page to turn off optional workflow or digest email from a signed CoFoundry message."
     />
 
     <div class="mt-10 max-w-3xl">

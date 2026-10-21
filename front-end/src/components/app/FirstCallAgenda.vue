@@ -15,13 +15,7 @@ defineProps<{
         <h3 class="text-base font-semibold">
           Guided first call
         </h3>
-        <p class="muted text-sm mt-1">
-          Use the first meeting to pressure-test intent before chemistry masks the hard parts.
-        </p>
       </div>
-      <BaseBadge tone="accent">
-        Research-backed
-      </BaseBadge>
     </div>
 
     <div v-if="profile" class="muted text-sm leading-6 mt-4 p-4 rounded-[1rem] bg-[var(--panel-strong)]">

@@ -99,7 +99,6 @@ onMounted(() => organizationStore.load())
     <PageIntro
       eyebrow="Team / Studio"
       title="Organization workspaces"
-      description="Portfolio, project, governance, agreement-policy, approval, counsel, and seat operations for startup teams and venture studios."
     >
       <template #actions>
         <BaseButton v-if="canCreate" @click="createOpen = true">
@@ -216,7 +215,7 @@ onMounted(() => organizationStore.load())
       />
     </section>
 
-    <BaseDialog v-model="createOpen" title="Create organization" description="Start with the operating structure. Members and portfolio work can be added next.">
+    <BaseDialog v-model="createOpen" title="Create organization">
       <form class="gap-4 grid" @submit.prevent="createWorkspace">
         <TextInput v-model="form.name" label="Organization name" />
         <SelectInput

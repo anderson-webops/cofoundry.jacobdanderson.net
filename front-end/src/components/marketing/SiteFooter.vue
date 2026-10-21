@@ -11,9 +11,6 @@ const supportLinkClass = "muted text-sm underline underline-offset-4 min-h-[44px
     <div class="page-shell flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
       <div>
         <AppLogo />
-        <p class="muted text-sm leading-6 mt-3 max-w-md">
-          CoFoundry helps founders and collaborators find fit, test the relationship, and put terms in writing.
-        </p>
         <div class="mt-4 flex flex-wrap gap-3 items-center">
           <BaseButton size="md" variant="secondary" :to="primaryAccessCta.to" class="min-h-[44px]">
             {{ primaryAccessCta.label }}

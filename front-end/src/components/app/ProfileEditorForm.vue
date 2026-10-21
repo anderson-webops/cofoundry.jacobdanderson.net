@@ -197,17 +197,16 @@ function submitForm() {
         v-model="form.photoUrl"
         label="Profile photo URL"
         type="url"
-        helper="Use a clear headshot or recognizable profile image. This counts toward profile readiness."
         :error="errors.photoUrl"
       />
-      <TextInput v-model="form.headline" label="Headline" :error="errors.headline" helper="State the role you want and the kind of company you want to build." />
+      <TextInput v-model="form.headline" label="Headline" :error="errors.headline" />
       <TextareaInput v-model="form.bio" label="Bio" :error="errors.bio" :rows="6" />
       <SelectInput v-model="form.remotePreference" label="Remote preference" :options="remoteOptions" :error="errors.remotePreference" />
       <div class="gap-4 grid md:grid-cols-2">
         <SelectInput v-model="form.primaryRole" label="Primary role" :options="roleOptions.map(role => ({ label: role, value: role }))" :error="errors.primaryRole" />
         <TextInput v-model="form.yearsExperience" label="Years of experience" type="number" :error="errors.yearsExperience" />
       </div>
-      <PillPicker v-model="form.roles" label="Role coverage" :options="roleOptions" helper="Pick the other roles you can credibly own in the first year." :error="errors.roles" />
+      <PillPicker v-model="form.roles" label="Other roles" :options="roleOptions" :error="errors.roles" />
     </section>
 
     <section v-show="!stepped || step === 1" class="gap-4 grid">
@@ -257,14 +256,12 @@ function submitForm() {
         <TextInput
           v-model="form.introCapacity"
           label="Conversation capacity"
-          helper="Example: Can take 2 founder conversations this month."
           :error="errors.introCapacity"
         />
       </div>
       <SelectInput
         v-model="form.equityPhilosophy"
         label="Equity philosophy"
-        helper="This makes early equity conversations more legible before a proposal starts."
         :options="equityPhilosophyOptions"
         :error="errors.equityPhilosophy"
       />
@@ -272,14 +269,12 @@ function submitForm() {
         v-model="form.companyPreferences"
         label="Company preferences"
         :options="companyPreferenceOptions"
-        helper="These preferences improve ranking and help other members decide whether the fit is real."
         :error="errors.companyPreferences"
       />
       <PillPicker
         v-model="form.nonNegotiables"
         label="Non-negotiables"
         :options="nonNegotiableOptions"
-        helper="State the conditions that should be explicit before anyone reaches for a proposal."
         :error="errors.nonNegotiables"
       />
     </section>

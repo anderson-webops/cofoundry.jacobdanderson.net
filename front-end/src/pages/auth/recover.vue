@@ -65,7 +65,7 @@ async function submitRecoveryRequest() {
     submitted.value = true
     toastStore.push({
       title: "Request received",
-      message: "An operator can review this from the account access queue.",
+      message: "We received your account-help request.",
       tone: "success",
     })
   }
@@ -82,14 +82,11 @@ async function submitRecoveryRequest() {
 
 <template>
   <div>
-    <p class="section-kicker">
-      Account help
-    </p>
-    <h2 class="text-3xl tracking-tight font-semibold mt-3">
+    <h1 class="text-3xl tracking-tight font-semibold">
       Recover workspace access.
-    </h2>
+    </h1>
     <p class="muted text-sm leading-6 mt-3">
-      Use this if you already have a CoFoundry account or invite but cannot sign in. The team will verify the request before changing account access.
+      The team will verify account ownership before changing access. Do not include passwords or secret reset links.
     </p>
 
     <div v-if="submitted" class="panel-inset mt-8 p-5">
@@ -97,7 +94,7 @@ async function submitRecoveryRequest() {
         Request received.
       </p>
       <p class="muted text-sm leading-6 mt-2">
-        Your account-help request is in the operator queue. Do not share passwords or secret reset links in follow-up messages.
+        Do not share passwords or secret reset links in follow-up messages.
       </p>
       <div class="mt-5 flex flex-wrap gap-3">
         <BaseButton variant="secondary" to="/auth/sign-in">

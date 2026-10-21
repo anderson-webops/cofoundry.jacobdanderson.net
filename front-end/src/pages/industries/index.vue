@@ -9,9 +9,7 @@ usePageSeo("Industry hubs", "Browse public founder and startup searches organize
 <template>
   <div class="page-shell py-16 md:py-20">
     <PageIntro
-      eyebrow="Industry hubs"
-      title="Find teams in markets where your judgment compounds."
-      description="Industry pages work best when they collect real public founder searches and collaborators who already understand the market constraints."
+      title="Browse founders and startup searches by industry."
     />
 
     <div class="mt-10 gap-5 grid md:grid-cols-2 xl:grid-cols-3">
@@ -26,9 +24,6 @@ usePageSeo("Industry hubs", "Browse public founder and startup searches organize
             <h2 class="text-xl font-semibold">
               {{ hub.label }}
             </h2>
-            <p class="muted text-sm leading-6 mt-3">
-              {{ hub.description }}
-            </p>
           </div>
           <BaseBadge tone="accent">
             {{ hub.profileCount + hub.opportunityCount }}

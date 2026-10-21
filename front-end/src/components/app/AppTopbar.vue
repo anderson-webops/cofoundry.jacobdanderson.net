@@ -55,9 +55,6 @@ async function signOut() {
           {{ authStore.currentUser?.name || "Member" }}
         </BaseBadge>
       </div>
-      <p class="muted text-sm leading-6 mt-2 max-w-2xl hidden lg:block">
-        {{ routeContext.description }}
-      </p>
     </div>
 
     <div class="flex flex-wrap gap-2 items-center md:justify-end">
@@ -74,7 +71,7 @@ async function signOut() {
       <BaseBadge :tone="notificationCount ? 'warning' : 'neutral'" class="hidden sm:inline-flex">
         {{ notificationCount }} alerts
       </BaseBadge>
-      <BaseButton variant="ghost" size="sm" :disabled="workspaceStore.hydrating" @click="refreshWorkspace">
+      <BaseButton variant="ghost" size="sm" :disabled="workspaceStore.hydrating" :aria-label="workspaceStore.hydrating ? 'Refreshing workspace' : 'Refresh workspace'" @click="refreshWorkspace">
         <span :class="workspaceStore.hydrating ? 'i-carbon-renew animate-spin' : 'i-carbon-renew'" />
         <span class="hidden lg:inline">{{ syncLabel }}</span>
       </BaseButton>

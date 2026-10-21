@@ -15,9 +15,8 @@ usePageSeo(
 <template>
   <div class="page-shell page-section">
     <PageIntro
-      eyebrow="Pricing"
-      title="Straightforward subscriptions for startup team formation."
-      description="Start free. Pay when you need more outreach, more live searches, and proposal and agreement tools. CoFoundry does not take automatic equity."
+      title="Pricing"
+      description="CoFoundry does not take automatic equity."
     />
 
     <div class="mt-10 gap-6 grid lg:grid-cols-3">

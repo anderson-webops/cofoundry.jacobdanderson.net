@@ -21,7 +21,7 @@ usePageSeo("Page unavailable", "The requested CoFoundry page is unavailable or m
         Page unavailable
       </h1>
       <p class="muted text-sm leading-7 mx-auto mt-4 max-w-lg">
-        The page you requested is unavailable or may have moved. Use the main navigation, return home, or contact support if you need help finding the right page.
+        The page you requested is unavailable or may have moved.
       </p>
       <div class="mt-8 flex gap-3 justify-center">
         <BaseButton variant="secondary" @click="router.back()">

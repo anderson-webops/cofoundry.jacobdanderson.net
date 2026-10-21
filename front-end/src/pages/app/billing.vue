@@ -157,9 +157,7 @@ async function toggleCancellation() {
 <template>
   <div class="gap-5 grid md:gap-6">
     <PageIntro
-      eyebrow="Billing"
-      title="Transparent pricing, usage, and cancellation"
-      description="CoFoundry charges for more outbound reach and proposal-to-agreement tools. Messaging after a mutual match stays available on every plan."
+      title="Billing"
     >
       <template #actions>
         <BaseBadge tone="accent">
@@ -174,10 +172,8 @@ async function toggleCancellation() {
           <h2 class="text-xl font-semibold">
             Current plan
           </h2>
-          <p class="muted text-sm leading-6 mt-3">
-            {{ operatorManagedBilling
-              ? "Plan changes route through the CoFoundry team until Stripe self-service is enabled."
-              : "Renewal and cancellation controls stay visible here. There is no off-platform cancellation step." }}
+          <p v-if="operatorManagedBilling" class="muted text-sm leading-6 mt-3">
+            Contact the CoFoundry team for plan changes.
           </p>
         </div>
         <BaseBadge :tone="subscription?.cancelAtPeriodEnd ? 'warning' : 'neutral'">
@@ -218,10 +214,10 @@ async function toggleCancellation() {
             {{ subscription?.plan === "free"
               ? "Free does not renew."
               : operatorManagedBilling
-                ? "Handled by the CoFoundry team until live billing is enabled."
+                ? "Contact the CoFoundry team to cancel."
                 : subscription?.cancelAtPeriodEnd
                   ? "Already scheduled. The plan stays active until the current term ends."
-                  : "Available in-product with one click. No support ticket required." }}
+                  : "Available through Manage billing." }}
           </p>
         </div>
       </div>
