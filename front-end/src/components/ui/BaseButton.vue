@@ -41,9 +41,9 @@ const variantClasses = computed(() => ({
 }[props.variant]))
 
 const sizeClasses = computed(() => ({
-  sm: "text-sm px-3 py-2 rounded-xl",
-  md: "text-sm px-4 py-2.75 rounded-2xl",
-  lg: "text-base px-5 py-3 rounded-2xl",
+  sm: "text-sm px-3 py-1.5 min-h-10 rounded-[var(--radius-md)]",
+  md: "text-[0.9375rem] px-4.5 py-2 min-h-11 rounded-[var(--radius-md)]",
+  lg: "text-base px-6 py-3 min-h-13 rounded-[var(--radius-md)]",
 }[props.size]))
 </script>
 
@@ -56,7 +56,7 @@ const sizeClasses = computed(() => ({
     :target="linkTarget"
     :type="componentTag === 'button' ? type : undefined"
     :disabled="disabled"
-    class="font-semibold border inline-flex gap-2 transition duration-150 ease-out items-center justify-center"
+    class="font-semibold border inline-flex gap-2 whitespace-nowrap transition duration-150 ease-out items-center justify-center disabled:opacity-55 disabled:cursor-not-allowed"
     :class="[variantClasses, sizeClasses, block ? 'w-full' : '']"
   >
     <slot />

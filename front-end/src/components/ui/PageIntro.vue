@@ -11,22 +11,25 @@ const props = withDefaults(defineProps<{
 })
 
 const headingTag = computed(() => `h${props.headingLevel}`)
+const headingClass = computed(() => props.headingLevel === 1
+  ? "text-[clamp(2rem,1.5rem+2vw,3rem)] leading-[1.1]"
+  : "text-2xl leading-tight md:text-3xl")
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 md:flex-row md:gap-6 md:items-end md:justify-between">
-    <div class="max-w-[46rem]">
+  <div class="flex flex-col gap-5 md:flex-row md:gap-8 md:items-end md:justify-between">
+    <div class="max-w-[48rem]">
       <p v-if="eyebrow" class="section-kicker">
         {{ eyebrow }}
       </p>
-      <component :is="headingTag" class="text-3xl tracking-tight font-semibold mt-2 max-w-[36rem] md:text-4xl">
+      <component :is="headingTag" class="tracking-tight font-semibold max-w-[38rem]" :class="[headingClass, eyebrow ? 'mt-3' : '']">
         {{ title }}
       </component>
-      <p v-if="description" class="muted text-[0.98rem] leading-7 mt-4 max-w-[42rem]">
+      <p v-if="description" class="muted text-[1.0625rem] leading-[1.7] mt-4 max-w-[42rem]">
         {{ description }}
       </p>
     </div>
-    <div class="flex flex-wrap gap-3 items-center md:justify-end">
+    <div v-if="$slots.actions" class="flex shrink-0 flex-wrap gap-3 items-center md:justify-end">
       <slot name="actions" />
     </div>
   </div>

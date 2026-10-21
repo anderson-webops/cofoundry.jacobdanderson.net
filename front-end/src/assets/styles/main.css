@@ -46,22 +46,42 @@ body,
 
 body {
   background:
-    radial-gradient(circle at top left, var(--bg-glow-primary), transparent 32%),
-    radial-gradient(circle at bottom right, var(--bg-glow-secondary), transparent 28%),
+    radial-gradient(ellipse 60% 40% at top left, var(--bg-glow-primary), transparent 70%),
     var(--bg);
+  background-attachment: fixed;
   color: var(--text);
   font-family: "DM Sans", sans-serif;
-  line-height: 1.5;
+  font-size: 1rem;
+  line-height: 1.6;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
 
 :root {
-  --shell-gutter: 0.75rem;
-  --shell-gutter-wide: 1rem;
+  --shell-gutter: 1rem;
+  --shell-gutter-wide: 1.5rem;
   --page-shell-max: 1180px;
   --reading-shell-max: 1180px;
   --workspace-shell-max: 1680px;
+  --radius-lg: 1.25rem;
+  --radius-md: 0.875rem;
+  --measure: 68ch;
+  --header-height: 4.5rem;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p,
+li {
+  text-wrap: pretty;
+}
+
+html {
+  scroll-padding-top: calc(var(--header-height) + 1rem);
 }
 
 a {
@@ -136,25 +156,26 @@ select {
 }
 
 .section-kicker {
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  font-size: 0.74rem;
+  font-size: 0.78rem;
   font-weight: 700;
+  line-height: 1.4;
   color: var(--accent);
 }
 
 .panel {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 1.5rem;
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
-  backdrop-filter: blur(18px);
+  backdrop-filter: blur(12px);
 }
 
 .panel-inset {
   background: var(--panel-inset);
   border: 1px solid var(--line);
-  border-radius: 1.25rem;
+  border-radius: var(--radius-md);
 }
 
 .surface-stack {
@@ -323,7 +344,8 @@ select {
 
 .field-control {
   width: 100%;
-  border-radius: 1rem;
+  min-height: 2.75rem;
+  border-radius: var(--radius-md);
   border: 1px solid var(--line);
   background: var(--panel-strong);
   color: var(--text);
@@ -529,5 +551,249 @@ select {
   }
   50% {
     transform: translateY(-10px);
+  }
+}
+
+/* Readability primitives */
+
+.display-heading {
+  font-family: "DM Serif Display", Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.05;
+}
+
+.lede {
+  max-width: 40rem;
+  color: var(--muted);
+  font-size: 1.125rem;
+  line-height: 1.7;
+}
+
+@media (min-width: 768px) {
+  .lede {
+    font-size: 1.1875rem;
+  }
+}
+
+.measure {
+  max-width: var(--measure);
+}
+
+.section-header {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 44rem;
+}
+
+.section-header h2 {
+  font-size: clamp(1.75rem, 1.3rem + 1.6vw, 2.5rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.section-header p {
+  color: var(--muted);
+  font-size: 1.0625rem;
+  line-height: 1.7;
+}
+
+.section-alt {
+  background: var(--bg-muted);
+  border-block: 1px solid var(--line);
+}
+
+.skip-link {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 100;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: var(--cta-accent-text);
+  font-weight: 600;
+  transform: translateY(-200%);
+  transition: transform 150ms ease;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+/* Numbered flow (how it works, home page) */
+
+.flow-list {
+  display: grid;
+  gap: 0;
+  counter-reset: flow;
+}
+
+.flow-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr);
+  gap: 1.25rem;
+  padding-bottom: 2.25rem;
+}
+
+.flow-step:last-child {
+  padding-bottom: 0;
+}
+
+.flow-step::before {
+  content: "";
+  position: absolute;
+  top: 2.75rem;
+  bottom: 0;
+  left: calc(1.375rem - 1px);
+  width: 2px;
+  background: var(--line-strong);
+}
+
+.flow-step:last-child::before {
+  display: none;
+}
+
+.flow-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Feature tiles */
+
+.feature-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .feature-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .feature-grid.feature-grid-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.feature-tile {
+  display: grid;
+  align-content: start;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+}
+
+.feature-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 1.25rem;
+}
+
+/* Pricing */
+
+.price-figure {
+  font-size: 2.75rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.price-card-featured {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent), var(--shadow);
+}
+
+/* Workspace navigation */
+
+.nav-group-label {
+  padding-inline: 0.75rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.nav-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 2.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  color: var(--muted);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+.nav-link:hover {
+  color: var(--text);
+  background: var(--accent-soft);
+}
+
+.nav-link-active {
+  color: var(--text);
+  background: var(--accent-soft);
+  font-weight: 600;
+}
+
+.nav-link-active::before {
+  content: "";
+  position: absolute;
+  top: 0.5rem;
+  bottom: 0.5rem;
+  left: 0;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.nav-count {
+  margin-left: auto;
+  min-width: 1.5rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--cta-accent-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }
