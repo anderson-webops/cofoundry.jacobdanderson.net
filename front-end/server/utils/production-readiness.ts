@@ -340,7 +340,7 @@ function phase(
   summary: string,
   detail: string,
   action: string,
-  docsPath = "docs/server-ai-production-cutover-prompt.md",
+  docsPath = "docs/operations-runbook.md",
 ): ProductionReadinessCutoverPhase {
   return { action, detail, docsPath, id, status, summary, title }
 }
@@ -440,7 +440,7 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
         ? "Run a staging provider sign-in smoke and confirm the successful OAuth callback appears in readiness evidence."
         : "Leave OAuth provider markers unset until the identity provider and callback flow are ready for a deliberate cutover.",
       "COFOUNDRY_OAUTH_PROVIDER=<provider-name>\n# Verify /auth/sign-in provider flow and confirm auth.oauth.signed_in telemetry.",
-      "docs/server-ai-production-cutover-prompt.md",
+      "docs/operations-runbook.md",
     ),
     task(
       "worker-token-provisioning",
@@ -582,7 +582,7 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
       "Supabase-backed production should have an auditable first-admin promotion before operators rely on the console.",
       "Run the bootstrap script from a server environment with Vault-injected Supabase service-role credentials.",
       "BOOTSTRAP_ADMIN_EMAIL=operator@example.com npm run -w back-end bootstrap-admin",
-      "docs/server-ai-admin-bootstrap-prompt.md",
+      "docs/operations-runbook.md",
     ),
     task(
       "stripe-cutover-provisioning",

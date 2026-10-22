@@ -180,7 +180,7 @@ Production SSR runs directly with Node under `cofoundry-app.service`; Docker, Co
 
 The public verifier also guards production-facing metadata and copy. Sitemap-listed public pages must render page-specific title, description, canonical, Open Graph, and Twitter metadata, and public pages plus linked noindex access pages fail verification if they expose mock/demo/sample/placeholder language that would make the live product feel unfinished.
 
-After tagging or moving the current `v1.x` release, generate an exact server handoff prompt with `npm run server:prompt:live-deploy`. It fills in the release tag, commit SHA, deployment timestamp, and public origin for the safe mock/access-request deploy path.
+After a reviewed release is published, the protected server-side deployment timer handles activation. Keep any operator handoff prompt local and ignored under `.ai-work/server-instructions/`.
 
 `npm run verify:host-env -- --production` checks the current process environment without loading `.env` files or printing secret values. Use it on the host before restarting production to catch missing deployment identity, unsafe app URLs, demo-access drift, missing session signing secrets, and mode-specific secret requirements.
 
@@ -341,7 +341,7 @@ Access-request rows are separately retained in `access-requests.json` with a def
 
 Supabase proposal and agreement version histories are read in checked pages so a provider response cap cannot silently omit older versions. Concurrent history changes during a paginated read fail closed and may be retried.
 
-The server-side handoff prompt for wiring these jobs lives at `docs/server-ai-operations-prompt.md`; first-admin provisioning is covered in `docs/server-ai-admin-bootstrap-prompt.md`; live deploy catch-up is covered in `docs/server-ai-live-deploy-prompt.md` and can be rendered with exact release values through `npm run server:prompt:live-deploy`; the staged provider cutover prompt lives at `docs/server-ai-production-cutover-prompt.md`; the recurring operator checklist lives at `docs/operations-runbook.md`.
+The recurring operator checklist lives at `docs/operations-runbook.md`. Keep server-AI prompts and site-specific handoffs local and ignored under `.ai-work/server-instructions/`, not in the repository or release assets.
 
 ## Billing notes
 

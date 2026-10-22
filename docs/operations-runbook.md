@@ -2,7 +2,7 @@
 
 CoFoundry can run in production-facing mock/access-request mode today without Supabase or Stripe. Treat this runbook as the server-side checklist for the pieces that need durable host setup before switching on live persistence, billing, or background workers.
 
-For a paste-ready host catch-up prompt after source validation passes but the public origin is stale, run `npm run server:prompt:live-deploy`. The template behind that command lives at `docs/server-ai-live-deploy-prompt.md`. For staged external provider work, use `docs/server-ai-production-cutover-prompt.md`.
+Keep operator-specific catch-up and provider-cutover prompts in the local ignored `.ai-work/server-instructions/` directory. This tracked runbook documents only the application contract.
 
 ## Required Host State
 

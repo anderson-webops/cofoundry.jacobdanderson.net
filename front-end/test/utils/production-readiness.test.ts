@@ -1156,7 +1156,7 @@ describe("production readiness snapshot", () => {
     expect(checkById.get("admin-bootstrap-audit")?.status).toBe("warn")
     expect(snapshot.provisioningTasks.find(task => task.id === "first-admin-bootstrap-provisioning")).toMatchObject({
       command: "BOOTSTRAP_ADMIN_EMAIL=operator@example.com npm run -w back-end bootstrap-admin",
-      docsPath: "docs/server-ai-admin-bootstrap-prompt.md",
+      docsPath: "docs/operations-runbook.md",
       status: "warn",
     })
     expect(snapshot.cutoverPhases.find(phase => phase.id === "supabase-persistence-cutover")).toMatchObject({
