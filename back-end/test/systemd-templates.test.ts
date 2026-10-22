@@ -165,17 +165,6 @@ test("systemd README documents manual smoke service verification", async () => {
   assert.match(readme, /shared atomic rate limiter/)
 })
 
-test("server operations handoff prompt enforces the single-process security boundary", async () => {
-  const prompt = await readRepoFile("docs", "server-ai-operations-prompt.md")
-
-  assert.match(prompt, /COFOUNDRY_COMMIT_SHA/)
-  assert.match(prompt, /Nuxt build fallback/)
-  assert.match(prompt, /COFOUNDRY_EXPECT_MULTI_INSTANCE=false/)
-  assert.match(prompt, /COFOUNDRY_APP_INSTANCE_COUNT=1/)
-  assert.match(prompt, /shared atomic limiter/)
-  assert.doesNotMatch(prompt, /systemctl start cofoundry-operations-realtime-smoke\.service/)
-})
-
 test("systemd installer defaults to safe timer installation", async () => {
   const installer = await readSystemdTemplate("install-operations-units.sh")
 

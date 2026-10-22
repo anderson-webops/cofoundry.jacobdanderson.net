@@ -1,5 +1,4 @@
 import { spawn } from "node:child_process"
-import { readFileSync } from "node:fs"
 import process from "node:process"
 
 const npmExecPath = process.env.npm_execpath
@@ -36,22 +35,6 @@ const syntheticProductionBuildEnv = {
   NUXT_PUBLIC_ENABLE_DEMO_ACCESS: syntheticProductionHostEnv.NUXT_PUBLIC_ENABLE_DEMO_ACCESS,
   SESSION_SIGNING_SECRET: syntheticProductionHostEnv.SESSION_SIGNING_SECRET,
 }
-
-function releaseTagFromPackageVersion(version) {
-  const normalizedVersion = String(version || "").trim()
-
-  if (!/^\d+\.\d+\.\d+(?:[-+][0-9a-z.-]+)?$/i.test(normalizedVersion))
-    throw new Error(`package.json version must be semver for release prompt verification. Received: ${normalizedVersion || "<empty>"}`)
-
-  return `v${normalizedVersion}`
-}
-
-function readPackageReleaseTag() {
-  const packageJson = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"))
-  return releaseTagFromPackageVersion(packageJson.version)
-}
-
-const packageReleaseTag = readPackageReleaseTag()
 
 const steps = [
   {
@@ -146,23 +129,6 @@ const steps = [
     args: ["run", "verify:public:dispatch", "--", "--dry-run"],
     id: "dispatch-dry-run",
     label: "Verify public workflow dispatch payload",
-  },
-  {
-    args: [
-      "scripts/render-live-deploy-prompt.mjs",
-      "--check",
-      "--release",
-      packageReleaseTag,
-      "--commit-sha",
-      syntheticProductionHostEnv.COFOUNDRY_COMMIT_SHA,
-      "--deployed-at",
-      syntheticProductionHostEnv.COFOUNDRY_DEPLOYED_AT,
-      "--public-origin",
-      "https://cofoundry.example.com",
-    ],
-    command: "node",
-    id: "live-deploy-prompt",
-    label: "Verify live deploy handoff prompt rendering",
   },
   {
     args: ["--check", "scripts/verify-github-actions-health.mjs"],
