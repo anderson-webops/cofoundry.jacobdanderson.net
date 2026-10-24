@@ -261,8 +261,10 @@ def validate_dependencies(root):
         if actual_version != expected_version:
             raise ValueError(f"generated dependency version mismatch: {dependency}")
         lock_candidates = [
-            lock_packages.get(f"node_modules/{dependency}"),
-            lock_packages.get(f"front-end/node_modules/{dependency}"),
+            entry
+            for relative, entry in lock_packages.items()
+            if relative == f"node_modules/{dependency}"
+            or relative.endswith(f"/node_modules/{dependency}")
         ]
         if not any(isinstance(entry, dict) and entry.get("version") == actual_version for entry in lock_candidates):
             raise ValueError(f"generated dependency is not bound to the root lock: {dependency}")

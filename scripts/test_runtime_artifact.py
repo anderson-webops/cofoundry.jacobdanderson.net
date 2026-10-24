@@ -164,6 +164,34 @@ class RuntimeArtifactTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "not bound to the root lock"):
             artifact.validate(self.root, self.manifest())
 
+    def test_generated_frontend_dependency_matches_nested_build_lock(self):
+        server_package_path = self.root / "front-end/.output/server/package.json"
+        server_package = json.loads(server_package_path.read_text())
+        server_package["dependencies"] = {"lru-cache": "11.5.3"}
+        server_package_path.write_text(json.dumps(server_package))
+        package = self.root / "front-end/.output/server/node_modules/lru-cache/package.json"
+        package.parent.mkdir(parents=True)
+        package.write_text(json.dumps({"name": "lru-cache", "version": "11.5.3"}))
+        lock_path = self.root / "package-lock.json"
+        lock = json.loads(lock_path.read_text())
+        lock["packages"]["node_modules/unstorage/node_modules/lru-cache"] = {
+            "dev": True,
+            "version": "11.5.3",
+        }
+        lock_path.write_text(json.dumps(lock))
+        artifact.validate(self.root, self.manifest())
+
+    def test_generated_frontend_development_tool_is_rejected(self):
+        server_package_path = self.root / "front-end/.output/server/package.json"
+        server_package = json.loads(server_package_path.read_text())
+        server_package["dependencies"] = {"vite": "7.0.0"}
+        server_package_path.write_text(json.dumps(server_package))
+        package = self.root / "front-end/.output/server/node_modules/vite/package.json"
+        package.parent.mkdir(parents=True)
+        package.write_text(json.dumps({"name": "vite", "version": "7.0.0"}))
+        with self.assertRaisesRegex(ValueError, "development tool"):
+            artifact.validate(self.root, self.manifest())
+
     def test_identity_mismatch_is_rejected(self):
         identity_path = self.root / artifact.IDENTITY
         identity = json.loads(identity_path.read_text())
