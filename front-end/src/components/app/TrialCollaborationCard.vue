@@ -6,6 +6,7 @@ import { buildTrialStatusCopy } from "~/shared/utils/formation"
 defineProps<{
   trial: TrialCollaboration
   acknowledged: boolean
+  compact?: boolean
 }>()
 </script>
 
@@ -16,7 +17,7 @@ defineProps<{
         <h3 class="text-base font-semibold">
           {{ trial.title }}
         </h3>
-        <p class="muted text-sm leading-6 mt-2">
+        <p class="muted text-sm leading-6 mt-2" :class="compact ? 'line-clamp-2' : ''">
           {{ trial.objective }}
         </p>
       </div>
@@ -29,32 +30,34 @@ defineProps<{
       {{ buildTrialStatusCopy(trial) }}
     </p>
 
-    <div class="text-sm gap-2 grid">
-      <div><span class="font-semibold">Scope:</span> <span class="muted">{{ trial.scope }}</span></div>
-      <div><span class="font-semibold">Cadence:</span> <span class="muted">{{ trial.checkInCadence }}</span></div>
-    </div>
+    <template v-if="!compact">
+      <div class="text-sm gap-2 grid">
+        <div><span class="font-semibold">Scope:</span> <span class="muted">{{ trial.scope }}</span></div>
+        <div><span class="font-semibold">Cadence:</span> <span class="muted">{{ trial.checkInCadence }}</span></div>
+      </div>
 
-    <div>
-      <h4 class="text-sm font-semibold">
-        Deliverables
-      </h4>
-      <ul class="muted text-sm leading-6 mt-2 gap-2 grid">
-        <li v-for="deliverable in trial.deliverables" :key="deliverable">
-          {{ deliverable }}
-        </li>
-      </ul>
-    </div>
+      <div>
+        <h4 class="text-sm font-semibold">
+          Deliverables
+        </h4>
+        <ul class="muted text-sm leading-6 mt-2 gap-2 grid">
+          <li v-for="deliverable in trial.deliverables" :key="deliverable">
+            {{ deliverable }}
+          </li>
+        </ul>
+      </div>
 
-    <div>
-      <h4 class="text-sm font-semibold">
-        Success signals
-      </h4>
-      <ul class="muted text-sm leading-6 mt-2 gap-2 grid">
-        <li v-for="signal in trial.successSignals" :key="signal">
-          {{ signal }}
-        </li>
-      </ul>
-    </div>
+      <div>
+        <h4 class="text-sm font-semibold">
+          Success signals
+        </h4>
+        <ul class="muted text-sm leading-6 mt-2 gap-2 grid">
+          <li v-for="signal in trial.successSignals" :key="signal">
+            {{ signal }}
+          </li>
+        </ul>
+      </div>
+    </template>
 
     <div class="flex flex-wrap gap-2 items-center justify-between">
       <BaseBadge :tone="acknowledged ? 'success' : 'warning'">

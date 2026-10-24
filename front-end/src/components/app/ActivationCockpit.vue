@@ -1,10 +1,19 @@
 <script setup lang="ts">
 import type { ActivationPlan } from "~/shared/utils/activation"
+import { computed } from "vue"
 
-defineProps<{
+const props = defineProps<{
   compact?: boolean
   plan: ActivationPlan
 }>()
+
+const visibleSteps = computed(() => {
+  if (!props.compact)
+    return props.plan.steps
+
+  const pending = props.plan.steps.filter(step => step.status === "current")
+  return (pending.length ? pending : props.plan.steps.filter(step => step.status !== "locked")).slice(0, 2)
+})
 </script>
 
 <template>
@@ -31,26 +40,24 @@ defineProps<{
 
     <div class="surface-row-list mt-5">
       <div
-        v-for="step in compact ? plan.steps.filter(item => item.status !== 'locked').slice(0, 2) : plan.steps"
+        v-for="step in visibleSteps"
         :key="step.id"
-        class="surface-row flex flex-col gap-3 md:flex-row md:items-start md:justify-between"
+        class="surface-row flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
       >
         <div>
-          <p class="text-sm font-semibold">
+          <p class="text-sm font-semibold flex flex-wrap gap-2 items-center">
             {{ step.title }}
+            <BaseBadge :tone="step.badgeTone">
+              {{ step.badgeLabel }}
+            </BaseBadge>
           </p>
           <p v-if="step.missingItems.length" class="muted text-xs leading-5 mt-2">
             Missing: {{ step.missingItems.join(", ") }}
           </p>
         </div>
-        <div class="flex gap-2 items-center md:flex-col md:items-end">
-          <BaseBadge :tone="step.badgeTone">
-            {{ step.badgeLabel }}
-          </BaseBadge>
-          <BaseButton v-if="step.status !== 'locked'" variant="ghost" size="sm" :to="step.href">
-            {{ step.ctaLabel }}
-          </BaseButton>
-        </div>
+        <BaseButton v-if="step.status !== 'locked'" :variant="step.status === 'current' ? 'secondary' : 'ghost'" size="sm" :to="step.href" class="shrink-0 self-start">
+          {{ step.ctaLabel }}
+        </BaseButton>
       </div>
     </div>
 

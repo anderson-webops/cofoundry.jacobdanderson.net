@@ -162,19 +162,23 @@ async function declineConnectRequest(requestId: string, reason: "timing" | "doma
       </template>
     </PageIntro>
 
-    <div class="panel p-6">
-      <h2 class="text-lg font-semibold">
-        {{ primaryAction.title }}
-      </h2>
-      <p v-if="primaryAction.description" class="muted text-sm leading-6 mt-3">
-        {{ primaryAction.description }}
-      </p>
-      <div class="mt-5">
-        <BaseButton :to="primaryAction.href">
-          {{ primaryAction.ctaLabel }}
-        </BaseButton>
+    <section class="panel panel-emphasis p-6 flex flex-col gap-5 md:p-7 md:flex-row md:items-center md:justify-between" aria-labelledby="overview-next-step">
+      <div>
+        <p class="section-kicker">
+          Your next step
+        </p>
+        <h2 id="overview-next-step" class="text-xl leading-snug font-semibold mt-2 md:text-2xl">
+          {{ primaryAction.title }}
+        </h2>
+        <p v-if="primaryAction.description" class="muted measure leading-7 mt-2">
+          {{ primaryAction.description }}
+        </p>
       </div>
-    </div>
+      <BaseButton size="lg" :to="primaryAction.href" class="shrink-0">
+        {{ primaryAction.ctaLabel }}
+        <span class="i-carbon-arrow-right" aria-hidden="true" />
+      </BaseButton>
+    </section>
 
     <ActivationCockpit v-if="activationPlan" :plan="activationPlan" compact />
 
@@ -194,15 +198,12 @@ async function declineConnectRequest(requestId: string, reason: "timing" | "doma
               :profile="item.profile"
               :skills="skillLabels(item.profile.id)"
             >
-              <BaseBadge tone="accent">
-                Match score {{ item.score }}
-              </BaseBadge>
-              <p v-if="item.reciprocityScore >= 6 || item.localBias" class="muted text-xs leading-5">
-                {{ [item.reciprocityScore >= 6 ? "Likely reply" : "", item.localBias ? "Local-first" : ""].filter(Boolean).join(" · ") }}
-              </p>
               <BaseButton variant="secondary" to="/app/discover">
                 Review collaborator
               </BaseButton>
+              <p class="muted text-xs ml-auto self-center">
+                {{ [`Match ${item.score}`, item.reciprocityScore >= 6 ? "Likely reply" : "", item.localBias ? "Local-first" : ""].filter(Boolean).join(" · ") }}
+              </p>
             </ProfileCard>
           </div>
 
@@ -212,12 +213,12 @@ async function declineConnectRequest(requestId: string, reason: "timing" | "doma
               :key="item.opportunity.id"
               :opportunity="item.opportunity"
             >
-              <BaseBadge tone="accent">
-                Match score {{ item.score }}
-              </BaseBadge>
               <BaseButton variant="secondary" :to="`/app/opportunities/${item.opportunity.id}`">
                 View opportunity
               </BaseButton>
+              <p class="muted text-xs ml-auto self-center">
+                Match {{ item.score }}
+              </p>
             </OpportunityCard>
           </div>
           <EmptyState
@@ -302,9 +303,10 @@ async function declineConnectRequest(requestId: string, reason: "timing" | "doma
                   :key="trial.id"
                   :trial="trial"
                   :acknowledged="trial.acknowledgedByUserIds.includes(currentUserId)"
+                  compact
                 >
                   <BaseButton variant="secondary" to="/app/matches">
-                    Open match details
+                    Open trial details
                   </BaseButton>
                 </TrialCollaborationCard>
               </div>
@@ -326,28 +328,25 @@ async function declineConnectRequest(requestId: string, reason: "timing" | "doma
         <div v-if="notifications.length" class="panel p-5">
           <h2 class="text-lg font-semibold">
             Unread notifications
+            <span class="muted text-sm font-normal ml-1">{{ notifications.length }}</span>
           </h2>
           <div class="surface-row-list mt-5">
-            <div v-for="notification in notifications" :key="notification.id" class="surface-row">
-              <div class="flex gap-3 items-start justify-between">
-                <div>
-                  <p class="text-sm font-semibold">
-                    {{ notification.title }}
-                  </p>
-                  <p class="muted text-sm leading-6 mt-1">
-                    {{ notification.body }}
-                  </p>
-                </div>
-                <BaseBadge :tone="notification.readAt ? 'neutral' : 'accent'">
-                  {{ notification.readAt ? "Read" : "New" }}
-                </BaseBadge>
+            <NuxtLink
+              v-for="notification in notifications"
+              :key="notification.id"
+              :to="notification.href"
+              class="surface-row group flex gap-3 items-start justify-between"
+            >
+              <div class="min-w-0">
+                <p class="text-sm font-semibold group-hover:text-[var(--accent-strong)]">
+                  {{ notification.title }}
+                </p>
+                <p class="muted text-sm leading-6 mt-1 line-clamp-2">
+                  {{ notification.body }}
+                </p>
               </div>
-              <div class="mt-4">
-                <BaseButton variant="ghost" :to="notification.href">
-                  Open
-                </BaseButton>
-              </div>
-            </div>
+              <span class="i-carbon-chevron-right muted mt-1 shrink-0" aria-hidden="true" />
+            </NuxtLink>
           </div>
         </div>
       </section>
