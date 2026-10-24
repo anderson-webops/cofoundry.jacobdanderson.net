@@ -99,6 +99,10 @@ export function getPlanPriceLabel(plan: SubscriptionPlan, billingCycle: BillingC
   return billingCycle === "annual" ? "$990/yr" : "$99/mo"
 }
 
+export function getPlanLimits(plan: SubscriptionPlan) {
+  return PLAN_LIMITS[plan]
+}
+
 export function getSubscriptionEntitlements(subscription?: Subscription): SubscriptionEntitlements {
   const entitled = subscription?.status === "active" || subscription?.status === "trialing"
   const plan = entitled ? subscription.plan : "free"

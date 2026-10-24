@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import type { SubscriptionPlan } from "~/shared/types/domain"
 import { faqs, pricingTiers } from "~/shared/data/marketing"
+import { getPlanLimits } from "~/shared/utils/billing"
 
 const { getPricingTierCta } = useProductAccess()
 
@@ -10,6 +12,21 @@ const pricingFaqQuestions = [
   "How easy is it to cancel a paid plan?",
 ]
 const pricingFaqs = faqs.filter(faq => pricingFaqQuestions.includes(faq.question))
+
+function formatMonthlyLimit(limit: number | null) {
+  return limit === null ? "Unlimited" : `${limit} / mo`
+}
+
+function planComparison(plan: SubscriptionPlan) {
+  const limits = getPlanLimits(plan)
+
+  return [
+    { label: "New intros", value: formatMonthlyLimit(limits.introLimit) },
+    { label: "Proposal sends", value: formatMonthlyLimit(limits.proposalSendLimit) },
+    { label: "Agreement drafts", value: formatMonthlyLimit(limits.contractDraftLimit) },
+    { label: "Signature-ready agreements", value: limits.canSignContracts ? "Included" : "Not included" },
+  ]
+}
 
 function splitPrice(label: string) {
   const [amount, period] = label.split("/")
@@ -52,9 +69,20 @@ usePageSeo(
           <span class="price-figure">{{ splitPrice(tier.priceLabel).amount }}</span>
           <span v-if="splitPrice(tier.priceLabel).period" class="muted text-base">{{ splitPrice(tier.priceLabel).period }}</span>
         </p>
-        <p class="muted leading-7 mt-4 min-h-[3.5rem]">
+        <p class="muted leading-7 mt-4 lg:min-h-[5.25rem]">
           {{ tier.description }}
         </p>
+
+        <dl class="text-[0.9375rem] mt-6 grid">
+          <div v-for="row in planComparison(tier.id)" :key="row.label" class="py-2.5 border-t border-[var(--line)] flex gap-4 justify-between">
+            <dt class="muted">
+              {{ row.label }}
+            </dt>
+            <dd class="font-semibold m-0 text-right tabular-nums">
+              {{ row.value }}
+            </dd>
+          </div>
+        </dl>
 
         <div class="mt-6">
           <BaseButton :to="getPricingTierCta(tier.id, `pricing-${tier.id}`).to" block :variant="tier.highlighted ? 'primary' : 'secondary'">
@@ -62,7 +90,10 @@ usePageSeo(
           </BaseButton>
         </div>
 
-        <ul class="text-[0.9375rem] leading-6 mt-7 pt-6 border-t border-[var(--line)] gap-3.5 grid">
+        <p class="text-sm font-semibold mt-7 pt-6 border-t border-[var(--line)]">
+          Everything in this plan
+        </p>
+        <ul class="text-[0.9375rem] leading-6 mt-4 gap-3.5 grid">
           <li v-for="feature in tier.features" :key="feature" class="flex gap-2.5">
             <span class="i-carbon-checkmark text-[var(--accent)] mt-1 shrink-0" aria-hidden="true" />
             <span>{{ feature }}</span>

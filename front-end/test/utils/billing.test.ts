@@ -1,8 +1,22 @@
 import { describe, expect, it } from "vitest"
+import { pricingTiers } from "../../shared/data/marketing"
 import { workspaceSeed } from "../../shared/data/seed"
-import { buildSubscriptionUsage, checkSavedSearchCount, checkSubscriptionGate, getPlanPriceLabel, getSubscriptionEntitlements, hasPaidContractWorkflowSponsor } from "../../shared/utils/billing"
+import { buildSubscriptionUsage, checkSavedSearchCount, checkSubscriptionGate, getPlanLimits, getPlanPriceLabel, getSubscriptionEntitlements, hasPaidContractWorkflowSponsor } from "../../shared/utils/billing"
 
 describe("billing helpers", () => {
+  it("exposes enforced plan limits for every public pricing tier", () => {
+    for (const tier of pricingTiers) {
+      const limits = getPlanLimits(tier.id)
+
+      expect(limits.introLimit === null || limits.introLimit > 0).toBe(true)
+      expect(limits.proposalSendLimit === null || limits.proposalSendLimit > 0).toBe(true)
+      expect(limits.contractDraftLimit === null || limits.contractDraftLimit > 0).toBe(true)
+    }
+
+    expect(getPlanLimits("free").canSignContracts).toBe(false)
+    expect(getPlanLimits("pro").introLimit).toBe(40)
+  })
+
   it("keeps matched messaging free while metering higher-intent actions", () => {
     const entitlements = getSubscriptionEntitlements({
       id: "subscription_test",
