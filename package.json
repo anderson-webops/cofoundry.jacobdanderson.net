@@ -18,22 +18,28 @@
   "overrides": {
     "braces": "$braces",
     "listhen": "$listhen",
+    "nuxt": {
+      "unimport": "7.0.1"
+    },
     "@bomb.sh/tab": "0.0.22",
     "glob": "13.0.6",
     "vite": {
-      ".": "8.2.0",
+      ".": "8.2.4",
       "esbuild": "0.28.1"
     },
     "brace-expansion": "$brace-expansion",
     "devalue": "5.9.4",
-    "fast-uri": "3.1.8",
+    "fast-uri": "3.1.9",
     "js-beautify": "$js-beautify",
     "js-yaml": "4.3.2",
+    "katex": "0.18.2",
     "nanoid": "3.3.18",
     "postcss": "8.5.26",
-    "shell-quote": "1.10.0",
+    "source-map-js": "1.2.2",
+    "shell-quote": "1.12.0",
     "svgo": "4.1.0",
     "tar": "7.5.22",
+    "tinypool": "2.2.0",
     "valibot": "1.4.2"
   },
   "scripts": {
@@ -65,7 +71,7 @@
     "typecheck": "node scripts/run-pinned-npm.mjs run -w front-end typecheck && node scripts/run-pinned-npm.mjs run -w back-end typecheck",
     "seed": "node scripts/run-pinned-npm.mjs run -w back-end seed",
     "test": "node scripts/run-pinned-npm.mjs run -w front-end test",
-    "test:unit": "node scripts/run-pinned-npm.mjs run -w front-end test:unit && node scripts/run-pinned-npm.mjs run -w back-end test:run && node --test scripts/test-braces-compat.mjs scripts/test-listhen-compat.mjs",
+    "test:unit": "node scripts/run-pinned-npm.mjs run -w front-end test:unit && node scripts/run-pinned-npm.mjs run -w back-end test:run && node --test scripts/test-braces-compat.mjs scripts/test-listhen-compat.mjs scripts/test-build-secret-boundary.mjs",
     "test:e2e": "node scripts/run-pinned-npm.mjs run -w front-end test:e2e",
     "test:run": "node scripts/run-pinned-npm.mjs run test:unit",
     "test:runtime-artifact": "python3 -B -m unittest scripts/test_runtime_artifact.py scripts/test_trusted_paths.py scripts/test_host_control_bundle.py",
@@ -98,16 +104,17 @@
     "eslint": "10.11.0",
     "eslint-plugin-format": "2.0.1",
     "globals": "^17.12.0",
-    "happy-dom": "20.14.5",
+    "happy-dom": "21.0.4",
     "js-beautify": "2.0.3",
     "listhen": "file:vendor/listhen",
     "puppeteer": "^25.11.0",
     "typescript": "^6.0.3",
-    "vue": "3.5.43"
+    "vue": "3.5.44"
   },
   "allowScripts": {
     "esbuild@0.28.1": true,
-    "puppeteer@25.11.0": true,
+    "esbuild@0.28.2": true,
+    "puppeteer@25.16.0": true,
     "unrs-resolver@1.12.2": true,
     "@parcel/watcher@2.5.6": true,
     "fsevents@2.3.3": true,

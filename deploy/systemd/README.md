@@ -2,6 +2,12 @@
 
 The production application runs directly with Node. Docker, Compose, Podman, and a container registry are not part of this deployment. The application listens only on `127.0.0.1:3000`; the existing Nginx TLS server remains the public IPv4/IPv6 edge.
 
+## Tagged runtime assets
+
+An annotated `v1.x` tag starts the Linux ARM64 artifact job after the repository's quality gates. Its exact clean source is built with pinned Node/npm, audited, tested, and checked as an isolated unpacked runtime, including missing-module and failed-promotion recovery cases. The GitHub release contains the runtime archive, separate host-control archive, `runtime-manifest.json`, `acceptance.json`, `SHA256SUMS`, and an Actions attestation bundle. The publisher compares downloaded release assets with the validated originals before making the draft public; existing tags and assets are not replaced.
+
+Artifact-only intake is a separate protected host capability. This source workflow neither activates it nor changes a running service. Until it is accepted, the existing host build path remains the only active path; an artifact-only adapter must defer missing or untrusted assets rather than compiling as a fallback.
+
 ## Application service
 
 1. Create the unprivileged `cofoundry` user, `/srv/cofoundry/releases`, `/var/lib/cofoundry`, `/run/cofoundry`, and `/var/backups/cofoundry` using the host's normal account-management process. Writable state remains outside immutable releases and must survive both promotion and rollback.
