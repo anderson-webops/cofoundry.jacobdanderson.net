@@ -11,6 +11,7 @@ command -v timeout >/dev/null
 
 timeout -k 5 120 bwrap --unshare-all --die-with-parent --new-session --uid 0 --gid 0 \
   --ro-bind /usr /usr --symlink usr/bin /bin --symlink usr/lib /lib \
+  --ro-bind /etc/passwd /etc/passwd --ro-bind /etc/group /etc/group \
   --tmpfs /usr/local --ro-bind "$node" /runtime/node --proc /proc --dev /dev --tmpfs /tmp \
   --ro-bind "$root/deploy" /source/deploy --ro-bind "$root/scripts" /source/scripts \
   --clearenv --setenv PATH /runtime:/usr/bin:/bin --setenv HOME /tmp \
