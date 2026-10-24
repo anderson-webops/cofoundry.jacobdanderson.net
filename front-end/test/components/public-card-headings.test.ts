@@ -15,7 +15,7 @@ function stubs() {
 }
 
 describe("public card headings", () => {
-  it("renders profile cards as h3 by default with proof nested below", () => {
+  it("renders profile cards as h3 by default and leaves proof detail to the profile page", () => {
     const wrapper = mount(ProfileCard, {
       global: { stubs: stubs() },
       props: {
@@ -25,7 +25,8 @@ describe("public card headings", () => {
     })
 
     expect(wrapper.find("h3").text()).toBe(profile.displayName)
-    expect(wrapper.find("h4").text()).toBe(profile.trustSignals.builderProofs[0]!.title)
+    expect(wrapper.find("h4").exists()).toBe(false)
+    expect(wrapper.text()).not.toContain(profile.trustSignals.builderProofs[0]!.title)
   })
 
   it("can render profile cards as h2 on standalone public listing pages", () => {
@@ -39,8 +40,7 @@ describe("public card headings", () => {
     })
 
     expect(wrapper.find("h2").text()).toBe(profile.displayName)
-    expect(wrapper.find("h3").text()).toBe(profile.trustSignals.builderProofs[0]!.title)
-    expect(wrapper.find("h4").exists()).toBe(false)
+    expect(wrapper.find("h3").exists()).toBe(false)
   })
 
   it("renders opportunity cards as h3 by default", () => {

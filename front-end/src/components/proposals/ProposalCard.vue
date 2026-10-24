@@ -1,12 +1,20 @@
 <script setup lang="ts">
 import type { Proposal, ProposalVersion } from "~/shared/types/domain"
+import { computed } from "vue"
 import { formatProposalRelationshipType, formatProposalStatus } from "~/shared/utils/format"
 
-defineProps<{
+const props = defineProps<{
   proposal: Proposal
   version?: ProposalVersion
   href: string
 }>()
+
+const facts = computed(() => [
+  { label: "Role", value: props.version?.roleTitle || "Not set" },
+  { label: "Relationship", value: props.version ? formatProposalRelationshipType(props.version.relationshipType) : "Not set" },
+  { label: "Cash", value: props.version?.cashCompensation || "Not set" },
+  { label: "Equity", value: props.version?.equity || "Not set" },
+])
 </script>
 
 <template>
@@ -16,18 +24,14 @@ defineProps<{
         <h3 class="text-lg font-semibold">
           {{ proposal.title }}
         </h3>
-        <p class="muted text-sm mt-2">
-          {{ version?.summary }}
+        <p v-if="version?.summary" class="muted text-sm leading-6 mt-1 line-clamp-2">
+          {{ version.summary }}
         </p>
       </div>
       <BaseBadge :tone="proposal.status === 'accepted' ? 'success' : proposal.status === 'rejected' ? 'danger' : 'accent'">
         {{ formatProposalStatus(proposal.status) }}
       </BaseBadge>
     </div>
-    <div class="muted text-sm mt-4 gap-2 grid">
-      <div>Relationship: {{ version ? formatProposalRelationshipType(version.relationshipType) : "Not set" }}</div>
-      <div>Role: {{ version?.roleTitle }}</div>
-      <div>Economics: {{ version?.cashCompensation }} · {{ version?.equity }}</div>
-    </div>
+    <CardFacts class="mt-4 sm:grid-cols-4" :facts="facts" />
   </NuxtLink>
 </template>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { StartupOpportunity } from "~/shared/types/domain"
 import { computed } from "vue"
-import { formatCommitment, formatCompensation, formatOpportunityVerificationStatus, formatRemotePreference, formatStage } from "~/shared/utils/format"
+import { formatCommitment, formatCompensation, formatOpportunityVerificationStatus, formatStage } from "~/shared/utils/format"
 import { getOpportunityVerificationTone } from "~/shared/utils/formation"
 
 const props = withDefaults(defineProps<{
@@ -12,55 +12,42 @@ const props = withDefaults(defineProps<{
 })
 
 const headingTag = computed(() => `h${props.headingLevel}`)
+
+const rolesLabel = computed(() => {
+  const roles = props.opportunity.rolesNeeded
+  if (!roles.length)
+    return "Not listed"
+
+  return roles.length > 2 ? `${roles.slice(0, 2).join(", ")} +${roles.length - 2}` : roles.join(", ")
+})
+
+const facts = computed(() => [
+  { label: "Looking for", value: rolesLabel.value },
+  { label: "Stage", value: formatStage(props.opportunity.stage) },
+  { label: "Commitment", value: formatCommitment(props.opportunity.expectedCommitment) },
+  { label: "Compensation", value: formatCompensation(props.opportunity.compensationStructure) },
+])
 </script>
 
 <template>
-  <article class="panel p-5 flex flex-col gap-4 h-full">
+  <article class="panel p-5 flex flex-col gap-5 h-full">
     <div class="flex gap-4 items-start justify-between">
-      <div>
-        <component :is="headingTag" class="text-lg font-semibold">
+      <div class="min-w-0">
+        <component :is="headingTag" class="text-lg leading-snug font-semibold">
           {{ opportunity.startupName }}
         </component>
-        <p class="muted text-sm mt-1">
+        <p class="muted text-sm leading-6 mt-0.5 line-clamp-2">
           {{ opportunity.oneLinePitch }}
         </p>
       </div>
-      <BaseBadge tone="accent">
-        {{ formatStage(opportunity.stage) }}
-      </BaseBadge>
-    </div>
-
-    <div class="flex flex-wrap gap-2">
-      <BaseBadge tone="neutral">
-        {{ formatRemotePreference(opportunity.remotePreference) }}
-      </BaseBadge>
-      <BaseBadge tone="neutral">
-        {{ formatCommitment(opportunity.expectedCommitment) }}
-      </BaseBadge>
-      <BaseBadge tone="neutral">
-        {{ formatCompensation(opportunity.compensationStructure) }}
-      </BaseBadge>
-      <BaseBadge :tone="getOpportunityVerificationTone(opportunity.verificationStatus)">
+      <BaseBadge :tone="getOpportunityVerificationTone(opportunity.verificationStatus)" class="shrink-0">
         {{ formatOpportunityVerificationStatus(opportunity.verificationStatus) }}
       </BaseBadge>
     </div>
 
-    <p class="muted text-sm leading-6">
-      {{ opportunity.problem }}
-    </p>
+    <CardFacts :facts="facts" />
 
-    <div class="flex flex-wrap gap-2">
-      <span v-for="role in opportunity.rolesNeeded" :key="role" class="pill">
-        {{ role }}
-      </span>
-    </div>
-
-    <div class="muted text-sm gap-2 grid">
-      <div>Traction: {{ opportunity.traction }}</div>
-      <div>Equity range: {{ opportunity.equityRange }}</div>
-    </div>
-
-    <div class="mt-auto flex flex-wrap gap-3">
+    <div v-if="$slots.default" class="mt-auto pt-4 border-t border-[var(--line)] flex flex-wrap gap-3">
       <slot />
     </div>
   </article>

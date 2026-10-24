@@ -81,6 +81,14 @@ usePageSeo(`${opportunity.startupName} startup search`, opportunity.oneLinePitch
               {{ opportunity.traction }}
             </p>
           </div>
+          <div class="surface-row">
+            <h2 class="text-lg font-semibold">
+              Equity range
+            </h2>
+            <p class="muted text-sm leading-7 mt-3">
+              {{ opportunity.equityRange }}
+            </p>
+          </div>
         </div>
       </section>
 

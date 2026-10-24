@@ -125,6 +125,14 @@ function onReportCreated() {
                 {{ opportunity.traction }}
               </p>
             </div>
+            <div>
+              <h2 class="text-lg font-semibold">
+                Equity range
+              </h2>
+              <p class="muted text-sm leading-7 mt-3">
+                {{ opportunity.equityRange }}
+              </p>
+            </div>
             <SafetyFlagsPanel :flags="opportunity.riskFlags" title="Listing review notice" />
           </div>
         </section>

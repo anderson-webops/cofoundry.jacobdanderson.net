@@ -24,8 +24,8 @@ defineProps<{
         {{ formatContractStatus(contract.status) }}
       </BaseBadge>
     </div>
-    <p class="muted text-sm leading-6 mt-4">
-      {{ version?.notes }}
+    <p v-if="version?.notes" class="muted text-sm leading-6 mt-3 line-clamp-2">
+      {{ version.notes }}
     </p>
   </NuxtLink>
 </template>
