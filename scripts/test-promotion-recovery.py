@@ -277,6 +277,8 @@ if len(sys.argv) == 1 or sys.argv[1] in {"all", "control-installer"}:
     environment = {
         **os.environ,
         "ENV_DEST": str(host / "etc/cofoundry/app.env"),
+        "FIXTURE_MODE": "success",
+        "FIXTURE_ROOT": str(root),
         "HELPER_DEST": str(host / "usr/local/libexec/cofoundry"),
         "LOCK_FILE": str(root / "control-install.lock"),
         "SYSTEMCTL_BIN": "/usr/local/bin/systemctl",
