@@ -45,7 +45,18 @@ mkdir -p "$stage/front-end" "$stage/back-end"
 install -m 0644 package.json package-lock.json "$stage/"
 install -m 0644 front-end/package.json "$stage/front-end/"
 install -m 0644 back-end/package.json "$stage/back-end/"
-cp -R front-end/.output "$stage/front-end/"
+frontend_output=$(realpath front-end/.output)
+while IFS= read -r -d '' link; do
+  target=$(realpath "$link") || { echo "Invalid frontend build link: $link" >&2; exit 1; }
+  case "$target" in
+    "$frontend_output"/*) ;;
+    *) echo "Frontend build link escapes output: $link" >&2; exit 1 ;;
+  esac
+  case "$link/" in
+    "$target/"*) echo "Frontend build link cycles to an ancestor: $link" >&2; exit 1 ;;
+  esac
+done < <(find "$frontend_output" -type l -print0)
+cp -RL "$frontend_output" "$stage/front-end/.output"
 cp -R back-end/dist "$stage/back-end/"
 mkdir "$stage/node_modules"
 python3 -B scripts/copy-production-dependencies.py "$root" "$stage/node_modules" > "$output/dependency-tree.json"
@@ -69,9 +80,6 @@ control_sha=$(sha256sum "$control_archive" | cut -d ' ' -f 1)
 python3 -B scripts/host-control-bundle.py verify \
   --archive "$control_archive" --sha256 "$control_sha" --commit "$commit" \
   > "$output/control-verification.json"
-printf '%s  %s\n%s  %s\n' \
-  "$sha" "$(basename "$archive")" \
-  "$control_sha" "$(basename "$control_archive")" > "$output/SHA256SUMS"
 cp "$stage/runtime-manifest.json" "$output/runtime-manifest.json"
 
 mkdir "$output/unpacked"
@@ -135,5 +143,15 @@ receipt["harnessSha256"] = {
 }
 (output / "acceptance.json").write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
 PY
+
+(
+  cd -- "$output"
+  sha256sum \
+    "$(basename "$archive")" \
+    "$(basename "$control_archive")" \
+    runtime-manifest.json \
+    acceptance.json > SHA256SUMS
+  sha256sum --check SHA256SUMS
+)
 
 echo "Exact unpacked CoFoundry artifact accepted: $archive"

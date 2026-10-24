@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs"
-import { readdir, readFile } from "node:fs/promises"
-import { resolve } from "node:path"
+import { lstat, readdir, readFile, realpath } from "node:fs/promises"
+import { resolve, sep } from "node:path"
 import process from "node:process"
 
 const outputDirectory = resolve(process.cwd(), "front-end/.output")
@@ -30,15 +30,28 @@ const secrets = secretNames.flatMap((name) => {
 
 async function listFiles(directory) {
   const entries = await readdir(directory, { withFileTypes: true })
-  const nested = await Promise.all(entries.map((entry) => {
+  const nested = await Promise.all(entries.map(async (entry) => {
     const path = resolve(directory, entry.name)
-    return entry.isDirectory() ? listFiles(path) : [path]
+    if (entry.isSymbolicLink()) {
+      const target = await realpath(path)
+      if (!target.startsWith(`${outputRoot}${sep}`) || path.startsWith(`${target}${sep}`))
+        throw new Error(`Build-secret verification failed: symlink escapes build output: ${path}`)
+      return []
+    }
+    if (entry.isDirectory())
+      return listFiles(path)
+    if (!entry.isFile())
+      throw new Error(`Build-secret verification failed: unsupported build object: ${path}`)
+    return [path]
   }))
   return nested.flat()
 }
 
+if (!(await lstat(outputDirectory)).isDirectory())
+  throw new Error("Build-secret verification failed: build output is not a real directory.")
+const outputRoot = await realpath(outputDirectory)
 const findings = []
-for (const path of await listFiles(outputDirectory)) {
+for (const path of await listFiles(outputRoot)) {
   const contents = await readFile(path)
   for (const secret of secrets) {
     if (contents.includes(secret.value))
