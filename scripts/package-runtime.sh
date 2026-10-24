@@ -34,7 +34,7 @@ export NUXT_PUBLIC_ENABLE_DEMO_ACCESS=false
 export NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE=false
 export SESSION_SIGNING_SECRET=artifact-build-session-secret-0000001
 
-npm ci --include=optional --no-fund
+npm ci --include=dev --include=optional --no-fund
 npm run audit
 npm audit --workspaces --omit=dev --audit-level=low
 npm audit signatures
