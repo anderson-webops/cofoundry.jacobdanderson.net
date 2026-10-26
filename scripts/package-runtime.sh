@@ -48,7 +48,7 @@ npm run verify:install-scripts
 npm run verify:toolchain
 npm run lint
 npm run typecheck
-npm run test:unit
+NODE_ENV=test npm run test:unit
 npm run test:runtime-artifact
 node --test scripts/native-artifact-transport.test.mjs
 npm run build
