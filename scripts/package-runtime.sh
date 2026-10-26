@@ -26,19 +26,6 @@ case "$output/" in
 esac
 test -z "$(find "$output" -mindepth 1 -maxdepth 1 -print -quit)"
 
-export COFOUNDRY_COMMIT_SHA="$commit"
-export COFOUNDRY_DEPLOYED_AT="$deployed_at"
-export COFOUNDRY_LOCAL_DATA_DIR=/tmp/cofoundry-build-data
-export COFOUNDRY_OPERATIONS_TOKEN=artifact-build-operations-token-000001
-export COFOUNDRY_RELEASE="$release"
-export NODE_ENV=production
-export NUXT_PUBLIC_APP_URL=https://cofoundry.jacobdanderson.net
-export NUXT_PUBLIC_BACKEND_MODE=mock
-export NUXT_PUBLIC_BILLING_MODE=mock
-export NUXT_PUBLIC_ENABLE_DEMO_ACCESS=false
-export NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE=false
-export SESSION_SIGNING_SECRET=artifact-build-session-secret-0000001
-
 npm ci --include=dev --include=optional --no-fund
 npm audit --workspaces --include=dev --audit-level=low
 npm audit --workspaces --omit=dev --audit-level=low
@@ -51,6 +38,18 @@ npm run typecheck
 NODE_ENV=test npm run test:unit
 npm run test:runtime-artifact
 node --test scripts/native-artifact-transport.test.mjs
+export COFOUNDRY_COMMIT_SHA="$commit"
+export COFOUNDRY_DEPLOYED_AT="$deployed_at"
+export COFOUNDRY_LOCAL_DATA_DIR=/tmp/cofoundry-build-data
+export COFOUNDRY_OPERATIONS_TOKEN=artifact-build-operations-token-000001
+export COFOUNDRY_RELEASE="$release"
+export NODE_ENV=production
+export NUXT_PUBLIC_APP_URL=https://cofoundry.jacobdanderson.net
+export NUXT_PUBLIC_BACKEND_MODE=mock
+export NUXT_PUBLIC_BILLING_MODE=mock
+export NUXT_PUBLIC_ENABLE_DEMO_ACCESS=false
+export NUXT_PUBLIC_FEATURE_INVESTMENT_MODULE=false
+export SESSION_SIGNING_SECRET=artifact-build-session-secret-0000001
 npm run build
 
 stage="$output/stage"

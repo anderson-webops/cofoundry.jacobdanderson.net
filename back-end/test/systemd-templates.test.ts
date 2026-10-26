@@ -22,7 +22,7 @@ test("application service uses a hardened direct Node loopback runtime", async (
   assert.match(service, /User=cofoundry/)
   assert.match(service, /Group=cofoundry/)
   assert.match(service, /Environment=NITRO_HOST=127\.0\.0\.1/)
-  assert.match(service, /Environment=NITRO_PORT=3000/)
+  assert.match(service, /Environment=NITRO_PORT=4013/)
   assert.match(service, /Environment=NITRO_SHUTDOWN_TIMEOUT=25000/)
   assert.match(service, /Environment=NODE_OPTIONS=--max-old-space-size=192/)
   assert.match(service, /ExecStart=\/opt\/node-24\.18\.1\/bin\/node front-end\/\.output\/server\/index\.mjs/)
@@ -38,9 +38,21 @@ test("application service uses a hardened direct Node loopback runtime", async (
   assert.match(envExample, /^COFOUNDRY_TRUSTED_PROXY_IPS=127\.0\.0\.1$/m)
   assert.match(envExample, /COFOUNDRY_EXPECT_MULTI_INSTANCE=false/)
   assert.match(envExample, /COFOUNDRY_APP_INSTANCE_COUNT=1/)
-  assert.match(nginxProxy, /proxy_pass http:\/\/127\.0\.0\.1:3000/)
+  assert.match(nginxProxy, /proxy_pass http:\/\/127\.0\.0\.1:4013/)
   assert.match(nginxProxy, /proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;/)
   assert.match(nginxProxy, /IPv4 and IPv6/)
+})
+
+test("backend service preserves the separate hardened loopback listener", async () => {
+  const service = await readSystemdTemplate("cofoundry-backend.service")
+  assert.match(service, /Environment=BACKEND_HOST=127\.0\.0\.1/)
+  assert.match(service, /Environment=BACKEND_PORT=3015/)
+  assert.match(service, /ExecStart=\/opt\/node-24\.18\.1\/bin\/node back-end\/dist\/server\.js/)
+  assert.match(service, /User=cofoundry/)
+  assert.match(service, /NoNewPrivileges=true/)
+  assert.match(service, /ProtectSystem=strict/)
+  assert.match(service, /ReadWritePaths=\/var\/lib\/cofoundry \/run\/cofoundry/)
+  assert.doesNotMatch(service, /npm|docker|podman/i)
 })
 
 test("application installer and promoter require trusted artifacts and atomic rollback", async () => {
