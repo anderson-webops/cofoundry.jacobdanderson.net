@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "site": "cofoundry.jacobdanderson.net",
+  "repository": "anderson-webops/cofoundry.jacobdanderson.net",
+  "builder_id": "jacob-m3",
+  "runtime": {
+    "os": "linux",
+    "architecture": "arm64",
+    "libc": "glibc",
+    "node": "24.18.1",
+    "npm": "12.0.2",
+    "package_manager": "npm@12.0.2"
+  },
+  "environment": {}
+}
