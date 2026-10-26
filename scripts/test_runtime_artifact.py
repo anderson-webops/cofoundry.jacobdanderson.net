@@ -88,6 +88,35 @@ class RuntimeArtifactTests(unittest.TestCase):
     def test_valid_tree(self):
         artifact.validate(self.root, self.manifest())
 
+    def test_identity_writer_is_readable_under_restrictive_umasks(self):
+        identity = self.root / artifact.IDENTITY
+        package = json.loads((SCRIPT.parent.parent / "package.json").read_text())
+        for mask in (0o077, 0o002):
+            with self.subTest(umask=oct(mask)):
+                identity.unlink()
+                subprocess.run(
+                    [
+                        "node",
+                        str(SCRIPT.with_name("write-runtime-identity.mjs")),
+                        str(self.root),
+                        self.commit,
+                        f"v{package['version']}",
+                        "2026-09-20T00:00:00Z",
+                    ],
+                    check=True,
+                    capture_output=True,
+                    umask=mask,
+                )
+                self.assertEqual(identity.stat().st_mode & 0o777, 0o644)
+                self.assertEqual(
+                    json.loads(identity.read_text())["commitSha"], self.commit
+                )
+
+    def test_service_unreadable_identity_is_rejected(self):
+        (self.root / artifact.IDENTITY).chmod(0o600)
+        with self.assertRaisesRegex(ValueError, "release identity mode"):
+            artifact.validate(self.root, self.manifest())
+
     def test_modified_file_is_rejected(self):
         manifest = self.manifest()
         (self.root / "back-end/dist/server.js").write_text("tampered\n")
