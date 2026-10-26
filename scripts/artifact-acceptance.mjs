@@ -208,7 +208,7 @@ try {
     await testBackendModule()
     const backend = await testBackendEntrypoint()
     await testFrontendAndWorker()
-    await assertMinimalProbe("http://127.0.0.1:3015/readyz")
+    await assertMinimalProbe("http://127.0.0.1:3015", "/readyz")
     await stopRuntime(backend)
   }
   else {
