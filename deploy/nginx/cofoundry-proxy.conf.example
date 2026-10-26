@@ -2,7 +2,7 @@
 # Preserve that server block's certificate settings and both IPv4 and IPv6 listeners.
 
 location / {
-    proxy_pass http://127.0.0.1:3000;
+    proxy_pass http://127.0.0.1:4013;
     proxy_http_version 1.1;
     proxy_set_header Connection "";
     proxy_set_header Host $host;
