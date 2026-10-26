@@ -24,6 +24,7 @@ FILES = {
     "deploy/runtime-artifact.json": 0o644,
     "deploy/systemd/cofoundry-app.env.example": 0o644,
     "deploy/systemd/cofoundry-app.service": 0o644,
+    "deploy/systemd/cofoundry-backend.service": 0o644,
     "deploy/systemd/install-app-unit.sh": 0o755,
     "deploy/systemd/promote-release.sh": 0o755,
     "deploy/systemd/trusted-paths.py": 0o755,

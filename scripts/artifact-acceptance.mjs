@@ -150,14 +150,17 @@ async function testBackendModule() {
 }
 
 async function testBackendEntrypoint() {
-  const port = await freePort()
+  const port = 3015
   const child = spawnRuntime("back-end/dist/server.js", syntheticEnvironment({ BACKEND_PORT: String(port) }))
   await assertMinimalProbe(`http://127.0.0.1:${port}`, "/healthz")
-  await stopRuntime(child)
+  await assertMinimalProbe(`http://127.0.0.1:${port}`, "/readyz")
+  const metadata = await fetch(`http://127.0.0.1:${port}/metadata`)
+  assert.equal(metadata.status, 401)
+  return child
 }
 
 async function testFrontendAndWorker() {
-  const port = await freePort()
+  const port = 4013
   const baseUrl = `http://127.0.0.1:${port}`
   const child = spawnRuntime("front-end/.output/server/index.mjs", syntheticEnvironment({
     NITRO_HOST: "127.0.0.1",
@@ -203,8 +206,10 @@ try {
   }
   else if (caseName === "complete") {
     await testBackendModule()
-    await testBackendEntrypoint()
+    const backend = await testBackendEntrypoint()
     await testFrontendAndWorker()
+    await assertMinimalProbe("http://127.0.0.1:3015/readyz")
+    await stopRuntime(backend)
   }
   else {
     throw new Error(`Unknown acceptance case: ${caseName}`)

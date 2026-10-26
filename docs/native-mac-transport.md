@@ -7,7 +7,11 @@ applications. Existing analytics enrollment is independent of these native profi
 
 `deploy/mac-artifact-profile.json` declares application `cofoundry.jacobdanderson.net`, builder
 `jacob-m3`, Linux ARM64/glibc, Node 24.18.1 and build-only npm 12.0.2.
-No public build-environment overrides are declared. Credentials, protected runtime
+No external public build-environment overrides are declared. The clean source
+recipe fixes the public origin to `https://cofoundry.jacobdanderson.net`, backend
+and billing modes to `mock`, and demo/investment features to `false`. These
+source-bound defaults are distinct from protected runtime configuration.
+Credentials, protected runtime
 configuration and mutable state remain external. A profile does not enroll a key,
 install an adapter, authorize activation or establish rollback acceptance.
 
@@ -52,3 +56,12 @@ Candidate receipts and synthetic signature tests are not production acceptance.
 Regression command: `node --test scripts/native-artifact-transport.test.mjs`.
 Publication, scoped host intake, application/runtime acceptance, genuine retained
 runtime/data recovery and public activation remain independently verified outcomes.
+
+`scripts/package-runtime.sh --build-only <empty-owned-output>` runs the locked
+installation, audits, signatures, lint, types, tests and native packaging without
+claiming runtime acceptance. A separate isolated serving environment accepts the
+exact unpacked bytes, copied inventory, deliberate missing-module case and recovery
+fixtures before a trusted Mac-local signer can approve the six-asset candidate.
+The serving profile preserves separate frontend `127.0.0.1:4013` and backend
+`127.0.0.1:3015` listeners. The native host adapter remains independently accepted;
+source templates do not replace installed host configuration.

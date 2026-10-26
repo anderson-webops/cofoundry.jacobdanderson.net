@@ -31,6 +31,8 @@ def once(key):
 if name == "sleep": sys.exit(0)
 if name == "nginx": sys.exit(0)
 if name == "systemctl":
+    with (root / "service-actions.jsonl").open("a") as journal:
+        journal.write(json.dumps(args) + "\n")
     if args[0] == "is-active": sys.exit(0 if current.is_symlink() else 3)
     if args[0] == "restart" and candidate and mode == "interrupt" and once("interrupted"):
         os.kill(os.getppid(), signal.SIGTERM)
@@ -39,6 +41,7 @@ if name == "systemctl":
 if name == "curl":
     if candidate and mode in {"bad-health", "first-failure", "rollback-failure"}: sys.exit(22)
     url = next(value for value in args if value.startswith(("http://", "https://")))
+    if candidate and mode == "bad-backend" and ":3015/" in url: sys.exit(22)
     output = pathlib.Path(args[args.index("--output") + 1])
     if "--dump-header" in args:
         pathlib.Path(args[args.index("--dump-header") + 1]).write_text("Cache-Control: no-store\n")
@@ -161,6 +164,7 @@ for command in ["curl", "nginx", "sleep", "systemctl"]:
 modes = [
     "success",
     "bad-health",
+    "bad-backend",
     "interrupt",
     "rollback-failure",
     "lock-contention",
@@ -231,6 +235,12 @@ for mode in modes:
     evidence = result.stdout + result.stderr
     success = mode in {"success", "first-success"}
     assert (result.returncode == 0) == success, (mode, evidence)
+    actions = root / "service-actions.jsonl"
+    if actions.exists():
+        for line in actions.read_text().splitlines():
+            action = json.loads(line)
+            if action[0] in {"restart", "stop"}:
+                assert action[1:] == ["cofoundry-app.service", "cofoundry-backend.service"], action
     if mode == "first-failure":
         assert not (root / "current").exists(), evidence
     else:
@@ -284,6 +294,7 @@ if len(sys.argv) == 1 or sys.argv[1] in {"all", "control-installer"}:
         "SYSTEMCTL_BIN": "/usr/local/bin/systemctl",
         "TMPDIR": str(root / "tmp"),
         "UNIT_DEST": str(host / "etc/systemd/system/cofoundry-app.service"),
+        "BACKEND_UNIT_DEST": str(host / "etc/systemd/system/cofoundry-backend.service"),
     }
     command = [
         "bash",
@@ -300,6 +311,8 @@ if len(sys.argv) == 1 or sys.argv[1] in {"all", "control-installer"}:
     env_file = host / "etc/cofoundry/app.env"
     assert current.is_symlink() and current.resolve().name == receipt["sha256"]
     assert unit.is_symlink() and unit.resolve() == current.resolve() / "cofoundry-app.service"
+    backend_unit = host / "etc/systemd/system/cofoundry-backend.service"
+    assert backend_unit.is_symlink() and backend_unit.resolve() == current.resolve() / "cofoundry-backend.service"
     assert stat.S_IMODE(env_file.stat().st_mode) == 0o600
     assert (current / "promote-release.sh").is_file()
     assert (current / "runtime-artifact.py").is_file()
@@ -332,4 +345,5 @@ if len(sys.argv) == 1 or sys.argv[1] in {"all", "control-installer"}:
     assert current.resolve().name == second["sha256"]
     assert (helper / "bundles" / receipt["sha256"]).is_dir()
     assert unit.resolve() == current.resolve() / "cofoundry-app.service"
+    assert backend_unit.resolve() == current.resolve() / "cofoundry-backend.service"
     print(json.dumps({"controlInstaller": "immutable-bundle-activation", "result": "passed"}), flush=True)

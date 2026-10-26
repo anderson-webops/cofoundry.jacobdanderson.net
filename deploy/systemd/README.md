@@ -1,10 +1,10 @@
 # CoFoundry direct systemd deployment
 
-The production application runs directly with Node. Docker, Compose, Podman, and a container registry are not part of this deployment. The application listens only on `127.0.0.1:3000`; the existing Nginx TLS server remains the public IPv4/IPv6 edge.
+The application runs directly with Node. The preserved host profile has a frontend on `127.0.0.1:4013` and backend on `127.0.0.1:3015`; the existing Nginx TLS server remains the public IPv4/IPv6 edge. Development acceptance containers are separate from this production topology. Source templates describe the two-service profile; their installation remains subject to protected adapter and rollback acceptance.
 
 ## Tagged runtime assets
 
-An annotated `v1.x` tag starts the Linux ARM64 artifact job after the repository's quality gates. Its exact clean source is built with pinned Node/npm, audited, tested, and checked as an isolated unpacked runtime, including missing-module and failed-promotion recovery cases. The GitHub release contains the runtime archive, separate host-control archive, `runtime-manifest.json`, `acceptance.json`, `SHA256SUMS`, and an Actions attestation bundle. The publisher compares downloaded release assets with the validated originals before making the draft public; existing tags and assets are not replaced.
+Current native Mac publication uses the six-asset Ed25519 transport in `docs/native-mac-transport.md`, preserving the independent runtime inventory. A clean Linux ARM64 build with pinned Node/npm, audits and tests precedes isolated unpacked-runtime, missing-module and failed-promotion acceptance. Public source identity, signed transport identity, protected host intake, rollback acceptance and activation are separate outcomes. Earlier GitHub-attested releases and their distinct asset convention retain their original identities.
 
 Artifact-only intake is a separate protected host capability. This source workflow neither activates it nor changes a running service. Until it is accepted, the existing host build path remains the only active path; an artifact-only adapter must defer missing or untrusted assets rather than compiling as a fallback.
 

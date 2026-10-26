@@ -1,7 +1,7 @@
 {
   "name": "cofoundry-monorepo",
   "type": "module",
-  "version": "1.2.5",
+  "version": "1.3.0",
   "private": true,
   "packageManager": "npm@12.0.2",
   "engines": {
@@ -74,7 +74,7 @@
     "test:unit": "node scripts/run-pinned-npm.mjs run -w front-end test:unit && node scripts/run-pinned-npm.mjs run -w back-end test:run && node --test scripts/test-braces-compat.mjs scripts/test-listhen-compat.mjs scripts/test-build-secret-boundary.mjs",
     "test:e2e": "node scripts/run-pinned-npm.mjs run -w front-end test:e2e",
     "test:run": "node scripts/run-pinned-npm.mjs run test:unit",
-    "test:runtime-artifact": "python3 -B -m unittest scripts/test_runtime_artifact.py scripts/test_trusted_paths.py scripts/test_host_control_bundle.py",
+    "test:runtime-artifact": "python3 -B -m unittest scripts/test_runtime_artifact.py scripts/test_trusted_paths.py scripts/test_host_control_bundle.py scripts/test_native_service_profile.py",
     "test:promotion-recovery": "bash scripts/test-promotion-recovery.sh",
     "verify:analytics": "node scripts/run-pinned-npm.mjs run -w front-end verify:analytics",
     "verify:build-secrets": "node scripts/verify-build-secret-boundary.mjs",

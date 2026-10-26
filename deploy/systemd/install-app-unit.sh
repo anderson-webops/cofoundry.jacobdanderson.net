@@ -5,10 +5,15 @@ export PATH
 umask 077
 
 unit_dest="${UNIT_DEST:-/etc/systemd/system/cofoundry-app.service}"
+backend_unit_dest="${BACKEND_UNIT_DEST:-/etc/systemd/system/cofoundry-backend.service}"
 env_dest="${ENV_DEST:-/etc/cofoundry/app.env}"
 helper_dest="${HELPER_DEST:-/usr/local/libexec/cofoundry}"
 lock_file="${LOCK_FILE:-/run/lock/cofoundry-control-install.lock}"
 systemctl_bin="${SYSTEMCTL_BIN:-systemctl}"
+if [[ "$unit_dest" == "$backend_unit_dest" ]]; then
+  echo "Frontend and backend units require distinct installation paths." >&2
+  exit 1
+fi
 bundle=""
 bundle_sha=""
 commit=""
@@ -17,7 +22,7 @@ force_env=false
 
 usage() {
   cat <<'USAGE'
-Install one reviewed, immutable CoFoundry host-control bundle without starting it.
+Install reviewed CoFoundry frontend/backend controls without starting services.
 
 Usage:
   install-app-unit.sh --bundle <archive> --sha256 <digest> --commit <commit> [options]
@@ -33,6 +38,7 @@ Options:
 
 Environment overrides:
   UNIT_DEST=/etc/systemd/system/cofoundry-app.service
+  BACKEND_UNIT_DEST=/etc/systemd/system/cofoundry-backend.service
   ENV_DEST=/etc/cofoundry/app.env
   HELPER_DEST=/usr/local/libexec/cofoundry
   LOCK_FILE=/run/lock/cofoundry-control-install.lock
@@ -151,6 +157,7 @@ run() {
 bundle_dest="$helper_dest/bundles/$bundle_sha"
 current_dest="$helper_dest/current"
 unit_target="$helper_dest/current/cofoundry-app.service"
+backend_unit_target="$helper_dest/current/cofoundry-backend.service"
 
 if [[ "$dry_run" == true ]]; then
   echo "Control bundle verified from one root-owned snapshot; planned mutations:"
@@ -158,6 +165,8 @@ if [[ "$dry_run" == true ]]; then
   run install -o root -g root -d -m 0755 "$bundle_dest"
   run ln -s "bundles/$bundle_sha" "$current_dest"
   run ln -s "$unit_target" "$unit_dest"
+  run install -o root -g root -d -m 0755 "$(dirname -- "$backend_unit_dest")"
+  run ln -s "$backend_unit_target" "$backend_unit_dest"
   if [[ "$force_env" == true || ! -e "$env_dest" ]]; then
     run install -o root -g root -m 0600 "$verified/deploy/systemd/cofoundry-app.env.example" "$env_dest"
   else
@@ -175,9 +184,9 @@ if ! flock -n 8; then
 fi
 
 install -o root -g root -d -m 0755 \
-  "$helper_dest" "$helper_dest/bundles" "$(dirname -- "$unit_dest")" "$(dirname -- "$env_dest")"
+  "$helper_dest" "$helper_dest/bundles" "$(dirname -- "$unit_dest")" "$(dirname -- "$backend_unit_dest")" "$(dirname -- "$env_dest")"
 /usr/bin/python3 -I "$verified/deploy/systemd/trusted-paths.py" \
-  "$helper_dest" "$helper_dest/bundles" "$(dirname -- "$unit_dest")" "$(dirname -- "$env_dest")"
+  "$helper_dest" "$helper_dest/bundles" "$(dirname -- "$unit_dest")" "$(dirname -- "$backend_unit_dest")" "$(dirname -- "$env_dest")"
 
 next_bundle="$helper_dest/bundles/.next-$bundle_sha-$$"
 install -o root -g root -d -m 0755 "$next_bundle"
@@ -188,6 +197,7 @@ install -o root -g root -m 0755 "$verified/scripts/host-control-bundle.py" "$nex
 install -o root -g root -m 0755 "$verified/scripts/runtime-artifact.py" "$next_bundle/runtime-artifact.py"
 install -o root -g root -m 0644 "$verified/deploy/runtime-artifact.json" "$next_bundle/runtime-artifact.json"
 install -o root -g root -m 0644 "$verified/deploy/systemd/cofoundry-app.service" "$next_bundle/cofoundry-app.service"
+install -o root -g root -m 0644 "$verified/deploy/systemd/cofoundry-backend.service" "$next_bundle/cofoundry-backend.service"
 install -o root -g root -m 0644 "$verified/deploy/systemd/cofoundry-app.env.example" "$next_bundle/cofoundry-app.env.example"
 install -o root -g root -m 0644 "$verified/control-manifest.json" "$next_bundle/control-manifest.json"
 /usr/bin/python3 -I "$next_bundle/trusted-paths.py" --tree "$next_bundle"
@@ -236,6 +246,17 @@ if [[ -e "$unit_dest" || -L "$unit_dest" ]]; then
     exit 1
   fi
 fi
+if [[ -e "$backend_unit_dest" || -L "$backend_unit_dest" ]]; then
+  if [[ -L "$backend_unit_dest" ]]; then
+    if [[ "$(readlink -- "$backend_unit_dest")" != "$backend_unit_target" ]]; then
+      echo "Existing backend unit symlink requires host review." >&2
+      exit 1
+    fi
+  elif ! cmp -s -- "$backend_unit_dest" "$bundle_dest/cofoundry-backend.service"; then
+    echo "Existing backend unit differs from the reviewed control bundle." >&2
+    exit 1
+  fi
+fi
 if [[ -e "$env_dest" && ( -L "$env_dest" || "$(stat -c '%u' "$env_dest")" != 0 || $(( 8#$(stat -c '%a' "$env_dest") & 8#077 )) -ne 0 ) ]]; then
   echo "Existing application environment file is not protected." >&2
   exit 1
@@ -243,10 +264,13 @@ fi
 
 current_next="$helper_dest/.current.next.$$"
 unit_next="${unit_dest}.next.$$"
+backend_unit_next="${backend_unit_dest}.next.$$"
 ln -s "bundles/$bundle_sha" "$current_next"
 ln -s "$unit_target" "$unit_next"
+ln -s "$backend_unit_target" "$backend_unit_next"
 mv -Tf -- "$current_next" "$current_dest"
 mv -Tf -- "$unit_next" "$unit_dest"
+mv -Tf -- "$backend_unit_next" "$backend_unit_dest"
 
 if [[ "$force_env" == true || ! -e "$env_dest" ]]; then
   env_next="${env_dest}.next.$$"
@@ -257,4 +281,4 @@ else
 fi
 
 "$systemctl_bin" daemon-reload
-echo "Activated verified controls at $current_dest. Review $env_dest, promote a validated release, then run: systemctl enable --now cofoundry-app.service"
+echo "Installed verified frontend/backend controls at $current_dest; runtime activation remains a separate host acceptance."

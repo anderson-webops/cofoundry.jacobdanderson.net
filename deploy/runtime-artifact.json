@@ -65,5 +65,5 @@
     }
   ],
   "privateConfiguration": "Protected host environment files remain outside the artifact. Credentials, provider configuration, databases, uploads, caches, queues, and writable state must never be archived.",
-  "topology": "One loopback-only Nuxt Node service plus isolated compiled operations workers. Preserve the installed /srv/cofoundry paths, service user, port 3000, Nginx policy, IPv4/IPv6 listeners, external environment files, and writable-state directories."
+  "topology": "Separate loopback-only Nuxt frontend on 4013 and operational backend on 3015, plus isolated compiled operations workers. Preserve the installed host paths, service identities, Nginx policy, IPv4/IPv6 listeners, external environment files, and writable-state directories. The protected cofoundry-native adapter owns the reviewed host-specific installation."
 }
