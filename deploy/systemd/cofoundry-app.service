@@ -12,7 +12,7 @@ EnvironmentFile=/etc/cofoundry/app.env
 Environment=NODE_ENV=production
 Environment=NODE_OPTIONS=--max-old-space-size=192
 Environment=NITRO_HOST=127.0.0.1
-Environment=NITRO_PORT=3000
+Environment=NITRO_PORT=4013
 Environment=NITRO_SHUTDOWN_TIMEOUT=25000
 Environment=COFOUNDRY_EXPECT_MULTI_INSTANCE=false
 Environment=COFOUNDRY_APP_INSTANCE_COUNT=1

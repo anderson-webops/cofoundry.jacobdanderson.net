@@ -9,9 +9,12 @@ umask 077
 release_root="${RELEASE_ROOT:-/srv/cofoundry/releases}"
 current_link="${CURRENT_LINK:-/srv/cofoundry/current}"
 service_name="${SERVICE_NAME:-cofoundry-app.service}"
-health_url="${HEALTH_URL:-http://127.0.0.1:3000/healthz}"
-readiness_url="${READINESS_URL:-http://127.0.0.1:3000/readyz}"
-identity_url="${IDENTITY_URL:-http://127.0.0.1:3000/api/health}"
+backend_service_name="${BACKEND_SERVICE_NAME:-cofoundry-backend.service}"
+health_url="${HEALTH_URL:-http://127.0.0.1:4013/healthz}"
+readiness_url="${READINESS_URL:-http://127.0.0.1:4013/readyz}"
+identity_url="${IDENTITY_URL:-http://127.0.0.1:4013/api/health}"
+backend_health_url="${BACKEND_HEALTH_URL:-http://127.0.0.1:3015/healthz}"
+backend_readiness_url="${BACKEND_READINESS_URL:-http://127.0.0.1:3015/readyz}"
 node_bin_dir="${NODE_BIN_DIR:-/opt/node-24.18.1/bin}"
 node="$node_bin_dir/node"
 
@@ -123,7 +126,7 @@ if [[ -L "$current_link" ]]; then
   /usr/bin/python3 -I "$trusted_paths" "$rollback_archive" --tree "$previous_target"
   /usr/bin/python3 -I "$artifact_verifier" verify "$previous_target" \
     --archive "$rollback_archive" --sha256 "$rollback_sha" --commit "$rollback_commit"
-elif systemctl is-active --quiet "$service_name"; then
+elif systemctl is-active --quiet "$service_name" || systemctl is-active --quiet "$backend_service_name"; then
   echo "An active service without a verified current release needs operator review." >&2
   exit 1
 fi
@@ -223,6 +226,12 @@ wait_for_target() {
       && probe_is_minimal "$response_probe" \
       && head_is_safe "$health_url" \
       && head_is_safe "$readiness_url" \
+      && curl --noproxy '*' --fail --silent --show-error --max-time 5 "$backend_health_url" --output "$response_probe" \
+      && probe_is_minimal "$response_probe" \
+      && curl --noproxy '*' --fail --silent --show-error --max-time 5 "$backend_readiness_url" --output "$response_probe" \
+      && probe_is_minimal "$response_probe" \
+      && head_is_safe "$backend_health_url" \
+      && head_is_safe "$backend_readiness_url" \
       && curl --noproxy '*' --fail --silent --show-error --max-time 5 "$identity_url" --output "$response_identity" \
       && identity_matches "$marker" "$response_identity"; then
       return 0
@@ -244,12 +253,12 @@ rollback() {
     verify_rollback || failed=1
     if [[ "$failed" -eq 0 ]]; then
       activate_target "$previous_target" || failed=1
-      systemctl restart "$service_name" || failed=1
+      systemctl restart "$service_name" "$backend_service_name" || failed=1
       wait_for_target "$previous_target" || failed=1
     fi
   else
     if [[ -L "$current_link" ]]; then unlink -- "$current_link" || failed=1; fi
-    systemctl stop "$service_name" || failed=1
+    systemctl stop "$service_name" "$backend_service_name" || failed=1
   fi
   return "$failed"
 }
@@ -283,7 +292,7 @@ trap 'exit 143' TERM
 
 mutation_started=true
 activate_target "$candidate"
-if systemctl restart "$service_name" && wait_for_target "$candidate"; then
+if systemctl restart "$service_name" "$backend_service_name" && wait_for_target "$candidate"; then
   finished=true
   rm -f -- "$recovery_record"
   echo "Promoted $candidate and verified exact identity, health, and readiness."

@@ -14,6 +14,11 @@ commit=$(git rev-parse HEAD)
 version=$(node -p 'require("./package.json").version')
 release="v$version"
 deployed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+build_only=false
+if [[ "${1:-}" == --build-only ]]; then
+  build_only=true
+  shift
+fi
 output=$(realpath "${1:?Pass an empty output directory under .ai-work/runs}")
 case "$output/" in
   "$root/.ai-work/runs/"*) ;;
@@ -39,6 +44,13 @@ npm audit --workspaces --include=dev --audit-level=low
 npm audit --workspaces --omit=dev --audit-level=low
 npm audit signatures --include=dev
 npm audit signatures --omit=dev
+npm run verify:install-scripts
+npm run verify:toolchain
+npm run lint
+npm run typecheck
+npm run test:unit
+npm run test:runtime-artifact
+node --test scripts/native-artifact-transport.test.mjs
 npm run build
 
 stage="$output/stage"
@@ -82,6 +94,11 @@ python3 -B scripts/host-control-bundle.py verify \
   --archive "$control_archive" --sha256 "$control_sha" --commit "$commit" \
   > "$output/control-verification.json"
 cp "$stage/runtime-manifest.json" "$output/runtime-manifest.json"
+
+if [[ "$build_only" == true ]]; then
+  echo "Built native candidate; unpacked runtime and recovery acceptance remain pending: $archive"
+  exit 0
+fi
 
 mkdir "$output/unpacked"
 python3 -B scripts/runtime-artifact.py unpack "$output/unpacked" --archive "$archive" --sha256 "$sha" --commit "$commit"
