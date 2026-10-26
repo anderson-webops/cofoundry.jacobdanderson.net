@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs"
+import { closeSync, fchmodSync, openSync, readFileSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
 import process from "node:process"
 
@@ -16,8 +16,11 @@ if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(deployedAt || "
   throw new Error("Runtime identity requires a valid UTC deployment timestamp.")
 
 const target = resolve(targetArg, ".cofoundry-release-prepared.json")
-writeFileSync(target, `${JSON.stringify({ commitSha, deployedAt, release }, null, 2)}\n`, {
-  encoding: "utf8",
-  flag: "wx",
-  mode: 0o644,
-})
+const identity = openSync(target, "wx", 0o600)
+try {
+  writeFileSync(identity, `${JSON.stringify({ commitSha, deployedAt, release }, null, 2)}\n`)
+  fchmodSync(identity, 0o644)
+}
+finally {
+  closeSync(identity)
+}

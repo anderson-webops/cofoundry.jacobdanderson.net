@@ -135,6 +135,8 @@ def read_json(path, label):
 
 
 def validate_identity(root, manifest):
+    if (root / IDENTITY).stat().st_mode & 0o777 != 0o644:
+        raise ValueError("release identity mode must be 0644")
     package = read_json(root / "package.json", "root package manifest")
     frontend = read_json(root / "front-end/package.json", "front-end package manifest")
     backend = read_json(root / "back-end/package.json", "back-end package manifest")
