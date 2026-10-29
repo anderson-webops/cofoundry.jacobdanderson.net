@@ -12,6 +12,8 @@ describe("external legal-review surface", () => {
     expect(appSource.match(/"data-website-id":/g)).toHaveLength(1)
     expect(appSource).toContain("82564e10-5962-49df-8332-50e0c04c7485")
     expect(appSource).not.toContain("89771691-ddd3-439b-bf75-7b62c50c41c2")
+    expect(appSource).toContain("ensureAnalyticsScript(document")
+    expect(appSource).not.toContain("...analyticsScripts.value,")
   })
 
   it("keeps bearer tokens out of analytics, canonical metadata, and referrer headers", () => {

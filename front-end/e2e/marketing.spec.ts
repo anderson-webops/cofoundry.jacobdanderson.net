@@ -25,3 +25,28 @@ test("public founder directory page exposes role-first browsing", async ({ page 
   await expect(page.getByRole("link", { name: /browse public profiles/i })).toBeVisible()
   await expect(page.getByRole("link", { name: /view all hubs/i })).toBeVisible()
 })
+
+test("loads dedicated analytics under CSP and blocks inline event handlers", async ({ page }) => {
+  let analyticsRequests = 0
+  await page.route("https://analytics.cofoundry.jacobdanderson.net/script.js", async (route) => {
+    analyticsRequests += 1
+    await route.fulfill({
+      contentType: "application/javascript",
+      body: "window.__cofoundryAnalyticsLoaded = true",
+    })
+  })
+
+  await page.goto("/")
+  await expect.poll(() => page.evaluate(() => Boolean(Reflect.get(window, "__cofoundryAnalyticsLoaded")))).toBe(true)
+  expect(analyticsRequests).toBe(1)
+
+  const inlineHandlerRan = await page.evaluate(() => {
+    const button = document.createElement("button")
+    button.setAttribute("onclick", "window.__cofoundryInlineHandlerRan = true")
+    document.body.appendChild(button)
+    button.click()
+    button.remove()
+    return Boolean(Reflect.get(window, "__cofoundryInlineHandlerRan"))
+  })
+  expect(inlineHandlerRan).toBe(false)
+})

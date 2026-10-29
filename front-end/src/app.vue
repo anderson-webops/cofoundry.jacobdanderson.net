@@ -4,6 +4,7 @@ import { isPrivateWorkspaceRoutePath } from "~/shared/constants/route-surfaces"
 import { serializeJsonForHtml } from "~/shared/utils/html"
 import { buildSiteStructuredData, buildSiteUrl } from "~/shared/utils/seo"
 import { themeSchemeStyleContent } from "~/shared/utils/theme"
+import { ensureAnalyticsScript } from "~/utils/analytics-loader"
 
 const workspaceStore = useWorkspaceStore()
 workspaceStore.ensureReady()
@@ -22,6 +23,10 @@ const analyticsScripts = computed(() => import.meta.env.PROD && !sensitiveBearer
       },
     ]
   : [])
+watch(analyticsScripts, (scripts) => {
+  if (import.meta.client && scripts[0])
+    ensureAnalyticsScript(document, scripts[0].src, scripts[0]["data-website-id"])
+}, { immediate: true })
 const siteUrl = computed(() => {
   if (sensitiveBearerRoute.value)
     return null
@@ -54,7 +59,6 @@ useHead(() => ({
       : []),
   ],
   script: [
-    ...analyticsScripts.value,
     ...structuredData.value.map((entry, index) => ({
       innerHTML: serializeJsonForHtml(entry),
       key: `structured-data-${index}`,
