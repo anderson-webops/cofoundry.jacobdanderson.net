@@ -17,6 +17,7 @@
   ],
   "overrides": {
     "braces": "$braces",
+    "deepmerge": "$deepmerge",
     "listhen": "$listhen",
     "nuxt": {
       "unimport": "7.0.1"
@@ -71,7 +72,7 @@
     "typecheck": "node scripts/run-pinned-npm.mjs run -w front-end typecheck && node scripts/run-pinned-npm.mjs run -w back-end typecheck",
     "seed": "node scripts/run-pinned-npm.mjs run -w back-end seed",
     "test": "node scripts/run-pinned-npm.mjs run -w front-end test",
-    "test:unit": "node scripts/run-pinned-npm.mjs run -w front-end test:unit && node scripts/run-pinned-npm.mjs run -w back-end test:run && node --test scripts/test-braces-compat.mjs scripts/test-listhen-compat.mjs scripts/test-build-secret-boundary.mjs",
+    "test:unit": "node scripts/run-pinned-npm.mjs run -w front-end test:unit && node scripts/run-pinned-npm.mjs run -w back-end test:run && node --test scripts/test-braces-compat.mjs scripts/test-deepmerge-compat.mjs scripts/test-listhen-compat.mjs scripts/test-build-secret-boundary.mjs",
     "test:e2e": "node scripts/run-pinned-npm.mjs run -w front-end test:e2e",
     "test:run": "node scripts/run-pinned-npm.mjs run test:unit",
     "test:runtime-artifact": "python3 -B -m unittest scripts/test_runtime_artifact.py scripts/test_trusted_paths.py scripts/test_host_control_bundle.py scripts/test_native_service_profile.py",
@@ -101,6 +102,7 @@
     "axe-core": "^4.13.0",
     "braces": "file:vendor/braces",
     "brace-expansion": "5.0.12",
+    "deepmerge": "file:vendor/deepmerge",
     "eslint": "10.11.0",
     "eslint-plugin-format": "2.0.1",
     "globals": "^17.12.0",
