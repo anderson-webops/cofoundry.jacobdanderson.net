@@ -18,7 +18,9 @@ const publicProfileUrl = canonicalAppUrl
   ? new URL(`/people/${buildPublicProfileSlug(profile)}`, `${canonicalAppUrl}/`).toString()
   : undefined
 const roleHubSlugs = new Set(directory.roleHubs.map(entry => entry.slug))
-const linkedRoles = [...new Set([profile.roleScope.primaryRole, ...profile.roles])]
+const linkedRoles = [
+  ...new Set([profile.roleScope.primaryRole, ...profile.roles])
+]
   .filter((role): role is string => Boolean(role) && roleHubSlugs.has(slugifySegment(role)))
 const publicLinks = [
   { label: "LinkedIn", href: profile.links.linkedin },
@@ -30,14 +32,21 @@ const structuredData = {
   "@context": "https://schema.org",
   "@type": "ProfilePage",
   "name": `${profile.displayName} on CoFoundry`,
-  ...(publicProfileUrl ? { url: publicProfileUrl } : {}),
+  ...(publicProfileUrl
+    ? { url: publicProfileUrl }
+    : {}),
   "mainEntity": {
     "@type": "Person",
     "name": profile.displayName,
     "description": profile.headline,
     "jobTitle": profile.roleScope.primaryRole || profile.roles[0],
     "knowsAbout": profile.industries,
-    "sameAs": [profile.links.linkedin, profile.links.github, profile.links.portfolio, profile.links.website].filter(Boolean),
+    "sameAs": [
+      profile.links.linkedin,
+      profile.links.github,
+      profile.links.portfolio,
+      profile.links.website
+    ].filter(Boolean),
   },
 }
 

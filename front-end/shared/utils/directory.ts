@@ -160,8 +160,12 @@ export function projectProfileForPublicDirectory(profile: Profile): Profile {
     privacy: {
       contactDetailsVisibleToMatchesOnly: profile.privacy.contactDetailsVisibleToMatchesOnly,
       contactRevealStage: profile.privacy.contactRevealStage,
-      opportunityVisibility: profile.privacy.opportunityVisibility === "public" ? "public" : "private",
-      portfolioVisibility: profile.privacy.portfolioVisibility === "public" ? "public" : "private",
+      opportunityVisibility: profile.privacy.opportunityVisibility === "public"
+        ? "public"
+        : "private",
+      portfolioVisibility: profile.privacy.portfolioVisibility === "public"
+        ? "public"
+        : "private",
       profileVisibility: "public",
     },
     verificationBadges: {
@@ -306,7 +310,9 @@ export function buildPublicProfileSlug(profile: Profile) {
 }
 
 export function formatPublicDirectoryCount(count: number, singular: string, plural = `${singular}s`) {
-  return `${count} ${count === 1 ? singular : plural}`
+  return `${count} ${count === 1
+    ? singular
+    : plural}`
 }
 
 export function formatHubInventoryLabel(hub: Pick<PublicHubEntry, "profileCount" | "opportunityCount">) {
@@ -366,7 +372,9 @@ export function getPublicOpportunities(seed: WorkspaceSeed) {
         ownerTrustSummary: buildPublicTrustSummary(ownerProfile),
         roleSlugs: buildOpportunityRoleSlugs(opportunity),
         industrySlugs: uniqueBySlug(opportunity.industries).map(entry => entry.slug),
-        stageSlugs: [buildSlug(formatStage(opportunity.stage))],
+        stageSlugs: [
+          buildSlug(formatStage(opportunity.stage))
+        ],
       } satisfies PublicOpportunityEntry
     })
     .filter((entry): entry is PublicOpportunityEntry => Boolean(entry))

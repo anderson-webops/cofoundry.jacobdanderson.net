@@ -54,7 +54,9 @@ function normalizeEmail(email: string) {
 function readEmailPreferenceSigningSecret() {
   return process.env.NUXT_SESSION_SIGNING_SECRET
     || process.env.SESSION_SIGNING_SECRET
-    || (isLocalDevelopmentEnvironment(process.env) ? emailPreferenceLocalSigningSecret : "")
+    || (isLocalDevelopmentEnvironment(process.env)
+      ? emailPreferenceLocalSigningSecret
+      : "")
 }
 
 function signEncodedPayload(encodedPayload: string, secret: string) {
@@ -108,7 +110,9 @@ function parsePayload(encodedPayload: string): EmailPreferenceTokenPayload | nul
 }
 
 function categoryPreferenceKey(category: EmailPreferenceCategory) {
-  return category === "digest" ? "unreadDigestEmail" : "workflowEmail"
+  return category === "digest"
+    ? "unreadDigestEmail"
+    : "workflowEmail"
 }
 
 function displayNameForEmail(email: string) {
@@ -178,13 +182,18 @@ export function createEmailPreferenceManagementUrl(
   const path = `/email/preferences?${query}`
   const appUrl = stripTrailingSlash(options.appUrl)
 
-  return appUrl ? `${appUrl}${path}` : path
+  return appUrl
+    ? `${appUrl}${path}`
+    : path
 }
 
 export async function applyEmailPreferenceToken(event: H3Event, token: string): Promise<ApplyEmailPreferenceResult> {
   const verified = verifyEmailPreferenceToken(token)
-  if (!verified.ok)
-    throw verificationError(verified.reason, "statusCode" in verified ? verified.statusCode : 400)
+  if (!verified.ok) {
+    throw verificationError(verified.reason, "statusCode" in verified
+      ? verified.statusCode
+      : 400)
+  }
 
   const workspace = await loadMemberWorkspaceState(
     event,

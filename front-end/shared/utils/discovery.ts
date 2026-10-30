@@ -97,8 +97,12 @@ function buildSegmentDensityScore(seed: WorkspaceSeed, viewer: Profile, candidat
 function buildProfileRecommendationScore(seed: WorkspaceSeed, candidate: Profile, viewer?: Profile) {
   const trustScore = buildProfileTrustScore(candidate)
   const reciprocityScore = buildReciprocityScore(candidate)
-  const mutualFitScore = viewer ? buildProfileMutualFitScore(viewer, candidate) : 0
-  const densityScore = viewer ? Math.min(buildSegmentDensityScore(seed, viewer, candidate), 4) : 0
+  const mutualFitScore = viewer
+    ? buildProfileMutualFitScore(viewer, candidate)
+    : 0
+  const densityScore = viewer
+    ? Math.min(buildSegmentDensityScore(seed, viewer, candidate), 4)
+    : 0
 
   return {
     trustScore,
@@ -246,7 +250,13 @@ export function filterOpportunities(seed: WorkspaceSeed, filters: SearchFilters,
   return seed.opportunities
     .map((opportunity) => {
       const queryMatchCount = filters.query
-        ? [opportunity.startupName, opportunity.oneLinePitch, opportunity.problem, ...opportunity.rolesNeeded, ...opportunity.industries]
+        ? [
+            opportunity.startupName,
+            opportunity.oneLinePitch,
+            opportunity.problem,
+            ...opportunity.rolesNeeded,
+            ...opportunity.industries
+          ]
             .filter(value => includesNormalized(value, filters.query))
             .length
         : 0
@@ -254,12 +264,20 @@ export function filterOpportunities(seed: WorkspaceSeed, filters: SearchFilters,
       return {
         opportunity,
         queryMatchCount,
-        fitScore: viewer ? buildOpportunityFitScore(viewer, opportunity) : 0,
+        fitScore: viewer
+          ? buildOpportunityFitScore(viewer, opportunity)
+          : 0,
       }
     })
     .filter(({ opportunity }) => {
       const queryMatches = !filters.query
-        || [opportunity.startupName, opportunity.oneLinePitch, opportunity.problem, ...opportunity.rolesNeeded, ...opportunity.industries]
+        || [
+          opportunity.startupName,
+          opportunity.oneLinePitch,
+          opportunity.problem,
+          ...opportunity.rolesNeeded,
+          ...opportunity.industries
+        ]
           .some(value => includesNormalized(value, filters.query))
       const rolesMatch = !filters.roles.length || filters.roles.some(role => opportunity.rolesNeeded.includes(role))
       const industriesMatch = !filters.industries.length || filters.industries.some(industry => opportunity.industries.includes(industry))
@@ -361,7 +379,10 @@ export function recommendProfilesForProfile(seed: WorkspaceSeed, profile: Profil
 export function recommendOpportunitiesForProfile(seed: WorkspaceSeed, profile: Profile) {
   return seed.opportunities
     .map((opportunity) => {
-      return { opportunity, score: buildOpportunityFitScore(profile, opportunity) }
+      return {
+        opportunity,
+        score: buildOpportunityFitScore(profile, opportunity)
+      }
     })
     .filter(entry => entry.score > 0)
     .sort((left, right) => right.score - left.score)

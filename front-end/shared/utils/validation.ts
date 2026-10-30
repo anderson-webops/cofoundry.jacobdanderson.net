@@ -110,9 +110,20 @@ export const accessRequestSchema = z
     ]),
     email: z.string().trim().email("Enter a valid email.").max(254),
     name: z.string().trim().min(2, "Enter your name.").max(120),
-    role: z.enum(["founder", "collaborator", "studio", "investor", "other"]),
+    role: z.enum([
+      "founder",
+      "collaborator",
+      "studio",
+      "investor",
+      "other"
+    ]),
     source: z.string().trim().max(120).optional().or(z.literal("")),
-    timeline: z.enum(["now", "30_days", "90_days", "exploring"]),
+    timeline: z.enum([
+      "now",
+      "30_days",
+      "90_days",
+      "exploring"
+    ]),
     useCase: z
       .string()
       .trim()
@@ -193,7 +204,12 @@ export const minimumOnboardingSchema = z
     ),
     timeCommitment: z.enum(["nights_weekends", "part_time", "full_time"]),
     weeklyAvailabilityHours: z.number().min(1).max(80),
-    startTimeline: z.enum(["immediately", "30_days", "90_days", "exploring"]),
+    startTimeline: z.enum([
+      "immediately",
+      "30_days",
+      "90_days",
+      "exploring"
+    ]),
     fullTimeBy: boundedText(120).min(
       1,
       "Add the date by which this would need to become a full-time decision.",
@@ -240,11 +256,22 @@ export const onboardingSchema = z
       "Choose at least one industry.",
     ),
     startupStagePreferences: z
-      .array(z.enum(["idea", "prototype", "mvp", "revenue", "growth"]))
+      .array(z.enum([
+        "idea",
+        "prototype",
+        "mvp",
+        "revenue",
+        "growth"
+      ]))
       .min(1, "Choose at least one stage."),
     compensationPreferences: z
       .array(
-        z.enum(["equity_only", "cash_and_equity", "cash_only", "advisory"]),
+        z.enum([
+          "equity_only",
+          "cash_and_equity",
+          "cash_only",
+          "advisory"
+        ]),
       )
       .min(1, "Choose at least one compensation preference."),
     equityExpectationRange: boundedText(160).min(
@@ -253,7 +280,12 @@ export const onboardingSchema = z
     ),
     timeCommitment: z.enum(["nights_weekends", "part_time", "full_time"]),
     weeklyAvailabilityHours: z.number().min(1).max(80),
-    startTimeline: z.enum(["immediately", "30_days", "90_days", "exploring"]),
+    startTimeline: z.enum([
+      "immediately",
+      "30_days",
+      "90_days",
+      "exploring"
+    ]),
     fullTimeBy: boundedText(120).min(1, "Add a full-time target date."),
     runwayBucket: z.enum([
       "under_3_months",
@@ -345,7 +377,13 @@ export const opportunitySchema = z
     oneLinePitch: boundedText(500).min(12, "Write a clearer one-line pitch."),
     problem: boundedText(5000).min(50, "Describe the problem in more detail."),
     targetUsers: boundedText(3000).min(20, "Describe the target users."),
-    stage: z.enum(["idea", "prototype", "mvp", "revenue", "growth"]),
+    stage: z.enum([
+      "idea",
+      "prototype",
+      "mvp",
+      "revenue",
+      "growth"
+    ]),
     traction: boundedText(5000).min(20, "Add concrete traction or evidence."),
     expectedCommitment: z.enum(["nights_weekends", "part_time", "full_time"]),
     compensationStructure: z.enum([
@@ -358,7 +396,12 @@ export const opportunitySchema = z
     location: boundedText(160).min(2, "Location is required."),
     remotePreference: z.enum(["remote", "hybrid", "in_person"]),
     officialWebsite: safeHttpUrlSchema,
-    verificationMethod: z.enum(["none", "work_email", "domain", "github_org"]),
+    verificationMethod: z.enum([
+      "none",
+      "work_email",
+      "domain",
+      "github_org"
+    ]),
     industries: boundedTextArray(30, 120).min(1, "Add at least one industry."),
     rolesNeeded: boundedTextArray(30, 160).min(1, "Add at least one role."),
   })
@@ -436,7 +479,14 @@ export const contractLegalReviewRequestSchema = z
     reviewerEmail: z.string().trim().email("Enter a valid reviewer email address.").max(254),
     reviewerOrganization: boundedText(240).min(2, "Organization or firm is required."),
     scope: z
-      .array(z.enum(["full_agreement", "equity_vesting", "ip_confidentiality", "governance", "employment_tax", "formation"]))
+      .array(z.enum([
+        "full_agreement",
+        "equity_vesting",
+        "ip_confidentiality",
+        "governance",
+        "employment_tax",
+        "formation"
+      ]))
       .min(1, "Choose at least one review area.")
       .max(6),
     message: boundedText(3000).min(10, "Add enough context for the reviewer."),
@@ -447,7 +497,9 @@ export const contractLegalReviewRequestSchema = z
   .strict()
 
 export const contractLegalReviewResponseSchema = z.discriminatedUnion("action", [
-  z.object({ action: z.literal("open") }).strict(),
+  z.object({
+    action: z.literal("open")
+  }).strict(),
   z
     .object({
       action: z.literal("respond"),
@@ -649,7 +701,14 @@ export const fileUploadPolicySchema = z
       "investment_document",
     ]),
     relatedType: z
-      .enum(["message", "proposal", "contract", "profile", "opportunity", "investment_workspace"])
+      .enum([
+        "message",
+        "proposal",
+        "contract",
+        "profile",
+        "opportunity",
+        "investment_workspace"
+      ])
       .nullable()
       .optional(),
     relatedId: z.string().trim().min(1).max(120).nullable().optional(),
@@ -698,7 +757,12 @@ export const fileScanResultSchema = z.object({
     .max(500, "Scan notes are too long.")
     .nullable()
     .optional(),
-  scanStatus: z.enum(["clean", "flagged", "failed", "skipped"]),
+  scanStatus: z.enum([
+    "clean",
+    "flagged",
+    "failed",
+    "skipped"
+  ]),
 }).strict()
 
 export const adminFileScanResultSchema = z.object({
@@ -733,7 +797,12 @@ export const operationsBackupRunSchema = z.object({
     .optional(),
   provider: z.string().trim().min(2).max(120).default("external"),
   startedAt: z.string().datetime("Use an ISO timestamp.").optional(),
-  status: z.enum(["scheduled", "running", "succeeded", "failed"]),
+  status: z.enum([
+    "scheduled",
+    "running",
+    "succeeded",
+    "failed"
+  ]),
 }).strict()
 
 export const operationsDigestRunSchema = z.object({
@@ -757,11 +826,22 @@ const profileSchema = z
     yearsExperience: z.number().int().min(0).max(80),
     industries: boundedTextArray(30, 120),
     startupStagePreferences: z
-      .array(z.enum(["idea", "prototype", "mvp", "revenue", "growth"]))
+      .array(z.enum([
+        "idea",
+        "prototype",
+        "mvp",
+        "revenue",
+        "growth"
+      ]))
       .max(5),
     compensationPreferences: z
       .array(
-        z.enum(["equity_only", "cash_and_equity", "cash_only", "advisory"]),
+        z.enum([
+          "equity_only",
+          "cash_and_equity",
+          "cash_only",
+          "advisory"
+        ]),
       )
       .max(4),
     equityExpectationRange: boundedText(160),
@@ -925,7 +1005,13 @@ const profileSchema = z
             id: identifierSchema,
             name: boundedText(160),
             role: boundedText(160),
-            stage: z.enum(["idea", "prototype", "mvp", "revenue", "growth"]),
+            stage: z.enum([
+              "idea",
+              "prototype",
+              "mvp",
+              "revenue",
+              "growth"
+            ]),
           })
           .strict(),
       )
@@ -943,7 +1029,13 @@ const opportunityWriteSchema = z
     oneLinePitch: boundedText(500),
     problem: boundedText(5000),
     targetUsers: boundedText(3000),
-    stage: z.enum(["idea", "prototype", "mvp", "revenue", "growth"]),
+    stage: z.enum([
+      "idea",
+      "prototype",
+      "mvp",
+      "revenue",
+      "growth"
+    ]),
     traction: boundedText(5000),
     rolesNeeded: boundedTextArray(30, 160),
     expectedCommitment: z.enum(["nights_weekends", "part_time", "full_time"]),
@@ -958,7 +1050,12 @@ const opportunityWriteSchema = z
     location: boundedText(160),
     remotePreference: z.enum(["remote", "hybrid", "in_person"]),
     officialWebsite: safeHttpUrlSchema,
-    verificationMethod: z.enum(["none", "work_email", "domain", "github_org"]),
+    verificationMethod: z.enum([
+      "none",
+      "work_email",
+      "domain",
+      "github_org"
+    ]),
     verificationStatus: z.enum([
       "unverified",
       "owner_verified",
@@ -980,7 +1077,14 @@ const searchFiltersSchema = z
     industries: boundedTextArray(30, 120),
     location: boundedText(160),
     remotePreference: z.enum(["remote", "hybrid", "in_person", "any"]),
-    stage: z.enum(["idea", "prototype", "mvp", "revenue", "growth", "any"]),
+    stage: z.enum([
+      "idea",
+      "prototype",
+      "mvp",
+      "revenue",
+      "growth",
+      "any"
+    ]),
     timeCommitment: z.enum([
       "nights_weekends",
       "part_time",
@@ -1170,7 +1274,12 @@ export const operationsTrustVerificationSchema = z.object({
   provider: z.string().trim().min(2).max(120).default("external"),
   providerSubjectId: z.string().trim().min(1).max(200).nullable().optional(),
   sourceEventId: z.string().trim().min(1).max(200).nullable().optional(),
-  status: z.enum(["verified", "failed", "manual_review", "expired"]),
+  status: z.enum([
+    "verified",
+    "failed",
+    "manual_review",
+    "expired"
+  ]),
   targetId: z.string().trim().min(1).max(160),
   targetType: z.enum(["profile", "user", "opportunity"]),
   verificationType: z.enum([
@@ -1252,8 +1361,21 @@ export const investmentApplicationSubmissionSchema = z
   })
   .strict()
 
-const organizationMemberRoleSchema = z.enum(["owner", "operator", "member", "reviewer", "billing", "counsel"])
-const organizationAssignableRoleSchema = z.enum(["operator", "member", "reviewer", "billing", "counsel"])
+const organizationMemberRoleSchema = z.enum([
+  "owner",
+  "operator",
+  "member",
+  "reviewer",
+  "billing",
+  "counsel"
+])
+const organizationAssignableRoleSchema = z.enum([
+  "operator",
+  "member",
+  "reviewer",
+  "billing",
+  "counsel"
+])
 const nullableIdentifierSchema = identifierSchema.nullable()
 const nullableDateTimeSchema = z.string().datetime("Use an ISO timestamp.").nullable()
 
@@ -1279,7 +1401,9 @@ export const organizationMutationEnvelopeSchema = z.object({
       dataRetentionDays: z.number().int().min(30).max(3650),
       seatLimit: z.number().int().min(2).max(100),
     }).strict(),
-    z.object({ action: z.literal("archive_organization") }).strict(),
+    z.object({
+      action: z.literal("archive_organization")
+    }).strict(),
     z.object({
       action: z.literal("invite_member"),
       displayName: boundedText(120).min(2),
@@ -1292,28 +1416,55 @@ export const organizationMutationEnvelopeSchema = z.object({
       invitationId: identifierSchema,
       response: z.enum(["accepted", "declined"]),
     }).strict(),
-    z.object({ action: z.literal("revoke_invitation"), invitationId: identifierSchema }).strict(),
+    z.object({
+      action: z.literal("revoke_invitation"),
+      invitationId: identifierSchema
+    }).strict(),
     z.object({
       action: z.literal("update_member"),
       membershipId: identifierSchema,
       role: organizationAssignableRoleSchema,
       title: boundedText(160).min(2),
     }).strict(),
-    z.object({ action: z.literal("remove_member"), membershipId: identifierSchema }).strict(),
-    z.object({ action: z.literal("transfer_ownership"), membershipId: identifierSchema }).strict(),
+    z.object({
+      action: z.literal("remove_member"),
+      membershipId: identifierSchema
+    }).strict(),
+    z.object({
+      action: z.literal("transfer_ownership"),
+      membershipId: identifierSchema
+    }).strict(),
     z.object({
       action: z.literal("create_venture"),
       leadUserId: nullableIdentifierSchema,
       name: boundedText(160).min(2),
       opportunityId: nullableIdentifierSchema,
-      stage: z.enum(["idea", "prototype", "mvp", "revenue", "growth"]),
+      stage: z.enum([
+        "idea",
+        "prototype",
+        "mvp",
+        "revenue",
+        "growth"
+      ]),
       summary: boundedText(3000).min(20),
     }).strict(),
     z.object({
       action: z.literal("update_venture"),
       leadUserId: nullableIdentifierSchema,
-      stage: z.enum(["idea", "prototype", "mvp", "revenue", "growth"]),
-      status: z.enum(["incubating", "active", "paused", "graduated", "archived"]),
+      stage: z.enum([
+        "idea",
+        "prototype",
+        "mvp",
+        "revenue",
+        "growth"
+      ]),
+      status: z.enum([
+        "incubating",
+        "active",
+        "paused",
+        "graduated",
+        "archived"
+      ]),
       summary: boundedText(3000).min(20),
       ventureId: identifierSchema,
     }).strict(),
@@ -1331,7 +1482,13 @@ export const organizationMutationEnvelopeSchema = z.object({
       dueAt: nullableDateTimeSchema,
       ownerUserId: nullableIdentifierSchema,
       projectId: identifierSchema,
-      status: z.enum(["planned", "active", "blocked", "completed", "archived"]),
+      status: z.enum([
+        "planned",
+        "active",
+        "blocked",
+        "completed",
+        "archived"
+      ]),
       title: boundedText(200).min(2),
     }).strict(),
     z.object({
@@ -1345,7 +1502,12 @@ export const organizationMutationEnvelopeSchema = z.object({
       action: z.literal("update_task"),
       assigneeUserId: nullableIdentifierSchema,
       dueAt: nullableDateTimeSchema,
-      status: z.enum(["todo", "in_progress", "blocked", "done"]),
+      status: z.enum([
+        "todo",
+        "in_progress",
+        "blocked",
+        "done"
+      ]),
       taskId: identifierSchema,
       title: boundedText(240).min(2),
     }).strict(),
@@ -1394,7 +1556,15 @@ export const organizationMutationEnvelopeSchema = z.object({
       policyId: nullableIdentifierSchema,
       summary: boundedText(4000).min(10),
       targetId: identifierSchema,
-      targetType: z.enum(["contract", "proposal", "venture", "project", "opportunity", "investment_application", "policy_exception"]),
+      targetType: z.enum([
+        "contract",
+        "proposal",
+        "venture",
+        "project",
+        "opportunity",
+        "investment_application",
+        "policy_exception"
+      ]),
       targetVersionId: nullableIdentifierSchema,
       title: boundedText(240).min(2),
     }).strict(),
@@ -1404,7 +1574,10 @@ export const organizationMutationEnvelopeSchema = z.object({
       decisionNote: boundedText(4000).min(8),
       status: z.enum(["approved", "changes_requested", "rejected"]),
     }).strict(),
-    z.object({ action: z.literal("cancel_approval"), approvalId: identifierSchema }).strict(),
+    z.object({
+      action: z.literal("cancel_approval"),
+      approvalId: identifierSchema
+    }).strict(),
     z.object({
       action: z.literal("share_search"),
       filters: searchFiltersSchema,
@@ -1412,15 +1585,27 @@ export const organizationMutationEnvelopeSchema = z.object({
       scope: z.enum(["profiles", "opportunities"]),
       sourceSavedSearchId: nullableIdentifierSchema,
     }).strict(),
-    z.object({ action: z.literal("remove_shared_search"), sharedSearchId: identifierSchema }).strict(),
+    z.object({
+      action: z.literal("remove_shared_search"),
+      sharedSearchId: identifierSchema
+    }).strict(),
     z.object({
       action: z.literal("link_resource"),
       label: boundedText(240).min(2),
       policyId: nullableIdentifierSchema,
       resourceId: identifierSchema,
-      resourceType: z.enum(["relationship", "proposal", "contract", "opportunity", "investment_application"]),
+      resourceType: z.enum([
+        "relationship",
+        "proposal",
+        "contract",
+        "opportunity",
+        "investment_application"
+      ]),
     }).strict(),
-    z.object({ action: z.literal("unlink_resource"), resourceLinkId: identifierSchema }).strict(),
+    z.object({
+      action: z.literal("unlink_resource"),
+      resourceLinkId: identifierSchema
+    }).strict(),
   ]),
 }).strict()
 
@@ -1439,7 +1624,12 @@ export const adminUserRoleSchema = z.object({
     .trim()
     .min(8, "Add a short role-change note.")
     .max(500, "Keep the role-change note concise."),
-  role: z.enum(["founder", "collaborator", "admin", "investor_admin"]),
+  role: z.enum([
+    "founder",
+    "collaborator",
+    "admin",
+    "investor_admin"
+  ]),
 }).strict()
 
 export const adminUserEmailVerificationSchema = z.object({
@@ -1503,7 +1693,12 @@ export const adminCommandQueueActionSchema = z.object({
     .max(120, "Assignee id is too long.")
     .optional(),
   escalationQueue: z
-    .enum(["trust_safety", "operations", "founder_success", "billing"])
+    .enum([
+      "trust_safety",
+      "operations",
+      "founder_success",
+      "billing"
+    ])
     .optional(),
   notes: z
     .string()

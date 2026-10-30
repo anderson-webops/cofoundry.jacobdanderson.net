@@ -48,7 +48,9 @@ describe("contract legal-review persistence", () => {
   beforeEach(async () => {
     dataDirectory = await mkdtemp(join(tmpdir(), "cofoundry-contract-legal-reviews-"))
     process.env.COFOUNDRY_LOCAL_DATA_DIR = dataDirectory
-    vi.stubGlobal("useRuntimeConfig", () => ({ public: { backendMode: "mock" } }))
+    vi.stubGlobal("useRuntimeConfig", () => ({
+      public: { backendMode: "mock" }
+    }))
     await clearContractLegalReviewStoreForTests()
   })
 

@@ -45,7 +45,9 @@ async function readStore() {
   return {
     ...emptyStore(),
     ...parsed,
-    documents: Array.isArray(parsed.documents) ? parsed.documents : [],
+    documents: Array.isArray(parsed.documents)
+      ? parsed.documents
+      : [],
   } as LocalOrganizationWorkspaceStore
 }
 
@@ -72,7 +74,9 @@ export async function listLocalOrganizationWorkspaceDocuments() {
 
 export async function getLocalOrganizationWorkspaceDocument(organizationId: string) {
   const document = (await readStore()).documents.find(item => item.organization.id === organizationId)
-  return document ? cloneValue(document) : null
+  return document
+    ? cloneValue(document)
+    : null
 }
 
 export async function createLocalOrganizationWorkspaceDocument(document: OrganizationWorkspaceDocument) {

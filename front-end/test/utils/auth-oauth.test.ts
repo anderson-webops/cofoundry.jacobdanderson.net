@@ -74,7 +74,9 @@ describe("oauth provider configuration", () => {
         provider: "google",
         providers: ["google"],
       },
-      identities: [{ provider: "google" }],
+      identities: [
+        { provider: "google" }
+      ],
     } as Parameters<typeof inferSupabaseOAuthProvider>[0]
 
     expect(inferSupabaseOAuthProvider(user, "github")).toBe("google")

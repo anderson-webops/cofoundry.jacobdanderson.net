@@ -19,6 +19,8 @@ export default defineEventHandler(async (event) => {
 
   return {
     event: operationalEvent,
-    mode: isSupabaseEnabled(event) ? "supabase" : "mock",
+    mode: isSupabaseEnabled(event)
+      ? "supabase"
+      : "mock",
   }
 })

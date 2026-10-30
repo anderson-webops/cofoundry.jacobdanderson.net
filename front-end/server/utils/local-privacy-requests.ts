@@ -182,7 +182,10 @@ export async function persistLocalPrivacyRequestStatusAction(input: {
         request.resolvedByUserId = input.action.adminUserId
       }
 
-      store.actions = [input.action, ...store.actions.filter(action => action.id !== input.action.id)]
+      store.actions = [
+        input.action,
+        ...store.actions.filter(action => action.id !== input.action.id)
+      ]
       return request
     })
   })

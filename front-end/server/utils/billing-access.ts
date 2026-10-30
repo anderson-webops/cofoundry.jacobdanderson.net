@@ -7,8 +7,12 @@ export function resolveServerBillingAccessPolicy(event: H3Event) {
   const runtimeConfig = useRuntimeConfig(event)
 
   return resolveProductAccessPolicy({
-    backendMode: runtimeConfig.public.backendMode === "supabase" ? "supabase" : "mock",
-    billingMode: runtimeConfig.public.billingMode === "stripe" ? "stripe" : "mock",
+    backendMode: runtimeConfig.public.backendMode === "supabase"
+      ? "supabase"
+      : "mock",
+    billingMode: runtimeConfig.public.billingMode === "stripe"
+      ? "stripe"
+      : "mock",
     enableDemoAccess: runtimeConfig.public.enableDemoAccess === true,
   }, isLocalDevelopmentEnvironment(process.env))
 }

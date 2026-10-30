@@ -29,7 +29,9 @@ export interface RequestIntegrityInput {
 export function getRequestIntegrityFailure(input: RequestIntegrityInput) {
   const method = input.method.toUpperCase()
   const contentLengthHeader = input.contentLength?.trim() || ""
-  const contentLength = contentLengthHeader ? Number.parseInt(contentLengthHeader, 10) : 0
+  const contentLength = contentLengthHeader
+    ? Number.parseInt(contentLengthHeader, 10)
+    : 0
   const maxBodyBytes = input.pathname.startsWith("/api/files/local-upload/")
     ? maxUploadBodyBytes
     : maxJsonBodyBytes

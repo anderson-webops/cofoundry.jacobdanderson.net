@@ -27,7 +27,9 @@ describe("stripe hosted URL validation", () => {
 describe("stripe client configuration", () => {
   it("uses the API version supported by the installed SDK", () => {
     vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_fixture")
-    vi.stubGlobal("useRuntimeConfig", () => ({ public: { billingMode: "stripe" } }))
+    vi.stubGlobal("useRuntimeConfig", () => ({
+      public: { billingMode: "stripe" }
+    }))
 
     expect(createStripeClient()?.getApiField("version")).toBe("2026-09-30.endive")
   })

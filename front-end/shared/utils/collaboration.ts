@@ -109,14 +109,30 @@ export function deriveCollaborationTrustMetrics(seed: WorkspaceSeed) {
           return [request.respondedAt]
         return []
       }),
-      ...nextSeed.messages.flatMap(message => message.senderUserId === userId ? [message.createdAt] : []),
-      ...nextSeed.proposalVersions.flatMap(version => version.createdByUserId === userId ? [version.createdAt] : []),
-      ...nextSeed.proposalComments.flatMap(comment => comment.authorUserId === userId ? [comment.createdAt] : []),
-      ...nextSeed.signatures.flatMap(signature => signature.userId === userId ? [signature.signedAt] : []),
-      ...nextSeed.trialCollaborations.flatMap(trial => trial.createdByUserId === userId ? [trial.createdAt] : []),
-      ...nextSeed.relationshipDecisions.flatMap(decision => decision.authorUserId === userId ? [decision.updatedAt] : []),
-      ...nextSeed.reports.flatMap(report => report.reporterUserId === userId ? [report.createdAt] : []),
-      ...nextSeed.investmentApplications.flatMap(application => application.applicantUserId === userId ? [application.createdAt] : []),
+      ...nextSeed.messages.flatMap(message => message.senderUserId === userId
+        ? [message.createdAt]
+        : []),
+      ...nextSeed.proposalVersions.flatMap(version => version.createdByUserId === userId
+        ? [version.createdAt]
+        : []),
+      ...nextSeed.proposalComments.flatMap(comment => comment.authorUserId === userId
+        ? [comment.createdAt]
+        : []),
+      ...nextSeed.signatures.flatMap(signature => signature.userId === userId
+        ? [signature.signedAt]
+        : []),
+      ...nextSeed.trialCollaborations.flatMap(trial => trial.createdByUserId === userId
+        ? [trial.createdAt]
+        : []),
+      ...nextSeed.relationshipDecisions.flatMap(decision => decision.authorUserId === userId
+        ? [decision.updatedAt]
+        : []),
+      ...nextSeed.reports.flatMap(report => report.reporterUserId === userId
+        ? [report.createdAt]
+        : []),
+      ...nextSeed.investmentApplications.flatMap(application => application.applicantUserId === userId
+        ? [application.createdAt]
+        : []),
     ].filter(Boolean)
     const latestActivity = activityTimes
       .sort((left, right) => new Date(right).getTime() - new Date(left).getTime())[0]
@@ -305,7 +321,9 @@ export function respondToConnectRequestTransition(
   const updatedRequest: ConnectRequest = {
     ...request,
     status,
-    declineReason: status === "declined" ? declineReason : null,
+    declineReason: status === "declined"
+      ? declineReason
+      : null,
     respondedAt,
   }
 
@@ -319,7 +337,9 @@ export function respondToConnectRequestTransition(
       updatedRequest.fromUserId,
       "match",
       "Structured intro closed",
-      declineReason ? `The other side declined with reason: ${declineReason.replaceAll("_", " ")}.` : "The other side closed the intro without opening a match.",
+      declineReason
+        ? `The other side declined with reason: ${declineReason.replaceAll("_", " ")}.`
+        : "The other side closed the intro without opening a match.",
       "/app/inbox",
       respondedAt,
       ids.matchNotificationId,
@@ -511,7 +531,9 @@ export function updateProposalStatusTransition(
     ids,
   )
 
-  const counterpartyId = proposal.createdByUserId === actorUserId ? proposal.recipientUserId : proposal.createdByUserId
+  const counterpartyId = proposal.createdByUserId === actorUserId
+    ? proposal.recipientUserId
+    : proposal.createdByUserId
   createNotification(
     withSystemMessage.seed,
     counterpartyId,
@@ -589,7 +611,9 @@ export function addProposalCommentTransition(
   }
 
   nextSeed.proposalComments = [comment, ...nextSeed.proposalComments]
-  const counterpartyId = proposal.createdByUserId === authorUserId ? proposal.recipientUserId : proposal.createdByUserId
+  const counterpartyId = proposal.createdByUserId === authorUserId
+    ? proposal.recipientUserId
+    : proposal.createdByUserId
   createNotification(nextSeed, counterpartyId, "proposal", "Proposal comment added", body, `/app/proposals/${proposalId}`, createdAt, ids.proposalNotificationId)
 
   return {
@@ -635,7 +659,10 @@ export function createContractFromProposalTransition(
   }
 
   nextSeed.contracts = [contract, ...nextSeed.contracts]
-  nextSeed.contractVersions = [{ ...contractVersion, createdAt }, ...nextSeed.contractVersions]
+  nextSeed.contractVersions = [
+    { ...contractVersion, createdAt },
+    ...nextSeed.contractVersions
+  ]
   createNotification(
     nextSeed,
     proposal.recipientUserId,
@@ -686,7 +713,9 @@ export function createContractVersionTransition(
   if (!proposal)
     return { seed: nextSeed, version }
 
-  const counterpartyId = proposal.createdByUserId === actorUserId ? proposal.recipientUserId : proposal.createdByUserId
+  const counterpartyId = proposal.createdByUserId === actorUserId
+    ? proposal.recipientUserId
+    : proposal.createdByUserId
   createNotification(
     nextSeed,
     counterpartyId,

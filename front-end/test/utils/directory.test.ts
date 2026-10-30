@@ -56,14 +56,16 @@ describe("public directory utilities", () => {
     source.privacy.contactDetailsVisibleToMatchesOnly = true
     source.privacy.portfolioVisibility = "private"
     source.links.website = "https://private.example"
-    source.portfolio = [{
-      id: "private-project",
-      name: "Private project",
-      outcome: "Private",
-      role: "Founder",
-      summary: "Private",
-      url: "https://private.example/project",
-    }]
+    source.portfolio = [
+      {
+        id: "private-project",
+        name: "Private project",
+        outcome: "Private",
+        role: "Founder",
+        summary: "Private",
+        url: "https://private.example/project",
+      }
+    ]
     source.ipReadiness.existingAssetsNotes = "Confidential ownership notes"
     source.intent.nonNegotiables = ["Confidential constraint"]
 
@@ -143,7 +145,10 @@ describe("public directory utilities", () => {
       ...profile.trustSignals.builderProofs.map(artifact => artifact.url),
     ])
     const publicOpportunityUrls = getPublicOpportunities(workspaceSeed).map(({ opportunity }) => opportunity.officialWebsite)
-    const publicUrls = [...publicProfileUrls, ...publicOpportunityUrls].filter(Boolean)
+    const publicUrls = [
+      ...publicProfileUrls,
+      ...publicOpportunityUrls
+    ].filter(Boolean)
 
     expect(publicUrls.filter(isReservedPublicUrl)).toEqual([])
   })

@@ -149,7 +149,14 @@ function check(
   detail: string,
   action: string,
 ): ProductionReadinessCheck {
-  return { action, detail, id, status, summary, title }
+  return {
+    action,
+    detail,
+    id,
+    status,
+    summary,
+    title
+  }
 }
 
 function toTime(value: unknown) {
@@ -157,7 +164,9 @@ function toTime(value: unknown) {
     return null
 
   const time = new Date(value).getTime()
-  return Number.isFinite(time) ? time : null
+  return Number.isFinite(time)
+    ? time
+    : null
 }
 
 function newestTime(rows: Array<Record<string, unknown>>, fields: string[]) {
@@ -166,7 +175,9 @@ function newestTime(rows: Array<Record<string, unknown>>, fields: string[]) {
     if (rowTime === null)
       return latest
 
-    return latest === null || rowTime > latest ? rowTime : latest
+    return latest === null || rowTime > latest
+      ? rowTime
+      : latest
   }, null)
 }
 
@@ -251,7 +262,9 @@ function isLocalhostUrl(value: string) {
 }
 
 function shortCommit(value: string) {
-  return value.length > 12 ? value.slice(0, 12) : value
+  return value.length > 12
+    ? value.slice(0, 12)
+    : value
 }
 
 function deploymentSummary(metadata: DeploymentMetadata) {
@@ -311,11 +324,17 @@ function scoreChecks(checks: ProductionReadinessCheck[]) {
 }
 
 function summarize(overallStatus: Exclude<ProductionReadinessStatus, "info">, failedChecks: number, warningChecks: number) {
-  if (overallStatus === "fail")
-    return `${failedChecks} launch-critical item${failedChecks === 1 ? " needs" : "s need"} resolution before treating this deployment as production-ready.`
+  if (overallStatus === "fail") {
+    return `${failedChecks} launch-critical item${failedChecks === 1
+      ? " needs"
+      : "s need"} resolution before treating this deployment as production-ready.`
+  }
 
-  if (overallStatus === "warn")
-    return `${warningChecks} operational item${warningChecks === 1 ? " should" : "s should"} be tightened, but no hard readiness failures are currently detected.`
+  if (overallStatus === "warn") {
+    return `${warningChecks} operational item${warningChecks === 1
+      ? " should"
+      : "s should"} be tightened, but no hard readiness failures are currently detected.`
+  }
 
   return "No launch-critical readiness failures or warnings are currently detected."
 }
@@ -330,7 +349,16 @@ function task(
   command: string,
   docsPath = "docs/operations-runbook.md",
 ): ProductionReadinessProvisioningTask {
-  return { action, command, detail, docsPath, id, status, summary, title }
+  return {
+    action,
+    command,
+    detail,
+    docsPath,
+    id,
+    status,
+    summary,
+    title
+  }
 }
 
 function phase(
@@ -342,7 +370,15 @@ function phase(
   action: string,
   docsPath = "docs/operations-runbook.md",
 ): ProductionReadinessCutoverPhase {
-  return { action, detail, docsPath, id, status, summary, title }
+  return {
+    action,
+    detail,
+    docsPath,
+    id,
+    status,
+    summary,
+    title
+  }
 }
 
 function aggregateStatus(checks: Array<ProductionReadinessCheck | undefined>): ProductionReadinessStatus {
@@ -400,7 +436,9 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
     task(
       "local-data-dir-provisioning",
       "Durable local store",
-      mockMode ? checkById.get("local-durable-store")?.status || "warn" : "info",
+      mockMode
+        ? checkById.get("local-durable-store")?.status || "warn"
+        : "info",
       mockMode
         ? input.hasDurableLocalDataDir ? "External data directory configured" : "Default .data path in use"
         : "Supabase mode stores primary data in the database",
@@ -477,7 +515,9 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
       "operations-unit-installer",
       "Operations unit installer",
       operationsUnitStatus,
-      operationsUnitStatus === "pass" ? "Worker telemetry current" : "Install or verify worker timers",
+      operationsUnitStatus === "pass"
+        ? "Worker telemetry current"
+        : "Install or verify worker timers",
       "The checked-in systemd installer reduces drift across backup, digest, scanner, heartbeat, alert-smoke, mail-smoke, realtime-smoke, and restore-drill worker units.",
       "Run the installer in dry-run mode first, review the generated commands and env file, then install or tune the units on the host.",
       "sudo deploy/systemd/install-operations-units.sh --dry-run\nsudo deploy/systemd/install-operations-units.sh",
@@ -588,7 +628,9 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
       "stripe-cutover-provisioning",
       "Stripe cutover",
       stripeCutoverStatus,
-      stripeMode ? stripeWebhookCheck?.summary || "Stripe mode enabled" : "Stripe intentionally disabled",
+      stripeMode
+        ? stripeWebhookCheck?.summary || "Stripe mode enabled"
+        : "Stripe intentionally disabled",
       "Live billing should stay disabled until products, prices, webhook signature validation, and customer portal settings are verified.",
       stripeMode
         ? "Confirm Stripe webhook delivery, customer portal setup, and Supabase subscription reconciliation before public checkout."
@@ -605,7 +647,9 @@ function buildCutoverPhases(input: ProductionReadinessInput, checkById: Map<stri
   const stripeMode = publicEnvironment.billingMode === "stripe"
   const emailProviderStatus = aggregateStatus([
     checkById.get("mail-transport"),
-    input.hasEmailSuppressionProviderConfigured ? checkById.get("email-suppression-evidence") : undefined,
+    input.hasEmailSuppressionProviderConfigured
+      ? checkById.get("email-suppression-evidence")
+      : undefined,
   ])
   const operationsAutomationStatus = aggregateStatus([
     checkById.get("operations-worker-token"),
@@ -634,8 +678,12 @@ function buildCutoverPhases(input: ProductionReadinessInput, checkById: Map<stri
     : "info"
   const trustAndAgreementStatus = input.hasTrustVerificationProviderConfigured || input.hasContractEnvelopeProviderConfigured
     ? aggregateStatus([
-        input.hasTrustVerificationProviderConfigured ? checkById.get("trust-verification-evidence") : undefined,
-        input.hasContractEnvelopeProviderConfigured ? checkById.get("contract-envelope-evidence") : undefined,
+        input.hasTrustVerificationProviderConfigured
+          ? checkById.get("trust-verification-evidence")
+          : undefined,
+        input.hasContractEnvelopeProviderConfigured
+          ? checkById.get("contract-envelope-evidence")
+          : undefined,
       ])
     : "info"
   const stripeCutoverStatus = stripeMode
@@ -687,7 +735,9 @@ function buildCutoverPhases(input: ProductionReadinessInput, checkById: Map<stri
       "operations-automation",
       "Operations automation",
       operationsAutomationStatus,
-      operationsAutomationStatus === "pass" ? "Workers reporting" : "Worker evidence incomplete",
+      operationsAutomationStatus === "pass"
+        ? "Workers reporting"
+        : "Worker evidence incomplete",
       "Backups, scanner results, digest runs, restore drills, monitoring heartbeats, and alert delivery need fresh worker-reported evidence.",
       "Run or tune the checked-in systemd installer, then verify current rows in `/admin/operations` and `/admin/readiness`.",
       "deploy/systemd/README.md",
@@ -711,7 +761,9 @@ function buildCutoverPhases(input: ProductionReadinessInput, checkById: Map<stri
       "supabase-persistence-cutover",
       "Supabase persistence cutover",
       supabaseCutoverStatus,
-      publicEnvironment.backendMode === "supabase" ? "Supabase mode active" : "Not enabled",
+      publicEnvironment.backendMode === "supabase"
+        ? "Supabase mode active"
+        : "Not enabled",
       "Live persistence should wait for migrations, Vault-supplied server credentials, ownership and RLS checks, and first-admin bootstrap evidence.",
       publicEnvironment.backendMode === "supabase"
         ? "Resolve any Supabase-mode readiness warnings before relying on live persisted accounts."
@@ -742,7 +794,9 @@ function buildCutoverPhases(input: ProductionReadinessInput, checkById: Map<stri
       "trust-and-agreement-providers",
       "Trust and agreement providers",
       trustAndAgreementStatus,
-      input.hasTrustVerificationProviderConfigured || input.hasContractEnvelopeProviderConfigured ? "Provider marker configured" : "Not enabled",
+      input.hasTrustVerificationProviderConfigured || input.hasContractEnvelopeProviderConfigured
+        ? "Provider marker configured"
+        : "Not enabled",
       "Identity, domain, ownership, e-signature, and PDF provider callbacks should create evidence without automatically granting member-facing claims.",
       input.hasTrustVerificationProviderConfigured || input.hasContractEnvelopeProviderConfigured
         ? "Send provider smoke rows through the checked-in operations endpoints and confirm admin evidence before exposing provider-backed claims."
@@ -765,7 +819,9 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
   const nowTime = new Date(input.generatedAt).getTime()
   const { public: publicEnvironment } = input.environment
   const hasDeploymentIdentity = Boolean(input.deploymentMetadata.release || input.deploymentMetadata.commitSha)
-  const deploymentIdentityStatus: ProductionReadinessStatus = hasDeploymentIdentity ? "pass" : input.isLocalDevelopment ? "info" : "warn"
+  const deploymentIdentityStatus: ProductionReadinessStatus = hasDeploymentIdentity
+    ? "pass"
+    : input.isLocalDevelopment ? "info" : "warn"
   const stripeMode = publicEnvironment.billingMode === "stripe"
   const investmentEnvironmentErrors = input.environmentValidationErrors.filter(error => /INVESTMENT|FILE_SCANNER|SUPABASE/.test(error))
   const accessQueue = openAccessQueueState(input.accessRequests, nowTime)
@@ -780,15 +836,23 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
   const latestMailSmoke = latestRow(mailSmokeDeliveries, ["delivered_at", "created_at"])
   const latestSuccessfulMailSmoke = latestRow(mailSmokeDeliveries.filter(row => String(row.status || "") === "sent"), ["delivered_at", "created_at"])
   const latestFailedMailSmoke = latestRow(mailSmokeDeliveries.filter(row => String(row.status || "") === "failed"), ["delivered_at", "created_at"])
-  const latestMailSmokeTime = newestTime(latestMailSmoke ? [latestMailSmoke] : [], ["delivered_at", "created_at"])
-  const latestSuccessfulMailSmokeTime = newestTime(latestSuccessfulMailSmoke ? [latestSuccessfulMailSmoke] : [], ["delivered_at", "created_at"])
-  const latestFailedMailSmokeTime = newestTime(latestFailedMailSmoke ? [latestFailedMailSmoke] : [], ["delivered_at", "created_at"])
+  const latestMailSmokeTime = newestTime(latestMailSmoke
+    ? [latestMailSmoke]
+    : [], ["delivered_at", "created_at"])
+  const latestSuccessfulMailSmokeTime = newestTime(latestSuccessfulMailSmoke
+    ? [latestSuccessfulMailSmoke]
+    : [], ["delivered_at", "created_at"])
+  const latestFailedMailSmokeTime = newestTime(latestFailedMailSmoke
+    ? [latestFailedMailSmoke]
+    : [], ["delivered_at", "created_at"])
   const mailSmokeDaysOld = daysSince(latestSuccessfulMailSmokeTime, nowTime)
   const latestMailSmokeStatus = String(latestMailSmoke?.status || "")
   const hasNewerMailSmokeFailure = latestFailedMailSmokeTime !== null && (latestSuccessfulMailSmokeTime === null || latestFailedMailSmokeTime >= latestSuccessfulMailSmokeTime)
   const emailSuppressions = input.operations.emailSuppressions || []
   const latestEmailSuppression = latestRow(emailSuppressions, ["suppressed_at", "created_at"])
-  const latestEmailSuppressionTime = newestTime(latestEmailSuppression ? [latestEmailSuppression] : [], ["suppressed_at", "created_at"])
+  const latestEmailSuppressionTime = newestTime(latestEmailSuppression
+    ? [latestEmailSuppression]
+    : [], ["suppressed_at", "created_at"])
   const emailSuppressionDaysOld = daysSince(latestEmailSuppressionTime, nowTime)
   let emailSuppressionStatus: ProductionReadinessStatus = "info"
   if (input.hasEmailSuppressionProviderConfigured) {
@@ -797,7 +861,11 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
       : "pass"
   }
   const emailSuppressionSummary = latestEmailSuppression
-    ? `${String(latestEmailSuppression.reason || "suppression")} from ${String(latestEmailSuppression.provider || "provider")}${emailSuppressionDaysOld === null ? "" : `, ${emailSuppressionDaysOld} day${emailSuppressionDaysOld === 1 ? "" : "s"} old`}`
+    ? `${String(latestEmailSuppression.reason || "suppression")} from ${String(latestEmailSuppression.provider || "provider")}${emailSuppressionDaysOld === null
+      ? ""
+      : `, ${emailSuppressionDaysOld} day${emailSuppressionDaysOld === 1
+        ? ""
+        : "s"} old`}`
     : input.hasEmailSuppressionProviderConfigured ? "Provider configured, no rows" : "No provider configured"
   const failedOrFlaggedScans = countRows(input.operations.fileUploads, "scan_status", ["failed", "flagged"])
   const pendingScans = countRows(input.operations.fileUploads, "scan_status", ["pending"])
@@ -805,7 +873,9 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
   const completedContractEnvelopeEvents = countRows(contractEnvelopeEvents, "status", ["completed"])
   const attentionContractEnvelopeEvents = countRows(contractEnvelopeEvents, "status", ["declined", "failed", "voided"])
   const latestCompletedContractEnvelope = latestMatchingEvent(contractEnvelopeEvents, isCompletedContractEnvelopeEvent)
-  const latestCompletedContractEnvelopeTime = newestTime(latestCompletedContractEnvelope ? [latestCompletedContractEnvelope] : [], ["occurred_at", "created_at"])
+  const latestCompletedContractEnvelopeTime = newestTime(latestCompletedContractEnvelope
+    ? [latestCompletedContractEnvelope]
+    : [], ["occurred_at", "created_at"])
   const contractEnvelopeDaysOld = daysSince(latestCompletedContractEnvelopeTime, nowTime)
   let contractEnvelopeStatus: ProductionReadinessStatus = "info"
   if (input.hasContractEnvelopeProviderConfigured) {
@@ -814,11 +884,17 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
       : "pass"
   }
   const contractEnvelopeSummary = contractEnvelopeEvents.length
-    ? `${completedContractEnvelopeEvents} completed, ${attentionContractEnvelopeEvents} declined/voided/failed${contractEnvelopeDaysOld === null ? "" : `, latest ${contractEnvelopeDaysOld} day${contractEnvelopeDaysOld === 1 ? "" : "s"} old`}`
+    ? `${completedContractEnvelopeEvents} completed, ${attentionContractEnvelopeEvents} declined/voided/failed${contractEnvelopeDaysOld === null
+      ? ""
+      : `, latest ${contractEnvelopeDaysOld} day${contractEnvelopeDaysOld === 1
+        ? ""
+        : "s"} old`}`
     : input.hasContractEnvelopeProviderConfigured ? "Provider configured, no rows" : "No provider configured"
   const trustVerificationEvents = input.operations.trustVerificationEvents || []
   const latestTrustVerification = latestRow(trustVerificationEvents, ["occurred_at", "created_at"])
-  const latestTrustVerificationTime = newestTime(latestTrustVerification ? [latestTrustVerification] : [], ["occurred_at", "created_at"])
+  const latestTrustVerificationTime = newestTime(latestTrustVerification
+    ? [latestTrustVerification]
+    : [], ["occurred_at", "created_at"])
   const trustVerificationDaysOld = daysSince(latestTrustVerificationTime, nowTime)
   const verifiedTrustVerificationEvents = countRows(trustVerificationEvents, "status", ["verified"])
   const reviewTrustVerificationEvents = countRows(trustVerificationEvents, "status", ["manual_review"])
@@ -829,7 +905,9 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
       : "pass"
   }
   const latestStripeWebhookEvent = latestMatchingEvent(input.operations.operationalEvents, isStripeWebhookProcessedEvent)
-  const latestStripeWebhookTime = newestTime(latestStripeWebhookEvent ? [latestStripeWebhookEvent] : [], ["created_at"])
+  const latestStripeWebhookTime = newestTime(latestStripeWebhookEvent
+    ? [latestStripeWebhookEvent]
+    : [], ["created_at"])
   const stripeWebhookDaysOld = daysSince(latestStripeWebhookTime, nowTime)
   let stripeWebhookStatus: ProductionReadinessStatus = "info"
   if (stripeMode) {
@@ -839,28 +917,42 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
   }
   const stripeWebhookSummary = stripeMode
     ? latestStripeWebhookEvent
-      ? `Last processed webhook${stripeWebhookDaysOld === null ? "" : ` ${stripeWebhookDaysOld} day${stripeWebhookDaysOld === 1 ? "" : "s"} old`}`
+      ? `Last processed webhook${stripeWebhookDaysOld === null
+        ? ""
+        : ` ${stripeWebhookDaysOld} day${stripeWebhookDaysOld === 1
+          ? ""
+          : "s"} old`}`
       : "Stripe mode enabled, no processed webhook"
     : "Stripe intentionally disabled"
   const latestOAuthSignInEvent = latestMatchingEvent(input.operations.operationalEvents, isOAuthSignInEvent)
-  const latestOAuthSignInTime = newestTime(latestOAuthSignInEvent ? [latestOAuthSignInEvent] : [], ["created_at"])
+  const latestOAuthSignInTime = newestTime(latestOAuthSignInEvent
+    ? [latestOAuthSignInEvent]
+    : [], ["created_at"])
   const oauthSignInDaysOld = daysSince(latestOAuthSignInTime, nowTime)
   const latestRealtimeFanoutSmoke = latestMatchingEvent(input.operations.operationalEvents, isRealtimeFanoutSmokeEvent)
-  const latestRealtimeFanoutSmokeTime = newestTime(latestRealtimeFanoutSmoke ? [latestRealtimeFanoutSmoke] : [], ["created_at"])
+  const latestRealtimeFanoutSmokeTime = newestTime(latestRealtimeFanoutSmoke
+    ? [latestRealtimeFanoutSmoke]
+    : [], ["created_at"])
   const realtimeFanoutSmokeDaysOld = daysSince(latestRealtimeFanoutSmokeTime, nowTime)
   const attentionEvents = input.operations.operationalEvents.filter(row => !isAlertSmokeEvent(row))
   const errorEvents = countRows(attentionEvents, "severity", ["error"])
   const warningEvents = countRows(attentionEvents, "severity", ["warning"])
   const latestRestoreDrill = latestMatchingEvent(input.operations.operationalEvents, row =>
     rowContainsAny(row, ["event_type", "source", "target_type"], ["restore_drill", "restore drill"]))
-  const latestRestoreDrillTime = newestTime(latestRestoreDrill ? [latestRestoreDrill] : [], ["created_at"])
+  const latestRestoreDrillTime = newestTime(latestRestoreDrill
+    ? [latestRestoreDrill]
+    : [], ["created_at"])
   const restoreDrillDaysOld = daysSince(latestRestoreDrillTime, nowTime)
   const latestMonitoringEvent = latestMatchingEvent(input.operations.operationalEvents, row =>
     rowContainsAny(row, ["event_type", "source", "target_type"], ["monitor", "alert", "uptime"]))
-  const latestMonitoringEventTime = newestTime(latestMonitoringEvent ? [latestMonitoringEvent] : [], ["created_at"])
+  const latestMonitoringEventTime = newestTime(latestMonitoringEvent
+    ? [latestMonitoringEvent]
+    : [], ["created_at"])
   const monitoringEventDaysOld = daysSince(latestMonitoringEventTime, nowTime)
   const latestAlertSmokeEvent = latestMatchingEvent(input.operations.operationalEvents, isAlertSmokeEvent)
-  const latestAlertSmokeTime = newestTime(latestAlertSmokeEvent ? [latestAlertSmokeEvent] : [], ["created_at"])
+  const latestAlertSmokeTime = newestTime(latestAlertSmokeEvent
+    ? [latestAlertSmokeEvent]
+    : [], ["created_at"])
   const alertSmokeDaysOld = daysSince(latestAlertSmokeTime, nowTime)
   const latestBootstrapAuditTime = toTime(input.adminPosture.latestBootstrapAuditAt)
   const bootstrapAuditDaysOld = daysSince(latestBootstrapAuditTime, nowTime)
@@ -873,7 +965,11 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
   let alertWebhookSummary = "No alert webhook configured"
   if (input.hasAlertWebhookConfigured) {
     alertWebhookSummary = latestAlertSmokeEvent
-      ? `Smoke event${alertSmokeDaysOld === null ? "" : ` ${alertSmokeDaysOld} day${alertSmokeDaysOld === 1 ? "" : "s"} old`}`
+      ? `Smoke event${alertSmokeDaysOld === null
+        ? ""
+        : ` ${alertSmokeDaysOld} day${alertSmokeDaysOld === 1
+          ? ""
+          : "s"} old`}`
       : "Configured, no smoke event"
   }
 
@@ -890,14 +986,26 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
   let mailTransportSummary = input.contactMailConfigured ? "Configured" : "Not configured"
   if (input.contactMailConfigured && hasNewerMailSmokeFailure) {
     const failedDaysOld = daysSince(latestFailedMailSmokeTime, nowTime)
-    mailTransportSummary = `failed smoke${failedDaysOld === null ? "" : `, ${failedDaysOld} day${failedDaysOld === 1 ? "" : "s"} old`}`
+    mailTransportSummary = `failed smoke${failedDaysOld === null
+      ? ""
+      : `, ${failedDaysOld} day${failedDaysOld === 1
+        ? ""
+        : "s"} old`}`
   }
   else if (input.contactMailConfigured && latestSuccessfulMailSmoke) {
-    mailTransportSummary = `sent smoke${mailSmokeDaysOld === null ? "" : `, ${mailSmokeDaysOld} day${mailSmokeDaysOld === 1 ? "" : "s"} old`}`
+    mailTransportSummary = `sent smoke${mailSmokeDaysOld === null
+      ? ""
+      : `, ${mailSmokeDaysOld} day${mailSmokeDaysOld === 1
+        ? ""
+        : "s"} old`}`
   }
   else if (input.contactMailConfigured && latestMailSmoke) {
     const latestDaysOld = daysSince(latestMailSmokeTime, nowTime)
-    mailTransportSummary = `${latestMailSmokeStatus || "recorded"} smoke${latestDaysOld === null ? "" : `, ${latestDaysOld} day${latestDaysOld === 1 ? "" : "s"} old`}`
+    mailTransportSummary = `${latestMailSmokeStatus || "recorded"} smoke${latestDaysOld === null
+      ? ""
+      : `, ${latestDaysOld} day${latestDaysOld === 1
+        ? ""
+        : "s"} old`}`
   }
   let mailTransportDetail = "Contact submissions and digests can be recorded, but users and operators will not receive outbound email."
   if (input.contactMailConfigured) {
@@ -919,7 +1027,11 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
     ? publicEnvironment.backendMode !== "supabase"
       ? "Provider marker configured before Supabase auth cutover"
       : latestOAuthSignInEvent
-        ? `Successful OAuth callback${oauthSignInDaysOld === null ? "" : ` ${oauthSignInDaysOld} day${oauthSignInDaysOld === 1 ? "" : "s"} old`}`
+        ? `Successful OAuth callback${oauthSignInDaysOld === null
+          ? ""
+          : ` ${oauthSignInDaysOld} day${oauthSignInDaysOld === 1
+            ? ""
+            : "s"} old`}`
         : "Provider configured, no successful OAuth callback"
     : "No provider configured"
   const externalAuthProviderDetail = input.hasOAuthProviderConfigured
@@ -939,7 +1051,11 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
   }
   const realtimeFanoutSummary = input.hasRealtimeFanoutConfigured
     ? latestRealtimeFanoutSmoke
-      ? `${String(latestRealtimeFanoutSmoke.event_type || "realtime smoke recorded")}${realtimeFanoutSmokeDaysOld === null ? "" : `, ${realtimeFanoutSmokeDaysOld} day${realtimeFanoutSmokeDaysOld === 1 ? "" : "s"} old`}`
+      ? `${String(latestRealtimeFanoutSmoke.event_type || "realtime smoke recorded")}${realtimeFanoutSmokeDaysOld === null
+        ? ""
+        : `, ${realtimeFanoutSmokeDaysOld} day${realtimeFanoutSmokeDaysOld === 1
+          ? ""
+          : "s"} old`}`
       : "Fanout configured, no smoke event"
     : input.expectsMultiInstanceRuntime ? "Multi-instance expected, fanout missing" : "Process-local SSE"
   const realtimeFanoutDetail = input.hasRealtimeFanoutConfigured
@@ -961,7 +1077,9 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
       "Environment contract",
       input.environmentValidationErrors.length ? "fail" : "pass",
       input.environmentValidationErrors.length
-        ? `${input.environmentValidationErrors.length} required environment value${input.environmentValidationErrors.length === 1 ? "" : "s"} missing or invalid.`
+        ? `${input.environmentValidationErrors.length} required environment value${input.environmentValidationErrors.length === 1
+          ? ""
+          : "s"} missing or invalid.`
         : "Configured public and server-only environment values satisfy the current mode contract.",
       input.environmentValidationErrors.join(" ") || "The current backend and billing modes can start without missing required secrets.",
       "Resolve each listed environment error before switching this deployment into a live mode.",
@@ -1024,7 +1142,11 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
       deploymentIdentityStatus,
       deploymentSummary(input.deploymentMetadata),
       hasDeploymentIdentity
-        ? `Release ${input.deploymentMetadata.release || "not set"}${input.deploymentMetadata.commitSha ? `, commit ${shortCommit(input.deploymentMetadata.commitSha)}` : ""}${input.deploymentMetadata.deployedAt ? `, deployed ${input.deploymentMetadata.deployedAt}` : ""}.`
+        ? `Release ${input.deploymentMetadata.release || "not set"}${input.deploymentMetadata.commitSha
+          ? `, commit ${shortCommit(input.deploymentMetadata.commitSha)}`
+          : ""}${input.deploymentMetadata.deployedAt
+          ? `, deployed ${input.deploymentMetadata.deployedAt}`
+          : ""}.`
         : "Hosted operation should expose a release tag or commit SHA so operators can confirm what code is running during incidents and rollbacks.",
       "Set COFOUNDRY_RELEASE and COFOUNDRY_COMMIT_SHA from the deploy pipeline or host unit environment.",
     ),
@@ -1034,10 +1156,16 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
     check(
       "active-admin-access",
       "Active admin access",
-      input.adminPosture.activeAdminCount > 0 ? "pass" : "fail",
-      `${input.adminPosture.activeAdminCount} active full admin${input.adminPosture.activeAdminCount === 1 ? "" : "s"}`,
       input.adminPosture.activeAdminCount > 0
-        ? `${input.adminPosture.activeInvestorAdminCount} active investor-admin account${input.adminPosture.activeInvestorAdminCount === 1 ? "" : "s"} can assist with bounded moderation but cannot replace a full admin.`
+        ? "pass"
+        : "fail",
+      `${input.adminPosture.activeAdminCount} active full admin${input.adminPosture.activeAdminCount === 1
+        ? ""
+        : "s"}`,
+      input.adminPosture.activeAdminCount > 0
+        ? `${input.adminPosture.activeInvestorAdminCount} active investor-admin account${input.adminPosture.activeInvestorAdminCount === 1
+          ? ""
+          : "s"} can assist with bounded moderation but cannot replace a full admin.`
         : "No active full admin account is available. Investor-admin accounts cannot perform security-sensitive promotion, demotion, or verification actions.",
       "Create or reinstate a persisted operator account, then run the first-admin bootstrap path before Supabase cutover.",
     ),
@@ -1050,7 +1178,11 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
           : "warn"
         : "info",
       input.adminPosture.hasBootstrapAuditEvidence
-        ? `Admin role-change audit recorded${bootstrapAuditDaysOld === null ? "" : `, ${bootstrapAuditDaysOld} day${bootstrapAuditDaysOld === 1 ? "" : "s"} old`}`
+        ? `Admin role-change audit recorded${bootstrapAuditDaysOld === null
+          ? ""
+          : `, ${bootstrapAuditDaysOld} day${bootstrapAuditDaysOld === 1
+            ? ""
+            : "s"} old`}`
         : "No admin bootstrap audit row detected",
       publicEnvironment.backendMode === "supabase"
         ? "Supabase-backed production should have an auditable first-admin promotion or admin role-change row before operators rely on the console."
@@ -1075,7 +1207,9 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
     check(
       "session-signing-secret",
       "Session signing secret",
-      input.hasSessionSigningSecret ? "pass" : input.isLocalDevelopment ? "info" : "fail",
+      input.hasSessionSigningSecret
+        ? "pass"
+        : input.isLocalDevelopment ? "info" : "fail",
       input.hasSessionSigningSecret ? "Configured" : "Missing",
       input.hasSessionSigningSecret
         ? "Session cookies can be signed with a deployment-specific secret."
@@ -1130,20 +1264,32 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
     check(
       "access-request-queue",
       "Access request queue",
-      accessQueue.stale.length || accessQueue.expiredInvites.length || accessQueue.open.length > 10 ? "warn" : "pass",
-      `${accessQueue.open.length} open, ${accessQueue.expiredInvites.length} expired invite${accessQueue.expiredInvites.length === 1 ? "" : "s"}`,
+      accessQueue.stale.length || accessQueue.expiredInvites.length || accessQueue.open.length > 10
+        ? "warn"
+        : "pass",
+      `${accessQueue.open.length} open, ${accessQueue.expiredInvites.length} expired invite${accessQueue.expiredInvites.length === 1
+        ? ""
+        : "s"}`,
       accessQueue.stale.length
-        ? `${accessQueue.stale.length} open access request${accessQueue.stale.length === 1 ? "" : "s"} are older than 7 days.`
+        ? `${accessQueue.stale.length} open access request${accessQueue.stale.length === 1
+          ? ""
+          : "s"} are older than 7 days.`
         : "The access queue has no stale open requests by the current threshold.",
       "Review `/admin/access-requests`, resolve stale requests, and reissue or close expired invites.",
     ),
     check(
       "privacy-request-queue",
       "Privacy and trust review queue",
-      privacyQueue.stale.length || privacyQueue.open.length > 10 ? "warn" : "pass",
-      `${privacyQueue.open.length} unresolved request${privacyQueue.open.length === 1 ? "" : "s"}`,
+      privacyQueue.stale.length || privacyQueue.open.length > 10
+        ? "warn"
+        : "pass",
+      `${privacyQueue.open.length} unresolved request${privacyQueue.open.length === 1
+        ? ""
+        : "s"}`,
       privacyQueue.stale.length
-        ? `${privacyQueue.stale.length} privacy or trust-review request${privacyQueue.stale.length === 1 ? "" : "s"} are older than 3 days.`
+        ? `${privacyQueue.stale.length} privacy or trust-review request${privacyQueue.stale.length === 1
+          ? ""
+          : "s"} are older than 3 days.`
         : "The privacy and trust-review queue has no stale unresolved requests by the current threshold.",
       "Review `/admin/privacy` and add operator notes for each reviewed or resolved request.",
     ),
@@ -1161,7 +1307,11 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
             ? "warn"
             : "pass",
       input.operations.backupRuns.length
-        ? `${String(latestBackup?.status || "recorded")} backup${backupDaysOld === null ? "" : `, ${backupDaysOld} day${backupDaysOld === 1 ? "" : "s"} old`}`
+        ? `${String(latestBackup?.status || "recorded")} backup${backupDaysOld === null
+          ? ""
+          : `, ${backupDaysOld} day${backupDaysOld === 1
+            ? ""
+            : "s"} old`}`
         : "No backup rows reported",
       "Public operation needs evidence that database/local-store backups are running and restorable.",
       "Configure the backup worker to report `/api/operations/backup-runs` after each run and schedule restore drills.",
@@ -1169,7 +1319,9 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
     check(
       "file-scanning",
       "File scanning",
-      failedOrFlaggedScans ? "fail" : pendingScans ? "warn" : "pass",
+      failedOrFlaggedScans
+        ? "fail"
+        : pendingScans ? "warn" : "pass",
       `${pendingScans} pending, ${failedOrFlaggedScans} failed or flagged`,
       failedOrFlaggedScans
         ? "At least one uploaded file has a failed or flagged scanner result."
@@ -1187,7 +1339,11 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
           ? "warn"
           : "pass",
       digestDeliveries.length
-        ? `Last digest record${notificationDaysOld === null ? "" : ` ${notificationDaysOld} day${notificationDaysOld === 1 ? "" : "s"} old`}`
+        ? `Last digest record${notificationDaysOld === null
+          ? ""
+          : ` ${notificationDaysOld} day${notificationDaysOld === 1
+            ? ""
+            : "s"} old`}`
         : "No digest delivery rows reported",
       "Digest rows prove that the scheduled notification path is running, even when mock mode records a skipped delivery.",
       "Schedule `/api/operations/notification-digests/run` and confirm recent rows appear in `/admin/operations`.",
@@ -1221,7 +1377,11 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
       "Trust verification provider evidence",
       trustVerificationStatus,
       trustVerificationEvents.length
-        ? `${verifiedTrustVerificationEvents} verified, ${reviewTrustVerificationEvents} manual review${trustVerificationDaysOld === null ? "" : `, latest ${trustVerificationDaysOld} day${trustVerificationDaysOld === 1 ? "" : "s"} old`}`
+        ? `${verifiedTrustVerificationEvents} verified, ${reviewTrustVerificationEvents} manual review${trustVerificationDaysOld === null
+          ? ""
+          : `, latest ${trustVerificationDaysOld} day${trustVerificationDaysOld === 1
+            ? ""
+            : "s"} old`}`
         : input.hasTrustVerificationProviderConfigured ? "Provider configured, no rows" : "No provider configured",
       input.hasTrustVerificationProviderConfigured
         ? "Provider trust checks are reporting into the operations store as evidence for operator review and future badge policy."
@@ -1245,7 +1405,9 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
     check(
       "operational-events",
       "Operational events",
-      errorEvents ? "fail" : warningEvents ? "warn" : "pass",
+      errorEvents
+        ? "fail"
+        : warningEvents ? "warn" : "pass",
       `${errorEvents} error, ${warningEvents} warning`,
       errorEvents
         ? "Recent operational events include errors that should be reviewed before launch."
@@ -1265,7 +1427,11 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
             ? "warn"
             : "pass",
       latestRestoreDrill
-        ? `${String(latestRestoreDrill.event_type || "restore drill recorded")}${restoreDrillDaysOld === null ? "" : `, ${restoreDrillDaysOld} day${restoreDrillDaysOld === 1 ? "" : "s"} old`}`
+        ? `${String(latestRestoreDrill.event_type || "restore drill recorded")}${restoreDrillDaysOld === null
+          ? ""
+          : `, ${restoreDrillDaysOld} day${restoreDrillDaysOld === 1
+            ? ""
+            : "s"} old`}`
         : "No restore drill events reported",
       latestRestoreDrill
         ? "Restore drill events prove that backup artifacts or durable local stores can be restored into a checked environment."
@@ -1281,7 +1447,11 @@ export function buildProductionReadinessSnapshot(input: ProductionReadinessInput
           ? "warn"
           : "pass",
       latestMonitoringEvent
-        ? `${String(latestMonitoringEvent.event_type || "monitoring event recorded")}${monitoringEventDaysOld === null ? "" : `, ${monitoringEventDaysOld} day${monitoringEventDaysOld === 1 ? "" : "s"} old`}`
+        ? `${String(latestMonitoringEvent.event_type || "monitoring event recorded")}${monitoringEventDaysOld === null
+          ? ""
+          : `, ${monitoringEventDaysOld} day${monitoringEventDaysOld === 1
+            ? ""
+            : "s"} old`}`
         : "No monitoring events reported",
       latestMonitoringEvent
         ? "Monitoring or alerting events are reaching the operations telemetry store."

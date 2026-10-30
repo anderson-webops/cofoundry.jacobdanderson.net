@@ -80,24 +80,26 @@ describe("relationship snapshots", () => {
   it("surfaces durable file uploads attached to relationship artifacts", () => {
     const seedWithUploads: WorkspaceSeed = {
       ...workspaceSeed,
-      fileUploads: [{
-        bucket: "cofoundry-private-files",
-        createdAt: "2026-04-29T14:30:00.000Z",
-        deletedAt: null,
-        id: "upload_ledgerloop_terms",
-        mimeType: "application/pdf",
-        objectPath: "user_olivia/2026-04-29/upload-ledgerloop-terms.pdf",
-        originalFilename: "ledgerloop-terms-review.pdf",
-        ownerUserId: "user_olivia",
-        purpose: "proposal_attachment",
-        relatedId: "proposal_ledgerloop_cto",
-        relatedType: "proposal",
-        scanNotes: "Clean scanner result.",
-        scanStatus: "clean",
-        sizeBytes: 153600,
-        status: "uploaded",
-        updatedAt: "2026-04-29T14:31:00.000Z",
-      }],
+      fileUploads: [
+        {
+          bucket: "cofoundry-private-files",
+          createdAt: "2026-04-29T14:30:00.000Z",
+          deletedAt: null,
+          id: "upload_ledgerloop_terms",
+          mimeType: "application/pdf",
+          objectPath: "user_olivia/2026-04-29/upload-ledgerloop-terms.pdf",
+          originalFilename: "ledgerloop-terms-review.pdf",
+          ownerUserId: "user_olivia",
+          purpose: "proposal_attachment",
+          relatedId: "proposal_ledgerloop_cto",
+          relatedType: "proposal",
+          scanNotes: "Clean scanner result.",
+          scanStatus: "clean",
+          sizeBytes: 153600,
+          status: "uploaded",
+          updatedAt: "2026-04-29T14:31:00.000Z",
+        }
+      ],
     }
     const snapshot = buildRelationshipSnapshot(seedWithUploads, "user_olivia", "match_olivia_malik")
 

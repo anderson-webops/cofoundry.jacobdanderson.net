@@ -33,13 +33,15 @@ describe("member workspace security boundary", () => {
     incoming.trustSignals.governmentIdVerified = true
     incoming.trustSignals.identityVerified = true
     incoming.trustSignals.replyRatePercent = 100
-    incoming.trustSignals.builderProofs = [{
-      id: "proof_forged",
-      outcome: "Forged",
-      summary: "Forged",
-      title: "Forged",
-      url: "https://attacker.example/forged",
-    }]
+    incoming.trustSignals.builderProofs = [
+      {
+        id: "proof_forged",
+        outcome: "Forged",
+        summary: "Forged",
+        title: "Forged",
+        url: "https://attacker.example/forged",
+      }
+    ]
 
     const sanitized = sanitizeProfileWrite(state!, incoming, "2026-07-29T12:00:00.000Z")
 

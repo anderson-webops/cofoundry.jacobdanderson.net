@@ -298,7 +298,9 @@ describe("local operations telemetry store", () => {
       sizeBytes: 2048,
     })
 
-    const uploads = await listLocalFileUploadsByRelated([{ relatedId: "proposal_test", relatedType: "proposal" }])
+    const uploads = await listLocalFileUploadsByRelated([
+      { relatedId: "proposal_test", relatedType: "proposal" }
+    ])
 
     expect(uploads).toHaveLength(1)
     expect(uploads[0]).toMatchObject({

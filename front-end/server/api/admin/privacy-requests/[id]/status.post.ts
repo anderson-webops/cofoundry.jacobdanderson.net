@@ -29,7 +29,9 @@ export default defineEventHandler(async (event) => {
     notes: payload.notes,
     targetId: requestId,
     targetType: "privacy_request" as const,
-    type: payload.status === "reviewed" ? "review_privacy_request" as const : "resolve_privacy_request" as const,
+    type: payload.status === "reviewed"
+      ? "review_privacy_request" as const
+      : "resolve_privacy_request" as const,
   }
 
   const persistedRequest = await persistAdminPrivacyRequestStatusAction(event, {
@@ -45,7 +47,9 @@ export default defineEventHandler(async (event) => {
         id: crypto.randomUUID(),
         userId: persistedRequest.userId,
         type: "admin",
-        title: payload.status === "reviewed" ? "Privacy request reviewed" : "Privacy request resolved",
+        title: payload.status === "reviewed"
+          ? "Privacy request reviewed"
+          : "Privacy request resolved",
         body: payload.status === "reviewed"
           ? "An operator reviewed your privacy request and recorded the next handling note."
           : "An operator confirmed that the requested privacy action was completed and marked your request resolved. Review your account settings if you need another follow-up.",
@@ -63,8 +67,12 @@ export default defineEventHandler(async (event) => {
     action,
     request: {
       id: requestId,
-      resolvedAt: payload.status === "resolved" ? updatedAt : null,
-      reviewedAt: payload.status === "reviewed" ? updatedAt : null,
+      resolvedAt: payload.status === "resolved"
+        ? updatedAt
+        : null,
+      reviewedAt: payload.status === "reviewed"
+        ? updatedAt
+        : null,
       status: payload.status,
     },
   }

@@ -21,7 +21,9 @@ export async function recordTrustVerificationEvent(event: H3Event, payload: Oper
   const { data, error } = await adminClient
     .from("trust_verification_events")
     .upsert({
-      confidence: typeof payload.confidence === "number" ? payload.confidence : null,
+      confidence: typeof payload.confidence === "number"
+        ? payload.confidence
+        : null,
       created_at: now,
       evidence_file_upload_id: payload.evidenceFileUploadId || null,
       id: randomUUID(),

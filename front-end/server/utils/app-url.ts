@@ -110,8 +110,11 @@ export function resolveServerAppUrl(event: H3Event) {
     requestUrl = getRequestURL(event)
   }
   catch {
-    if (process.env.NODE_ENV === "production" && !allowLocalPublicAppUrl())
-      return isLocalAppUrl(configuredAppUrl) || !configuredAppUrl ? appProductionUrl : configuredAppUrl
+    if (process.env.NODE_ENV === "production" && !allowLocalPublicAppUrl()) {
+      return isLocalAppUrl(configuredAppUrl) || !configuredAppUrl
+        ? appProductionUrl
+        : configuredAppUrl
+    }
 
     return configuredAppUrl || "http://localhost:3000"
   }

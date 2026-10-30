@@ -73,14 +73,18 @@ export default defineEventHandler(async (event) => {
     for (const session of sessions) {
       const unreadCount = unreadCountForUser(session.id)
       const digestEnabled = isScheduledDigestEmailEnabled(workspaceSeed, session.id)
-      const reason = !digestEnabled ? "email_digest_disabled" : payload.dryRun ? "dry_run" : "mock_mode"
+      const reason = !digestEnabled
+        ? "email_digest_disabled"
+        : payload.dryRun ? "dry_run" : "mock_mode"
 
       await recordNotificationDelivery(event, session, {
         configured: false,
         delivered: false,
         error: reason === "email_digest_disabled"
           ? "Scheduled digest email is disabled for this member."
-          : reason === "dry_run" ? "Dry run; no email sent." : "Mock mode records scheduled digest runs without sending email.",
+          : reason === "dry_run"
+            ? "Dry run; no email sent."
+            : "Mock mode records scheduled digest runs without sending email.",
         subject: buildDigestSubject(unreadCount),
         suppressed: reason === "email_digest_disabled",
         unreadCount,
@@ -187,14 +191,20 @@ export default defineEventHandler(async (event) => {
       results.push({
         configured: delivery.configured,
         delivered: delivery.delivered,
-        reason: delivery.reason || (delivery.suppressed ? "email_digest_disabled" : delivery.delivered ? "sent" : delivery.configured ? "delivery_failed" : "mail_not_configured"),
+        reason: delivery.reason || (delivery.suppressed
+          ? "email_digest_disabled"
+          : delivery.delivered
+            ? "sent"
+            : delivery.configured ? "delivery_failed" : "mail_not_configured"),
         unreadCount: delivery.unreadCount,
         userId: user.id,
       })
     }
     catch (error) {
       failures.push({
-        error: error instanceof Error ? error.message : "Digest processing failed.",
+        error: error instanceof Error
+          ? error.message
+          : "Digest processing failed.",
         userId: user.id,
       })
     }

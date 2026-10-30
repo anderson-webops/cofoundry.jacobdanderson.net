@@ -33,7 +33,9 @@ const siteUrl = computed(() => {
 
   return buildSiteUrl(canonicalAppUrl, route.path || "/")
 })
-const structuredData = computed(() => sensitiveBearerRoute.value ? [] : buildSiteStructuredData(canonicalAppUrl))
+const structuredData = computed(() => sensitiveBearerRoute.value
+  ? []
+  : buildSiteStructuredData(canonicalAppUrl))
 
 useHead(() => ({
   htmlAttrs: {

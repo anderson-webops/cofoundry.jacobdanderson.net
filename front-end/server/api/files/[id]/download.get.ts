@@ -32,7 +32,9 @@ export default defineEventHandler(async (event) => {
   ])
   const reviewer = ["admin", "investor_admin"].includes(session.role)
   const applicantOwner = !reviewer && workspace?.applicantUserId === session.id
-  const reviewerWorkspace = reviewer && workspace ? projectInvestmentWorkspaceForReviewer(workspace) : null
+  const reviewerWorkspace = reviewer && workspace
+    ? projectInvestmentWorkspaceForReviewer(workspace)
+    : null
   const item = applicantOwner
     ? workspace.dataRoomItems.find(candidate => candidate.fileUploadId === uploadId)
     : reviewerWorkspace?.dataRoomItems.find(candidate => candidate.fileUploadId === uploadId)
@@ -66,7 +68,9 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: "Supabase admin client is unavailable." })
   const signed = await adminClient.storage
     .from(upload.bucket)
-    .createSignedUrl(upload.objectPath, 60, { download: safeFilename(upload.originalFilename) })
+    .createSignedUrl(upload.objectPath, 60, {
+      download: safeFilename(upload.originalFilename)
+    })
   if (signed.error || !signed.data?.signedUrl)
     throw createError({ statusCode: 404, statusMessage: "A secure download URL could not be created." })
   return sendRedirect(event, signed.data.signedUrl, 302)

@@ -65,21 +65,25 @@ describe("collaboration helpers", () => {
     profile.trustSignals.replyRatePercent = 100
     profile.trustSignals.medianReplyHours = 1
     profile.trustSignals.lastActiveAt = "2026-04-01T10:00:00.000Z"
-    seed.connectRequests = [{
-      ...seed.connectRequests[0]!,
-      createdAt: "2026-04-16T10:00:00.000Z",
-      fromUserId: "user_arjun",
-      id: "connect_metrics",
-      respondedAt: "2026-04-16T13:00:00.000Z",
-      status: "accepted",
-      toUserId: "user_noah",
-    }]
-    seed.messages = [{
-      ...seed.messages[0]!,
-      createdAt: "2026-04-16T14:00:00.000Z",
-      id: "message_metrics",
-      senderUserId: "user_noah",
-    }]
+    seed.connectRequests = [
+      {
+        ...seed.connectRequests[0]!,
+        createdAt: "2026-04-16T10:00:00.000Z",
+        fromUserId: "user_arjun",
+        id: "connect_metrics",
+        respondedAt: "2026-04-16T13:00:00.000Z",
+        status: "accepted",
+        toUserId: "user_noah",
+      }
+    ]
+    seed.messages = [
+      {
+        ...seed.messages[0]!,
+        createdAt: "2026-04-16T14:00:00.000Z",
+        id: "message_metrics",
+        senderUserId: "user_noah",
+      }
+    ]
 
     const derivedProfile = deriveCollaborationTrustMetrics(seed)
       .profiles

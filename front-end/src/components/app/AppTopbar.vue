@@ -9,8 +9,12 @@ const workspaceStore = useWorkspaceStore()
 const route = useRoute()
 
 const notificationCount = computed(() => workspaceStore.data.notifications.filter(notification => notification.userId === authStore.currentUser?.id && !notification.readAt).length)
-const unreadMessages = computed(() => authStore.currentUser?.id ? getUnreadMessages(workspaceStore.data, authStore.currentUser.id) : 0)
-const inboxActionCount = computed(() => authStore.currentUser?.id ? buildInboxSnapshot(workspaceStore.data, authStore.currentUser.id).actions.length : 0)
+const unreadMessages = computed(() => authStore.currentUser?.id
+  ? getUnreadMessages(workspaceStore.data, authStore.currentUser.id)
+  : 0)
+const inboxActionCount = computed(() => authStore.currentUser?.id
+  ? buildInboxSnapshot(workspaceStore.data, authStore.currentUser.id).actions.length
+  : 0)
 const routeContext = computed(() => resolveWorkspaceRouteContext(route.path))
 const syncLabel = computed(() => {
   if (workspaceStore.hydrating)

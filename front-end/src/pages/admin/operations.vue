@@ -86,23 +86,49 @@ function rowTitle(row: OpsRow) {
 
 function rowDate(row: OpsRow) {
   const value = row.created_at || row.occurred_at || row.suppressed_at || row.started_at
-  return typeof value === "string" ? formatDate(value) : "No date"
+  return typeof value === "string"
+    ? formatDate(value)
+    : "No date"
 }
 
 function rowDetail(row: OpsRow) {
   const details = [
-    row.event_type ? `event ${row.event_type}` : "",
-    row.target_type && row.target_id ? `${row.target_type} ${row.target_id}` : "",
-    row.verification_type ? `check ${readable(row.verification_type)}` : "",
-    row.recipient ? `recipient ${row.recipient}` : "",
-    row.contract_id ? `contract ${row.contract_id}` : "",
-    row.contract_version_id ? `version ${row.contract_version_id}` : "",
-    row.category ? `category ${row.category}` : "",
-    row.provider ? `provider ${row.provider}` : "",
-    row.provider_subject_id ? `subject ${row.provider_subject_id}` : "",
-    typeof row.confidence === "number" ? `confidence ${Math.round(row.confidence * 100)}%` : "",
-    row.evidence_file_upload_id ? `evidence ${row.evidence_file_upload_id}` : "",
-    row.source_event_id ? `source ${row.source_event_id}` : "",
+    row.event_type
+      ? `event ${row.event_type}`
+      : "",
+    row.target_type && row.target_id
+      ? `${row.target_type} ${row.target_id}`
+      : "",
+    row.verification_type
+      ? `check ${readable(row.verification_type)}`
+      : "",
+    row.recipient
+      ? `recipient ${row.recipient}`
+      : "",
+    row.contract_id
+      ? `contract ${row.contract_id}`
+      : "",
+    row.contract_version_id
+      ? `version ${row.contract_version_id}`
+      : "",
+    row.category
+      ? `category ${row.category}`
+      : "",
+    row.provider
+      ? `provider ${row.provider}`
+      : "",
+    row.provider_subject_id
+      ? `subject ${row.provider_subject_id}`
+      : "",
+    typeof row.confidence === "number"
+      ? `confidence ${Math.round(row.confidence * 100)}%`
+      : "",
+    row.evidence_file_upload_id
+      ? `evidence ${row.evidence_file_upload_id}`
+      : "",
+    row.source_event_id
+      ? `source ${row.source_event_id}`
+      : "",
   ].filter(Boolean)
 
   return details.join(" · ")

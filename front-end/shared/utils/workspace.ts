@@ -201,7 +201,9 @@ export function getProfileSkills(seed: WorkspaceSeed, profileId: string) {
     .filter(profileSkill => profileSkill.profileId === profileId)
     .map((profileSkill) => {
       const skill = seed.skills.find(item => item.id === profileSkill.skillId)
-      return skill ? { ...profileSkill, skill } : null
+      return skill
+        ? { ...profileSkill, skill }
+        : null
     })
     .filter((value): value is NonNullable<typeof value> => Boolean(value))
 }

@@ -26,7 +26,9 @@ export const useOrganizationStore = defineStore("organizations", () => {
 
     loading.value = true
     try {
-      const headers = import.meta.server ? useRequestHeaders(["cookie"]) : undefined
+      const headers = import.meta.server
+        ? useRequestHeaders(["cookie"])
+        : undefined
       snapshot.value = await $fetch<OrganizationWorkspaceSnapshot>("/api/organizations", { headers })
       loadedUserId.value = session.value.id
       lastSyncedAt.value = new Date().toISOString()
@@ -38,7 +40,9 @@ export const useOrganizationStore = defineStore("organizations", () => {
   }
 
   async function create(payload: CreateOrganizationPayload) {
-    const headers = import.meta.server ? useRequestHeaders(["cookie"]) : undefined
+    const headers = import.meta.server
+      ? useRequestHeaders(["cookie"])
+      : undefined
     const response = await $fetch<{ workspace: OrganizationWorkspaceDocument }>("/api/organizations", {
       body: payload,
       headers,
@@ -53,7 +57,9 @@ export const useOrganizationStore = defineStore("organizations", () => {
   }
 
   async function mutate(workspace: OrganizationWorkspaceDocument, mutation: OrganizationMutation) {
-    const headers = import.meta.server ? useRequestHeaders(["cookie"]) : undefined
+    const headers = import.meta.server
+      ? useRequestHeaders(["cookie"])
+      : undefined
     const response = await $fetch<{
       delivery: { delivered: boolean }
       workspace: OrganizationWorkspaceDocument
@@ -66,7 +72,9 @@ export const useOrganizationStore = defineStore("organizations", () => {
       method: "POST",
     })
     snapshot.value.workspaces = snapshot.value.workspaces.map(item =>
-      item.organization.id === response.workspace.organization.id ? response.workspace : item,
+      item.organization.id === response.workspace.organization.id
+        ? response.workspace
+        : item,
     )
     lastSyncedAt.value = new Date().toISOString()
     return response

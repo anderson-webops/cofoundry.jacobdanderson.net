@@ -23,7 +23,9 @@ export default defineEventHandler(async (event) => {
 
   const workspace = await loadMemberWorkspaceState(event, session)
   const contract = getContractById(workspace.seed, contractId)
-  const version = contract ? getCurrentContractVersion(workspace.seed, contract) : null
+  const version = contract
+    ? getCurrentContractVersion(workspace.seed, contract)
+    : null
   const review = await getContractLegalReview(event, reviewId)
   if (!contract || !version || !review || review.contractId !== contract.id)
     throw createError({ statusCode: 404, statusMessage: "Legal review not found." })

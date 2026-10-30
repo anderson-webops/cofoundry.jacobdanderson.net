@@ -302,7 +302,9 @@ export async function loadInvestmentReviewerSnapshot(event: H3Event, session: Se
     .map(projectInvestmentWorkspaceForReviewer)
     .filter((document): document is InvestmentWorkspaceDocument => Boolean(document))
     .sort((left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime())
-  const visibleUploadIds = new Set(workspaces.flatMap(workspace => workspace.dataRoomItems.flatMap(item => item.fileUploadId ? [item.fileUploadId] : [])))
+  const visibleUploadIds = new Set(workspaces.flatMap(workspace => workspace.dataRoomItems.flatMap(item => item.fileUploadId
+    ? [item.fileUploadId]
+    : [])))
   const fileUploads = (await listFileUploadsByRelated(event, investmentFileSelectors(workspaces)))
     .filter(upload => visibleUploadIds.has(upload.id))
     .map(projectInvestmentFileUpload)
@@ -319,10 +321,14 @@ export async function loadInvestmentReviewerWorkspace(event: H3Event, session: S
   if (!["admin", "investor_admin"].includes(session.role))
     throw createError({ statusCode: 403, statusMessage: "Investment-review access is required." })
   const current = await getRawInvestmentWorkspaceDocument(event, workspaceId)
-  const workspace = current ? projectInvestmentWorkspaceForReviewer(current) : null
+  const workspace = current
+    ? projectInvestmentWorkspaceForReviewer(current)
+    : null
   if (!workspace)
     throw createError({ statusCode: 404, statusMessage: "Review case not found." })
-  const visibleUploadIds = new Set(workspace.dataRoomItems.flatMap(item => item.fileUploadId ? [item.fileUploadId] : []))
+  const visibleUploadIds = new Set(workspace.dataRoomItems.flatMap(item => item.fileUploadId
+    ? [item.fileUploadId]
+    : []))
   const fileUploads = (await listFileUploadsByRelated(event, investmentFileSelectors([workspace])))
     .filter(upload => visibleUploadIds.has(upload.id))
     .map(projectInvestmentFileUpload)

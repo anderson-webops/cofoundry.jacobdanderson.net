@@ -49,10 +49,34 @@ export interface AdminEvidencePackageInput {
   seed: WorkspaceSeed
 }
 
-const fileScanStatuses = new Set<FileScanStatus>(["pending", "clean", "flagged", "failed", "skipped"])
-const fileUploadStatuses = new Set<FileUploadStatus>(["pending", "uploaded", "blocked", "deleted"])
-const fileUploadPurposes = new Set<FileUploadPurpose>(["message_attachment", "proposal_attachment", "contract_attachment", "trust_evidence", "investment_document"])
-const fileUploadRelatedTypes = new Set<FileUploadRelatedType>(["message", "proposal", "contract", "profile", "opportunity", "investment_workspace"])
+const fileScanStatuses = new Set<FileScanStatus>([
+  "pending",
+  "clean",
+  "flagged",
+  "failed",
+  "skipped"
+])
+const fileUploadStatuses = new Set<FileUploadStatus>([
+  "pending",
+  "uploaded",
+  "blocked",
+  "deleted"
+])
+const fileUploadPurposes = new Set<FileUploadPurpose>([
+  "message_attachment",
+  "proposal_attachment",
+  "contract_attachment",
+  "trust_evidence",
+  "investment_document"
+])
+const fileUploadRelatedTypes = new Set<FileUploadRelatedType>([
+  "message",
+  "proposal",
+  "contract",
+  "profile",
+  "opportunity",
+  "investment_workspace"
+])
 
 function stringValue(row: Record<string, unknown>, ...keys: string[]) {
   for (const key of keys) {
@@ -76,7 +100,9 @@ function numberValue(row: Record<string, unknown>, ...keys: string[]) {
 
 function nullableStringValue(row: Record<string, unknown>, ...keys: string[]) {
   const value = stringValue(row, ...keys)
-  return value && value.length ? value : null
+  return value && value.length
+    ? value
+    : null
 }
 
 function coercePurpose(value: string | null) {
@@ -191,7 +217,10 @@ export function buildAdminEvidencePackages(input: AdminEvidencePackageInput) {
   const actions = input.adminActions || input.seed.adminActions
   const uploadById = new Map<string, FileUpload>()
 
-  for (const upload of [...input.seed.fileUploads, ...(input.fileUploads || [])]) {
+  for (const upload of [
+    ...input.seed.fileUploads,
+    ...(input.fileUploads || [])
+  ]) {
     const normalizedUpload = normalizeFileUpload(upload)
     if (normalizedUpload?.deletedAt)
       uploadById.delete(normalizedUpload.id)
@@ -199,10 +228,14 @@ export function buildAdminEvidencePackages(input: AdminEvidencePackageInput) {
       uploadById.set(normalizedUpload.id, normalizedUpload)
   }
 
-  const uploadPackages: AdminEvidencePackage[] = [...uploadById.values()].map((upload) => {
+  const uploadPackages: AdminEvidencePackage[] = [
+    ...uploadById.values()
+  ].map((upload) => {
     const request = getMatchingPrivacyRequest(upload, privacyRequests)
     const reviewAction = getLatestEvidenceReview(actions, "file_upload", upload.id)
-    const reviewedByLabel = reviewAction ? getOwnerLabel(input.seed, reviewAction.adminUserId) : null
+    const reviewedByLabel = reviewAction
+      ? getOwnerLabel(input.seed, reviewAction.adminUserId)
+      : null
     const state = stateForUpload(upload, reviewAction)
     const ownerLabel = getOwnerLabel(input.seed, upload.ownerUserId)
 
@@ -242,7 +275,9 @@ export function buildAdminEvidencePackages(input: AdminEvidencePackageInput) {
     .filter(request => request.type === "safety_privacy" && !coveredRequestIds.has(request.id))
     .map((request) => {
       const reviewAction = getLatestEvidenceReview(actions, "privacy_request", request.id)
-      const reviewedByLabel = reviewAction ? getOwnerLabel(input.seed, reviewAction.adminUserId) : null
+      const reviewedByLabel = reviewAction
+        ? getOwnerLabel(input.seed, reviewAction.adminUserId)
+        : null
       const state: AdminEvidencePackageState = request.status === "resolved"
         ? "resolved"
         : reviewAction || request.status === "reviewed"
@@ -280,5 +315,8 @@ export function buildAdminEvidencePackages(input: AdminEvidencePackageInput) {
       }
     })
 
-  return newestFirst([...uploadPackages, ...requestPackages])
+  return newestFirst([
+    ...uploadPackages,
+    ...requestPackages
+  ])
 }

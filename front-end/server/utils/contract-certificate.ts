@@ -42,7 +42,9 @@ export function buildContractExecutionCertificate(input: {
     legalNotice: "This certificate records CoFoundry's typed-name signature evidence for the generated agreement template. It is not legal advice and is not a substitute for qualified counsel or a dedicated e-signature provider when one is required.",
     parties,
     providerEvidence: input.providerEvidence || [],
-    status: parties.length > 0 && parties.every(party => party.signedAt) ? "complete" as const : "pending" as const,
+    status: parties.length > 0 && parties.every(party => party.signedAt)
+      ? "complete" as const
+      : "pending" as const,
     versionId: input.version.id,
     versionNumber: input.version.versionNumber,
   }

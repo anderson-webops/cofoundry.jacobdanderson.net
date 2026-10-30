@@ -25,7 +25,9 @@ function readGitMetadata(args: string[]) {
 function readFrontendPackageVersion() {
   try {
     const packageJson = JSON.parse(readFileSync(new URL("package.json", import.meta.url), "utf8")) as { version?: unknown }
-    return typeof packageJson.version === "string" ? packageJson.version : ""
+    return typeof packageJson.version === "string"
+      ? packageJson.version
+      : ""
   }
   catch {
     return ""
@@ -39,10 +41,17 @@ const packageRelease = releaseTagFromPackageVersion(readFrontendPackageVersion()
 const buildDeploymentMetadata = {
   commitSha: explicitDeploymentMetadata.commitSha || readGitMetadata(["rev-parse", "HEAD"]),
   deployedAt: explicitDeploymentMetadata.deployedAt,
-  release: explicitDeploymentMetadata.release || packageRelease || readGitMetadata(["describe", "--tags", "--exact-match", "HEAD"]),
+  release: explicitDeploymentMetadata.release || packageRelease || readGitMetadata([
+    "describe",
+    "--tags",
+    "--exact-match",
+    "HEAD"
+  ]),
 }
 const publicRoutes = getPublicRoutePaths(workspaceSeed)
-const prerenderPublicRoutes = isPublicSiteUrl(environment.public.appUrl) ? publicRoutes : []
+const prerenderPublicRoutes = isPublicSiteUrl(environment.public.appUrl)
+  ? publicRoutes
+  : []
 const securityHeaders = buildSecurityHeaders({
   appUrl: environment.public.appUrl,
   backendMode: environment.public.backendMode,
@@ -57,10 +66,19 @@ const privateRouteHeaders = {
   "X-Robots-Tag": "noindex, nofollow",
 }
 const privateRouteRules = Object.fromEntries(
-  [...privateWorkspaceRoutePrefixes, ...privateApiRoutePrefixes]
+  [
+    ...privateWorkspaceRoutePrefixes,
+    ...privateApiRoutePrefixes
+  ]
     .flatMap(prefix => [
-      [prefix, { headers: privateRouteHeaders }] as const,
-      [`${prefix}/**`, { headers: privateRouteHeaders }] as const,
+      [
+        prefix,
+        { headers: privateRouteHeaders }
+      ] as const,
+      [
+        `${prefix}/**`,
+        { headers: privateRouteHeaders }
+      ] as const,
     ]),
 )
 const isNuxtAnalysisCommand = process.argv
@@ -107,8 +125,18 @@ export default defineNuxtConfig({
       link: [
         { rel: "icon", href: "/favicon.ico", sizes: "any" },
         { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
-        { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon-32x32.png" },
-        { rel: "icon", type: "image/png", sizes: "16x16", href: "/favicon-16x16.png" },
+        {
+          rel: "icon",
+          type: "image/png",
+          sizes: "32x32",
+          href: "/favicon-32x32.png"
+        },
+        {
+          rel: "icon",
+          type: "image/png",
+          sizes: "16x16",
+          href: "/favicon-16x16.png"
+        },
         { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
         { rel: "manifest", href: "/site.webmanifest" },
       ],

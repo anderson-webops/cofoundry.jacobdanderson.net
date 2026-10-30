@@ -55,7 +55,10 @@ export function buildProposalSectionSummaries(
   status: ProposalStatus,
 ): ProposalSectionSummary[] {
   const commentsBySection = new Map(
-    proposalSectionOrder.map(section => [section, sectionComments(comments, version.id, section)]),
+    proposalSectionOrder.map(section => [
+      section,
+      sectionComments(comments, version.id, section)
+    ]),
   )
 
   const build = (id: ProposalSectionKey, title: string, body: string, supporting: string[] = []) => ({

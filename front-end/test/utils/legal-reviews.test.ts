@@ -93,7 +93,9 @@ describe("contract legal reviews", () => {
     })).toBe(false)
 
     const finalCharacter = token!.at(-1)
-    const tamperedToken = `${token!.slice(0, -1)}${finalCharacter === "a" ? "b" : "a"}`
+    const tamperedToken = `${token!.slice(0, -1)}${finalCharacter === "a"
+      ? "b"
+      : "a"}`
     expect(verifyContractLegalReviewToken(tamperedToken, reviewNow)).toMatchObject({
       ok: false,
       statusCode: 404,

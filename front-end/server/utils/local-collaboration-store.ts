@@ -186,7 +186,9 @@ function assertMemberGrowthLimit<T>(
 }
 
 function proposalMemberIds(proposal: Proposal | undefined) {
-  return proposal ? [proposal.createdByUserId, proposal.recipientUserId] : []
+  return proposal
+    ? [proposal.createdByUserId, proposal.recipientUserId]
+    : []
 }
 
 function contractMemberIds(contract: Contract | undefined, proposals: Map<string, Proposal>) {
@@ -223,8 +225,11 @@ async function readStoreFile() {
 
 async function readStore(seedForWrite = false) {
   const contents = await readStoreFile()
-  if (!contents)
-    return seedForWrite ? seededStore() : emptyStore()
+  if (!contents) {
+    return seedForWrite
+      ? seededStore()
+      : emptyStore()
+  }
 
   return {
     ...emptyStore(),
@@ -439,7 +444,9 @@ export async function loadLocalCollaborationState(
 ) {
   const store = pruneStore(await readStore())
   const state = filterCollaborationStateForUser(store, userId, options)
-  return hasCollaborationRows(state) ? state : null
+  return hasCollaborationRows(state)
+    ? state
+    : null
 }
 
 export async function findLocalReportById(reportId: string) {
@@ -453,7 +460,9 @@ export async function persistLocalCollaborationStateForUsers(
   options: { expectedState?: PersistedCollaborationState } = {},
 ) {
   return updateStore((store) => {
-    const uniqueUserIds = [...new Set(userIds)]
+    const uniqueUserIds = [
+      ...new Set(userIds)
+    ]
     let nextState = cloneValue(state)
     const previousContractVersions = store.contractVersions
     const previousProposalVersions = store.proposalVersions

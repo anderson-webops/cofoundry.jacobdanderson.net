@@ -23,17 +23,35 @@ const connectDialogOpen = ref(false)
 const connectTargetUserId = ref("")
 const connectRoleContext = ref("")
 const currentUserId = computed(() => authStore.currentUser?.id || "")
-const currentProfile = computed(() => currentUserId.value ? workspaceStore.data.profiles.find(profile => profile.userId === currentUserId.value) : null)
-const currentReadiness = computed(() => currentProfile.value ? buildProfileReadiness(currentProfile.value) : null)
-const usage = computed(() => authStore.currentUser ? buildSubscriptionUsage(workspaceStore.data, authStore.currentUser.id, subscription.value || undefined) : null)
+const currentProfile = computed(() => currentUserId.value
+  ? workspaceStore.data.profiles.find(profile => profile.userId === currentUserId.value)
+  : null)
+const currentReadiness = computed(() => currentProfile.value
+  ? buildProfileReadiness(currentProfile.value)
+  : null)
+const usage = computed(() => authStore.currentUser
+  ? buildSubscriptionUsage(workspaceStore.data, authStore.currentUser.id, subscription.value || undefined)
+  : null)
 const showPlanLimitNotice = computed(() => Boolean(usage.value?.intros.exhausted || usage.value?.savedSearches.exhausted))
-const connectTargetProfile = computed(() => connectTargetUserId.value ? workspaceStore.data.profiles.find(profile => profile.userId === connectTargetUserId.value) : null)
+const connectTargetProfile = computed(() => connectTargetUserId.value
+  ? workspaceStore.data.profiles.find(profile => profile.userId === connectTargetUserId.value)
+  : null)
 
 const profileResults = computed(() => filterProfiles(workspaceStore.data, filters, currentProfile.value || undefined))
 const opportunityResults = computed(() => filterOpportunities(workspaceStore.data, filters, currentProfile.value || undefined))
-const currentBookmarks = computed(() => currentUserId.value ? workspaceStore.data.bookmarks.filter(bookmark => bookmark.userId === currentUserId.value) : [])
-const resultCount = computed(() => scope.value === "profiles" ? profileResults.value.length : opportunityResults.value.length)
-const resultLabel = computed(() => `${resultCount.value} ${scope.value === "profiles" ? `profile${resultCount.value === 1 ? "" : "s"}` : `opportunit${resultCount.value === 1 ? "y" : "ies"}`}`)
+const currentBookmarks = computed(() => currentUserId.value
+  ? workspaceStore.data.bookmarks.filter(bookmark => bookmark.userId === currentUserId.value)
+  : [])
+const resultCount = computed(() => scope.value === "profiles"
+  ? profileResults.value.length
+  : opportunityResults.value.length)
+const resultLabel = computed(() => `${resultCount.value} ${scope.value === "profiles"
+  ? `profile${resultCount.value === 1
+    ? ""
+    : "s"}`
+  : `opportunit${resultCount.value === 1
+    ? "y"
+    : "ies"}`}`)
 const activeFilterChips = computed(() => {
   const chips: { id: string, label: string, type: string, value?: string }[] = []
 
@@ -64,8 +82,18 @@ const activeFilterChips = computed(() => {
   if (filters.equityPhilosophy !== "any")
     chips.push({ id: `equity-${filters.equityPhilosophy}`, label: `Equity: ${formatEquityPhilosophy(filters.equityPhilosophy)}`, type: "equityPhilosophy" })
 
-  filters.roles.forEach(role => chips.push({ id: `role-${role}`, label: `Role: ${role}`, type: "role", value: role }))
-  filters.industries.forEach(industry => chips.push({ id: `industry-${industry}`, label: `Industry: ${industry}`, type: "industry", value: industry }))
+  filters.roles.forEach(role => chips.push({
+    id: `role-${role}`,
+    label: `Role: ${role}`,
+    type: "role",
+    value: role
+  }))
+  filters.industries.forEach(industry => chips.push({
+    id: `industry-${industry}`,
+    label: `Industry: ${industry}`,
+    type: "industry",
+    value: industry
+  }))
 
   return chips
 })
@@ -106,7 +134,9 @@ async function submitConnectRequest(payload: { note: string, structuredIntro: St
   if (!sent) {
     toastStore.push({
       title: "Request blocked",
-      message: currentProfile.value ? getOutreachUnlockMessage(currentProfile.value) : "Finish your profile and phone verification before sending connect requests.",
+      message: currentProfile.value
+        ? getOutreachUnlockMessage(currentProfile.value)
+        : "Finish your profile and phone verification before sending connect requests.",
       tone: "warning",
     })
     return
@@ -139,7 +169,9 @@ function saveCurrentSearch() {
   const saved = workspaceStore.saveSearch(
     authStore.currentUser.id,
     scope.value,
-    `${scope.value === "profiles" ? "Profiles" : "Opportunities"} · ${new Date().toLocaleDateString()}`,
+    `${scope.value === "profiles"
+      ? "Profiles"
+      : "Opportunities"} · ${new Date().toLocaleDateString()}`,
     filters,
   )
 
@@ -165,7 +197,9 @@ function isBookmarked(targetType: "profile" | "opportunity", targetId: string) {
 
 function quotaText(key: "intros" | "savedSearches") {
   const quota = usage.value?.[key]
-  return quota ? formatUsageQuota(quota) : ""
+  return quota
+    ? formatUsageQuota(quota)
+    : ""
 }
 
 function clearAllFilters() {

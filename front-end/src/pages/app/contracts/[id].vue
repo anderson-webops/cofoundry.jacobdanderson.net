@@ -34,14 +34,24 @@ const { authStore, workspaceStore } = useCurrentMember()
 const organizationStore = useOrganizationStore()
 
 const contract = computed(() => getContractById(workspaceStore.data, route.params.id as string))
-const version = computed(() => contract.value ? getCurrentContractVersion(workspaceStore.data, contract.value) : undefined)
-const proposal = computed(() => contract.value ? getProposalById(workspaceStore.data, contract.value.proposalId) : undefined)
-const proposalVersion = computed(() => proposal.value ? getCurrentProposalVersion(workspaceStore.data, proposal.value) : undefined)
-const proposalSummary = computed(() => proposalVersion.value ? buildProposalTermsSummary(proposalVersion.value) : [])
+const version = computed(() => contract.value
+  ? getCurrentContractVersion(workspaceStore.data, contract.value)
+  : undefined)
+const proposal = computed(() => contract.value
+  ? getProposalById(workspaceStore.data, contract.value.proposalId)
+  : undefined)
+const proposalVersion = computed(() => proposal.value
+  ? getCurrentProposalVersion(workspaceStore.data, proposal.value)
+  : undefined)
+const proposalSummary = computed(() => proposalVersion.value
+  ? buildProposalTermsSummary(proposalVersion.value)
+  : [])
 const signatures = computed(() => workspaceStore.data.signatures.filter(signature =>
   signature.contractId === route.params.id && signature.contractVersionId === version.value?.id,
 ))
-const relationshipHref = computed(() => contract.value && authStore.currentUser ? getRelationshipHrefForContract(workspaceStore.data, authStore.currentUser.id, contract.value.id) : null)
+const relationshipHref = computed(() => contract.value && authStore.currentUser
+  ? getRelationshipHrefForContract(workspaceStore.data, authStore.currentUser.id, contract.value.id)
+  : null)
 const previewOnly = computed(() => !contract.value || !hasPaidContractWorkflowSponsor(workspaceStore.data, contract.value))
 const editDialogOpen = ref(false)
 const editPending = ref(false)
@@ -102,7 +112,9 @@ function legalReviewTone(status: ContractLegalReview["status"]) {
 
 function contractVersionLabel(contractVersionId: string) {
   const item = workspaceStore.data.contractVersions.find(candidate => candidate.id === contractVersionId)
-  return item ? `Version ${item.versionNumber}` : "Prior version"
+  return item
+    ? `Version ${item.versionNumber}`
+    : "Prior version"
 }
 
 async function loadLegalReviews() {
@@ -335,11 +347,15 @@ async function requestLegalReview(payload: LegalReviewRequestPayload) {
     lastInviteUrl.value = response.inviteUrl
     legalReviewDialogOpen.value = false
     toastStore.push({
-      title: response.delivery === "sent" ? "Review invite sent" : "Review invite ready",
+      title: response.delivery === "sent"
+        ? "Review invite sent"
+        : "Review invite ready",
       message: response.delivery === "sent"
         ? `A version-bound review link was sent to ${response.review.reviewerEmail}.`
         : "Email delivery is not configured or did not complete. Use the secure copy-link action to share the invite manually.",
-      tone: response.delivery === "sent" ? "success" : "warning",
+      tone: response.delivery === "sent"
+        ? "success"
+        : "warning",
     })
   }
   catch (error: unknown) {
@@ -363,7 +379,9 @@ async function cancelLegalReview(review: ContractLegalReview) {
       body: {},
       method: "POST",
     })
-    legalReviews.value = legalReviews.value.map(item => item.id === review.id ? response.review : item)
+    legalReviews.value = legalReviews.value.map(item => item.id === review.id
+      ? response.review
+      : item)
     if (lastInviteUrl.value)
       lastInviteUrl.value = ""
     toastStore.push({
@@ -392,11 +410,15 @@ async function resendLegalReview(review: ContractLegalReview) {
     })
     lastInviteUrl.value = response.inviteUrl
     toastStore.push({
-      title: response.delivery === "sent" ? "Invite resent" : "Share link ready",
+      title: response.delivery === "sent"
+        ? "Invite resent"
+        : "Share link ready",
       message: response.delivery === "sent"
         ? `The review invite was sent again to ${review.reviewerEmail}.`
         : "Use the copy-link action to share this confidential invite manually.",
-      tone: response.delivery === "sent" ? "success" : "warning",
+      tone: response.delivery === "sent"
+        ? "success"
+        : "warning",
     })
   }
   catch (error: unknown) {

@@ -28,7 +28,12 @@ const planMix = computed(() => {
 })
 
 const roleMix = computed(() => {
-  return ["founder", "collaborator", "admin", "investor_admin"].map(role => ({
+  return [
+    "founder",
+    "collaborator",
+    "admin",
+    "investor_admin"
+  ].map(role => ({
     role,
     count: userRows.value.filter(row => row.user.role === role).length,
   }))

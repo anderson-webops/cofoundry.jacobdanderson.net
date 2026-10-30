@@ -52,7 +52,10 @@ async function readStore() {
 }
 
 async function writeStore(store: LocalMemberWorkspaceStore) {
-  await writePrivateFileAtomic(storePath(), `${JSON.stringify({ ...store, updatedAt: new Date().toISOString() }, null, 2)}\n`)
+  await writePrivateFileAtomic(storePath(), `${JSON.stringify({
+    ...store,
+    updatedAt: new Date().toISOString()
+  }, null, 2)}\n`)
 }
 
 async function updateStore<T>(updater: (_store: LocalMemberWorkspaceStore) => T | Promise<T>) {
@@ -70,7 +73,9 @@ async function updateStore<T>(updater: (_store: LocalMemberWorkspaceStore) => T 
 export async function readLocalMemberWorkspaceState(userId: string) {
   const store = await readStore()
   const state = store.members.find(member => member.user.id === userId)
-  return state ? cloneValue(state) : null
+  return state
+    ? cloneValue(state)
+    : null
 }
 
 export async function readLocalMemberWorkspaceStates() {

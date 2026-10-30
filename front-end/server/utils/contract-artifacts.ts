@@ -30,7 +30,9 @@ export async function loadContractArtifactContext(event: H3Event, contractId: st
   })
 
   const contract = getContractById(workspace.seed, contractId)
-  const version = contract ? getCurrentContractVersion(workspace.seed, contract) : undefined
+  const version = contract
+    ? getCurrentContractVersion(workspace.seed, contract)
+    : undefined
   if (!contract || !version)
     throw createError({ statusCode: 404, statusMessage: "Contract not found." })
 

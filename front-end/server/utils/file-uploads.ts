@@ -338,7 +338,9 @@ export async function getFileUploadById(event: H3Event, uploadId: string) {
     .maybeSingle()
   if (error)
     throw error
-  return data ? fileUploadRowToDomain(data as PersistedFileUploadRow) : null
+  return data
+    ? fileUploadRowToDomain(data as PersistedFileUploadRow)
+    : null
 }
 
 export async function recordFileScanResult(event: H3Event, uploadId: string, payload: FileScanResultPayload) {
@@ -354,7 +356,9 @@ export async function recordFileScanResult(event: H3Event, uploadId: string, pay
     .update({
       scan_notes: payload.notes || null,
       scan_status: payload.scanStatus,
-      status: payload.scanStatus === "clean" ? "uploaded" : "blocked",
+      status: payload.scanStatus === "clean"
+        ? "uploaded"
+        : "blocked",
       updated_at: new Date().toISOString(),
     })
     .eq("id", uploadId)
@@ -407,7 +411,9 @@ export async function recordAdminFileScanResult(
     const stale = error.message.includes("changed after")
     const ineligible = error.message.includes("not eligible")
     throw createError({
-      statusCode: stale || ineligible ? 409 : 400,
+      statusCode: stale || ineligible
+        ? 409
+        : 400,
       statusMessage: stale
         ? "The file changed after this review began. Refresh and review the current state."
         : ineligible
@@ -420,14 +426,19 @@ export async function recordAdminFileScanResult(
     ...existingData,
     scan_notes: payload.notes,
     scan_status: payload.scanStatus,
-    status: payload.scanStatus === "clean" ? "uploaded" as const : "blocked" as const,
+    status: payload.scanStatus === "clean"
+      ? "uploaded" as const
+      : "blocked" as const,
     updated_at: action.createdAt,
   }
 }
 
 export async function listPendingFileScans(event: H3Event, limit: number) {
-  if (!isSupabaseEnabled(event))
-    return listLocalPendingFileScans(limit, { appUrl: resolveServerAppUrl(event) })
+  if (!isSupabaseEnabled(event)) {
+    return listLocalPendingFileScans(limit, {
+      appUrl: resolveServerAppUrl(event)
+    })
+  }
 
   const adminClient = createSupabaseAdminClient(event)
   if (!adminClient)

@@ -239,7 +239,12 @@ export const workspaceSeed: WorkspaceSeed = {
       },
       hasIdea: true,
       wantsToJoinIdea: false,
-      values: ["Candor", "Bias to action", "High trust", "Clear decision-making"],
+      values: [
+        "Candor",
+        "Bias to action",
+        "High trust",
+        "Clear decision-making"
+      ],
       workStylePreferences: ["Weekly written updates", "Default to transparency", "Operator-led product discovery"],
       privacy: {
         profileVisibility: "public",
@@ -269,7 +274,14 @@ export const workspaceSeed: WorkspaceSeed = {
           proof("proof_olivia_1", "Fintech workflow case study", "Detailed write-up of the compliance operations system Olivia shipped and the buyer constraints it solved.", "https://ledgerloop.co/case-studies/clearwire-treasury", "Cut KYB review time by 38% across 2,100 SMB teams."),
           proof("proof_olivia_2", "Founder memo", "Concise founder memo on the LedgerLoop wedge, customer pull, and what the first 90 days should prove.", "https://ledgerloop.co/memo", "Used in founder and design-partner conversations."),
         ],
-        { phoneVerified: true, linkedInVerified: true, githubVerified: true, workDomainVerified: true, websiteVerified: true, governmentIdVerified: true },
+        {
+          phoneVerified: true,
+          linkedInVerified: true,
+          githubVerified: true,
+          workDomainVerified: true,
+          websiteVerified: true,
+          governmentIdVerified: true
+        },
       ),
       availability: "Available for 3 founder conversations this week.",
       portfolio: [
@@ -283,7 +295,12 @@ export const workspaceSeed: WorkspaceSeed = {
         },
       ],
       ventures: [
-        { id: "venture_ledgerloop", name: "LedgerLoop", role: "Founder", stage: "prototype" },
+        {
+          id: "venture_ledgerloop",
+          name: "LedgerLoop",
+          role: "Founder",
+          stage: "prototype"
+        },
       ],
       summaryHighlights: ["Hiring first technical co-founder", "Brings domain expertise and initial design partner demand", "Wants full-time partner within 60 days"],
     },
@@ -324,7 +341,12 @@ export const workspaceSeed: WorkspaceSeed = {
       },
       hasIdea: false,
       wantsToJoinIdea: true,
-      values: ["Clear ownership", "Technical rigor", "No hidden politics", "Weekly product contact"],
+      values: [
+        "Clear ownership",
+        "Technical rigor",
+        "No hidden politics",
+        "Weekly product contact"
+      ],
       workStylePreferences: ["Write before meetings", "Lean architecture until needed", "Prefer async decision logs"],
       privacy: {
         profileVisibility: "public",
@@ -354,7 +376,13 @@ export const workspaceSeed: WorkspaceSeed = {
           proof("proof_malik_1", "Realtime ledger architecture", "Explains how Malik redesigned a high-volume payments system with operational reliability in mind.", "https://malik.dev/reconciliation", "Dropped reconciliation lag from 12 hours to under 4 minutes."),
           proof("proof_malik_2", "Systems design notes", "Short technical notes showing how he scopes 0-to-1 architecture without overbuilding.", "https://malik.dev/work", "Used to qualify deep infra conversations quickly."),
         ],
-        { phoneVerified: true, linkedInVerified: true, githubVerified: true, workDomainVerified: true, websiteVerified: true },
+        {
+          phoneVerified: true,
+          linkedInVerified: true,
+          githubVerified: true,
+          workDomainVerified: true,
+          websiteVerified: true
+        },
       ),
       availability: "Open to one serious founder match and two exploratory calls this month.",
       portfolio: [
@@ -592,7 +620,12 @@ export const workspaceSeed: WorkspaceSeed = {
           proof("proof_emma_1", "CareOps launchbook", "A product-growth case study showing Emma's operating system for getting clinical products into real customer hands.", "https://trialwire.health/case-study", "Reached eight paid pilot customers in 10 months."),
           proof("proof_emma_2", "Clinical ops pilot brief", "Sanitized overview of the customer workflow and traction signals Trialwire already has.", "https://trialwire.health/pilots", "Gives joiners enough signal to evaluate seriousness before outreach."),
         ],
-        { phoneVerified: true, linkedInVerified: true, workDomainVerified: true, websiteVerified: true },
+        {
+          phoneVerified: true,
+          linkedInVerified: true,
+          workDomainVerified: true,
+          websiteVerified: true
+        },
       ),
       availability: "Hiring one founding designer and one operations partner now.",
       portfolio: [
@@ -606,7 +639,12 @@ export const workspaceSeed: WorkspaceSeed = {
         },
       ],
       ventures: [
-        { id: "venture_trialwire", name: "Trialwire", role: "Founder", stage: "mvp" },
+        {
+          id: "venture_trialwire",
+          name: "Trialwire",
+          role: "Founder",
+          stage: "mvp"
+        },
       ],
       summaryHighlights: ["Pilot traction with design partners", "Healthtech + AI workflow focus", "Building an accountable operating culture early"],
     },
@@ -676,12 +714,24 @@ export const workspaceSeed: WorkspaceSeed = {
         [
           proof("proof_noah_1", "SignalDeck retention notes", "Short operational brief showing why the current logistics wedge is sticky and where the product is going next.", "https://signaldeck.io", "$19k MRR with 93% gross revenue retention."),
         ],
-        { phoneVerified: true, linkedInVerified: true, githubVerified: true, workDomainVerified: true, websiteVerified: true, governmentIdVerified: true },
+        {
+          phoneVerified: true,
+          linkedInVerified: true,
+          githubVerified: true,
+          workDomainVerified: true,
+          websiteVerified: true,
+          governmentIdVerified: true
+        },
       ),
       availability: "Open to a technical founding operator or senior builder.",
       portfolio: [],
       ventures: [
-        { id: "venture_signaldeck", name: "SignalDeck", role: "Founder", stage: "revenue" },
+        {
+          id: "venture_signaldeck",
+          name: "SignalDeck",
+          role: "Founder",
+          stage: "revenue"
+        },
       ],
       summaryHighlights: ["Already at early revenue", "Needs a hands-on technical operator", "Best fit for systems-minded builders"],
     },
@@ -749,7 +799,12 @@ export const workspaceSeed: WorkspaceSeed = {
         true,
         true,
         [],
-        { phoneVerified: true, linkedInVerified: true, governmentIdVerified: true, workDomainVerified: true },
+        {
+          phoneVerified: true,
+          linkedInVerified: true,
+          governmentIdVerified: true,
+          workDomainVerified: true
+        },
       ),
       availability: "Internal team member",
       portfolio: [],
@@ -820,7 +875,12 @@ export const workspaceSeed: WorkspaceSeed = {
         true,
         true,
         [],
-        { phoneVerified: true, linkedInVerified: true, governmentIdVerified: true, workDomainVerified: true },
+        {
+          phoneVerified: true,
+          linkedInVerified: true,
+          governmentIdVerified: true,
+          workDomainVerified: true
+        },
       ),
       availability: "Internal team member",
       portfolio: [],
@@ -843,21 +903,111 @@ export const workspaceSeed: WorkspaceSeed = {
     { id: "skill_logistics", label: "Logistics", category: "Domain" },
   ],
   profileSkills: [
-    { id: "ps_olivia_1", profileId: "profile_olivia", skillId: "skill_product", level: "expert", years: 8 },
-    { id: "ps_olivia_2", profileId: "profile_olivia", skillId: "skill_compliance", level: "expert", years: 7 },
-    { id: "ps_olivia_3", profileId: "profile_olivia", skillId: "skill_sales", level: "strong", years: 5 },
-    { id: "ps_malik_1", profileId: "profile_malik", skillId: "skill_full_stack", level: "expert", years: 9 },
-    { id: "ps_malik_2", profileId: "profile_malik", skillId: "skill_backend", level: "expert", years: 9 },
-    { id: "ps_malik_3", profileId: "profile_malik", skillId: "skill_ai", level: "strong", years: 4 },
-    { id: "ps_sofia_1", profileId: "profile_sofia", skillId: "skill_design", level: "expert", years: 8 },
-    { id: "ps_sofia_2", profileId: "profile_sofia", skillId: "skill_brand", level: "strong", years: 6 },
-    { id: "ps_arjun_1", profileId: "profile_arjun", skillId: "skill_sales", level: "expert", years: 7 },
-    { id: "ps_arjun_2", profileId: "profile_arjun", skillId: "skill_growth", level: "strong", years: 6 },
-    { id: "ps_arjun_3", profileId: "profile_arjun", skillId: "skill_ops", level: "strong", years: 5 },
-    { id: "ps_emma_1", profileId: "profile_emma", skillId: "skill_growth", level: "expert", years: 7 },
-    { id: "ps_emma_2", profileId: "profile_emma", skillId: "skill_healthtech", level: "expert", years: 6 },
-    { id: "ps_noah_1", profileId: "profile_noah", skillId: "skill_ops", level: "expert", years: 10 },
-    { id: "ps_noah_2", profileId: "profile_noah", skillId: "skill_logistics", level: "expert", years: 10 },
+    {
+      id: "ps_olivia_1",
+      profileId: "profile_olivia",
+      skillId: "skill_product",
+      level: "expert",
+      years: 8
+    },
+    {
+      id: "ps_olivia_2",
+      profileId: "profile_olivia",
+      skillId: "skill_compliance",
+      level: "expert",
+      years: 7
+    },
+    {
+      id: "ps_olivia_3",
+      profileId: "profile_olivia",
+      skillId: "skill_sales",
+      level: "strong",
+      years: 5
+    },
+    {
+      id: "ps_malik_1",
+      profileId: "profile_malik",
+      skillId: "skill_full_stack",
+      level: "expert",
+      years: 9
+    },
+    {
+      id: "ps_malik_2",
+      profileId: "profile_malik",
+      skillId: "skill_backend",
+      level: "expert",
+      years: 9
+    },
+    {
+      id: "ps_malik_3",
+      profileId: "profile_malik",
+      skillId: "skill_ai",
+      level: "strong",
+      years: 4
+    },
+    {
+      id: "ps_sofia_1",
+      profileId: "profile_sofia",
+      skillId: "skill_design",
+      level: "expert",
+      years: 8
+    },
+    {
+      id: "ps_sofia_2",
+      profileId: "profile_sofia",
+      skillId: "skill_brand",
+      level: "strong",
+      years: 6
+    },
+    {
+      id: "ps_arjun_1",
+      profileId: "profile_arjun",
+      skillId: "skill_sales",
+      level: "expert",
+      years: 7
+    },
+    {
+      id: "ps_arjun_2",
+      profileId: "profile_arjun",
+      skillId: "skill_growth",
+      level: "strong",
+      years: 6
+    },
+    {
+      id: "ps_arjun_3",
+      profileId: "profile_arjun",
+      skillId: "skill_ops",
+      level: "strong",
+      years: 5
+    },
+    {
+      id: "ps_emma_1",
+      profileId: "profile_emma",
+      skillId: "skill_growth",
+      level: "expert",
+      years: 7
+    },
+    {
+      id: "ps_emma_2",
+      profileId: "profile_emma",
+      skillId: "skill_healthtech",
+      level: "expert",
+      years: 6
+    },
+    {
+      id: "ps_noah_1",
+      profileId: "profile_noah",
+      skillId: "skill_ops",
+      level: "expert",
+      years: 10
+    },
+    {
+      id: "ps_noah_2",
+      profileId: "profile_noah",
+      skillId: "skill_logistics",
+      level: "expert",
+      years: 10
+    },
   ],
   opportunities: [
     {
@@ -1005,9 +1155,27 @@ export const workspaceSeed: WorkspaceSeed = {
     },
   ],
   bookmarks: [
-    { id: "bookmark_1", userId: "user_olivia", targetType: "profile", targetId: "profile_malik", createdAt: ts(8, "10:15") },
-    { id: "bookmark_2", userId: "user_malik", targetType: "opportunity", targetId: "opp_ledgerloop", createdAt: ts(8, "10:20") },
-    { id: "bookmark_3", userId: "user_sofia", targetType: "opportunity", targetId: "opp_trialwire", createdAt: ts(9, "14:12") },
+    {
+      id: "bookmark_1",
+      userId: "user_olivia",
+      targetType: "profile",
+      targetId: "profile_malik",
+      createdAt: ts(8, "10:15")
+    },
+    {
+      id: "bookmark_2",
+      userId: "user_malik",
+      targetType: "opportunity",
+      targetId: "opp_ledgerloop",
+      createdAt: ts(8, "10:20")
+    },
+    {
+      id: "bookmark_3",
+      userId: "user_sofia",
+      targetType: "opportunity",
+      targetId: "opp_trialwire",
+      createdAt: ts(9, "14:12")
+    },
   ],
   connectRequests: [
     {
@@ -1119,7 +1287,12 @@ export const workspaceSeed: WorkspaceSeed = {
       type: "user",
       body: "Thanks for accepting. I recorded a short memo on the customer workflow and how I think the first product should look.",
       attachments: [
-        { id: "att_1", name: "ledgerloop-customer-notes.pdf", url: "#", sizeLabel: "1.2 MB" },
+        {
+          id: "att_1",
+          name: "ledgerloop-customer-notes.pdf",
+          url: "#",
+          sizeLabel: "1.2 MB"
+        },
       ],
       createdAt: ts(7, "14:15"),
     },

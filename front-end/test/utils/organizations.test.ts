@@ -73,8 +73,12 @@ describe("organization workspaces", () => {
 
     expect(document.organization.ownerUserId).toBe(owner.id)
     expect(document.organization.seatLimit).toBe(25)
-    expect(document.memberships).toMatchObject([{ role: "owner", userId: owner.id }])
-    expect(document.agreementPolicies).toMatchObject([{ isDefault: true, requiresInternalApproval: true }])
+    expect(document.memberships).toMatchObject([
+      { role: "owner", userId: owner.id }
+    ])
+    expect(document.agreementPolicies).toMatchObject([
+      { isDefault: true, requiresInternalApproval: true }
+    ])
     expect(document.auditEvents[0]?.action).toBe("organization.created")
   })
 
@@ -247,7 +251,10 @@ describe("organization workspaces", () => {
     }, 5)
 
     expect(getOrganizationContractGovernanceRequirements([linked], "contract_1", "contract_version_1", new Set())[0])
-      .toMatchObject({ approvalStatus: "missing", blockers: ["Internal approval has not been requested for this version."] })
+      .toMatchObject({
+        approvalStatus: "missing",
+        blockers: ["Internal approval has not been requested for this version."]
+      })
 
     const validRequest = apply(linked, owner, {
       action: "request_approval",
@@ -304,7 +311,10 @@ describe("organization workspaces", () => {
     expect(() => apply(linked, owner, request(null), 3)).toThrow("linked agreement policy")
     expect(() => apply(linked, owner, request(otherPolicyDocument.agreementPolicies[0]!.id), 3)).toThrow("linked agreement policy")
     expect(() => apply(linked, owner, request(document.agreementPolicies[0]!.id), 3)).not.toThrow()
-    expect(() => apply(linked, owner, { ...request(null), targetType: "venture" }, 3)).not.toThrow()
+    expect(() => apply(linked, owner, {
+      ...request(null),
+      targetType: "venture"
+    }, 3)).not.toThrow()
 
     const defaultLinked = apply(document, owner, {
       action: "link_resource",
@@ -391,7 +401,10 @@ describe("organization workspaces", () => {
     }, 4)
 
     expect(getOrganizationContractGovernanceRequirements([linked], "contract_1", "contract_version_1", new Set())[0])
-      .toMatchObject({ approvalStatus: "missing", blockers: ["Internal approval has not been requested for this version."] })
+      .toMatchObject({
+        approvalStatus: "missing",
+        blockers: ["Internal approval has not been requested for this version."]
+      })
   })
 
   it("keeps signing blocked when a linked contract loses its default policy", () => {
@@ -419,7 +432,10 @@ describe("organization workspaces", () => {
     }, 2)
 
     expect(getOrganizationContractGovernanceRequirements([withoutDefault], "contract_1", "contract_version_1", new Set())[0])
-      .toMatchObject({ approvalStatus: "missing", blockers: ["The linked agreement policy is unavailable. An organization owner must restore it before signing."] })
+      .toMatchObject({
+        approvalStatus: "missing",
+        blockers: ["The linked agreement policy is unavailable. An organization owner must restore it before signing."]
+      })
     expect(() => apply(withoutDefault, owner, {
       action: "request_approval",
       policyId: null,
@@ -433,7 +449,10 @@ describe("organization workspaces", () => {
     const staleExplicitLink = structuredClone(linked)
     staleExplicitLink.resourceLinks[0]!.policyId = "organization_policy_unavailable"
     expect(getOrganizationContractGovernanceRequirements([staleExplicitLink], "contract_1", "contract_version_1", new Set())[0])
-      .toMatchObject({ policyId: "organization_policy_unavailable", blockers: ["The linked agreement policy is unavailable. An organization owner must restore it before signing."] })
+      .toMatchObject({
+        policyId: "organization_policy_unavailable",
+        blockers: ["The linked agreement policy is unavailable. An organization owner must restore it before signing."]
+      })
   })
 
   it("requires a currently eligible independent approver under the linked policy", () => {
@@ -468,7 +487,10 @@ describe("organization workspaces", () => {
       title: "Team member",
     }, 6)
     expect(getOrganizationContractGovernanceRequirements([downgraded], "contract_1", "contract_version_1", new Set())[0])
-      .toMatchObject({ approvalStatus: "missing", blockers: ["Internal approval has not been requested for this version."] })
+      .toMatchObject({
+        approvalStatus: "missing",
+        blockers: ["Internal approval has not been requested for this version."]
+      })
 
     const legacySelfApproved = structuredClone(approved)
     legacySelfApproved.approvalRequests[0]!.decidedByUserId = owner.id

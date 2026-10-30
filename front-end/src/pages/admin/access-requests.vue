@@ -124,13 +124,17 @@ async function updateStatus(request: AccessRequest, status: "approved" | "denied
     toastStore.push({
       title: "Access request updated",
       message: `The request is now ${status}.`,
-      tone: status === "denied" ? "warning" : "success",
+      tone: status === "denied"
+        ? "warning"
+        : "success",
     })
   }
   catch (caughtError) {
     toastStore.push({
       title: "Access request update failed",
-      message: caughtError instanceof Error ? caughtError.message : "The request could not be updated.",
+      message: caughtError instanceof Error
+        ? caughtError.message
+        : "The request could not be updated.",
       tone: "danger",
     })
   }
@@ -160,7 +164,9 @@ async function issueInvite(request: AccessRequest) {
   catch (caughtError) {
     toastStore.push({
       title: "Invite failed",
-      message: caughtError instanceof Error ? caughtError.message : "The invite could not be generated.",
+      message: caughtError instanceof Error
+        ? caughtError.message
+        : "The invite could not be generated.",
       tone: "danger",
     })
   }

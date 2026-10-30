@@ -21,8 +21,22 @@ const secureUrl = z.string().trim().max(1000).refine((value) => {
   }
 }, "Use a credential-free HTTPS URL.")
 const requiredSecureUrl = secureUrl.refine(Boolean, "Add a secure HTTPS URL.")
-const instrument = z.enum(["safe", "convertible_note", "preferred_equity", "other"])
-const dataRoomCategory = z.enum(["pitch", "corporate", "financial", "traction", "team", "product", "legal", "other"])
+const instrument = z.enum([
+  "safe",
+  "convertible_note",
+  "preferred_equity",
+  "other"
+])
+const dataRoomCategory = z.enum([
+  "pitch",
+  "corporate",
+  "financial",
+  "traction",
+  "team",
+  "product",
+  "legal",
+  "other"
+])
 
 export const investmentWorkspaceCreateSchema = z.object({
   opportunityId: id,
@@ -69,7 +83,13 @@ const applicantMutationSchema = z.discriminatedUnion("action", [
     minimumInvestment: shortText,
     openedAt: nullableDateTime,
     roundId: id,
-    status: z.enum(["planning", "open", "soft_circled", "closed", "canceled"]),
+    status: z.enum([
+      "planning",
+      "open",
+      "soft_circled",
+      "closed",
+      "canceled"
+    ]),
     targetAmount: requiredShortText,
     targetCloseAt: nullableDateTime,
     title: requiredShortText,
@@ -78,16 +98,34 @@ const applicantMutationSchema = z.discriminatedUnion("action", [
   }).strict(),
   z.object({
     action: z.literal("create_prospect"),
-    email: z.union([z.literal(""), z.string().trim().email().max(254)]),
+    email: z.union([
+      z.literal(""),
+      z.string().trim().email().max(254)
+    ]),
     expectedCheckSize: shortText,
     firm: shortText,
-    kind: z.enum(["angel", "fund", "strategic", "accelerator", "other"]),
+    kind: z.enum([
+      "angel",
+      "fund",
+      "strategic",
+      "accelerator",
+      "other"
+    ]),
     name: shortText,
     nextStep: mediumText,
     nextStepAt: nullableDateTime,
     notes: longText,
     source: shortText,
-    status: z.enum(["researching", "contact_planned", "contacted", "meeting", "diligence", "passed", "committed", "closed"]),
+    status: z.enum([
+      "researching",
+      "contact_planned",
+      "contacted",
+      "meeting",
+      "diligence",
+      "passed",
+      "committed",
+      "closed"
+    ]),
     website: secureUrl,
   }).strict().refine(payload => Boolean(payload.name || payload.firm), {
     message: "Add a person or firm name.",
@@ -95,17 +133,35 @@ const applicantMutationSchema = z.discriminatedUnion("action", [
   }),
   z.object({
     action: z.literal("update_prospect"),
-    email: z.union([z.literal(""), z.string().trim().email().max(254)]),
+    email: z.union([
+      z.literal(""),
+      z.string().trim().email().max(254)
+    ]),
     expectedCheckSize: shortText,
     firm: shortText,
-    kind: z.enum(["angel", "fund", "strategic", "accelerator", "other"]),
+    kind: z.enum([
+      "angel",
+      "fund",
+      "strategic",
+      "accelerator",
+      "other"
+    ]),
     name: shortText,
     nextStep: mediumText,
     nextStepAt: nullableDateTime,
     notes: longText,
     prospectId: id,
     source: shortText,
-    status: z.enum(["researching", "contact_planned", "contacted", "meeting", "diligence", "passed", "committed", "closed"]),
+    status: z.enum([
+      "researching",
+      "contact_planned",
+      "contacted",
+      "meeting",
+      "diligence",
+      "passed",
+      "committed",
+      "closed"
+    ]),
     website: secureUrl,
   }).strict().refine(payload => Boolean(payload.name || payload.firm), {
     message: "Add a person or firm name.",
@@ -117,7 +173,14 @@ const applicantMutationSchema = z.discriminatedUnion("action", [
     occurredAt: dateTime,
     prospectId: id,
     summary: requiredMediumText,
-    type: z.enum(["note", "email", "call", "meeting", "data_room", "term_sheet"]),
+    type: z.enum([
+      "note",
+      "email",
+      "call",
+      "meeting",
+      "data_room",
+      "term_sheet"
+    ]),
   }).strict(),
   z.object({
     action: z.literal("add_data_room_item"),
@@ -140,7 +203,10 @@ const applicantMutationSchema = z.discriminatedUnion("action", [
     shareWithProgram: z.boolean(),
     title: requiredShortText,
   }).strict(),
-  z.object({ action: z.literal("remove_data_room_item"), dataRoomItemId: id }).strict(),
+  z.object({
+    action: z.literal("remove_data_room_item"),
+    dataRoomItemId: id
+  }).strict(),
   z.object({
     action: z.literal("update_application"),
     companySummary: requiredMediumText,
@@ -162,9 +228,17 @@ const applicantMutationSchema = z.discriminatedUnion("action", [
       regulatedExecutionAcknowledged: z.boolean(),
     }).strict(),
   }).strict(),
-  z.object({ action: z.literal("set_partner_sharing_consent"), consent: z.boolean() }).strict(),
-  z.object({ action: z.literal("submit_application") }).strict(),
-  z.object({ action: z.literal("withdraw_application"), reason: requiredMediumText }).strict(),
+  z.object({
+    action: z.literal("set_partner_sharing_consent"),
+    consent: z.boolean()
+  }).strict(),
+  z.object({
+    action: z.literal("submit_application")
+  }).strict(),
+  z.object({
+    action: z.literal("withdraw_application"),
+    reason: requiredMediumText
+  }).strict(),
   z.object({
     action: z.literal("respond_information_request"),
     informationRequestId: id,
@@ -200,7 +274,10 @@ export const investmentApplicantMutationEnvelopeSchema = z.object({
 }).strict()
 
 const reviewerMutationSchema = z.discriminatedUnion("action", [
-  z.object({ action: z.literal("assign_reviewer"), reviewerUserId: nullableId }).strict(),
+  z.object({
+    action: z.literal("assign_reviewer"),
+    reviewerUserId: nullableId
+  }).strict(),
   z.object({
     action: z.literal("update_review"),
     priority: z.enum(["standard", "high", "urgent"]),
@@ -209,7 +286,14 @@ const reviewerMutationSchema = z.discriminatedUnion("action", [
   }).strict(),
   z.object({
     action: z.literal("set_application_status"),
-    status: z.enum(["submitted", "under_review", "information_requested", "diligence", "committee_review", "closed"]),
+    status: z.enum([
+      "submitted",
+      "under_review",
+      "information_requested",
+      "diligence",
+      "committee_review",
+      "closed"
+    ]),
   }).strict(),
   z.object({
     action: z.literal("request_information"),
@@ -237,19 +321,36 @@ const reviewerMutationSchema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("add_review_note"),
     body: requiredMediumText,
-    category: z.enum(["screening", "diligence", "committee", "compliance", "partner"]),
+    category: z.enum([
+      "screening",
+      "diligence",
+      "committee",
+      "compliance",
+      "partner"
+    ]),
   }).strict(),
   z.object({
     action: z.literal("record_decision"),
     internalRationale: requiredMediumText,
-    outcome: z.enum(["advance", "hold", "decline", "refer_to_partner"]),
+    outcome: z.enum([
+      "advance",
+      "hold",
+      "decline",
+      "refer_to_partner"
+    ]),
     publicRationale: requiredMediumText,
   }).strict(),
   z.object({
     action: z.literal("create_partner_handoff"),
     internalNotes: mediumText,
     partnerName: requiredShortText,
-    partnerType: z.enum(["broker_dealer", "funding_portal", "counsel", "investment_adviser", "other"]),
+    partnerType: z.enum([
+      "broker_dealer",
+      "funding_portal",
+      "counsel",
+      "investment_adviser",
+      "other"
+    ]),
     partnerUrl: requiredSecureUrl,
     sharedDataRoomItemIds: z.array(id).max(100),
   }).strict(),
@@ -259,7 +360,15 @@ const reviewerMutationSchema = z.discriminatedUnion("action", [
     handoffId: id,
     internalNotes: mediumText,
     sharedDataRoomItemIds: z.array(id).max(100),
-    status: z.enum(["planned", "consent_pending", "ready", "sent", "acknowledged", "closed", "canceled"]),
+    status: z.enum([
+      "planned",
+      "consent_pending",
+      "ready",
+      "sent",
+      "acknowledged",
+      "closed",
+      "canceled"
+    ]),
   }).strict(),
 ])
 

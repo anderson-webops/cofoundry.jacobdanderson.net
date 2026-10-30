@@ -55,7 +55,9 @@ async function submitReport() {
     isOpen.value = false
   }
   catch (caughtError) {
-    errors.value.form = caughtError instanceof Error ? caughtError.message : "The report could not be submitted."
+    errors.value.form = caughtError instanceof Error
+      ? caughtError.message
+      : "The report could not be submitted."
   }
   finally {
     pending.value = false

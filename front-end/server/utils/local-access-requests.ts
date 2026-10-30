@@ -226,7 +226,10 @@ export async function applyLocalAdminAccessRequestStatus(
       request.reviewedByUserId = payload.action.adminUserId
       request.status = payload.status
       request.updatedAt = payload.action.createdAt
-      store.actions = [payload.action, ...store.actions.filter(action => action.id !== payload.action.id)]
+      store.actions = [
+        payload.action,
+        ...store.actions.filter(action => action.id !== payload.action.id)
+      ]
       return publicRequest(request)
     })
   })
@@ -280,7 +283,10 @@ export async function issueLocalAdminAccessInvite(id: string, payload: {
       request.reviewedByUserId = payload.action.adminUserId
       request.status = "invited"
       request.updatedAt = payload.action.createdAt
-      store.actions = [payload.action, ...store.actions.filter(action => action.id !== payload.action.id)]
+      store.actions = [
+        payload.action,
+        ...store.actions.filter(action => action.id !== payload.action.id)
+      ]
 
       return {
         inviteToken: token,
@@ -293,7 +299,9 @@ export async function issueLocalAdminAccessInvite(id: string, payload: {
 
 export async function validateLocalAccessInvite(token: string, email?: string) {
   const hash = tokenHash(token.trim())
-  const normalizedEmail = email ? normalizeEmail(email) : ""
+  const normalizedEmail = email
+    ? normalizeEmail(email)
+    : ""
   const request = (await readStore()).requests.find(row => row.inviteTokenHash === hash)
 
   if (!request || request.status !== "invited")

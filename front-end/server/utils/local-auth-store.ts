@@ -66,7 +66,10 @@ async function readStore() {
 }
 
 async function writeStore(store: LocalAuthStore) {
-  await writePrivateFileAtomic(storePath(), `${JSON.stringify({ ...store, updatedAt: new Date().toISOString() }, null, 2)}\n`)
+  await writePrivateFileAtomic(storePath(), `${JSON.stringify({
+    ...store,
+    updatedAt: new Date().toISOString()
+  }, null, 2)}\n`)
 }
 
 async function updateStore<T>(updater: (_store: LocalAuthStore) => T | Promise<T>) {
@@ -149,12 +152,16 @@ export async function deleteLocalAuthAccount(id: string) {
 export async function findLocalAuthSessionByEmail(email: string) {
   const normalizedEmail = normalizeEmail(email)
   const account = (await readStore()).accounts.find(row => row.email === normalizedEmail)
-  return account ? toSession(account) : null
+  return account
+    ? toSession(account)
+    : null
 }
 
 export async function findLocalAuthSessionById(id: string) {
   const account = (await readStore()).accounts.find(row => row.id === id)
-  return account ? toSession(account) : null
+  return account
+    ? toSession(account)
+    : null
 }
 
 export async function verifyLocalAuthCredentials(email: string, password: string) {

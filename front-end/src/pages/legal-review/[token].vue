@@ -20,7 +20,9 @@ interface ReviewResponse {
 }
 
 const route = useRoute()
-const token = computed(() => typeof route.params.token === "string" ? route.params.token : "")
+const token = computed(() => typeof route.params.token === "string"
+  ? route.params.token
+  : "")
 const loading = ref(true)
 const submitting = ref(false)
 const data = ref<ReviewResponse | null>(null)

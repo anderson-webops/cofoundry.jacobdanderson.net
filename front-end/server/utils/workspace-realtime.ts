@@ -145,11 +145,15 @@ export function resolveWorkspaceRealtimeFanoutDestination(
 
 function readFanoutTimeoutMs() {
   const value = Number.parseInt(process.env.COFOUNDRY_REALTIME_FANOUT_TIMEOUT_MS || "", 10)
-  return Number.isFinite(value) && value > 0 ? Math.min(value, 30_000) : 5_000
+  return Number.isFinite(value) && value > 0
+    ? Math.min(value, 30_000)
+    : 5_000
 }
 
 function readFanoutProvider() {
-  return process.env.COFOUNDRY_REALTIME_FANOUT_PROVIDER?.trim() || (readFanoutUrl() ? "webhook" : "")
+  return process.env.COFOUNDRY_REALTIME_FANOUT_PROVIDER?.trim() || (readFanoutUrl()
+    ? "webhook"
+    : "")
 }
 
 function rememberMessageId(messageId: string, now = Date.now()) {

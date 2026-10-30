@@ -18,7 +18,9 @@ export default defineEventHandler(async (event) => {
   const verificationEvent = await recordTrustVerificationEvent(event, payload)
 
   return {
-    mode: isSupabaseEnabled(event) ? "supabase" : "mock",
+    mode: isSupabaseEnabled(event)
+      ? "supabase"
+      : "mock",
     verificationEvent,
   }
 })

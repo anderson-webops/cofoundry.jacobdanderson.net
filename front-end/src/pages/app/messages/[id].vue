@@ -17,17 +17,35 @@ const toastStore = useToastStore()
 const { authStore, subscription, workspaceStore } = useCurrentMember()
 
 const conversation = computed(() => workspaceStore.data.conversations.find(item => item.id === route.params.id))
-const messages = computed(() => conversation.value ? getMessagesForConversation(workspaceStore.data, conversation.value.id) : [])
-const participants = computed(() => conversation.value ? buildParticipantProfiles(workspaceStore.data, conversation.value.participantIds) : [])
+const messages = computed(() => conversation.value
+  ? getMessagesForConversation(workspaceStore.data, conversation.value.id)
+  : [])
+const participants = computed(() => conversation.value
+  ? buildParticipantProfiles(workspaceStore.data, conversation.value.participantIds)
+  : [])
 const otherParticipant = computed(() => participants.value.find(item => item.userId !== authStore.currentUser?.id) || null)
-const currentProfile = computed(() => authStore.currentUser ? getProfileByUserId(workspaceStore.data, authStore.currentUser.id) : null)
+const currentProfile = computed(() => authStore.currentUser
+  ? getProfileByUserId(workspaceStore.data, authStore.currentUser.id)
+  : null)
 const entitlements = computed(() => getSubscriptionEntitlements(subscription.value || undefined))
-const usage = computed(() => authStore.currentUser ? buildSubscriptionUsage(workspaceStore.data, authStore.currentUser.id, subscription.value || undefined) : null)
-const match = computed(() => conversation.value ? getMatchByConversation(workspaceStore.data, conversation.value.id) : undefined)
-const trial = computed(() => match.value ? getTrialForMatch(workspaceStore.data, match.value.id) : undefined)
-const proposal = computed(() => conversation.value ? getProposalByConversation(workspaceStore.data, conversation.value.id) : undefined)
-const proposalVersion = computed(() => proposal.value ? getCurrentProposalVersion(workspaceStore.data, proposal.value) : undefined)
-const relationshipHref = computed(() => conversation.value && authStore.currentUser ? getRelationshipHrefForConversation(workspaceStore.data, authStore.currentUser.id, conversation.value.id) : null)
+const usage = computed(() => authStore.currentUser
+  ? buildSubscriptionUsage(workspaceStore.data, authStore.currentUser.id, subscription.value || undefined)
+  : null)
+const match = computed(() => conversation.value
+  ? getMatchByConversation(workspaceStore.data, conversation.value.id)
+  : undefined)
+const trial = computed(() => match.value
+  ? getTrialForMatch(workspaceStore.data, match.value.id)
+  : undefined)
+const proposal = computed(() => conversation.value
+  ? getProposalByConversation(workspaceStore.data, conversation.value.id)
+  : undefined)
+const proposalVersion = computed(() => proposal.value
+  ? getCurrentProposalVersion(workspaceStore.data, proposal.value)
+  : undefined)
+const relationshipHref = computed(() => conversation.value && authStore.currentUser
+  ? getRelationshipHrefForConversation(workspaceStore.data, authStore.currentUser.id, conversation.value.id)
+  : null)
 const incomingMessages = computed(() => messages.value.filter(message => message.senderUserId && message.senderUserId !== authStore.currentUser?.id))
 const latestIncomingMessage = computed(() => incomingMessages.value.at(-1))
 const conversationFlags = computed(() => buildConversationRiskFlags(incomingMessages.value))
@@ -37,7 +55,9 @@ const proposalDialogOpen = ref(false)
 const profileReportDialogOpen = ref(false)
 const messageReportDialogOpen = ref(false)
 const draftFlags = computed(() => buildMessageRiskFlags(draftMessage.value))
-const proposalGateOpen = computed(() => currentProfile.value && otherParticipant.value ? canOpenProposalWorkflow(currentProfile.value, otherParticipant.value) : false)
+const proposalGateOpen = computed(() => currentProfile.value && otherParticipant.value
+  ? canOpenProposalWorkflow(currentProfile.value, otherParticipant.value)
+  : false)
 
 watchEffect(() => {
   if (conversation.value && authStore.currentUser)

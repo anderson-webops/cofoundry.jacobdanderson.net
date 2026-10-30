@@ -109,14 +109,16 @@ describe("workspace response authorization", () => {
     const target = source.profiles.find(profile => profile.userId === "user_noah")!
     target.privacy.portfolioVisibility = "private"
     target.privacy.opportunityVisibility = "private"
-    target.portfolio = [{
-      id: "portfolio_private_pending_intro",
-      name: "Confidential work",
-      outcome: "Private diligence material",
-      role: "Founder",
-      summary: "Private diligence material",
-      url: "https://private.example",
-    }]
+    target.portfolio = [
+      {
+        id: "portfolio_private_pending_intro",
+        name: "Confidential work",
+        outcome: "Private diligence material",
+        role: "Founder",
+        summary: "Private diligence material",
+        url: "https://private.example",
+      }
+    ]
     const privateOpportunity = source.opportunities.find(opportunity => opportunity.ownerUserId === target.userId)!
 
     const projected = projectWorkspaceForSession(source, session)

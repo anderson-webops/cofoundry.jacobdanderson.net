@@ -9,7 +9,15 @@ import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
 type OperationsContractEnvelopePayload = z.infer<typeof operationsContractEnvelopeSchema>
 type ContractEnvelopeStatus = ContractProviderEvidence["status"]
 
-const contractEnvelopeStatuses = new Set<ContractEnvelopeStatus>(["created", "sent", "viewed", "completed", "declined", "voided", "failed"])
+const contractEnvelopeStatuses = new Set<ContractEnvelopeStatus>([
+  "created",
+  "sent",
+  "viewed",
+  "completed",
+  "declined",
+  "voided",
+  "failed"
+])
 
 function normalizeStatus(value: unknown): ContractEnvelopeStatus {
   return typeof value === "string" && contractEnvelopeStatuses.has(value as ContractEnvelopeStatus)
@@ -19,12 +27,24 @@ function normalizeStatus(value: unknown): ContractEnvelopeStatus {
 
 function toCertificateEvidence(row: Record<string, unknown>): ContractProviderEvidence {
   return {
-    completedPdfFileUploadId: typeof row.completed_pdf_file_upload_id === "string" ? row.completed_pdf_file_upload_id : null,
-    completedPdfSha256: typeof row.completed_pdf_sha256 === "string" ? row.completed_pdf_sha256 : null,
-    occurredAt: typeof row.occurred_at === "string" ? row.occurred_at : "",
-    provider: typeof row.provider === "string" ? row.provider : "external",
-    providerEnvelopeId: typeof row.provider_envelope_id === "string" ? row.provider_envelope_id : "",
-    signedByUserIds: Array.isArray(row.signed_by_user_ids) ? row.signed_by_user_ids.filter((value): value is string => typeof value === "string") : [],
+    completedPdfFileUploadId: typeof row.completed_pdf_file_upload_id === "string"
+      ? row.completed_pdf_file_upload_id
+      : null,
+    completedPdfSha256: typeof row.completed_pdf_sha256 === "string"
+      ? row.completed_pdf_sha256
+      : null,
+    occurredAt: typeof row.occurred_at === "string"
+      ? row.occurred_at
+      : "",
+    provider: typeof row.provider === "string"
+      ? row.provider
+      : "external",
+    providerEnvelopeId: typeof row.provider_envelope_id === "string"
+      ? row.provider_envelope_id
+      : "",
+    signedByUserIds: Array.isArray(row.signed_by_user_ids)
+      ? row.signed_by_user_ids.filter((value): value is string => typeof value === "string")
+      : [],
     status: normalizeStatus(row.status),
   }
 }

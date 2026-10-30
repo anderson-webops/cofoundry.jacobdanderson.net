@@ -72,11 +72,19 @@ function addCheck(
   detail: string,
   remediation?: string,
 ) {
-  checks.push({ detail, id, remediation, status, title })
+  checks.push({
+    detail,
+    id,
+    remediation,
+    status,
+    title
+  })
 }
 
 function summarizeSecretPresence(isPresent: boolean, label: string) {
-  return isPresent ? `${label} is present.` : `${label} is missing.`
+  return isPresent
+    ? `${label} is present.`
+    : `${label} is missing.`
 }
 
 export function buildHostEnvironmentReport(
@@ -207,7 +215,9 @@ export function buildHostEnvironmentReport(
       "pass",
       "backend-bind",
       "Backend network bind",
-      publicBackendBind ? `Explicit public bind authorized for ${backendHost}.` : `Backend binds to ${backendHost}.`,
+      publicBackendBind
+        ? `Explicit public bind authorized for ${backendHost}.`
+        : `Backend binds to ${backendHost}.`,
     )
   }
 
@@ -277,14 +287,22 @@ export function buildHostEnvironmentReport(
   }
   else {
     const identity = [
-      deployment.release ? `release=${deployment.release}` : null,
-      deployment.commitSha ? `commit=${deployment.commitSha.slice(0, 12)}` : null,
-      deployment.deployedAt ? `deployedAt=${deployment.deployedAt}` : null,
+      deployment.release
+        ? `release=${deployment.release}`
+        : null,
+      deployment.commitSha
+        ? `commit=${deployment.commitSha.slice(0, 12)}`
+        : null,
+      deployment.deployedAt
+        ? `deployedAt=${deployment.deployedAt}`
+        : null,
     ].filter(Boolean).join(", ")
 
     addCheck(
       checks,
-      deployment.release || deployment.commitSha ? "pass" : "warn",
+      deployment.release || deployment.commitSha
+        ? "pass"
+        : "warn",
       "deployment-identity",
       "Deployment identity",
       identity || "No release or commit identity is set. This is acceptable only for local development.",
@@ -316,7 +334,11 @@ export function buildHostEnvironmentReport(
   const operationsTokenLength = secretEnvironment.operationsWorkerToken.length
   addCheck(
     checks,
-    operationsTokenLength >= 32 ? "pass" : operationsTokenLength || productionExpected ? "fail" : "warn",
+    operationsTokenLength >= 32
+      ? "pass"
+      : operationsTokenLength || productionExpected
+        ? "fail"
+        : "warn",
     "operations-token",
     "Operations worker token",
     operationsTokenLength >= 32
@@ -351,7 +373,9 @@ export function buildHostEnvironmentReport(
       "pass",
       "oauth-markers",
       "OAuth provider markers",
-      oauthMarkers.length > 0 ? `Configured marker(s): ${oauthMarkers.join(", ")}.` : "No OAuth provider markers are set.",
+      oauthMarkers.length > 0
+        ? `Configured marker(s): ${oauthMarkers.join(", ")}.`
+        : "No OAuth provider markers are set.",
     )
   }
 

@@ -26,5 +26,7 @@ export default defineNitroErrorHandler(async (error, event, { defaultHandler }) 
   setResponseStatus(event, response.status, response.statusText)
 
   const body = sanitizeErrorResponseBody(response.body, getRequestURL(event).pathname)
-  return send(event, typeof body === "string" ? body : JSON.stringify(body, null, 2))
+  return send(event, typeof body === "string"
+    ? body
+    : JSON.stringify(body, null, 2))
 })

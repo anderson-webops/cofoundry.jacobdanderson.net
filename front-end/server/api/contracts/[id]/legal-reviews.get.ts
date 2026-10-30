@@ -21,7 +21,9 @@ export default defineEventHandler(async (event) => {
 
   const workspace = await loadMemberWorkspaceState(event, session)
   const contract = getContractById(workspace.seed, contractId)
-  const version = contract ? getCurrentContractVersion(workspace.seed, contract) : null
+  const version = contract
+    ? getCurrentContractVersion(workspace.seed, contract)
+    : null
   if (!contract || !version)
     throw createError({ statusCode: 404, statusMessage: "Contract not found." })
   if (!isContractParticipant(workspace.seed, contract, session.id))

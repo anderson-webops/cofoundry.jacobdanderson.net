@@ -134,7 +134,9 @@ function canSendOutreachFromProfile(profile?: ReturnType<typeof getProfileByUser
 }
 
 function deriveUserRole(hasIdea: boolean, wantsToJoinIdea: boolean) {
-  return !hasIdea && wantsToJoinIdea ? "collaborator" : "founder"
+  return !hasIdea && wantsToJoinIdea
+    ? "collaborator"
+    : "founder"
 }
 
 export const useWorkspaceStore = defineStore("workspace", () => {
@@ -153,7 +155,9 @@ export const useWorkspaceStore = defineStore("workspace", () => {
 
   function createWriteSignature(userId: string) {
     const payload = buildMemberWorkspaceWritePayload(data.value, userId)
-    return payload ? JSON.stringify(payload) : null
+    return payload
+      ? JSON.stringify(payload)
+      : null
   }
 
   function rememberAuthoritativeWorkspace(userId: string) {
@@ -245,7 +249,9 @@ export const useWorkspaceStore = defineStore("workspace", () => {
             : "Exploring both founder and collaborator paths",
       `${profile.roleScope.primaryRole || profile.roles[0] || "Generalist"} · ${profile.commitmentProfile.weeklyAvailabilityHours}h/week · ${profile.intent.startTimeline.replaceAll("_", " ")}`,
       profile.trustSignals.builderProofs.length
-        ? `${profile.trustSignals.builderProofs.length} evidence card${profile.trustSignals.builderProofs.length === 1 ? "" : "s"} · ${profile.trustSignals.replyRatePercent}% replies`
+        ? `${profile.trustSignals.builderProofs.length} evidence card${profile.trustSignals.builderProofs.length === 1
+          ? ""
+          : "s"} · ${profile.trustSignals.replyRatePercent}% replies`
         : profile.intent.companyPreferences.slice(0, 2).join(" · ") || "Refine company fit preferences",
     ]
     user.role = deriveUserRole(profile.hasIdea, profile.wantsToJoinIdea)
@@ -301,7 +307,9 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     persistError.value = ""
 
     try {
-      const headers = requestHeaders || (import.meta.server ? useRequestHeaders(["cookie"]) : undefined)
+      const headers = requestHeaders || (import.meta.server
+        ? useRequestHeaders(["cookie"])
+        : undefined)
       const response = await $fetch<{ data: WorkspaceSeed, session: SessionUser }>("/api/workspace", { headers })
       data.value = cloneValue(response.data)
       loadedUserId.value = response.session.id
@@ -312,7 +320,9 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       return data.value
     }
     catch (caughtError) {
-      persistError.value = caughtError instanceof Error ? caughtError.message : "Unable to load the workspace."
+      persistError.value = caughtError instanceof Error
+        ? caughtError.message
+        : "Unable to load the workspace."
       throw caughtError
     }
     finally {
@@ -338,7 +348,9 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     syncing.value = true
 
     try {
-      const headers = import.meta.server ? useRequestHeaders(["cookie"]) : undefined
+      const headers = import.meta.server
+        ? useRequestHeaders(["cookie"])
+        : undefined
       const response = await $fetch<{ data: WorkspaceSeed, session: SessionUser }>("/api/workspace/member", {
         method: "POST",
         body: { state: payload },
@@ -353,7 +365,9 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       return data.value
     }
     catch (caughtError) {
-      persistError.value = caughtError instanceof Error ? caughtError.message : "Unable to save your workspace changes."
+      persistError.value = caughtError instanceof Error
+        ? caughtError.message
+        : "Unable to save your workspace changes."
       if (force)
         throw caughtError
       return data.value
@@ -377,7 +391,9 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   async function runCollaborationMutation<Result extends Record<string, string | null> | undefined>(
     payload: Record<string, unknown>,
   ) {
-    const headers = import.meta.server ? useRequestHeaders(["cookie"]) : undefined
+    const headers = import.meta.server
+      ? useRequestHeaders(["cookie"])
+      : undefined
     const response = await $fetch<{ data: WorkspaceSeed, result: Result, session: SessionUser }>("/api/workspace/collaboration", {
       method: "POST",
       body: payload,
@@ -389,7 +405,9 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   }
 
   async function syncNotificationRead(notificationId: string) {
-    const headers = import.meta.server ? useRequestHeaders(["cookie"]) : undefined
+    const headers = import.meta.server
+      ? useRequestHeaders(["cookie"])
+      : undefined
     const response = await $fetch<{ data: WorkspaceSeed, session: SessionUser }>(`/api/inbox/notifications/${notificationId}/read`, {
       method: "POST",
       headers,
@@ -696,7 +714,9 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     typingPresenceSignatures.set(signatureKey, isTyping)
 
     try {
-      const headers = import.meta.server ? useRequestHeaders(["cookie"]) : undefined
+      const headers = import.meta.server
+        ? useRequestHeaders(["cookie"])
+        : undefined
       await $fetch("/api/workspace/typing", {
         body: {
           conversationId,
@@ -958,7 +978,12 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     details: string,
   ) {
     const response = await $fetch<{ data: WorkspaceSeed, report: WorkspaceSeed["reports"][number], session: SessionUser }>("/api/reports", {
-      body: { details, reason, targetId, targetType },
+      body: {
+        details,
+        reason,
+        targetId,
+        targetType
+      },
       method: "POST",
     })
     applyAuthoritativeWorkspace(response)
@@ -1023,7 +1048,9 @@ export const useWorkspaceStore = defineStore("workspace", () => {
 
     subscription.plan = plan
     subscription.status = "active"
-    subscription.renewsAt = plan === "free" ? null : new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString()
+    subscription.renewsAt = plan === "free"
+      ? null
+      : new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString()
     subscription.cancelAtPeriodEnd = false
     subscription.visibilityBoost = plan !== "free"
     subscription.unlimitedMessaging = plan !== "free"

@@ -2,7 +2,12 @@ import type { SessionUser } from "../types/domain"
 
 export const sessionCookieName = "cofoundry_session"
 export const sessionSignatureCookieName = "cofoundry_session_sig"
-const allowedRoles = new Set<SessionUser["role"]>(["admin", "collaborator", "founder", "investor_admin"])
+const allowedRoles = new Set<SessionUser["role"]>([
+  "admin",
+  "collaborator",
+  "founder",
+  "investor_admin"
+])
 const allowedSubscriptionPlans = new Set<SessionUser["subscriptionPlan"]>(["free", "pro", "team"])
 
 function encodeBase64Url(value: string) {

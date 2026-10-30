@@ -63,7 +63,9 @@ export async function loadContractLegalReviewAccess(event: H3Event, token: strin
     subscriptionPlan: "free",
   }, { allowUserBootstrap: false })
   const contract = getContractById(workspace.seed, review.contractId)
-  const currentVersion = contract ? getCurrentContractVersion(workspace.seed, contract) : null
+  const currentVersion = contract
+    ? getCurrentContractVersion(workspace.seed, contract)
+    : null
   const requestedVersion = workspace.seed.contractVersions.find(version => version.id === review.contractVersionId)
 
   if (!contract || !currentVersion || !requestedVersion)

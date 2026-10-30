@@ -2,10 +2,30 @@ import { describe, expect, it } from "vitest"
 import { evaluateAdminSecurityMutation } from "../../shared/utils/admin-authorization"
 
 const users = [
-  { id: "admin_primary", role: "admin" as const, suspendedAt: null, verifiedEmail: true },
-  { id: "investor_admin", role: "investor_admin" as const, suspendedAt: null, verifiedEmail: true },
-  { id: "member", role: "founder" as const, suspendedAt: null, verifiedEmail: false },
-  { id: "suspended_member", role: "collaborator" as const, suspendedAt: "2026-07-01T12:00:00.000Z", verifiedEmail: false },
+  {
+    id: "admin_primary",
+    role: "admin" as const,
+    suspendedAt: null,
+    verifiedEmail: true
+  },
+  {
+    id: "investor_admin",
+    role: "investor_admin" as const,
+    suspendedAt: null,
+    verifiedEmail: true
+  },
+  {
+    id: "member",
+    role: "founder" as const,
+    suspendedAt: null,
+    verifiedEmail: false
+  },
+  {
+    id: "suspended_member",
+    role: "collaborator" as const,
+    suspendedAt: "2026-07-01T12:00:00.000Z",
+    verifiedEmail: false
+  },
 ]
 
 describe("admin security authorization", () => {
@@ -20,7 +40,12 @@ describe("admin security authorization", () => {
 
     const unverifiedActorUsers = [
       ...users.filter(user => user.id !== "admin_primary"),
-      { id: "admin_primary", role: "admin" as const, suspendedAt: null, verifiedEmail: false },
+      {
+        id: "admin_primary",
+        role: "admin" as const,
+        suspendedAt: null,
+        verifiedEmail: false
+      },
     ]
     expect(evaluateAdminSecurityMutation(unverifiedActorUsers, "admin_primary", "member", {
       kind: "verify_email",
@@ -50,7 +75,12 @@ describe("admin security authorization", () => {
 
     const secondAdminUsers = [
       ...users,
-      { id: "admin_secondary", role: "admin" as const, suspendedAt: null, verifiedEmail: true },
+      {
+        id: "admin_secondary",
+        role: "admin" as const,
+        suspendedAt: null,
+        verifiedEmail: true
+      },
     ]
     expect(evaluateAdminSecurityMutation(secondAdminUsers, "admin_secondary", "admin_primary", {
       kind: "change_role",
@@ -59,7 +89,12 @@ describe("admin security authorization", () => {
 
     const unusableSecondAdminUsers = [
       ...users,
-      { id: "admin_unverified", role: "admin" as const, suspendedAt: null, verifiedEmail: false },
+      {
+        id: "admin_unverified",
+        role: "admin" as const,
+        suspendedAt: null,
+        verifiedEmail: false
+      },
     ]
     expect(evaluateAdminSecurityMutation(unusableSecondAdminUsers, "admin_primary", "admin_unverified", {
       action: "suspend",
@@ -93,7 +128,12 @@ describe("admin security authorization", () => {
 
     const unverifiedSuspendedAdmin = [
       ...users,
-      { id: "admin_unverified", role: "admin" as const, suspendedAt: "2026-07-01T12:00:00.000Z", verifiedEmail: false },
+      {
+        id: "admin_unverified",
+        role: "admin" as const,
+        suspendedAt: "2026-07-01T12:00:00.000Z",
+        verifiedEmail: false
+      },
     ]
     expect(evaluateAdminSecurityMutation(unverifiedSuspendedAdmin, "admin_primary", "admin_unverified", {
       action: "reinstate",

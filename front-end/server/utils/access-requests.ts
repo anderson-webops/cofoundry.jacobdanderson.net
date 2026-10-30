@@ -182,7 +182,9 @@ export async function updateAccessRequestStatus(event: H3Event, id: string, payl
   if (error) {
     const stale = error.message.includes("changed after")
     throw createError({
-      statusCode: stale || error.message.includes("accepted") ? 409 : 400,
+      statusCode: stale || error.message.includes("accepted")
+        ? 409
+        : 400,
       statusMessage: stale
         ? "The access request changed after this review began. Refresh and review the current state."
         : error.message.includes("accepted")
@@ -245,7 +247,9 @@ export async function createAccessInvite(event: H3Event, id: string, payload: {
     const accepted = error.message.includes("accepted")
     const approval = error.message.includes("Approve")
     throw createError({
-      statusCode: stale || accepted || approval ? 409 : 400,
+      statusCode: stale || accepted || approval
+        ? 409
+        : 400,
       statusMessage: stale
         ? "The access request changed after this review began. Refresh and review the current state."
         : accepted
@@ -280,7 +284,9 @@ export async function validateAccessInvite(event: H3Event, token: string, email?
     return validateLocalAccessInvite(token, email)
 
   const adminClient = requireSupabaseAdmin(event)
-  const normalizedEmail = email ? normalizeEmail(email) : ""
+  const normalizedEmail = email
+    ? normalizeEmail(email)
+    : ""
   const { data, error } = await adminClient
     .from("access_requests")
     .select("*")
@@ -290,7 +296,9 @@ export async function validateAccessInvite(event: H3Event, token: string, email?
   if (error)
     throw error
 
-  const request = data ? toAccessRequest(data as SupabaseAccessRequestRow) : null
+  const request = data
+    ? toAccessRequest(data as SupabaseAccessRequestRow)
+    : null
   if (!request || request.status !== "invited")
     return null
 
