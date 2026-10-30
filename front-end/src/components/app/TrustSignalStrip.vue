@@ -23,7 +23,11 @@ const badges = computed(() => {
   const items: { label: string, tone: "success" | "accent" | "neutral" | "warning" }[] = [
     {
       label: formatTrustTier(trustTier.value),
-      tone: trustTier.value === "level_c" ? "success" : trustTier.value === "level_b" ? "accent" : "neutral",
+      tone: trustTier.value === "level_c"
+        ? "success"
+        : trustTier.value === "level_b"
+          ? "accent"
+          : "neutral",
     },
     {
       label: `${trustCompletedCount.value}/${trustTotalCount.value} profile signals`,
@@ -31,11 +35,22 @@ const badges = computed(() => {
     },
   ]
 
-  if (props.profile.trustSignals.builderProofs.length)
-    items.push({ label: `${props.profile.trustSignals.builderProofs.length} evidence card${props.profile.trustSignals.builderProofs.length === 1 ? "" : "s"}`, tone: "success" })
+  if (props.profile.trustSignals.builderProofs.length) {
+    items.push({ label: `${props.profile.trustSignals.builderProofs.length} evidence card${props.profile.trustSignals.builderProofs.length === 1
+      ? ""
+      : "s"}`, tone: "success" })
+  }
 
-  if (verifiedLinkCount.value)
-    items.push({ label: `${verifiedLinkCount.value} verified link${verifiedLinkCount.value === 1 ? "" : "s"}`, tone: verifiedLinkCount.value >= 2 ? "success" : "neutral" })
+  if (verifiedLinkCount.value) {
+    items.push({
+      label: `${verifiedLinkCount.value} verified link${verifiedLinkCount.value === 1
+        ? ""
+        : "s"}`,
+      tone: verifiedLinkCount.value >= 2
+        ? "success"
+        : "neutral"
+    })
+  }
 
   if (!props.compact && props.profile.trustSignals.phoneVerified)
     items.push({ label: "Phone verified", tone: "neutral" })
@@ -45,13 +60,23 @@ const badges = computed(() => {
 
   items.push({
     label: `~${props.profile.trustSignals.medianReplyHours}h response`,
-    tone: props.profile.trustSignals.medianReplyHours <= 24 ? "success" : "neutral",
+    tone: props.profile.trustSignals.medianReplyHours <= 24
+      ? "success"
+      : "neutral",
   })
 
-  if (!props.compact)
-    items.push({ label: recentlyActive.value ? "Recently active" : formatRelativeDate(props.profile.trustSignals.lastActiveAt), tone: recentlyActive.value ? "success" : "warning" })
+  if (!props.compact) {
+    items.push({
+      label: recentlyActive.value
+        ? "Recently active"
+        : formatRelativeDate(props.profile.trustSignals.lastActiveAt),
+      tone: recentlyActive.value ? "success" : "warning"
+    })
+  }
 
-  return props.compact ? items.slice(0, 4) : items.slice(0, 6)
+  return props.compact
+    ? items.slice(0, 4)
+    : items.slice(0, 6)
 })
 </script>
 

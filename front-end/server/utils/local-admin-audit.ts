@@ -173,8 +173,12 @@ function buildLocalAdminSecurityUsers(
     return {
       id: user.id,
       role: patch?.role || user.role,
-      suspendedAt: typeof patch?.suspendedAt === "undefined" ? user.suspendedAt : patch.suspendedAt,
-      verifiedEmail: typeof patch?.verifiedEmail === "undefined" ? user.verifiedEmail : patch.verifiedEmail,
+      suspendedAt: typeof patch?.suspendedAt === "undefined"
+        ? user.suspendedAt
+        : patch.suspendedAt,
+      verifiedEmail: typeof patch?.verifiedEmail === "undefined"
+        ? user.verifiedEmail
+        : patch.verifiedEmail,
     }
   })
 }
@@ -216,7 +220,10 @@ export async function recordLocalAdminQueueAction(action: AdminAction) {
         })
       }
 
-      store.actions = [action, ...store.actions.filter(item => item.id !== action.id)]
+      store.actions = [
+        action,
+        ...store.actions.filter(item => item.id !== action.id)
+      ]
       return action
     })
   })
@@ -224,7 +231,10 @@ export async function recordLocalAdminQueueAction(action: AdminAction) {
 
 export async function recordLocalUserNotification(notification: Notification) {
   return updateStore((store) => {
-    store.notifications = [notification, ...store.notifications.filter(item => item.id !== notification.id)]
+    store.notifications = [
+      notification,
+      ...store.notifications.filter(item => item.id !== notification.id)
+    ]
     return notification
   })
 }
@@ -252,15 +262,26 @@ export async function persistLocalAdminUserSecurityAction(input: {
         id: input.action.targetId,
         updatedAt: input.action.createdAt,
       }
-      if (input.mutation.kind === "change_role")
+      if (input.mutation.kind === "change_role") {
         row.role = input.mutation.role
-      else if (input.mutation.kind === "change_status")
-        row.suspendedAt = input.mutation.action === "suspend" ? input.action.createdAt : null
-      else
+      }
+      else if (input.mutation.kind === "change_status") {
+        row.suspendedAt = input.mutation.action === "suspend"
+          ? input.action.createdAt
+          : null
+      }
+      else {
         row.verifiedEmail = true
+      }
 
-      store.userPatches = [row, ...store.userPatches.filter(item => item.id !== input.action.targetId)]
-      store.actions = [input.action, ...store.actions.filter(item => item.id !== input.action.id)]
+      store.userPatches = [
+        row,
+        ...store.userPatches.filter(item => item.id !== input.action.targetId)
+      ]
+      store.actions = [
+        input.action,
+        ...store.actions.filter(item => item.id !== input.action.id)
+      ]
       return row
     })
   })
@@ -327,8 +348,14 @@ export async function persistLocalReportStatusAction(input: {
         row.resolvedByUserId = input.action.adminUserId
       }
 
-      store.reportPatches = [row, ...store.reportPatches.filter(item => item.id !== input.action.targetId)]
-      store.actions = [input.action, ...store.actions.filter(item => item.id !== input.action.id)]
+      store.reportPatches = [
+        row,
+        ...store.reportPatches.filter(item => item.id !== input.action.targetId)
+      ]
+      store.actions = [
+        input.action,
+        ...store.actions.filter(item => item.id !== input.action.id)
+      ]
       return {
         id: row.id,
         reporterUserId: sourceReport.reporterUserId,
@@ -377,8 +404,14 @@ export async function persistLocalOpportunityVerificationAction(input: {
         updatedAt: input.action.createdAt,
       }
 
-      store.opportunityPatches = [row, ...store.opportunityPatches.filter(item => item.id !== input.action.targetId)]
-      store.actions = [input.action, ...store.actions.filter(item => item.id !== input.action.id)]
+      store.opportunityPatches = [
+        row,
+        ...store.opportunityPatches.filter(item => item.id !== input.action.targetId)
+      ]
+      store.actions = [
+        input.action,
+        ...store.actions.filter(item => item.id !== input.action.id)
+      ]
       return row
     })
   })
@@ -437,15 +470,21 @@ export async function mergeLocalAdminAuditState(seed: WorkspaceSeed) {
         ? {
             ...user,
             role: patch.role || user.role,
-            suspendedAt: typeof patch.suspendedAt === "undefined" ? user.suspendedAt : patch.suspendedAt,
-            verifiedEmail: typeof patch.verifiedEmail === "undefined" ? user.verifiedEmail : patch.verifiedEmail,
+            suspendedAt: typeof patch.suspendedAt === "undefined"
+              ? user.suspendedAt
+              : patch.suspendedAt,
+            verifiedEmail: typeof patch.verifiedEmail === "undefined"
+              ? user.verifiedEmail
+              : patch.verifiedEmail,
           }
         : user
     }),
     profiles: seed.profiles.map((profile) => {
       const user = seed.users.find(row => row.id === profile.userId)
       const patch = userPatchById.get(profile.userId)
-      const verifiedEmail = typeof patch?.verifiedEmail === "undefined" ? user?.verifiedEmail : patch.verifiedEmail
+      const verifiedEmail = typeof patch?.verifiedEmail === "undefined"
+        ? user?.verifiedEmail
+        : patch.verifiedEmail
 
       return typeof verifiedEmail === "boolean"
         ? {

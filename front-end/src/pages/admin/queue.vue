@@ -54,7 +54,13 @@ const { data, pending, refresh } = await useAsyncData("admin-command-queue", asy
     requestFetch<AdminOpportunitiesPayload>("/api/admin/opportunities"),
   ])
 
-  return { access, audit, opportunities, privacy, readiness }
+  return {
+    access,
+    audit,
+    opportunities,
+    privacy,
+    readiness
+  }
 })
 
 function mergeRowsById<T extends { id: string }>(primary: T[], fallback: T[]) {
@@ -285,15 +291,23 @@ async function recordQueueAction(item: AdminCommandQueueItem, action: "assign" |
     await refresh()
 
     toastStore.push({
-      title: action === "assign" ? "Case assigned" : action === "escalate" ? "Case escalated" : "Evidence reviewed",
+      title: action === "assign"
+        ? "Case assigned"
+        : action === "escalate"
+          ? "Case escalated"
+          : "Evidence reviewed",
       message: "The audit trail has been updated and the command queue was refreshed.",
-      tone: action === "escalate" ? "warning" : "success",
+      tone: action === "escalate"
+        ? "warning"
+        : "success",
     })
   }
   catch (caughtError) {
     toastStore.push({
       title: "Queue action failed",
-      message: caughtError instanceof Error ? caughtError.message : "The queue action could not be saved.",
+      message: caughtError instanceof Error
+        ? caughtError.message
+        : "The queue action could not be saved.",
       tone: "danger",
     })
   }
@@ -324,13 +338,17 @@ async function recordOpportunityVerification(item: AdminCommandQueueItem, status
     toastStore.push({
       title: "Opportunity verification updated",
       message: "The listing status and audit trail were saved.",
-      tone: status === "unverified" ? "warning" : "success",
+      tone: status === "unverified"
+        ? "warning"
+        : "success",
     })
   }
   catch (caughtError) {
     toastStore.push({
       title: "Opportunity verification failed",
-      message: caughtError instanceof Error ? caughtError.message : "The listing verification status could not be saved.",
+      message: caughtError instanceof Error
+        ? caughtError.message
+        : "The listing verification status could not be saved.",
       tone: "danger",
     })
   }

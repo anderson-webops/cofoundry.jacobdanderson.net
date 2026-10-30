@@ -58,7 +58,9 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: "Uploaded file size does not match the requested upload policy." })
 
   const rawBody = await readRawBody(event, false)
-  const bytes = Buffer.isBuffer(rawBody) ? rawBody : Buffer.from(rawBody || "")
+  const bytes = Buffer.isBuffer(rawBody)
+    ? rawBody
+    : Buffer.from(rawBody || "")
 
   try {
     const upload = await writeLocalFileUploadContent(uploadId, token, bytes)

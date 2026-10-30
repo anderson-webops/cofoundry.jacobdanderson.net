@@ -38,15 +38,23 @@ type TabId = typeof tabs[number]["id"]
 
 const activeTab = computed<TabId>(() => {
   const requested = String(route.query.view || "overview")
-  return tabs.some(tab => tab.id === requested) ? requested as TabId : "overview"
+  return tabs.some(tab => tab.id === requested)
+    ? requested as TabId
+    : "overview"
 })
 const organizationId = computed(() => String(route.params.id || ""))
 const workspace = computed(() => organizationStore.snapshot.workspaces.find(item => item.organization.id === organizationId.value))
 const currentUserId = computed(() => authStore.currentUser?.id || "")
-const membership = computed(() => workspace.value ? organizationMembershipFor(workspace.value, currentUserId.value) : null)
-const canManage = computed(() => workspace.value ? canManageOrganization(workspace.value, currentUserId.value) : false)
+const membership = computed(() => workspace.value
+  ? organizationMembershipFor(workspace.value, currentUserId.value)
+  : null)
+const canManage = computed(() => workspace.value
+  ? canManageOrganization(workspace.value, currentUserId.value)
+  : false)
 const canWork = computed(() => Boolean(membership.value && ["owner", "operator", "member"].includes(membership.value.role)))
-const canReview = computed(() => workspace.value ? canResolveOrganizationApprovals(workspace.value, currentUserId.value) : false)
+const canReview = computed(() => workspace.value
+  ? canResolveOrganizationApprovals(workspace.value, currentUserId.value)
+  : false)
 const canManagePolicy = computed(() => Boolean(membership.value && ["owner", "operator", "counsel"].includes(membership.value.role)))
 const isOwner = computed(() => membership.value?.role === "owner")
 const legalQueue = computed(() => organizationStore.snapshot.legalReviewQueue.filter(item => item.organizationId === organizationId.value))
@@ -60,11 +68,21 @@ const savedSearchOptions = computed(() => workspaceStore.data.savedSearches.map(
 const availableResources = computed(() => [
   ...workspaceStore.data.contracts.map((contract) => {
     const version = getCurrentContractVersion(workspaceStore.data, contract)
-    return { id: contract.id, label: contract.title, type: "contract" as const, versionId: version?.id || null }
+    return {
+      id: contract.id,
+      label: contract.title,
+      type: "contract" as const,
+      versionId: version?.id || null
+    }
   }),
   ...workspaceStore.data.proposals.map((proposal) => {
     const version = getCurrentProposalVersion(workspaceStore.data, proposal)
-    return { id: proposal.id, label: proposal.title, type: "proposal" as const, versionId: version?.id || null }
+    return {
+      id: proposal.id,
+      label: proposal.title,
+      type: "proposal" as const,
+      versionId: version?.id || null
+    }
   }),
   ...workspaceStore.data.opportunities.filter(item => item.ownerUserId === currentUserId.value).map(item => ({
     id: item.id,
@@ -88,14 +106,48 @@ const availableResources = computed(() => [
   })),
 ])
 
-const inviteForm = reactive({ displayName: "", email: "", role: "member" as Exclude<OrganizationMemberRole, "owner">, title: "" })
-const ventureForm = reactive({ leadUserId: "", name: "", opportunityId: "", stage: "idea" as "idea" | "prototype" | "mvp" | "revenue" | "growth", summary: "" })
-const projectForm = reactive({ description: "", dueAt: "", ownerUserId: "", title: "", ventureId: "" })
-const taskForm = reactive({ assigneeUserId: "", dueAt: "", projectId: "", title: "" })
-const decisionForm = reactive({ context: "", decision: "", ownerUserId: "", projectId: "", title: "", ventureId: "" })
+const inviteForm = reactive({
+  displayName: "",
+  email: "",
+  role: "member" as Exclude<OrganizationMemberRole, "owner">,
+  title: ""
+})
+const ventureForm = reactive({
+  leadUserId: "",
+  name: "",
+  opportunityId: "",
+  stage: "idea" as "idea" | "prototype" | "mvp" | "revenue" | "growth",
+  summary: ""
+})
+const projectForm = reactive({
+  description: "",
+  dueAt: "",
+  ownerUserId: "",
+  title: "",
+  ventureId: ""
+})
+const taskForm = reactive({
+  assigneeUserId: "",
+  dueAt: "",
+  projectId: "",
+  title: ""
+})
+const decisionForm = reactive({
+  context: "",
+  decision: "",
+  ownerUserId: "",
+  projectId: "",
+  title: "",
+  ventureId: ""
+})
 const policyForm = reactive({
   allowOutsideCounsel: true,
-  approvalRoles: ["owner", "operator", "reviewer", "counsel"] as OrganizationMemberRole[],
+  approvalRoles: [
+    "owner",
+    "operator",
+    "reviewer",
+    "counsel"
+  ] as OrganizationMemberRole[],
   description: "",
   isDefault: false,
   name: "",
@@ -104,7 +156,12 @@ const policyForm = reactive({
   requiresLegalReview: false,
   separationOfDuties: true,
 })
-const approvalForm = reactive({ policyId: "", summary: "", target: "", title: "" })
+const approvalForm = reactive({
+  policyId: "",
+  summary: "",
+  target: "",
+  title: ""
+})
 const linkForm = reactive({ label: "", policyId: "", resource: "" })
 const searchForm = reactive({ savedSearchId: "" })
 const settingsForm = reactive({ allowOperatorInvites: true, dataRetentionDays: 365, seatLimit: 12 })
@@ -115,12 +172,31 @@ function errorMessage(error: unknown, fallback: string) {
 }
 
 function toneForStatus(status: string) {
-  if (["active", "approved", "completed", "done", "graduated"].includes(status))
+  if ([
+    "active",
+    "approved",
+    "completed",
+    "done",
+    "graduated"
+  ].includes(status)) {
     return "success" as const
-  if (["blocked", "changes_requested", "rejected", "declined"].includes(status))
+  }
+  if ([
+    "blocked",
+    "changes_requested",
+    "rejected",
+    "declined"
+  ].includes(status)) {
     return "warning" as const
-  if (["pending", "in_progress", "under_review", "proposed"].includes(status))
+  }
+  if ([
+    "pending",
+    "in_progress",
+    "under_review",
+    "proposed"
+  ].includes(status)) {
     return "accent" as const
+  }
   return "neutral" as const
 }
 
@@ -129,11 +205,15 @@ function statusLabel(status: string) {
 }
 
 function toIsoDate(value: string) {
-  return value ? new Date(`${value}T17:00:00`).toISOString() : null
+  return value
+    ? new Date(`${value}T17:00:00`).toISOString()
+    : null
 }
 
 function dateInputValue(value: string | null) {
-  return value ? value.slice(0, 10) : ""
+  return value
+    ? value.slice(0, 10)
+    : ""
 }
 
 function open(action: typeof dialog.value) {
@@ -141,7 +221,14 @@ function open(action: typeof dialog.value) {
 }
 
 async function selectTab(tab: TabId) {
-  await router.replace({ query: { ...route.query, view: tab === "overview" ? undefined : tab } })
+  await router.replace({
+    query: {
+      ...route.query,
+      view: tab === "overview"
+        ? undefined
+        : tab
+    }
+  })
 }
 
 async function mutate(mutation: OrganizationMutation, successMessage: string) {
@@ -154,7 +241,11 @@ async function mutate(mutation: OrganizationMutation, successMessage: string) {
     return result
   }
   catch (error) {
-    toastStore.push({ message: errorMessage(error, "The organization change could not be saved."), title: "Change not saved", tone: "danger" })
+    toastStore.push({
+      message: errorMessage(error, "The organization change could not be saved."),
+      title: "Change not saved",
+      tone: "danger"
+    })
     return null
   }
   finally {
@@ -172,7 +263,12 @@ async function inviteMember() {
     title: result.delivery.delivered ? "Invitation delivered" : "Invitation saved",
     tone: result.delivery.delivered ? "success" : "info",
   })
-  Object.assign(inviteForm, { displayName: "", email: "", role: "member", title: "" })
+  Object.assign(inviteForm, {
+    displayName: "",
+    email: "",
+    role: "member",
+    title: ""
+  })
 }
 
 async function createVenture() {
@@ -187,7 +283,13 @@ async function createVenture() {
     return
   }
   dialog.value = ""
-  Object.assign(ventureForm, { leadUserId: "", name: "", opportunityId: "", stage: "idea", summary: "" })
+  Object.assign(ventureForm, {
+    leadUserId: "",
+    name: "",
+    opportunityId: "",
+    stage: "idea",
+    summary: ""
+  })
 }
 
 async function createProject() {
@@ -202,7 +304,13 @@ async function createProject() {
     return
   }
   dialog.value = ""
-  Object.assign(projectForm, { description: "", dueAt: "", ownerUserId: "", title: "", ventureId: "" })
+  Object.assign(projectForm, {
+    description: "",
+    dueAt: "",
+    ownerUserId: "",
+    title: "",
+    ventureId: ""
+  })
 }
 
 async function createTask() {
@@ -216,7 +324,12 @@ async function createTask() {
     return
   }
   dialog.value = ""
-  Object.assign(taskForm, { assigneeUserId: "", dueAt: "", projectId: "", title: "" })
+  Object.assign(taskForm, {
+    assigneeUserId: "",
+    dueAt: "",
+    projectId: "",
+    title: ""
+  })
 }
 
 async function createDecision() {
@@ -232,7 +345,14 @@ async function createDecision() {
     return
   }
   dialog.value = ""
-  Object.assign(decisionForm, { context: "", decision: "", ownerUserId: "", projectId: "", title: "", ventureId: "" })
+  Object.assign(decisionForm, {
+    context: "",
+    decision: "",
+    ownerUserId: "",
+    projectId: "",
+    title: "",
+    ventureId: ""
+  })
 }
 
 async function createPolicy() {
@@ -256,8 +376,18 @@ async function createPolicy() {
 
 async function requestApproval() {
   const target = availableResources.value.find(item => `${item.type}|${item.id}|${item.versionId || ""}` === approvalForm.target)
-    || workspace.value?.projects.map(item => ({ id: item.id, label: item.title, type: "project" as const, versionId: null })).find(item => `project|${item.id}|` === approvalForm.target)
-    || workspace.value?.ventures.map(item => ({ id: item.id, label: item.name, type: "venture" as const, versionId: null })).find(item => `venture|${item.id}|` === approvalForm.target)
+    || workspace.value?.projects.map(item => ({
+      id: item.id,
+      label: item.title,
+      type: "project" as const,
+      versionId: null
+    })).find(item => `project|${item.id}|` === approvalForm.target)
+    || workspace.value?.ventures.map(item => ({
+      id: item.id,
+      label: item.name,
+      type: "venture" as const,
+      versionId: null
+    })).find(item => `venture|${item.id}|` === approvalForm.target)
   if (!target)
     return
   const linkedContract = target.type === "contract"
@@ -278,7 +408,12 @@ async function requestApproval() {
     return
   }
   dialog.value = ""
-  Object.assign(approvalForm, { policyId: "", summary: "", target: "", title: "" })
+  Object.assign(approvalForm, {
+    policyId: "",
+    summary: "",
+    target: "",
+    title: ""
+  })
 }
 
 async function linkResource() {
@@ -411,8 +546,14 @@ async function resolveApproval(status: "approved" | "changes_requested" | "rejec
 
 async function resolveDecision(decisionId: string, status: "approved" | "superseded") {
   const item = workspace.value?.decisions.find(decision => decision.id === decisionId)
-  if (item)
-    await mutate({ action: "resolve_decision", decision: item.decision, decisionId, status }, `${item.title} was marked ${status}.`)
+  if (item) {
+    await mutate({
+      action: "resolve_decision",
+      decision: item.decision,
+      decisionId,
+      status
+    }, `${item.title} was marked ${status}.`)
+  }
 }
 
 async function revokeInvitation(invitationId: string) {
@@ -434,7 +575,9 @@ watch(workspace, (current) => {
 onMounted(async () => {
   await Promise.all([
     organizationStore.load(true),
-    investmentEnabled.value ? investmentStore.load(true) : Promise.resolve(),
+    investmentEnabled.value
+      ? investmentStore.load(true)
+      : Promise.resolve(),
   ])
 })
 </script>

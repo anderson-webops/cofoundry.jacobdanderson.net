@@ -201,7 +201,10 @@ function buildRelationshipFiles(seed: WorkspaceSeed, conversationId: string, pro
       }
     })
 
-  return sortByDateDesc([...messageFiles, ...uploadedFiles])
+  return sortByDateDesc([
+    ...messageFiles,
+    ...uploadedFiles
+  ])
 }
 
 function buildRelationshipTimeline(
@@ -237,7 +240,9 @@ function buildRelationshipTimeline(
       entries.push({
         actorUserId: version.createdByUserId,
         createdAt: version.createdAt,
-        href: proposal ? `/app/proposals/${proposal.id}` : null,
+        href: proposal
+          ? `/app/proposals/${proposal.id}`
+          : null,
         id: `proposal-version:${version.id}`,
         kind: "proposal",
         summary: version.summary,
@@ -389,7 +394,9 @@ function buildRelationshipDecisionLog(
           href: `/app/contracts/${contract.id}`,
           id: `contract-decision:${version.id}`,
           ownerUserId: null,
-          status: contract.status === "signed" ? "signed" : "documented",
+          status: contract.status === "signed"
+            ? "signed"
+            : "documented",
           summary: version.decisionMaking,
           title: "Agreement decision clause",
         })
@@ -421,7 +428,9 @@ export function buildRelationshipSnapshot(seed: WorkspaceSeed, userId: string, m
     return null
 
   const counterpartUserId = match.participantIds.find(participantId => participantId !== userId)
-  const counterpartProfile = counterpartUserId ? getProfileByUserId(seed, counterpartUserId) : undefined
+  const counterpartProfile = counterpartUserId
+    ? getProfileByUserId(seed, counterpartUserId)
+    : undefined
   if (!counterpartProfile)
     return null
 
@@ -473,15 +482,21 @@ export function getRelationshipMatchByContract(seed: WorkspaceSeed, userId: stri
 
 export function getRelationshipHrefForConversation(seed: WorkspaceSeed, userId: string, conversationId: string) {
   const match = getRelationshipMatchByConversation(seed, userId, conversationId)
-  return match ? `/app/relationships/${match.id}` : null
+  return match
+    ? `/app/relationships/${match.id}`
+    : null
 }
 
 export function getRelationshipHrefForProposal(seed: WorkspaceSeed, userId: string, proposalId: string) {
   const match = getRelationshipMatchByProposal(seed, userId, proposalId)
-  return match ? `/app/relationships/${match.id}` : null
+  return match
+    ? `/app/relationships/${match.id}`
+    : null
 }
 
 export function getRelationshipHrefForContract(seed: WorkspaceSeed, userId: string, contractId: string) {
   const match = getRelationshipMatchByContract(seed, userId, contractId)
-  return match ? `/app/relationships/${match.id}` : null
+  return match
+    ? `/app/relationships/${match.id}`
+    : null
 }

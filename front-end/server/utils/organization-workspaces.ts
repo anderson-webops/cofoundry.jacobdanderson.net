@@ -136,9 +136,17 @@ async function listSupabaseOrganizationDocuments(event: H3Event, session: Sessio
   if (invitationResult.error)
     throw invitationResult.error
 
-  const rows = [...(memberResult.data || []), ...(invitationResult.data || [])] as OrganizationWorkspaceRow[]
-  const byId = new Map(rows.map(row => [row.id, rowToDocument(row)]))
-  return [...byId.values()]
+  const rows = [
+    ...(memberResult.data || []),
+    ...(invitationResult.data || [])
+  ] as OrganizationWorkspaceRow[]
+  const byId = new Map(rows.map(row => [
+    row.id,
+    rowToDocument(row)
+  ]))
+  return [
+    ...byId.values()
+  ]
 }
 
 async function listRawOrganizationDocuments(event: H3Event, session: SessionUser) {
@@ -166,7 +174,9 @@ async function getRawOrganizationDocument(event: H3Event, organizationId: string
     .maybeSingle()
   if (error)
     throw error
-  return data ? rowToDocument(data as OrganizationWorkspaceRow) : null
+  return data
+    ? rowToDocument(data as OrganizationWorkspaceRow)
+    : null
 }
 
 async function listOrganizationDocumentsForResource(event: H3Event, resourceType: string, resourceId: string) {
@@ -280,27 +290,31 @@ async function buildLegalReviewQueue(event: H3Event, session: SessionUser, docum
     const exactOrganization = counselOrganizations.find(document =>
       document.organization.name.trim().toLowerCase() === review.reviewerOrganization.trim().toLowerCase(),
     )
-    const document = exactOrganization || (counselOrganizations.length === 1 ? counselOrganizations[0] : null)
+    const document = exactOrganization || (counselOrganizations.length === 1
+      ? counselOrganizations[0]
+      : null)
     if (!document)
       return []
     const reviewUrl = createContractLegalReviewUrl(event, review)
     if (!reviewUrl)
       return []
-    return [{
-      contractId: review.contractId,
-      contractVersionId: review.contractVersionId,
-      createdAt: review.createdAt,
-      expiresAt: review.expiresAt,
-      id: review.id,
-      organizationId: document.organization.id,
-      requestedByUserId: review.requestedByUserId,
-      reviewerName: review.reviewerName,
-      reviewerOrganization: review.reviewerOrganization,
-      reviewerType: review.reviewerType,
-      reviewUrl,
-      scope: review.scope,
-      status: review.status,
-    }]
+    return [
+      {
+        contractId: review.contractId,
+        contractVersionId: review.contractVersionId,
+        createdAt: review.createdAt,
+        expiresAt: review.expiresAt,
+        id: review.id,
+        organizationId: document.organization.id,
+        requestedByUserId: review.requestedByUserId,
+        reviewerName: review.reviewerName,
+        reviewerOrganization: review.reviewerOrganization,
+        reviewerType: review.reviewerType,
+        reviewUrl,
+        scope: review.scope,
+        status: review.status,
+      }
+    ]
   })
 }
 
@@ -369,7 +383,12 @@ async function assertVisibleResource(
     if (!visible)
       throw createError({ statusCode: 404, statusMessage: "The selected workspace resource is not available to you." })
   }
-  if (mutation.action === "request_approval" && ["contract", "proposal", "opportunity", "investment_application"].includes(mutation.targetType)) {
+  if (mutation.action === "request_approval" && [
+    "contract",
+    "proposal",
+    "opportunity",
+    "investment_application"
+  ].includes(mutation.targetType)) {
     const visible = mutation.targetType === "contract"
       ? seed.contracts.some(item => item.id === mutation.targetId)
       : mutation.targetType === "proposal"

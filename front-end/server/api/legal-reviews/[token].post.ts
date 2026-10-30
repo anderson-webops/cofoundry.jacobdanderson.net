@@ -24,8 +24,11 @@ export default defineEventHandler(async (event) => {
   const updatedAt = new Date().toISOString()
 
   if (payload.action === "open") {
-    if (context.review.status !== "requested")
-      return { review: projectContractLegalReviewForReviewer(context.review) }
+    if (context.review.status !== "requested") {
+      return {
+        review: projectContractLegalReviewForReviewer(context.review)
+      }
+    }
 
     const review = await updateContractLegalReview(event, context.review, {
       openedAt: updatedAt,
@@ -39,7 +42,9 @@ export default defineEventHandler(async (event) => {
       },
       source: "contract.legal-review",
     }).catch(error => console.warn("[contract-legal-review] Open-state refresh failed.", error))
-    return { review: projectContractLegalReviewForReviewer(review) }
+    return {
+      review: projectContractLegalReviewForReviewer(review)
+    }
   }
 
   if (!["requested", "opened"].includes(context.review.status))
@@ -55,9 +60,15 @@ export default defineEventHandler(async (event) => {
   })
 
   await notifyContractLegalReviewParticipants(event, context.workspace.seed, context.contract, {
-    body: `${review.reviewerName} ${payload.status === "approved" ? "approved the requested review scope" : "requested changes"} for version ${context.version.versionNumber}. Open the agreement to review the response.`,
-    title: payload.status === "approved" ? "Legal review completed" : "Legal review changes requested",
+    body: `${review.reviewerName} ${payload.status === "approved"
+      ? "approved the requested review scope"
+      : "requested changes"} for version ${context.version.versionNumber}. Open the agreement to review the response.`,
+    title: payload.status === "approved"
+      ? "Legal review completed"
+      : "Legal review changes requested",
   }).catch(error => console.warn("[contract-legal-review] Participant notification failed.", error))
 
-  return { review: projectContractLegalReviewForReviewer(review) }
+  return {
+    review: projectContractLegalReviewForReviewer(review)
+  }
 })

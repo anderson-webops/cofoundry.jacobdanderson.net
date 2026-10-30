@@ -66,13 +66,17 @@ export default defineEventHandler(async (event) => {
   const seed = await loadLifecycleWorkspace(event, payload.userId)
   const result = await sendLifecycleNotification(event, seed, payload, {
     dryRun: payload.dryRun,
-    forceRecordOnlyReason: isSupabaseEnabled(event) ? undefined : "mock_mode",
+    forceRecordOnlyReason: isSupabaseEnabled(event)
+      ? undefined
+      : "mock_mode",
   })
 
   return {
     delivered: result.delivery.delivered,
     eventType: result.plan.eventType,
-    mode: isSupabaseEnabled(event) ? "supabase" : "mock",
+    mode: isSupabaseEnabled(event)
+      ? "supabase"
+      : "mock",
     reason: result.delivery.reason,
     skipped: result.delivery.skipped === true,
     subject: result.plan.subject,

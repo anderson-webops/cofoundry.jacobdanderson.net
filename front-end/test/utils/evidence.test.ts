@@ -6,21 +6,23 @@ import { buildAdminEvidencePackages } from "../../shared/utils/evidence"
 describe("evidence utilities", () => {
   it("normalizes operations file-upload rows into trust evidence packages", () => {
     const packages = buildAdminEvidencePackages({
-      fileUploads: [{
-        id: "upload_pending",
-        owner_user_id: "user_olivia",
-        original_filename: "identity-evidence.pdf",
-        mime_type: "application/pdf",
-        size_bytes: 102400,
-        purpose: "trust_evidence",
-        related_type: "profile",
-        related_id: "profile_olivia",
-        status: "uploaded",
-        scan_status: "pending",
-        scan_notes: "Scanner has not returned a result yet.",
-        created_at: "2026-06-10T12:00:00.000Z",
-        updated_at: "2026-06-10T12:00:00.000Z",
-      }],
+      fileUploads: [
+        {
+          id: "upload_pending",
+          owner_user_id: "user_olivia",
+          original_filename: "identity-evidence.pdf",
+          mime_type: "application/pdf",
+          size_bytes: 102400,
+          purpose: "trust_evidence",
+          related_type: "profile",
+          related_id: "profile_olivia",
+          status: "uploaded",
+          scan_status: "pending",
+          scan_notes: "Scanner has not returned a result yet.",
+          created_at: "2026-06-10T12:00:00.000Z",
+          updated_at: "2026-06-10T12:00:00.000Z",
+        }
+      ],
       seed: workspaceSeed,
     })
     const upload = packages.find(item => item.targetId === "upload_pending")

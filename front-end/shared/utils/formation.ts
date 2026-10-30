@@ -25,7 +25,12 @@ import {
 const recentActivityWindowMs = 1000 * 60 * 60 * 24 * 7
 const offPlatformRiskPattern = /\b(?:telegram|whatsapp|signal|text me|text us|wire|crypto|wallet|processing fee|application fee|pay to proceed|dm me|move this off-platform)\b/i
 const investorRiskPattern = /\b(?:investor|angel|fund|venture|vc|limited partner|syndicate)\b/i
-const highPriorityReportReasons = new Set<ReportReason>(["scam_fraud", "impersonation", "data_harvesting", "privacy_violation"])
+const highPriorityReportReasons = new Set<ReportReason>([
+  "scam_fraud",
+  "impersonation",
+  "data_harvesting",
+  "privacy_violation"
+])
 
 export const firstCallAgenda = [
   {
@@ -179,7 +184,9 @@ function buildTrustReadinessChecklist(profile: Profile): ProfileReadinessItem[] 
       title: "Verified identity rails",
       complete: identityRailsComplete,
       description: identityRailsComplete
-        ? `${verifiedLinkCount} verified professional link${verifiedLinkCount === 1 ? "" : "s"} plus phone or ID assurance.`
+        ? `${verifiedLinkCount} verified professional link${verifiedLinkCount === 1
+          ? ""
+          : "s"} plus phone or ID assurance.`
         : "Verify at least one professional link plus phone or ID so the profile is harder to fake.",
     },
     {
@@ -192,7 +199,9 @@ function buildTrustReadinessChecklist(profile: Profile): ProfileReadinessItem[] 
       id: "role_context",
       title: "Role context",
       complete: roleContextComplete,
-      description: roleContextComplete ? `${profile.roleScope.primaryRole} · ${profile.yearsExperience}+ years` : "State your primary role, headline, and experience so people know what you can really own.",
+      description: roleContextComplete
+        ? `${profile.roleScope.primaryRole} · ${profile.yearsExperience}+ years`
+        : "State your primary role, headline, and experience so people know what you can really own.",
     },
     {
       id: "availability",
@@ -252,19 +261,25 @@ function buildProfileReadinessChecklist(profile: Profile): ProfileReadinessItem[
       id: "identity",
       title: "Identity basics",
       complete: identityComplete,
-      description: identityComplete ? `${profile.displayName} · ${profile.location}` : "Add a clear name, location, and profile visibility rule.",
+      description: identityComplete
+        ? `${profile.displayName} · ${profile.location}`
+        : "Add a clear name, location, and profile visibility rule.",
     },
     {
       id: "role_signal",
       title: "Role signal",
       complete: roleSignalComplete,
-      description: roleSignalComplete ? `${profile.roles.slice(0, 2).join(", ")} · ${profile.headline}` : "Add the role you want and a concise summary of what you are building or joining.",
+      description: roleSignalComplete
+        ? `${profile.roles.slice(0, 2).join(", ")} · ${profile.headline}`
+        : "Add the role you want and a concise summary of what you are building or joining.",
     },
     {
       id: "company_fit",
       title: "Company fit",
       complete: companyFitComplete,
-      description: companyFitComplete ? `${profile.industries.slice(0, 2).join(", ")} · ${profile.intent.companyPreferences.slice(0, 2).join(", ")}` : "Add industry and company preferences so CoFoundry can rank relevant matches.",
+      description: companyFitComplete
+        ? `${profile.industries.slice(0, 2).join(", ")} · ${profile.intent.companyPreferences.slice(0, 2).join(", ")}`
+        : "Add industry and company preferences so CoFoundry can rank relevant matches.",
     },
     {
       id: "commitment",
@@ -284,19 +299,25 @@ function buildProfileReadinessChecklist(profile: Profile): ProfileReadinessItem[
       id: "guardrails",
       title: "Outreach guardrails",
       complete: outreachGuardrailsComplete,
-      description: outreachGuardrailsComplete ? `${profile.intent.nonNegotiables.slice(0, 2).join(" · ")} · ${profile.intent.introCapacity}` : "State your non-negotiables and how many conversations you can take right now.",
+      description: outreachGuardrailsComplete
+        ? `${profile.intent.nonNegotiables.slice(0, 2).join(" · ")} · ${profile.intent.introCapacity}`
+        : "State your non-negotiables and how many conversations you can take right now.",
     },
     {
       id: "collaboration_style",
       title: "Collaboration style",
       complete: collaborationStyleComplete,
-      description: collaborationStyleComplete ? `${profile.values.slice(0, 2).join(" · ")} · ${profile.workStylePreferences.slice(0, 2).join(" · ")}` : "Add values and work-style preferences so early conversations have useful constraints.",
+      description: collaborationStyleComplete
+        ? `${profile.values.slice(0, 2).join(" · ")} · ${profile.workStylePreferences.slice(0, 2).join(" · ")}`
+        : "Add values and work-style preferences so early conversations have useful constraints.",
     },
     {
       id: "compensation_stage",
       title: "Compensation and stage",
       complete: compensationStageComplete,
-      description: compensationStageComplete ? `${profile.equityExpectationRange} · ${profile.startupStagePreferences.slice(0, 2).join(", ")}` : "Add stage, compensation, and equity expectations before proposals start.",
+      description: compensationStageComplete
+        ? `${profile.equityExpectationRange} · ${profile.startupStagePreferences.slice(0, 2).join(", ")}`
+        : "Add stage, compensation, and equity expectations before proposals start.",
     },
     {
       id: "governance",
@@ -319,7 +340,9 @@ function buildProfileReadinessChecklist(profile: Profile): ProfileReadinessItem[
       title: "IP readiness",
       complete: ipReadinessComplete,
       description: ipReadinessComplete
-        ? `${profile.ipReadiness.existingAssets.length} asset note${profile.ipReadiness.existingAssets.length === 1 ? "" : "s"} · ready for assignment`
+        ? `${profile.ipReadiness.existingAssets.length} asset note${profile.ipReadiness.existingAssets.length === 1
+          ? ""
+          : "s"} · ready for assignment`
         : "Disclose pre-existing assets and any employer constraints before the deal room opens.",
     },
   ]
@@ -336,11 +359,27 @@ export function buildProfileReadiness(profile: Profile): ProfileReadinessState {
   const trustChecklist = buildTrustReadinessChecklist(profile)
   const trustCompletedCount = trustChecklist.filter(item => item.complete).length
   const trustTotalCount = trustChecklist.length
-  const trustRequiredItemIds = new Set(["recognizable_profile", "identity_rails", "proof_of_work", "role_context", "availability", "intent_clarity"])
+  const trustRequiredItemIds = new Set([
+    "recognizable_profile",
+    "identity_rails",
+    "proof_of_work",
+    "role_context",
+    "availability",
+    "intent_clarity"
+  ])
   const missingTrustItems = trustChecklist
     .filter(item => trustRequiredItemIds.has(item.id) && !item.complete)
     .map(item => item.title)
-  const outreachRequiredItemIds = new Set(["identity", "role_signal", "company_fit", "commitment", "proof", "guardrails", "governance", "ip_readiness"])
+  const outreachRequiredItemIds = new Set([
+    "identity",
+    "role_signal",
+    "company_fit",
+    "commitment",
+    "proof",
+    "guardrails",
+    "governance",
+    "ip_readiness"
+  ])
   const missingOutreachItems = checklist
     .filter(item => outreachRequiredItemIds.has(item.id) && !item.complete)
     .map(item => item.title)
@@ -444,7 +483,9 @@ export function buildIntentChecklist(profile: Profile) {
       title: "Proof of work",
       complete: profile.trustSignals.builderProofs.length > 0,
       description: profile.trustSignals.builderProofs.length
-        ? `${profile.trustSignals.builderProofs.length} artifact${profile.trustSignals.builderProofs.length === 1 ? "" : "s"} attached`
+        ? `${profile.trustSignals.builderProofs.length} artifact${profile.trustSignals.builderProofs.length === 1
+          ? ""
+          : "s"} attached`
         : "Add shipped work, case studies, or repos",
     },
     {
@@ -475,7 +516,9 @@ export function buildIntentChecklist(profile: Profile) {
       id: "activation",
       title: "Activation progress",
       complete: readiness.readyForOutreach,
-      description: readiness.readyForOutreach ? "Outreach is unlocked." : `Need ${readiness.missingOutreachItems.join(", ")}`,
+      description: readiness.readyForOutreach
+        ? "Outreach is unlocked."
+        : `Need ${readiness.missingOutreachItems.join(", ")}`,
     },
   ]
 }
@@ -504,7 +547,9 @@ export function buildAlignmentCheck(left: Profile, right: Profile): AlignmentChe
       id: "commitment",
       title: "Commitment",
       status: left.commitmentProfile.weeklyAvailabilityHours && right.commitmentProfile.weeklyAvailabilityHours
-        ? left.timeCommitment === right.timeCommitment ? "aligned" : "review"
+        ? left.timeCommitment === right.timeCommitment
+          ? "aligned"
+          : "review"
         : "missing",
       summary: `${left.commitmentProfile.weeklyAvailabilityHours}h/week vs ${right.commitmentProfile.weeklyAvailabilityHours}h/week · ${formatRunwayBucket(left.commitmentProfile.runwayBucket)} vs ${formatRunwayBucket(right.commitmentProfile.runwayBucket)}`,
     },
@@ -512,7 +557,9 @@ export function buildAlignmentCheck(left: Profile, right: Profile): AlignmentChe
       id: "equity",
       title: "Equity philosophy",
       status: left.governancePreferences.equityPhilosophy && right.governancePreferences.equityPhilosophy
-        ? left.governancePreferences.equityPhilosophy === right.governancePreferences.equityPhilosophy ? "aligned" : "review"
+        ? left.governancePreferences.equityPhilosophy === right.governancePreferences.equityPhilosophy
+          ? "aligned"
+          : "review"
         : "missing",
       summary: `${formatEquityPhilosophy(left.governancePreferences.equityPhilosophy)} vs ${formatEquityPhilosophy(right.governancePreferences.equityPhilosophy)}`,
     },
@@ -528,7 +575,11 @@ export function buildAlignmentCheck(left: Profile, right: Profile): AlignmentChe
       id: "governance",
       title: "Decision rights",
       status: left.governancePreferences.decisionModelPreference && right.governancePreferences.decisionModelPreference
-        ? bothWantLead ? "review" : left.governancePreferences.decisionModelPreference === right.governancePreferences.decisionModelPreference ? "aligned" : "review"
+        ? bothWantLead
+          ? "review"
+          : left.governancePreferences.decisionModelPreference === right.governancePreferences.decisionModelPreference
+            ? "aligned"
+            : "review"
         : "missing",
       summary: `${formatDecisionModelPreference(left.governancePreferences.decisionModelPreference)} · ${formatLeadershipPreference(left.governancePreferences.leadershipPreference)} / ${formatLeadershipPreference(right.governancePreferences.leadershipPreference)}`,
     },
@@ -546,7 +597,9 @@ export function buildAlignmentCheck(left: Profile, right: Profile): AlignmentChe
       id: "communication",
       title: "Communication style",
       status: left.workStylePreferences.length && right.workStylePreferences.length
-        ? hasSharedWorkStyle(left, right) ? "aligned" : "review"
+        ? hasSharedWorkStyle(left, right)
+          ? "aligned"
+          : "review"
         : "missing",
       summary: hasSharedWorkStyle(left, right)
         ? "There is at least one shared operating preference."
@@ -608,7 +661,9 @@ export function getOpportunityVerificationTone(status: OpportunityVerificationSt
 }
 
 export function getReportPriority(reason: ReportReason): ReportPriority {
-  return highPriorityReportReasons.has(reason) ? "high" : "standard"
+  return highPriorityReportReasons.has(reason)
+    ? "high"
+    : "standard"
 }
 
 export function buildTrialStatusCopy(trial: TrialCollaboration) {

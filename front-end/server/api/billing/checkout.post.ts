@@ -34,7 +34,9 @@ export default defineEventHandler(async (event) => {
     return {
       mode: "mock",
       checkoutUrl: `${appUrl}/app/billing?checkout=success&plan=${payload.plan}`,
-      data: workspace ? projectWorkspaceForSession(workspace.seed, workspace.session) : undefined,
+      data: workspace
+        ? projectWorkspaceForSession(workspace.seed, workspace.session)
+        : undefined,
       session: workspace?.session,
       subscription: workspace?.state.subscription,
     }
@@ -75,7 +77,9 @@ export default defineEventHandler(async (event) => {
       cofoundryUserId: session.id,
     },
     mode: "subscription",
-    line_items: [{ price: priceId, quantity: 1 }],
+    line_items: [
+      { price: priceId, quantity: 1 }
+    ],
     subscription_data: {
       metadata: {
         cofoundryPlan: payload.plan,

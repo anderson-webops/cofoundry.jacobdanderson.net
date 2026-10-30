@@ -23,7 +23,9 @@ export async function emitLifecycleNotificationEvent(
         ...(request.metadata || {}),
       },
     }, {
-      forceRecordOnlyReason: isSupabaseEnabled(event) ? undefined : "mock_mode",
+      forceRecordOnlyReason: isSupabaseEnabled(event)
+        ? undefined
+        : "mock_mode",
     })
   }
   catch (error) {
@@ -31,7 +33,9 @@ export async function emitLifecycleNotificationEvent(
       await recordOperationalEvent(event, {
         eventType: "lifecycle_notification.failed",
         metadata: {
-          error: error instanceof Error ? error.message : "Lifecycle notification failed.",
+          error: error instanceof Error
+            ? error.message
+            : "Lifecycle notification failed.",
           notificationEventType: request.eventType,
           notificationTargetId: request.targetId,
           notificationTargetType: request.targetType || null,

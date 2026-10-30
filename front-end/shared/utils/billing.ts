@@ -83,7 +83,9 @@ function buildQuota(used: number, limit: number | null, label: string): UsageQuo
   return {
     used,
     limit,
-    remaining: limit === null ? null : Math.max(limit - used, 0),
+    remaining: limit === null
+      ? null
+      : Math.max(limit - used, 0),
     exhausted: limit !== null && used >= limit,
     label,
   }
@@ -93,10 +95,15 @@ export function getPlanPriceLabel(plan: SubscriptionPlan, billingCycle: BillingC
   if (plan === "free")
     return "$0"
 
-  if (plan === "pro")
-    return billingCycle === "annual" ? "$240/yr" : "$29/mo"
+  if (plan === "pro") {
+    return billingCycle === "annual"
+      ? "$240/yr"
+      : "$29/mo"
+  }
 
-  return billingCycle === "annual" ? "$990/yr" : "$99/mo"
+  return billingCycle === "annual"
+    ? "$990/yr"
+    : "$99/mo"
 }
 
 export function getSubscriptionEntitlements(subscription?: Subscription): SubscriptionEntitlements {
@@ -157,7 +164,9 @@ export function checkSavedSearchCount(subscription: Subscription | undefined, sa
   if (limit !== null && savedSearchCount > limit) {
     return {
       allowed: false,
-      reason: `Your plan allows ${limit} saved search${limit === 1 ? "" : "es"}. Upgrade before adding another saved search.`,
+      reason: `Your plan allows ${limit} saved search${limit === 1
+        ? ""
+        : "es"}. Upgrade before adding another saved search.`,
     }
   }
 

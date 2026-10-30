@@ -120,7 +120,9 @@ function buildIntroAcceptedPlan(seed: WorkspaceSeed, request: LifecycleNotificat
 
   return finalizePlan({
     eventType: "intro.accepted",
-    href: relationship ? `/app/relationships/${relationship.id}` : "/app/inbox",
+    href: relationship
+      ? `/app/relationships/${relationship.id}`
+      : "/app/inbox",
     metadata: request.metadata || {},
     notificationType: "match",
     recipientEmail: recipientUser.email,
@@ -139,7 +141,9 @@ function buildMatchCreatedPlan(seed: WorkspaceSeed, request: LifecycleNotificati
     return null
 
   const counterpartId = match.participantIds.find(userId => userId !== request.userId)
-  const counterpartName = counterpartId ? userName(seed, counterpartId) : "your counterpart"
+  const counterpartName = counterpartId
+    ? userName(seed, counterpartId)
+    : "your counterpart"
 
   return finalizePlan({
     eventType: "match.created",
@@ -165,7 +169,9 @@ function buildUnreadMessagePlan(seed: WorkspaceSeed, request: LifecycleNotificat
   if (!conversation || !isConversationParticipant(conversation, request.userId))
     return null
 
-  const senderName = message?.senderUserId ? userName(seed, message.senderUserId) : "CoFoundry"
+  const senderName = message?.senderUserId
+    ? userName(seed, message.senderUserId)
+    : "CoFoundry"
 
   return finalizePlan({
     eventType: "message.unread",
@@ -188,7 +194,9 @@ function buildProposalReceivedPlan(seed: WorkspaceSeed, request: LifecycleNotifi
     return null
 
   const version = getCurrentProposalVersion(seed, proposal)
-  const actorName = version?.createdByUserId ? userName(seed, version.createdByUserId) : "Your counterpart"
+  const actorName = version?.createdByUserId
+    ? userName(seed, version.createdByUserId)
+    : "Your counterpart"
   const roleTitle = version?.roleTitle || proposal.title
 
   return finalizePlan({
@@ -212,7 +220,9 @@ function buildProposalUpdatedPlan(seed: WorkspaceSeed, request: LifecycleNotific
     return null
 
   const version = getCurrentProposalVersion(seed, proposal)
-  const actorName = version?.createdByUserId ? userName(seed, version.createdByUserId) : "Your counterpart"
+  const actorName = version?.createdByUserId
+    ? userName(seed, version.createdByUserId)
+    : "Your counterpart"
   const roleTitle = version?.roleTitle || proposal.title
 
   return finalizePlan({
@@ -232,7 +242,9 @@ function buildProposalUpdatedPlan(seed: WorkspaceSeed, request: LifecycleNotific
 
 function buildSignatureRequiredPlan(seed: WorkspaceSeed, request: LifecycleNotificationRequest, recipientUser: NonNullable<ReturnType<typeof recipient>>) {
   const contract = getContractById(seed, request.targetId)
-  const version = contract ? getCurrentContractVersion(seed, contract) : undefined
+  const version = contract
+    ? getCurrentContractVersion(seed, contract)
+    : undefined
   if (!contract || !collaborationContractNeedsUserSignature(seed, contract, version, seed.signatures, request.userId))
     return null
 
@@ -253,7 +265,9 @@ function buildSignatureRequiredPlan(seed: WorkspaceSeed, request: LifecycleNotif
 
 function buildReportReviewedPlan(seed: WorkspaceSeed, request: LifecycleNotificationRequest, recipientUser: NonNullable<ReturnType<typeof recipient>>) {
   const report = seed.reports.find(item => item.id === request.targetId)
-  const status = report?.status || (request.metadata?.status === "reviewed" || request.metadata?.status === "resolved" ? request.metadata.status : null)
+  const status = report?.status || (request.metadata?.status === "reviewed" || request.metadata?.status === "resolved"
+    ? request.metadata.status
+    : null)
 
   if (report && report.reporterUserId !== request.userId)
     return null

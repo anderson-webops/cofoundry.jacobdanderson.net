@@ -70,7 +70,9 @@ async function createOpportunityPost() {
     catch {}
 
     errors.value = {
-      form: caughtError instanceof Error ? caughtError.message : "The opportunity could not be published.",
+      form: caughtError instanceof Error
+        ? caughtError.message
+        : "The opportunity could not be published.",
     }
     toastStore.push({
       title: "Opportunity not saved",

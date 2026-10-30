@@ -33,7 +33,12 @@ interface CreateOrganizationInput {
 
 const operatorRoles = new Set<OrganizationMemberRole>(["owner", "operator"])
 const workingRoles = new Set<OrganizationMemberRole>(["owner", "operator", "member"])
-const reviewingRoles = new Set<OrganizationMemberRole>(["owner", "operator", "reviewer", "counsel"])
+const reviewingRoles = new Set<OrganizationMemberRole>([
+  "owner",
+  "operator",
+  "reviewer",
+  "counsel"
+])
 const policyRoles = new Set<OrganizationMemberRole>(["owner", "operator", "counsel"])
 
 function fail(message: string, statusCode = 400): never {
@@ -104,7 +109,9 @@ function updateDefaultPolicy(document: OrganizationWorkspaceDocument, selectedPo
   document.agreementPolicies = document.agreementPolicies.map(policy => ({
     ...policy,
     isDefault: policy.id === selectedPolicyId,
-    updatedAt: policy.id === selectedPolicyId || policy.isDefault ? updatedAt : policy.updatedAt,
+    updatedAt: policy.id === selectedPolicyId || policy.isDefault
+      ? updatedAt
+      : policy.updatedAt,
   }))
 }
 
@@ -135,7 +142,9 @@ function validateApprovalRoles(roles: OrganizationMemberRole[]) {
 }
 
 function approvalPolicy(document: OrganizationWorkspaceDocument, approval: OrganizationApprovalRequest) {
-  return approval.policyId ? getPolicy(document, approval.policyId) : null
+  return approval.policyId
+    ? getPolicy(document, approval.policyId)
+    : null
 }
 
 export function createOrganizationWorkspaceDocument(
@@ -155,7 +164,9 @@ export function createOrganizationWorkspaceDocument(
     kind: input.kind,
     name: input.name,
     ownerUserId: session.id,
-    seatLimit: input.kind === "venture_studio" ? 25 : 12,
+    seatLimit: input.kind === "venture_studio"
+      ? 25
+      : 12,
     slug: input.slug,
     status: "active",
     updatedAt: options.now,
@@ -163,38 +174,53 @@ export function createOrganizationWorkspaceDocument(
   }
   const defaultPolicyId = options.createId("organization_policy")
   const document: OrganizationWorkspaceDocument = {
-    agreementPolicies: [{
-      allowOutsideCounsel: true,
-      approvalRoles: ["owner", "operator", "reviewer", "counsel"],
-      createdAt: options.now,
-      createdByUserId: session.id,
-      description: "Standard approval and legal-review controls for founder agreements.",
-      id: defaultPolicyId,
-      isDefault: true,
-      name: "Founder agreement review",
-      organizationId,
-      requiredClauses: ["Roles and scope", "Equity and vesting", "IP assignment", "Decision rights", "Exit and termination"],
-      requiresInternalApproval: true,
-      requiresLegalReview: false,
-      separationOfDuties: true,
-      updatedAt: options.now,
-    }],
+    agreementPolicies: [
+      {
+        allowOutsideCounsel: true,
+        approvalRoles: [
+          "owner",
+          "operator",
+          "reviewer",
+          "counsel"
+        ],
+        createdAt: options.now,
+        createdByUserId: session.id,
+        description: "Standard approval and legal-review controls for founder agreements.",
+        id: defaultPolicyId,
+        isDefault: true,
+        name: "Founder agreement review",
+        organizationId,
+        requiredClauses: [
+          "Roles and scope",
+          "Equity and vesting",
+          "IP assignment",
+          "Decision rights",
+          "Exit and termination"
+        ],
+        requiresInternalApproval: true,
+        requiresLegalReview: false,
+        separationOfDuties: true,
+        updatedAt: options.now,
+      }
+    ],
     approvalRequests: [],
     auditEvents: [],
     decisions: [],
     invitations: [],
-    memberships: [{
-      createdAt: options.now,
-      displayName: session.name,
-      email: normalizeEmail(session.email),
-      id: membershipId,
-      joinedAt: options.now,
-      organizationId,
-      role: "owner",
-      title: "Owner",
-      updatedAt: options.now,
-      userId: session.id,
-    }],
+    memberships: [
+      {
+        createdAt: options.now,
+        displayName: session.name,
+        email: normalizeEmail(session.email),
+        id: membershipId,
+        joinedAt: options.now,
+        organizationId,
+        role: "owner",
+        title: "Owner",
+        updatedAt: options.now,
+        userId: session.id,
+      }
+    ],
     organization,
     projects: [],
     resourceLinks: [],
@@ -386,9 +412,15 @@ export function applyOrganizationMutation(
       if (target.role === "owner")
         fail("Transfer ownership before removing the owner.", 409)
       document.memberships = document.memberships.filter(item => item.id !== target.id)
-      document.tasks = document.tasks.map(task => task.assigneeUserId === target.userId ? { ...task, assigneeUserId: null, updatedAt: options.now } : task)
-      document.projects = document.projects.map(project => project.ownerUserId === target.userId ? { ...project, ownerUserId: null, updatedAt: options.now } : project)
-      document.ventures = document.ventures.map(venture => venture.leadUserId === target.userId ? { ...venture, leadUserId: null, updatedAt: options.now } : venture)
+      document.tasks = document.tasks.map(task => task.assigneeUserId === target.userId
+        ? { ...task, assigneeUserId: null, updatedAt: options.now }
+        : task)
+      document.projects = document.projects.map(project => project.ownerUserId === target.userId
+        ? { ...project, ownerUserId: null, updatedAt: options.now }
+        : project)
+      document.ventures = document.ventures.map(venture => venture.leadUserId === target.userId
+        ? { ...venture, leadUserId: null, updatedAt: options.now }
+        : venture)
       audit(document, session.id, "membership.removed", "organization_membership", target.id, `${session.name} removed ${target.displayName} from the organization.`, options)
       break
     }
@@ -602,7 +634,9 @@ export function applyOrganizationMutation(
       const contractLink = mutation.targetType === "contract"
         ? document.resourceLinks.find(link => link.resourceType === "contract" && link.resourceId === mutation.targetId)
         : null
-      const linkedPolicy = contractLink ? linkedAgreementPolicy(document, contractLink.policyId) : null
+      const linkedPolicy = contractLink
+        ? linkedAgreementPolicy(document, contractLink.policyId)
+        : null
       if (contractLink && !linkedPolicy)
         fail("The linked agreement policy is unavailable.", 409)
       if (linkedPolicy && mutation.policyId !== linkedPolicy.id)
@@ -642,7 +676,12 @@ export function applyOrganizationMutation(
       if (!approval || approval.status !== "pending")
         fail("This approval request is no longer pending.", 409)
       const policy = approvalPolicy(document, approval)
-      const approvalRoles = new Set<OrganizationMemberRole>(policy?.approvalRoles || ["owner", "operator", "reviewer", "counsel"])
+      const approvalRoles = new Set<OrganizationMemberRole>(policy?.approvalRoles || [
+        "owner",
+        "operator",
+        "reviewer",
+        "counsel"
+      ])
       requireRole(membership, approvalRoles, "Your organization role cannot resolve this approval request.")
       if (policy?.separationOfDuties && approval.requestedByUserId === session.id)
         fail("This policy requires a different organization member to resolve the approval.", 409)
@@ -748,25 +787,29 @@ export function getOrganizationContractGovernanceRequirements(
       return []
     const policy = linkedAgreementPolicy(document, link.policyId)
     if (!policy) {
-      return [{
-        allowOutsideCounsel: false,
-        approvalStatus: "missing",
-        approvedLegalReview: approvedLegalReviewVersionIds.has(contractVersionId),
-        blockers: ["The linked agreement policy is unavailable. An organization owner must restore it before signing."],
-        organizationId: document.organization.id,
-        organizationName: document.organization.name,
-        policyId: link.policyId || "",
-        policyName: "Unavailable agreement policy",
-        requiresInternalApproval: false,
-        requiresLegalReview: false,
-      }]
+      return [
+        {
+          allowOutsideCounsel: false,
+          approvalStatus: "missing",
+          approvedLegalReview: approvedLegalReviewVersionIds.has(contractVersionId),
+          blockers: ["The linked agreement policy is unavailable. An organization owner must restore it before signing."],
+          organizationId: document.organization.id,
+          organizationName: document.organization.name,
+          policyId: link.policyId || "",
+          policyName: "Unavailable agreement policy",
+          requiresInternalApproval: false,
+          requiresLegalReview: false,
+        }
+      ]
     }
     const approval = document.approvalRequests
       .filter(item => item.targetType === "contract" && item.targetId === contractId && item.targetVersionId === contractVersionId && item.policyId === policy.id)
       .sort((left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime())[0]
     const approvedLegalReview = approvedLegalReviewVersionIds.has(contractVersionId)
     const blockers: string[] = []
-    const decidedBy = approval?.decidedByUserId ? activeMembership(document, approval.decidedByUserId) : null
+    const decidedBy = approval?.decidedByUserId
+      ? activeMembership(document, approval.decidedByUserId)
+      : null
     const approvalStatus = approval?.status === "approved" && (
       !decidedBy
       || !policy.approvalRoles.includes(decidedBy.role)
@@ -774,32 +817,41 @@ export function getOrganizationContractGovernanceRequirements(
     )
       ? "missing"
       : approval?.status || "missing"
-    if (policy.requiresInternalApproval && approvalStatus !== "approved")
-      blockers.push(approvalStatus === "missing" ? "Internal approval has not been requested for this version." : `Internal approval is ${approvalStatus.replaceAll("_", " ")}.`)
+    if (policy.requiresInternalApproval && approvalStatus !== "approved") {
+      blockers.push(approvalStatus === "missing"
+        ? "Internal approval has not been requested for this version."
+        : `Internal approval is ${approvalStatus.replaceAll("_", " ")}.`)
+    }
     if (policy.requiresLegalReview && !approvedLegalReview)
       blockers.push("The linked policy requires an approved legal review for this version.")
 
-    return [{
-      allowOutsideCounsel: policy.allowOutsideCounsel,
-      approvalStatus,
-      approvedLegalReview,
-      blockers,
-      organizationId: document.organization.id,
-      organizationName: document.organization.name,
-      policyId: policy.id,
-      policyName: policy.name,
-      requiresInternalApproval: policy.requiresInternalApproval,
-      requiresLegalReview: policy.requiresLegalReview,
-    }]
+    return [
+      {
+        allowOutsideCounsel: policy.allowOutsideCounsel,
+        approvalStatus,
+        approvedLegalReview,
+        blockers,
+        organizationId: document.organization.id,
+        organizationName: document.organization.name,
+        policyId: policy.id,
+        policyName: policy.name,
+        requiresInternalApproval: policy.requiresInternalApproval,
+        requiresLegalReview: policy.requiresLegalReview,
+      }
+    ]
   })
 }
 
 export function formatOrganizationKind(kind: Organization["kind"]) {
-  return kind === "venture_studio" ? "Venture studio" : "Startup team"
+  return kind === "venture_studio"
+    ? "Venture studio"
+    : "Startup team"
 }
 
 export function formatOrganizationMemberRole(role: OrganizationMemberRole) {
-  return role === "counsel" ? "Counsel" : role.charAt(0).toUpperCase() + role.slice(1)
+  return role === "counsel"
+    ? "Counsel"
+    : role.charAt(0).toUpperCase() + role.slice(1)
 }
 
 export function organizationMembershipFor(document: OrganizationWorkspaceDocument, userId: string) {

@@ -73,8 +73,12 @@ function parseAddressList(value?: string) {
 
 function requireEnvelopeAddress(value: string, label: string) {
   const atIndex = value.indexOf("@")
-  const localPart = atIndex > 0 ? value.slice(0, atIndex) : ""
-  const domain = atIndex > 0 ? value.slice(atIndex + 1) : ""
+  const localPart = atIndex > 0
+    ? value.slice(0, atIndex)
+    : ""
+  const domain = atIndex > 0
+    ? value.slice(atIndex + 1)
+    : ""
   const structurallyValid = Boolean(
     localPart
     && localPart.length <= 64
@@ -127,7 +131,9 @@ function escapeHeader(value: string) {
 function dotStuff(message: string) {
   return message
     .split(newlinePattern)
-    .map(line => (line.startsWith(".") ? `.${line}` : line))
+    .map(line => (line.startsWith(".")
+      ? `.${line}`
+      : line))
     .join("\r\n")
 }
 
@@ -195,7 +201,9 @@ class SmtpLineReader {
     })
 
     socket.on("error", (error) => {
-      this.error = error instanceof Error ? error : new Error(String(error))
+      this.error = error instanceof Error
+        ? error
+        : new Error(String(error))
       this.resume?.()
       this.resume = null
     })
@@ -258,7 +266,10 @@ class SmtpLineReader {
       }
 
       if (code === responseCode && separator === " ") {
-        return { code: Number.parseInt(responseCode, 10), lines }
+        return {
+          code: Number.parseInt(responseCode, 10),
+          lines
+        }
       }
     }
   }
@@ -311,7 +322,9 @@ function applySocketTimeout(socket: SocketLike, timeoutMs: number) {
 async function upgradeToTls(socket: net.Socket, host: string, timeoutMs: number) {
   const secureSocket = tls.connect({
     host,
-    ...(net.isIP(host) ? {} : { servername: host }),
+    ...(net.isIP(host)
+      ? {}
+      : { servername: host }),
     socket,
   })
 
@@ -327,7 +340,9 @@ async function connectSmtp(config: SmtpConfig) {
     socket = tls.connect({
       host: config.host,
       port: config.port,
-      ...(net.isIP(config.host) ? {} : { servername: config.host }),
+      ...(net.isIP(config.host)
+        ? {}
+        : { servername: config.host }),
     })
     applySocketTimeout(socket, config.timeoutMs)
     await once(socket, "secureConnect")
@@ -404,7 +419,10 @@ async function closeSmtpConnection(socket: SocketLike, reader: SmtpLineReader) {
 
 async function sendViaSmtp(config: SmtpConfig, message: string) {
   const { reader, socket } = await connectSmtp(config)
-  const recipients = [config.toEmail, ...(config.bccEmail || [])]
+  const recipients = [
+    config.toEmail,
+    ...(config.bccEmail || [])
+  ]
 
   try {
     const mailFrom = await sendSmtpCommand(socket, reader, `MAIL FROM:<${config.fromEmail}>`)
@@ -428,12 +446,20 @@ async function sendViaSmtp(config: SmtpConfig, message: string) {
 }
 
 async function sendRawSendmail(config: SendmailConfig, message: string) {
-  const recipients = [config.toEmail, ...(config.bccEmail || [])]
+  const recipients = [
+    config.toEmail,
+    ...(config.bccEmail || [])
+  ]
 
   await new Promise<void>((resolve, reject) => {
     const child = spawn(
       config.sendmailPath,
-      ["-i", "-f", config.fromEmail, ...recipients],
+      [
+        "-i",
+        "-f",
+        config.fromEmail,
+        ...recipients
+      ],
       {
         shell: false,
         stdio: ["pipe", "ignore", "pipe"],
@@ -585,7 +611,9 @@ export async function sendPlainTextEmail(payload: PlainTextEmailPayload) {
 }
 
 function formatHeaderLine(label: string, value?: string) {
-  return value ? `${label}: ${value}` : undefined
+  return value
+    ? `${label}: ${value}`
+    : undefined
 }
 
 export async function sendContactMessage(payload: ContactPayload, event: H3Event) {

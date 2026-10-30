@@ -28,7 +28,9 @@ function firstHeaderValue(value: string | null | undefined) {
 
 function validIp(value: string | null | undefined) {
   const candidate = firstHeaderValue(value)
-  return isIP(candidate) ? candidate : ""
+  return isIP(candidate)
+    ? candidate
+    : ""
 }
 
 function forwardedClientIp(value: string | null | undefined, trustedProxyIps: string | undefined) {
@@ -81,7 +83,9 @@ export function getRequesterIp(event: H3Event) {
 }
 
 export function assertRateLimit(event: H3Event, options: RateLimitOptions) {
-  const identity = options.key ? normalizeKeyPart(options.key) : getRequesterIp(event)
+  const identity = options.key
+    ? normalizeKeyPart(options.key)
+    : getRequesterIp(event)
   const key = `${options.scope}:${identity}`
   const decision = buckets.consume(key, options.scope, options.limit, options.windowMs)
 
@@ -95,7 +99,10 @@ export function assertRateLimit(event: H3Event, options: RateLimitOptions) {
 }
 
 export function buildRateLimitKey(event: H3Event, ...parts: string[]) {
-  return [getRequesterIp(event), ...parts].map(normalizeKeyPart).join(":")
+  return [
+    getRequesterIp(event),
+    ...parts
+  ].map(normalizeKeyPart).join(":")
 }
 
 export function clearRateLimitBucketsForTests() {

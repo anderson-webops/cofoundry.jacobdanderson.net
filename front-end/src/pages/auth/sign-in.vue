@@ -35,7 +35,9 @@ const form = reactive({
 })
 const errors = ref<Record<string, string>>({})
 const oauthErrorMessage = computed(() => {
-  const code = typeof route.query.error === "string" ? route.query.error : ""
+  const code = typeof route.query.error === "string"
+    ? route.query.error
+    : ""
   const messages: Record<string, string> = {
     account_inactive: "That account is not active. Contact the team if you think this is wrong.",
     oauth_failed: "Provider sign-in could not be completed. Use email/password or request account help.",
@@ -63,7 +65,9 @@ async function submitForm() {
     })
     await navigateTo(session.onboardingCompleted
       ? session.role === "investor_admin"
-        ? runtimeConfig.public.featureInvestmentModule === true ? "/investment-review" : "/"
+        ? runtimeConfig.public.featureInvestmentModule === true
+          ? "/investment-review"
+          : "/"
         : "/app"
       : "/onboarding")
   }

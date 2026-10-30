@@ -78,13 +78,26 @@ function emailDomain(email: string) {
 }
 
 function countUrls(text: string) {
-  return [...text.matchAll(urlPattern)].length
+  return [
+    ...text.matchAll(urlPattern)
+  ].length
 }
 
 function countMeaningfulWords(text: string) {
-  return [...text.matchAll(wordPattern)]
+  return [
+    ...text.matchAll(wordPattern)
+  ]
     .map(match => match[0].toLowerCase())
-    .filter(word => !["and", "for", "the", "that", "this", "with", "you", "your"].includes(word))
+    .filter(word => ![
+      "and",
+      "for",
+      "the",
+      "that",
+      "this",
+      "with",
+      "you",
+      "your"
+    ].includes(word))
     .length
 }
 
@@ -101,7 +114,9 @@ export function evaluatePublicIntakeQuality(input: PublicIntakeQualityInput): Pu
     input.message,
   ].join(" "))
   const meaningfulWordCount = countMeaningfulWords(combinedText)
-  const minimumMeaningfulWords = input.kind === "access_request" ? 8 : 5
+  const minimumMeaningfulWords = input.kind === "access_request"
+    ? 8
+    : 5
 
   if (!domain || !domain.includes(".") || reservedEmailDomains.has(domain) || domain.endsWith(".invalid") || domain.endsWith(".localhost") || domain.endsWith(".test")) {
     issues.push(buildIssue(

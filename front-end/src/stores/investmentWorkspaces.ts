@@ -24,7 +24,9 @@ export const useInvestmentWorkspaceStore = defineStore("investment-workspaces", 
 
     loading.value = true
     try {
-      const headers = import.meta.server ? useRequestHeaders(["cookie"]) : undefined
+      const headers = import.meta.server
+        ? useRequestHeaders(["cookie"])
+        : undefined
       snapshot.value = await $fetch<InvestmentApplicantSnapshot>("/api/investment/workspaces", { headers })
       loadedUserId.value = session.value.id
       lastSyncedAt.value = new Date().toISOString()
@@ -36,7 +38,9 @@ export const useInvestmentWorkspaceStore = defineStore("investment-workspaces", 
   }
 
   async function create(payload: { opportunityId: string, organizationId: string | null }) {
-    const headers = import.meta.server ? useRequestHeaders(["cookie"]) : undefined
+    const headers = import.meta.server
+      ? useRequestHeaders(["cookie"])
+      : undefined
     const response = await $fetch<{ workspace: InvestmentWorkspaceDocument }>("/api/investment/workspaces", {
       body: payload,
       headers,
@@ -51,7 +55,9 @@ export const useInvestmentWorkspaceStore = defineStore("investment-workspaces", 
   }
 
   async function mutate(workspace: InvestmentWorkspaceDocument, mutation: InvestmentApplicantMutation) {
-    const headers = import.meta.server ? useRequestHeaders(["cookie"]) : undefined
+    const headers = import.meta.server
+      ? useRequestHeaders(["cookie"])
+      : undefined
     const response = await $fetch<{ workspace: InvestmentWorkspaceDocument }>(`/api/investment/workspaces/${workspace.id}/mutations`, {
       body: {
         expectedVersion: workspace.version,
@@ -60,7 +66,9 @@ export const useInvestmentWorkspaceStore = defineStore("investment-workspaces", 
       headers,
       method: "POST",
     })
-    snapshot.value.workspaces = snapshot.value.workspaces.map(item => item.id === response.workspace.id ? response.workspace : item)
+    snapshot.value.workspaces = snapshot.value.workspaces.map(item => item.id === response.workspace.id
+      ? response.workspace
+      : item)
     lastSyncedAt.value = new Date().toISOString()
     return response.workspace
   }

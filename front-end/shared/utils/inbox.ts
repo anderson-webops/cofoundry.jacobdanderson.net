@@ -182,7 +182,9 @@ export function buildInboxSnapshot(seed: WorkspaceSeed, userId: string, queues =
       kind: "message",
       priority: "high",
       title: `Reply to ${getConversationCounterpartLabel(seed, conversation, userId)}`,
-      summary: `${preview.slice(0, 140)}${preview.length > 140 ? "..." : ""}`,
+      summary: `${preview.slice(0, 140)}${preview.length > 140
+        ? "..."
+        : ""}`,
       href: `/app/messages/${conversation.id}`,
       createdAt: conversation.lastMessageAt,
       badgeLabel: `${unreadCount} new`,
@@ -192,13 +194,17 @@ export function buildInboxSnapshot(seed: WorkspaceSeed, userId: string, queues =
 
   const proposalItems: InboxActionItem[] = proposalsNeedingResponse.map((proposal) => {
     const currentVersion = getCurrentProposalVersion(seed, proposal)
-    const author = currentVersion ? getProfileByUserId(seed, currentVersion.createdByUserId) : null
+    const author = currentVersion
+      ? getProfileByUserId(seed, currentVersion.createdByUserId)
+      : null
 
     return {
       id: `proposal:${proposal.id}`,
       kind: "proposal",
       priority: "high",
-      title: `Review proposal update${author ? ` from ${author.displayName}` : ""}`,
+      title: `Review proposal update${author
+        ? ` from ${author.displayName}`
+        : ""}`,
       summary: `${proposal.title} · ${formatProposalStatus(proposal.status)}`,
       href: `/app/proposals/${proposal.id}`,
       createdAt: proposal.updatedAt,
@@ -215,7 +221,9 @@ export function buildInboxSnapshot(seed: WorkspaceSeed, userId: string, queues =
       kind: "contract",
       priority: "high",
       title: "Signature still required",
-      summary: `${contract.title}${version ? ` · Version ${version.versionNumber}` : ""}`,
+      summary: `${contract.title}${version
+        ? ` · Version ${version.versionNumber}`
+        : ""}`,
       href: `/app/contracts/${contract.id}`,
       createdAt: contract.updatedAt,
       badgeLabel: "Signature",
@@ -234,16 +242,26 @@ export function buildInboxSnapshot(seed: WorkspaceSeed, userId: string, queues =
     .map(notification => ({
       id: `notification:${notification.id}`,
       kind: "notification",
-      priority: notification.type === "admin" || notification.type === "billing" ? "high" : "medium",
+      priority: notification.type === "admin" || notification.type === "billing"
+        ? "high"
+        : "medium",
       title: notification.title,
       summary: notification.body,
       href: sanitizeNotificationHref(notification.href),
       createdAt: notification.createdAt,
       badgeLabel: "Update",
-      badgeTone: notification.type === "admin" || notification.type === "billing" ? "warning" : "neutral",
+      badgeTone: notification.type === "admin" || notification.type === "billing"
+        ? "warning"
+        : "neutral",
     }))
 
-  const actions = [...introItems, ...messageItems, ...proposalItems, ...contractItems, ...notificationItems]
+  const actions = [
+    ...introItems,
+    ...messageItems,
+    ...proposalItems,
+    ...contractItems,
+    ...notificationItems
+  ]
     .sort((left, right) => priorityWeight[left.priority] - priorityWeight[right.priority] || byNewest(left, right))
 
   return {

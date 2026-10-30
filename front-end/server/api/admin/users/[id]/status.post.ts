@@ -32,13 +32,19 @@ export default defineEventHandler(async (event) => {
     notes: payload.notes,
     targetId: targetUserId,
     targetType: "user" as const,
-    type: payload.action === "suspend" ? "suspend_user" as const : "reinstate_user" as const,
+    type: payload.action === "suspend"
+      ? "suspend_user" as const
+      : "reinstate_user" as const,
     metadata: {
       previousSuspendedAt: target?.suspendedAt,
-      nextSuspendedAt: payload.action === "suspend" ? createdAt : null,
+      nextSuspendedAt: payload.action === "suspend"
+        ? createdAt
+        : null,
     },
   }
-  const suspendedAt = payload.action === "suspend" ? createdAt : null
+  const suspendedAt = payload.action === "suspend"
+    ? createdAt
+    : null
 
   await persistAdminUserSecurityAction(event, { action, mutation })
 

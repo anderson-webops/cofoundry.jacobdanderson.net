@@ -14,7 +14,9 @@ export default defineEventHandler(async (event) => {
   })
 
   return {
-    mode: isSupabaseEnabled(event) ? "supabase" : "mock",
+    mode: isSupabaseEnabled(event)
+      ? "supabase"
+      : "mock",
     requests: await listAccessRequests(event) as AccessRequest[],
     warning: null,
   }

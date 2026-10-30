@@ -10,7 +10,9 @@ usePageSeo("Proposals")
 
 const { authStore, workspaceStore } = useCurrentMember()
 
-const proposals = computed(() => authStore.currentUser ? getProposalsForUser(workspaceStore.data, authStore.currentUser.id) : [])
+const proposals = computed(() => authStore.currentUser
+  ? getProposalsForUser(workspaceStore.data, authStore.currentUser.id)
+  : [])
 </script>
 
 <template>

@@ -72,9 +72,15 @@ async function respondToInvitation(workspace: OrganizationWorkspaceDocument, inv
       response,
     })
     toastStore.push({
-      message: response === "accepted" ? `You joined ${workspace.organization.name}.` : `You declined the invitation to ${workspace.organization.name}.`,
-      title: response === "accepted" ? "Invitation accepted" : "Invitation declined",
-      tone: response === "accepted" ? "success" : "info",
+      message: response === "accepted"
+        ? `You joined ${workspace.organization.name}.`
+        : `You declined the invitation to ${workspace.organization.name}.`,
+      title: response === "accepted"
+        ? "Invitation accepted"
+        : "Invitation declined",
+      tone: response === "accepted"
+        ? "success"
+        : "info",
     })
     if (response === "accepted")
       await navigateTo(`/app/studio/${workspace.organization.id}`)

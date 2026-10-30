@@ -17,7 +17,9 @@ export default defineEventHandler(async (event) => {
     const profileByUserId = new Map(slice.profiles.map(profile => [profile.userId, profile]))
 
     return {
-      mode: isSupabaseEnabled(event) ? "supabase" : "mock",
+      mode: isSupabaseEnabled(event)
+        ? "supabase"
+        : "mock",
       opportunities: slice.opportunities,
       owners: slice.users.map(user => ({
         displayName: profileByUserId.get(user.id)?.displayName || user.id,
@@ -31,7 +33,9 @@ export default defineEventHandler(async (event) => {
   }
 
   return {
-    mode: isSupabaseEnabled(event) ? "supabase" : "mock",
+    mode: isSupabaseEnabled(event)
+      ? "supabase"
+      : "mock",
     ...slice,
   }
 })

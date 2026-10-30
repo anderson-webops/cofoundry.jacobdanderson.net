@@ -22,7 +22,9 @@ const localSigningSecret = randomBytes(32).toString("base64url")
 function signingSecret() {
   return process.env.NUXT_SESSION_SIGNING_SECRET
     || process.env.SESSION_SIGNING_SECRET
-    || (isLocalDevelopmentEnvironment(process.env) ? localSigningSecret : "")
+    || (isLocalDevelopmentEnvironment(process.env)
+      ? localSigningSecret
+      : "")
 }
 
 function digestEmail(email: string) {

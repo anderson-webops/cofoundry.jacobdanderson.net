@@ -17,16 +17,36 @@ const toastStore = useToastStore()
 const { authStore, profile, subscription, workspaceStore } = useCurrentMember()
 const currentUserId = computed(() => authStore.currentUser?.id || "")
 
-const readiness = computed(() => profile.value ? buildProfileReadiness(profile.value) : null)
-const activationPlan = computed(() => currentUserId.value ? buildActivationPlan(workspaceStore.data, currentUserId.value) : null)
-const inboxSnapshot = computed(() => currentUserId.value ? buildInboxSnapshot(workspaceStore.data, currentUserId.value) : null)
-const profileRecommendations = computed(() => profile.value ? recommendProfilesForProfile(workspaceStore.data, profile.value).slice(0, 3) : [])
-const opportunityRecommendations = computed(() => profile.value ? recommendOpportunitiesForProfile(workspaceStore.data, profile.value).slice(0, 3) : [])
-const showProfileRecommendations = computed(() => profile.value ? profile.value.hasIdea && !profile.value.wantsToJoinIdea : false)
-const proposals = computed(() => currentUserId.value ? getProposalsForUser(workspaceStore.data, currentUserId.value).slice(0, 3) : [])
-const matches = computed(() => currentUserId.value ? getMatchesForUser(workspaceStore.data, currentUserId.value).slice(0, 3) : [])
-const contracts = computed(() => currentUserId.value ? getContractsForUser(workspaceStore.data, currentUserId.value).slice(0, 2) : [])
-const trials = computed(() => currentUserId.value ? getTrialsForUser(workspaceStore.data, currentUserId.value).slice(0, 2) : [])
+const readiness = computed(() => profile.value
+  ? buildProfileReadiness(profile.value)
+  : null)
+const activationPlan = computed(() => currentUserId.value
+  ? buildActivationPlan(workspaceStore.data, currentUserId.value)
+  : null)
+const inboxSnapshot = computed(() => currentUserId.value
+  ? buildInboxSnapshot(workspaceStore.data, currentUserId.value)
+  : null)
+const profileRecommendations = computed(() => profile.value
+  ? recommendProfilesForProfile(workspaceStore.data, profile.value).slice(0, 3)
+  : [])
+const opportunityRecommendations = computed(() => profile.value
+  ? recommendOpportunitiesForProfile(workspaceStore.data, profile.value).slice(0, 3)
+  : [])
+const showProfileRecommendations = computed(() => profile.value
+  ? profile.value.hasIdea && !profile.value.wantsToJoinIdea
+  : false)
+const proposals = computed(() => currentUserId.value
+  ? getProposalsForUser(workspaceStore.data, currentUserId.value).slice(0, 3)
+  : [])
+const matches = computed(() => currentUserId.value
+  ? getMatchesForUser(workspaceStore.data, currentUserId.value).slice(0, 3)
+  : [])
+const contracts = computed(() => currentUserId.value
+  ? getContractsForUser(workspaceStore.data, currentUserId.value).slice(0, 2)
+  : [])
+const trials = computed(() => currentUserId.value
+  ? getTrialsForUser(workspaceStore.data, currentUserId.value).slice(0, 2)
+  : [])
 const notifications = computed(() => currentUserId.value
   ? workspaceStore.data.notifications
       .filter(notification => notification.userId === currentUserId.value && !notification.readAt)
@@ -40,7 +60,9 @@ const incomingRequests = computed(() => {
     .filter(request => request.status === "pending")
     .map((request) => {
       const counterpart = getProfileByUserId(workspaceStore.data, request.fromUserId)
-      return counterpart ? { request, counterpart } : null
+      return counterpart
+        ? { request, counterpart }
+        : null
     })
     .filter((value): value is NonNullable<typeof value> => Boolean(value))
 })
@@ -52,14 +74,18 @@ const outgoingRequests = computed(() => {
     .filter(request => request.status === "pending")
     .map((request) => {
       const counterpart = getProfileByUserId(workspaceStore.data, request.toUserId)
-      return counterpart ? { request, counterpart } : null
+      return counterpart
+        ? { request, counterpart }
+        : null
     })
     .filter((value): value is NonNullable<typeof value> => Boolean(value))
 })
 const primaryAction = computed(() => {
   if (inboxSnapshot.value?.counts.pendingIntros) {
     return {
-      title: `Review ${inboxSnapshot.value.counts.pendingIntros} inbound intro${inboxSnapshot.value.counts.pendingIntros === 1 ? "" : "s"}`,
+      title: `Review ${inboxSnapshot.value.counts.pendingIntros} inbound intro${inboxSnapshot.value.counts.pendingIntros === 1
+        ? ""
+        : "s"}`,
       href: "/app/inbox",
       ctaLabel: "Open intro queue",
     }

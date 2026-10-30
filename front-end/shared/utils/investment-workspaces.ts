@@ -45,13 +45,39 @@ const reviewerVisibleApplicationStatuses = new Set<InvestmentProgramApplicationS
 const reviewerStatusTransitions: Record<InvestmentProgramApplicationStatus, ReadonlySet<InvestmentProgramApplicationStatus>> = {
   accepted: new Set(["closed"]),
   closed: new Set(),
-  committee_review: new Set(["diligence", "information_requested", "accepted", "declined"]),
+  committee_review: new Set([
+    "diligence",
+    "information_requested",
+    "accepted",
+    "declined"
+  ]),
   declined: new Set(["closed"]),
-  diligence: new Set(["information_requested", "committee_review", "accepted", "declined"]),
+  diligence: new Set([
+    "information_requested",
+    "committee_review",
+    "accepted",
+    "declined"
+  ]),
   draft: new Set(),
-  information_requested: new Set(["under_review", "diligence", "committee_review", "declined"]),
-  submitted: new Set(["under_review", "information_requested", "diligence", "declined"]),
-  under_review: new Set(["information_requested", "diligence", "committee_review", "accepted", "declined"]),
+  information_requested: new Set([
+    "under_review",
+    "diligence",
+    "committee_review",
+    "declined"
+  ]),
+  submitted: new Set([
+    "under_review",
+    "information_requested",
+    "diligence",
+    "declined"
+  ]),
+  under_review: new Set([
+    "information_requested",
+    "diligence",
+    "committee_review",
+    "accepted",
+    "declined"
+  ]),
   withdrawn: new Set(["closed"]),
 }
 
@@ -320,7 +346,9 @@ export function projectInvestmentWorkspaceForApplicant(
     .filter(event => event.audience === "applicant" || event.audience === "all")
     .map(event => ({
       ...event,
-      actorUserId: event.actorUserId === applicantUserId ? applicantUserId : null,
+      actorUserId: event.actorUserId === applicantUserId
+        ? applicantUserId
+        : null,
     }))
   return document
 }
@@ -633,7 +661,9 @@ export function applyInvestmentApplicantMutation(
           ? { ...handoff, status: "consent_pending", updatedAt: options.now }
           : handoff)
       }
-      audit(document, session.id, "all", mutation.consent ? "investment.partner_sharing_consented" : "investment.partner_sharing_revoked", "investment_application", document.application.id, mutation.consent ? `${session.name} consented to a separately approved regulated-partner handoff.` : `${session.name} withdrew consent for future regulated-partner sharing.`, options)
+      audit(document, session.id, "all", mutation.consent ? "investment.partner_sharing_consented" : "investment.partner_sharing_revoked", "investment_application", document.application.id, mutation.consent
+        ? `${session.name} consented to a separately approved regulated-partner handoff.`
+        : `${session.name} withdrew consent for future regulated-partner sharing.`, options)
       break
     }
     case "submit_application": {
@@ -653,8 +683,15 @@ export function applyInvestmentApplicantMutation(
       break
     }
     case "withdraw_application": {
-      if (!["submitted", "under_review", "information_requested", "diligence", "committee_review"].includes(document.application.status))
+      if (![
+        "submitted",
+        "under_review",
+        "information_requested",
+        "diligence",
+        "committee_review"
+      ].includes(document.application.status)) {
         fail("This application cannot be withdrawn from its current status.", 409)
+      }
       document.application.status = "withdrawn"
       document.application.withdrawalReason = mutation.reason
       document.application.withdrawnAt = options.now
@@ -742,7 +779,9 @@ export function applyInvestmentReviewerMutation(
     case "assign_reviewer": {
       document.review.assignedReviewerUserId = mutation.reviewerUserId
       document.review.lastReviewedAt = options.now
-      audit(document, session.id, "staff", "investment.reviewer_assigned", "investment_workspace", document.id, mutation.reviewerUserId ? `${session.name} assigned the review case.` : `${session.name} returned the case to the shared queue.`, options)
+      audit(document, session.id, "staff", "investment.reviewer_assigned", "investment_workspace", document.id, mutation.reviewerUserId
+        ? `${session.name} assigned the review case.`
+        : `${session.name} returned the case to the shared queue.`, options)
       break
     }
     case "update_review": {
@@ -762,8 +801,15 @@ export function applyInvestmentReviewerMutation(
       break
     }
     case "request_information": {
-      if (!["submitted", "under_review", "diligence", "committee_review", "information_requested"].includes(document.application.status))
+      if (![
+        "submitted",
+        "under_review",
+        "diligence",
+        "committee_review",
+        "information_requested"
+      ].includes(document.application.status)) {
         fail("Information cannot be requested from this application state.", 409)
+      }
       const id = options.createId("investment_information_request")
       document.informationRequests.unshift({
         closedByUserId: null,
@@ -797,8 +843,14 @@ export function applyInvestmentReviewerMutation(
       break
     }
     case "create_diligence_item": {
-      if (!["under_review", "information_requested", "diligence", "committee_review"].includes(document.application.status))
+      if (![
+        "under_review",
+        "information_requested",
+        "diligence",
+        "committee_review"
+      ].includes(document.application.status)) {
         fail("Diligence cannot begin from this application state.", 409)
+      }
       const id = options.createId("investment_diligence_item")
       document.diligenceItems.unshift({
         category: mutation.category,
@@ -846,8 +898,15 @@ export function applyInvestmentReviewerMutation(
       break
     }
     case "record_decision": {
-      if (!["submitted", "under_review", "information_requested", "diligence", "committee_review"].includes(document.application.status))
+      if (![
+        "submitted",
+        "under_review",
+        "information_requested",
+        "diligence",
+        "committee_review"
+      ].includes(document.application.status)) {
         fail("A new program decision cannot be recorded from this application state.", 409)
+      }
       const id = options.createId("investment_decision")
       document.decisions.unshift({
         decidedAt: options.now,
@@ -857,17 +916,27 @@ export function applyInvestmentReviewerMutation(
         outcome: mutation.outcome,
         publicRationale: mutation.publicRationale,
       })
-      if (mutation.outcome === "advance" && ["submitted", "under_review", "information_requested", "diligence"].includes(document.application.status))
+      if (mutation.outcome === "advance" && [
+        "submitted",
+        "under_review",
+        "information_requested",
+        "diligence"
+      ].includes(document.application.status)) {
         document.application.status = "committee_review"
-      else if (mutation.outcome === "decline")
+      }
+      else if (mutation.outcome === "decline") {
         document.application.status = "declined"
-      else if (mutation.outcome === "refer_to_partner")
+      }
+      else if (mutation.outcome === "refer_to_partner") {
         document.application.status = "accepted"
+      }
       document.application.updatedAt = options.now
       if (["decline", "refer_to_partner"].includes(mutation.outcome))
         document.application.reviewedAt = options.now
       document.review.lastReviewedAt = options.now
-      audit(document, session.id, "all", "investment.decision_recorded", "investment_decision", id, mutation.outcome === "refer_to_partner" ? "The application was accepted for next-stage regulated-partner preparation; this is not a funding commitment." : `Program review recorded a ${mutation.outcome.replaceAll("_", " ")} decision.`, options)
+      audit(document, session.id, "all", "investment.decision_recorded", "investment_decision", id, mutation.outcome === "refer_to_partner"
+        ? "The application was accepted for next-stage regulated-partner preparation; this is not a funding commitment."
+        : `Program review recorded a ${mutation.outcome.replaceAll("_", " ")} decision.`, options)
       break
     }
     case "create_partner_handoff": {
@@ -903,8 +972,14 @@ export function applyInvestmentReviewerMutation(
         fail(`The handoff cannot move from ${handoff.status.replaceAll("_", " ")} to ${mutation.status.replaceAll("_", " ")}.`, 409)
       const selectedItemsChanged = handoff.sharedDataRoomItemIds.length !== new Set(mutation.sharedDataRoomItemIds).size
         || handoff.sharedDataRoomItemIds.some(id => !mutation.sharedDataRoomItemIds.includes(id))
-      if (["sent", "acknowledged", "closed", "canceled"].includes(handoff.status) && selectedItemsChanged)
+      if ([
+        "sent",
+        "acknowledged",
+        "closed",
+        "canceled"
+      ].includes(handoff.status) && selectedItemsChanged) {
         fail("Records selected for a sent or final handoff cannot be changed.", 409)
+      }
       if (["ready", "sent"].includes(mutation.status) && !document.application.attestations.regulatedPartnerSharingConsent)
         fail("Current regulated-partner sharing consent is required before this handoff can proceed.", 409)
       handoff.externalReference = mutation.externalReference

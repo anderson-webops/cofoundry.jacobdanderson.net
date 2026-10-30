@@ -42,7 +42,12 @@ export interface ActivationPlan {
   waitingOnReplyCount: number
 }
 
-const minimumProfileItemIds = new Set(["identity", "role_signal", "company_fit", "commitment"])
+const minimumProfileItemIds = new Set([
+  "identity",
+  "role_signal",
+  "company_fit",
+  "commitment"
+])
 
 function buildMissingMinimumItems(profile: Profile) {
   return buildProfileReadiness(profile).checklist.filter(item => minimumProfileItemIds.has(item.id) && !item.complete).map(item => item.title)
@@ -68,8 +73,16 @@ function createStep(input: Omit<ActivationStep, "badgeLabel" | "badgeTone" | "st
   return {
     ...input,
     status,
-    badgeLabel: status === "complete" ? "Done" : status === "current" ? "Next" : "Locked",
-    badgeTone: status === "complete" ? "success" : status === "current" ? "warning" : "neutral",
+    badgeLabel: status === "complete"
+      ? "Done"
+      : status === "current"
+        ? "Next"
+        : "Locked",
+    badgeTone: status === "complete"
+      ? "success"
+      : status === "current"
+        ? "warning"
+        : "neutral",
   }
 }
 
@@ -95,17 +108,26 @@ function buildStageLabel(currentStep: ActivationStep | null) {
 
 function buildStageDescription(currentStep: ActivationStep | null, plan: Pick<ActivationPlan, "inboxActionCount" | "recommendationCount" | "waitingOnReplyCount">) {
   if (!currentStep) {
-    if (plan.waitingOnReplyCount > 0)
-      return `${plan.waitingOnReplyCount} intro${plan.waitingOnReplyCount === 1 ? "" : "s"} are waiting on the other side; keep the inbox clear while they respond.`
+    if (plan.waitingOnReplyCount > 0) {
+      return `${plan.waitingOnReplyCount} intro${plan.waitingOnReplyCount === 1
+        ? ""
+        : "s"} are waiting on the other side; keep the inbox clear while they respond.`
+    }
 
     return "The profile, trust signal, first-intro, and inbox-follow-through gates are clear."
   }
 
-  if (currentStep.id === "first_intro" && plan.recommendationCount > 0)
-    return `${plan.recommendationCount} ranked recommendation${plan.recommendationCount === 1 ? "" : "s"} are available. Pick one strong fit before widening the search.`
+  if (currentStep.id === "first_intro" && plan.recommendationCount > 0) {
+    return `${plan.recommendationCount} ranked recommendation${plan.recommendationCount === 1
+      ? ""
+      : "s"} are available. Pick one strong fit before widening the search.`
+  }
 
-  if (currentStep.id === "inbox_follow_up" && plan.inboxActionCount > 0)
-    return `${plan.inboxActionCount} inbox action${plan.inboxActionCount === 1 ? "" : "s"} still need a response.`
+  if (currentStep.id === "inbox_follow_up" && plan.inboxActionCount > 0) {
+    return `${plan.inboxActionCount} inbox action${plan.inboxActionCount === 1
+      ? ""
+      : "s"} still need a response.`
+  }
 
   return currentStep.description
 }
@@ -125,7 +147,12 @@ export function buildActivationPlanForMember(seed: WorkspaceSeed, user: User, pr
   const inbox = buildInboxSnapshot(seed, user.id)
   const minimumMissingItems = buildMissingMinimumItems(profile)
   const minimumComplete = user.onboardingCompleted && minimumMissingItems.length === 0
-  const trustMissingItems = [...new Set([...readiness.missingTrustItems, ...readiness.missingOutreachItems])]
+  const trustMissingItems = [
+    ...new Set([
+      ...readiness.missingTrustItems,
+      ...readiness.missingOutreachItems
+    ])
+  ]
   const trustComplete = readiness.trustReady && readiness.readyForOutreach
   const recommendationCount = buildRecommendationCount(seed, profile)
   const firstIntroComplete = hasStartedIntroPath(seed, user.id)
@@ -165,9 +192,15 @@ export function buildActivationPlanForMember(seed: WorkspaceSeed, user: User, pr
       description: firstIntroComplete
         ? "At least one structured intro or match is already in motion."
         : "Use recommendations deliberately and act on one strong fit before opening more threads.",
-      ctaLabel: recommendationCount > 0 ? "Open discover" : "Review profile",
-      href: recommendationCount > 0 ? "/app/discover" : "/app/profile/edit",
-      missingItems: recommendationCount > 0 ? [] : ["Ranked recommendation signal"],
+      ctaLabel: recommendationCount > 0
+        ? "Open discover"
+        : "Review profile",
+      href: recommendationCount > 0
+        ? "/app/discover"
+        : "/app/profile/edit",
+      missingItems: recommendationCount > 0
+        ? []
+        : ["Ranked recommendation signal"],
     }),
     createStep({
       id: "inbox_follow_up",
@@ -179,7 +212,11 @@ export function buildActivationPlanForMember(seed: WorkspaceSeed, user: User, pr
         : "Clear active intros, replies, proposal responses, signatures, and operational updates before adding more volume.",
       ctaLabel: "Open inbox",
       href: "/app/inbox",
-      missingItems: inboxActionCount > 0 ? [`${inboxActionCount} open inbox action${inboxActionCount === 1 ? "" : "s"}`] : [],
+      missingItems: inboxActionCount > 0
+        ? [`${inboxActionCount} open inbox action${inboxActionCount === 1
+            ? ""
+            : "s"}`]
+        : [],
     }),
   ]
 

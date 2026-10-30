@@ -12,9 +12,13 @@ usePageSeo("Matches")
 const toastStore = useToastStore()
 const { authStore, workspaceStore } = useCurrentMember()
 const currentUserId = computed(() => authStore.currentUser?.id || "")
-const currentProfile = computed(() => currentUserId.value ? getProfileByUserId(workspaceStore.data, currentUserId.value) : null)
+const currentProfile = computed(() => currentUserId.value
+  ? getProfileByUserId(workspaceStore.data, currentUserId.value)
+  : null)
 
-const matches = computed(() => authStore.currentUser ? getMatchesForUser(workspaceStore.data, authStore.currentUser.id) : [])
+const matches = computed(() => authStore.currentUser
+  ? getMatchesForUser(workspaceStore.data, authStore.currentUser.id)
+  : [])
 const selectedMatchId = ref("")
 
 watchEffect(() => {
@@ -32,7 +36,9 @@ function matchPartner(match: ReturnType<typeof getMatchesForUser>[number]) {
 
 function latestPreview(match: ReturnType<typeof getMatchesForUser>[number]) {
   const conversation = getConversationByMatch(workspaceStore.data, match)
-  return conversation ? workspaceStore.getConversationPreview(conversation.id)?.body : ""
+  return conversation
+    ? workspaceStore.getConversationPreview(conversation.id)?.body
+    : ""
 }
 
 function trialForMatch(match: ReturnType<typeof getMatchesForUser>[number]) {

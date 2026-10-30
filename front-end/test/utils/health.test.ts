@@ -132,7 +132,10 @@ describe("frontend readiness database boundary", () => {
     vi.stubGlobal("fetch", fetchMock)
     const event = {} as H3Event
 
-    const results = Promise.all([resolveFrontendReadiness(event), resolveFrontendReadiness(event)])
+    const results = Promise.all([
+      resolveFrontendReadiness(event),
+      resolveFrontendReadiness(event)
+    ])
     await vi.advanceTimersByTimeAsync(2000)
     expect(await results).toEqual([false, false])
     expect(fetchMock).toHaveBeenCalledTimes(1)

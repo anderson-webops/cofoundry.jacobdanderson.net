@@ -169,20 +169,22 @@ describe("workspace realtime hub", () => {
       createdAt: "2026-06-15T00:00:00.000Z",
       eventType: "workspace-change",
       idScope: "workspace.collaboration",
-      messages: [{
-        message: {
-          data: JSON.stringify({
-            createdAt: "2026-06-15T00:00:00.000Z",
-            metadata: { action: "accept_intro" },
-            source: "workspace.collaboration",
-            userId: "user_recipient",
-          }),
-          event: "workspace-change",
-          id: "2026-06-15T00:00:00.000Z:user_recipient:workspace.collaboration",
-          retry: 5000,
-        },
-        userId: "user_recipient",
-      }],
+      messages: [
+        {
+          message: {
+            data: JSON.stringify({
+              createdAt: "2026-06-15T00:00:00.000Z",
+              metadata: { action: "accept_intro" },
+              source: "workspace.collaboration",
+              userId: "user_recipient",
+            }),
+            event: "workspace-change",
+            id: "2026-06-15T00:00:00.000Z:user_recipient:workspace.collaboration",
+            retry: 5000,
+          },
+          userId: "user_recipient",
+        }
+      ],
       sourceInstanceId: "instance_a",
       version: 1,
     })
@@ -201,20 +203,22 @@ describe("workspace realtime hub", () => {
       createdAt: "2026-06-15T00:00:00.000Z",
       eventType: "typing",
       idScope: "typing:conversation_1:user_sender",
-      messages: [{
-        message: {
-          data: JSON.stringify({
-            conversationId: "conversation_1",
-            createdAt: "2026-06-15T00:00:00.000Z",
-            isTyping: true,
-            userId: "user_sender",
-          }),
-          event: "typing",
-          id: "2026-06-15T00:00:00.000Z:user_recipient:typing:conversation_1:user_sender",
-          retry: 5000,
-        },
-        userId: "user_recipient",
-      }],
+      messages: [
+        {
+          message: {
+            data: JSON.stringify({
+              conversationId: "conversation_1",
+              createdAt: "2026-06-15T00:00:00.000Z",
+              isTyping: true,
+              userId: "user_sender",
+            }),
+            event: "typing",
+            id: "2026-06-15T00:00:00.000Z:user_recipient:typing:conversation_1:user_sender",
+            retry: 5000,
+          },
+          userId: "user_recipient",
+        }
+      ],
       sourceInstanceId: "instance_a",
       version: 1,
     }

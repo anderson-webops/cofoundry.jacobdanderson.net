@@ -226,7 +226,9 @@ function emptyStore(): LocalOperationsStore {
 function getRowTime(row: object) {
   const record = row as Record<string, unknown>
   const value = record.created_at || record.createdAt || record.started_at || record.updated_at || record.updatedAt
-  return typeof value === "string" ? new Date(value).getTime() : 0
+  return typeof value === "string"
+    ? new Date(value).getTime()
+    : 0
 }
 
 function newestFirst<T extends object>(rows: T[]) {
@@ -419,7 +421,9 @@ export async function recordLocalTrustVerificationEvent(payload: OperationsTrust
 
     const now = new Date().toISOString()
     const row: LocalTrustVerificationEventRow = {
-      confidence: typeof payload.confidence === "number" ? payload.confidence : null,
+      confidence: typeof payload.confidence === "number"
+        ? payload.confidence
+        : null,
       created_at: now,
       evidence_file_upload_id: payload.evidenceFileUploadId || null,
       id: randomUUID(),
@@ -467,7 +471,9 @@ export async function listLocalFileUploadsByRelated(relatedItems: Array<{ relate
 
 export async function getLocalFileUploadById(uploadId: string) {
   const row = (await readStore()).fileUploads.find(item => item.id === uploadId)
-  return row ? localFileUploadToDomain(row) : null
+  return row
+    ? localFileUploadToDomain(row)
+    : null
 }
 
 export async function recordLocalBackupRun(payload: OperationsBackupRunPayload) {
@@ -487,7 +493,10 @@ export async function recordLocalBackupRun(payload: OperationsBackupRunPayload) 
       status: payload.status,
     }
 
-    store.backupRuns = [row, ...store.backupRuns.filter(item => item.id !== id)]
+    store.backupRuns = [
+      row,
+      ...store.backupRuns.filter(item => item.id !== id)
+    ]
     return row
   })
 }
@@ -517,7 +526,10 @@ export async function recordLocalFileUploadPolicy(session: SessionUser, policy: 
       updated_at: now,
     }
 
-    store.fileUploads = [row, ...store.fileUploads.filter(item => item.id !== row.id)]
+    store.fileUploads = [
+      row,
+      ...store.fileUploads.filter(item => item.id !== row.id)
+    ]
     return row
   })
 }
@@ -582,7 +594,10 @@ export async function writeLocalFileUploadContent(uploadId: string, token: strin
       updated_at: now,
     }
 
-    store.fileUploads = [row, ...store.fileUploads.filter(item => item.id !== uploadId)]
+    store.fileUploads = [
+      row,
+      ...store.fileUploads.filter(item => item.id !== uploadId)
+    ]
     return row
   })
 }
@@ -610,11 +625,16 @@ export async function recordLocalFileScanResult(uploadId: string, payload: FileS
       scan_notes: payload.notes || null,
       scan_status: payload.scanStatus,
       size_bytes: existing.size_bytes,
-      status: payload.scanStatus === "clean" ? "uploaded" : "blocked",
+      status: payload.scanStatus === "clean"
+        ? "uploaded"
+        : "blocked",
       updated_at: now,
     }
 
-    store.fileUploads = [row, ...store.fileUploads.filter(item => item.id !== uploadId)]
+    store.fileUploads = [
+      row,
+      ...store.fileUploads.filter(item => item.id !== uploadId)
+    ]
     return row
   })
 }
@@ -654,12 +674,20 @@ export async function recordLocalAdminFileScanResult(
         ...existing,
         scan_notes: payload.notes || null,
         scan_status: payload.scanStatus,
-        status: payload.scanStatus === "clean" ? "uploaded" : "blocked",
+        status: payload.scanStatus === "clean"
+          ? "uploaded"
+          : "blocked",
         updated_at: action.createdAt,
       }
 
-      store.adminActions = [action, ...store.adminActions.filter(item => item.id !== action.id)]
-      store.fileUploads = [row, ...store.fileUploads.filter(item => item.id !== uploadId)]
+      store.adminActions = [
+        action,
+        ...store.adminActions.filter(item => item.id !== action.id)
+      ]
+      store.fileUploads = [
+        row,
+        ...store.fileUploads.filter(item => item.id !== uploadId)
+      ]
       return row
     })
   })
@@ -688,7 +716,9 @@ export async function listLocalPendingFileScans(limit: number, options: { appUrl
       relatedId: row.related_id,
       relatedType: row.related_type,
       signedDownloadError: hasContent ? null : "Local upload content has not been received.",
-      signedDownloadUrl: hasContent ? `${options.appUrl || ""}${downloadPath}` : null,
+      signedDownloadUrl: hasContent
+        ? `${options.appUrl || ""}${downloadPath}`
+        : null,
       sizeBytes: row.size_bytes,
     }
   })
@@ -720,14 +750,18 @@ export async function recordLocalNotificationDelivery(session: SessionUser, resu
       body_preview: result.bodyPreview || null,
       channel: "email",
       created_at: new Date().toISOString(),
-      delivered_at: result.delivered ? new Date().toISOString() : null,
+      delivered_at: result.delivered
+        ? new Date().toISOString()
+        : null,
       error: result.error,
       event_type: result.eventType || "digest.unread",
       id: randomUUID(),
       metadata: result.metadata || {},
       notification_count: result.unreadCount,
       recipient: session.email,
-      status: result.delivered ? "sent" : result.configured ? "failed" : "skipped",
+      status: result.delivered
+        ? "sent"
+        : result.configured ? "failed" : "skipped",
       subject: result.subject,
       target_id: result.targetId || null,
       target_type: result.targetType || null,

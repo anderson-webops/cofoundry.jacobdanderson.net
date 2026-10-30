@@ -16,7 +16,9 @@ describe("supabase version history pagination", () => {
   it("rejects a changing result set instead of returning incomplete history", async () => {
     const rows = Array.from({ length: 300 }, (_, index) => ({ id: `version_${index + 1}` }))
     await expect(collectStablePages(async (start, end) => ({
-      count: start ? rows.length + 1 : rows.length,
+      count: start
+        ? rows.length + 1
+        : rows.length,
       data: rows.slice(start, end + 1),
       error: null,
     }))).rejects.toThrow("changed during loading")
@@ -26,7 +28,9 @@ describe("supabase version history pagination", () => {
     const rows = Array.from({ length: 300 }, (_, index) => ({ id: `version_${index + 1}` }))
     await expect(collectStablePages(async (start, end) => ({
       count: rows.length,
-      data: start ? rows.slice(start - 1, end) : rows.slice(start, end + 1),
+      data: start
+        ? rows.slice(start - 1, end)
+        : rows.slice(start, end + 1),
       error: null,
     }))).rejects.toThrow("changed during loading")
   })

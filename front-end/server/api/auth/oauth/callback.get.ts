@@ -11,8 +11,12 @@ export default defineEventHandler(async (event) => {
   })
 
   const query = getQuery(event)
-  const code = typeof query.code === "string" ? query.code : ""
-  const error = typeof query.error === "string" ? query.error : ""
+  const code = typeof query.code === "string"
+    ? query.code
+    : ""
+  const error = typeof query.error === "string"
+    ? query.error
+    : ""
   const provider = normalizeOAuthProvider(query.provider)
 
   if (error || !code) {

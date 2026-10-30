@@ -67,7 +67,12 @@ const maximumScanFileBytes = 10 * 1024 * 1024
 const unsafeScannerFilenamePattern = /[^\w.-]+/g
 const defaultAlertSeverities = new Set<OperationsAlertSeverity>(["error", "warning"])
 const supportedAlertSeverities = new Set<OperationsAlertSeverity>(["error", "info", "warning"])
-const localWorkerHostnames = new Set(["127.0.0.1", "::1", "[::1]", "localhost"])
+const localWorkerHostnames = new Set([
+  "127.0.0.1",
+  "::1",
+  "[::1]",
+  "localhost"
+])
 
 function readValue(env: EnvironmentSource, key: string) {
   return env[key]?.trim() || ""
@@ -90,12 +95,16 @@ function parseBooleanFlag(value: string | undefined) {
 
 function parsePositiveInteger(value: string | undefined, fallback: number) {
   const parsed = Number.parseInt(value || "", 10)
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
+  return Number.isFinite(parsed) && parsed > 0
+    ? parsed
+    : fallback
 }
 
 function parseNonNegativeInteger(value: string | undefined, fallback: number) {
   const parsed = Number.parseInt(value || "", 10)
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback
+  return Number.isFinite(parsed) && parsed >= 0
+    ? parsed
+    : fallback
 }
 
 function parseArgs(argv: string[]): ParsedArgs {
@@ -118,8 +127,12 @@ function parseArgs(argv: string[]): ParsedArgs {
 
     const flag = arg.slice(2)
     const inlineSeparatorIndex = flag.indexOf("=")
-    const rawKey = inlineSeparatorIndex >= 0 ? flag.slice(0, inlineSeparatorIndex) : flag
-    const inlineValue = inlineSeparatorIndex >= 0 ? flag.slice(inlineSeparatorIndex + 1) : undefined
+    const rawKey = inlineSeparatorIndex >= 0
+      ? flag.slice(0, inlineSeparatorIndex)
+      : flag
+    const inlineValue = inlineSeparatorIndex >= 0
+      ? flag.slice(inlineSeparatorIndex + 1)
+      : undefined
     const key = rawKey.trim()
     const next = rest[index + 1]
     const value = typeof inlineValue === "string"
@@ -128,7 +141,10 @@ function parseArgs(argv: string[]): ParsedArgs {
         ? (index += 1, next)
         : "true"
 
-    flags.set(key, [...(flags.get(key) || []), value])
+    flags.set(key, [
+      ...(flags.get(key) || []),
+      value
+    ])
   }
 
   return { command, commandArgs, flags }
@@ -160,7 +176,9 @@ function parseMetadata(flags: Map<string, string[]>) {
 }
 
 function normalizeAlertSeverity(value: string | undefined): OperationsAlertSeverity {
-  return value === "error" || value === "warning" ? value : "info"
+  return value === "error" || value === "warning"
+    ? value
+    : "info"
 }
 
 function configuredAlertSeverities(env: EnvironmentSource) {
@@ -229,7 +247,9 @@ async function sendOperationsAlert(options: Required<WorkerCommandOptions>, payl
       }),
       headers: {
         "content-type": "application/json",
-        ...(token ? { authorization: `Bearer ${token}` } : {}),
+        ...(token
+          ? { authorization: `Bearer ${token}` }
+          : {}),
       },
       method: "POST",
       redirect: "error",
@@ -240,7 +260,9 @@ async function sendOperationsAlert(options: Required<WorkerCommandOptions>, payl
       throw new Error(`Alert webhook returned ${response.status}.`)
   }
   catch (error) {
-    options.log(`Operations alert delivery failed: ${error instanceof Error ? error.message : "unknown error"}`)
+    options.log(`Operations alert delivery failed: ${error instanceof Error
+      ? error.message
+      : "unknown error"}`)
   }
   finally {
     clearTimeout(timeout)
@@ -332,9 +354,13 @@ async function requestJson<T>(
 
   try {
     const response = await options.fetchImpl(`${environment.appUrl}${path}`, {
-      body: typeof options.body === "undefined" ? undefined : JSON.stringify(options.body),
+      body: typeof options.body === "undefined"
+        ? undefined
+        : JSON.stringify(options.body),
       headers: authHeaders(environment),
-      method: options.method || (typeof options.body === "undefined" ? "GET" : "POST"),
+      method: options.method || (typeof options.body === "undefined"
+        ? "GET"
+        : "POST"),
       redirect: "error",
       signal: controller.signal,
     })
@@ -470,7 +496,9 @@ function resolveExecutableCommand(commandArgs: string[], environmentCommand: str
     }
   }
 
-  return environmentCommand ? parseExecutableCommand(environmentCommand) : null
+  return environmentCommand
+    ? parseExecutableCommand(environmentCommand)
+    : null
 }
 
 function scannerCommandForFile(scannerCommand: string, filePath: string, uploadId: string) {
@@ -483,7 +511,9 @@ function scannerCommandForFile(scannerCommand: string, filePath: string, uploadI
   return {
     args: [
       ...parsed.args.map(replacePlaceholders),
-      ...(hasFilePlaceholder ? [] : [filePath]),
+      ...(hasFilePlaceholder
+        ? []
+        : [filePath]),
     ],
     executable: replacePlaceholders(parsed.executable),
   }
@@ -527,12 +557,22 @@ async function runBackup(parsed: ParsedArgs, options: Required<WorkerCommandOpti
   const commandMetadata = commandTelemetry(configuredCommand.executable, configuredCommand.args)
 
   await requestJson(environment, "/api/operations/backup-runs", {
-    body: { artifactUri, id, metadata, notes, provider, startedAt, status: "running" },
+    body: {
+      artifactUri,
+      id,
+      metadata,
+      notes,
+      provider,
+      startedAt,
+      status: "running"
+    },
     fetchImpl: options.fetch,
   })
 
   const exitCode = await options.runCommand(configuredCommand.executable, configuredCommand.args)
-  const status = exitCode === 0 ? "succeeded" : "failed"
+  const status = exitCode === 0
+    ? "succeeded"
+    : "failed"
 
   await requestJson(environment, "/api/operations/backup-runs", {
     body: {
@@ -560,7 +600,9 @@ async function runBackup(parsed: ParsedArgs, options: Required<WorkerCommandOpti
         ...commandMetadata,
         exitCode,
         provider,
-        ...(artifactUri ? { artifactUri } : {}),
+        ...(artifactUri
+          ? { artifactUri }
+          : {}),
       },
       severity: "error",
       source: "backup-worker",
@@ -586,7 +628,12 @@ async function runDigest(parsed: ParsedArgs, options: Required<WorkerCommandOpti
   const onlyWithUnread = !parseBooleanFlag(flagValue(parsed.flags, "include-read", "false"))
   const userId = flagValue(parsed.flags, "user-id") || undefined
   const response = await requestJson(environment, "/api/operations/notification-digests/run", {
-    body: { dryRun, maxUsers, onlyWithUnread, userId },
+    body: {
+      dryRun,
+      maxUsers,
+      onlyWithUnread,
+      userId
+    },
     fetchImpl: options.fetch,
   })
 
@@ -602,8 +649,12 @@ async function runMailSmoke(parsed: ParsedArgs, options: Required<WorkerCommandO
     body: {
       dryRun,
       metadata: parseMetadata(parsed.flags),
-      ...(subject ? { subject } : {}),
-      ...(toEmail ? { toEmail } : {}),
+      ...(subject
+        ? { subject }
+        : {}),
+      ...(toEmail
+        ? { toEmail }
+        : {}),
     },
     fetchImpl: options.fetch,
   })
@@ -665,7 +716,9 @@ async function runEmailSuppression(parsed: ParsedArgs, options: Required<WorkerC
       provider,
       reason,
       sourceEventId,
-      ...(suppressedAt ? { suppressedAt } : {}),
+      ...(suppressedAt
+        ? { suppressedAt }
+        : {}),
     },
     fetchImpl: options.fetch,
   })
@@ -705,7 +758,9 @@ async function runContractEnvelope(parsed: ParsedArgs, options: Required<WorkerC
       contractId,
       contractVersionId,
       metadata: parseMetadata(parsed.flags),
-      ...(occurredAt ? { occurredAt } : {}),
+      ...(occurredAt
+        ? { occurredAt }
+        : {}),
       provider,
       providerEnvelopeId,
       signedByUserIds,
@@ -730,7 +785,9 @@ async function runTrustVerification(parsed: ParsedArgs, options: Required<Worker
   const provider = flagValue(parsed.flags, "provider", "external")
   const providerSubjectId = flagValue(parsed.flags, "provider-subject-id") || null
   const sourceEventId = flagValue(parsed.flags, "source-event-id") || null
-  const confidence = confidenceValue ? Number.parseFloat(confidenceValue) : null
+  const confidence = confidenceValue
+    ? Number.parseFloat(confidenceValue)
+    : null
 
   if (!targetType)
     throw new Error("Trust verification requires --target-type.")
@@ -752,7 +809,9 @@ async function runTrustVerification(parsed: ParsedArgs, options: Required<Worker
       confidence,
       evidenceFileUploadId,
       metadata: parseMetadata(parsed.flags),
-      ...(occurredAt ? { occurredAt } : {}),
+      ...(occurredAt
+        ? { occurredAt }
+        : {}),
       provider,
       providerSubjectId,
       sourceEventId,
@@ -914,7 +973,9 @@ async function runScan(parsed: ParsedArgs, options: Required<WorkerCommandOption
     catch (error) {
       failed += 1
       await reportScanResult(environment, item, {
-        notes: error instanceof Error ? error.message : "Scanner worker failed.",
+        notes: error instanceof Error
+          ? error.message
+          : "Scanner worker failed.",
         scanStatus: "failed",
       }, options.fetch)
     }
@@ -926,12 +987,26 @@ async function runScan(parsed: ParsedArgs, options: Required<WorkerCommandOption
 
   await reportOperationalEvent(environment, {
     eventType: "file_scan_worker_completed",
-    metadata: { clean, failed, flagged, pending: pendingScans.length, skipped },
-    severity: failed ? "error" : flagged ? "warning" : "info",
+    metadata: {
+      clean,
+      failed,
+      flagged,
+      pending: pendingScans.length,
+      skipped
+    },
+    severity: failed
+      ? "error"
+      : flagged ? "warning" : "info",
     source: "file-scan-worker",
   }, options)
 
-  options.log(JSON.stringify({ clean, failed, flagged, pending: pendingScans.length, skipped }, null, 2))
+  options.log(JSON.stringify({
+    clean,
+    failed,
+    flagged,
+    pending: pendingScans.length,
+    skipped
+  }, null, 2))
 }
 
 async function runRealtimeSmoke(parsed: ParsedArgs, options: Required<WorkerCommandOptions>) {
@@ -957,20 +1032,22 @@ async function runRealtimeSmoke(parsed: ParsedArgs, options: Required<WorkerComm
     createdAt,
     eventType: "workspace-change",
     idScope: `operations.realtime_smoke:${id}`,
-    messages: [{
-      message: {
-        data: JSON.stringify({
-          createdAt,
-          metadata,
-          source: "operations.realtime_smoke",
-          userId,
-        }),
-        event: "workspace-change",
-        id: `${createdAt}:${userId}:operations.realtime_smoke:${id}`,
-        retry: 5000,
-      },
-      userId,
-    }],
+    messages: [
+      {
+        message: {
+          data: JSON.stringify({
+            createdAt,
+            metadata,
+            source: "operations.realtime_smoke",
+            userId,
+          }),
+          event: "workspace-change",
+          id: `${createdAt}:${userId}:operations.realtime_smoke:${id}`,
+          retry: 5000,
+        },
+        userId,
+      }
+    ],
     sourceInstanceId,
     version: 1,
   }
@@ -981,7 +1058,9 @@ async function runRealtimeSmoke(parsed: ParsedArgs, options: Required<WorkerComm
       body: envelope,
       fetchImpl: options.fetch,
     })
-    const delivered = typeof response.delivered === "number" ? response.delivered : 0
+    const delivered = typeof response.delivered === "number"
+      ? response.delivered
+      : 0
     const passed = delivered >= minDelivered
 
     await reportOperationalEvent(environment, {
@@ -1004,7 +1083,12 @@ async function runRealtimeSmoke(parsed: ParsedArgs, options: Required<WorkerComm
       throw new Error(`Realtime smoke delivered ${delivered}; expected at least ${minDelivered}.`)
     }
 
-    options.log(JSON.stringify({ delivered, id, minDelivered, ok: true }, null, 2))
+    options.log(JSON.stringify({
+      delivered,
+      id,
+      minDelivered,
+      ok: true
+    }, null, 2))
   }
   catch (error) {
     if (failureReported)
@@ -1014,7 +1098,9 @@ async function runRealtimeSmoke(parsed: ParsedArgs, options: Required<WorkerComm
       eventType: "realtime_fanout_smoke_failed",
       metadata: {
         ...metadata,
-        error: error instanceof Error ? error.message : "Unknown realtime smoke failure.",
+        error: error instanceof Error
+          ? error.message
+          : "Unknown realtime smoke failure.",
         minDelivered,
         sourceInstanceId,
         userId,
@@ -1098,7 +1184,10 @@ async function runRestoreDrill(parsed: ParsedArgs, options: Required<WorkerComma
 
   await reportOperationalEvent(environment, {
     eventType: "restore_drill_started",
-    metadata: { ...metadata, ...commandMetadata },
+    metadata: {
+      ...metadata,
+      ...commandMetadata
+    },
     severity: "info",
     source: "restore-drill-worker",
     targetId: id,
@@ -1107,9 +1196,17 @@ async function runRestoreDrill(parsed: ParsedArgs, options: Required<WorkerComma
 
   const exitCode = await options.runCommand(configuredCommand.executable, configuredCommand.args)
   await reportOperationalEvent(environment, {
-    eventType: exitCode === 0 ? "restore_drill_succeeded" : "restore_drill_failed",
-    metadata: { ...metadata, ...commandMetadata, exitCode },
-    severity: exitCode === 0 ? "info" : "error",
+    eventType: exitCode === 0
+      ? "restore_drill_succeeded"
+      : "restore_drill_failed",
+    metadata: {
+      ...metadata,
+      ...commandMetadata,
+      exitCode
+    },
+    severity: exitCode === 0
+      ? "info"
+      : "error",
     source: "restore-drill-worker",
     targetId: id,
     targetType: "restore_drill",
@@ -1166,7 +1263,9 @@ export async function runOperationsWorker(argv: string[], options: WorkerCommand
   }
 }
 
-const isMainModule = process.argv[1] ? resolve(process.argv[1]) === fileURLToPath(import.meta.url) : false
+const isMainModule = process.argv[1]
+  ? resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+  : false
 
 if (isMainModule) {
   runOperationsWorker(process.argv.slice(2)).catch((error) => {

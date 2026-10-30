@@ -31,7 +31,10 @@ function submitForm() {
   errors.value = {}
   const parsed = contractVersionSchema.safeParse(form)
   if (!parsed.success) {
-    errors.value = Object.fromEntries(parsed.error.issues.map(issue => [String(issue.path[0] || "form"), issue.message]))
+    errors.value = Object.fromEntries(parsed.error.issues.map(issue => [
+      String(issue.path[0] || "form"),
+      issue.message
+    ]))
     return
   }
 

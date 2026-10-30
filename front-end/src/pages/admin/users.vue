@@ -129,7 +129,9 @@ async function toggleSuspension(row: AdminUserRow) {
   catch (caughtError) {
     toastStore.push({
       title: "Admin action failed",
-      message: caughtError instanceof Error ? caughtError.message : "The moderation action could not be completed.",
+      message: caughtError instanceof Error
+        ? caughtError.message
+        : "The moderation action could not be completed.",
       tone: "danger",
     })
   }
@@ -168,7 +170,9 @@ async function changeRole(row: AdminUserRow) {
   catch (caughtError) {
     toastStore.push({
       title: "Role change failed",
-      message: caughtError instanceof Error ? caughtError.message : "The role change could not be completed.",
+      message: caughtError instanceof Error
+        ? caughtError.message
+        : "The role change could not be completed.",
       tone: "danger",
     })
   }
@@ -196,7 +200,9 @@ async function verifyEmail(row: AdminUserRow) {
   catch (caughtError) {
     toastStore.push({
       title: "Email verification failed",
-      message: caughtError instanceof Error ? caughtError.message : "The email verification could not be recorded.",
+      message: caughtError instanceof Error
+        ? caughtError.message
+        : "The email verification could not be recorded.",
       tone: "danger",
     })
   }

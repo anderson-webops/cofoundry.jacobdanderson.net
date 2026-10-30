@@ -13,7 +13,9 @@ useHead({
 
 const token = computed(() => {
   const value = route.query.token
-  return typeof value === "string" ? value : ""
+  return typeof value === "string"
+    ? value
+    : ""
 })
 
 onMounted(() => {

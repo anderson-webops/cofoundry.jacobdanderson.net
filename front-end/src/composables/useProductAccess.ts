@@ -5,8 +5,12 @@ export function useProductAccess() {
   const runtimeConfig = useRuntimeConfig()
   const isLocalDevelopment = import.meta.dev
   const environment = computed<ProductAccessEnvironment>(() => ({
-    backendMode: runtimeConfig.public.backendMode === "supabase" ? "supabase" : "mock",
-    billingMode: runtimeConfig.public.billingMode === "stripe" ? "stripe" : "mock",
+    backendMode: runtimeConfig.public.backendMode === "supabase"
+      ? "supabase"
+      : "mock",
+    billingMode: runtimeConfig.public.billingMode === "stripe"
+      ? "stripe"
+      : "mock",
     enableDemoAccess: runtimeConfig.public.enableDemoAccess === true,
   }))
 

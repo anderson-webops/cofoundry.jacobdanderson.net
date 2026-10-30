@@ -26,7 +26,9 @@ export default defineEventHandler(async (event) => {
     notes: payload.notes,
     targetId: reportId,
     targetType: "report" as const,
-    type: payload.status === "reviewed" ? "review_report" as const : "resolve_report" as const,
+    type: payload.status === "reviewed"
+      ? "review_report" as const
+      : "resolve_report" as const,
   }
 
   const report = await persistAdminReportStatusAction(event, {
@@ -68,8 +70,12 @@ export default defineEventHandler(async (event) => {
     action,
     report: {
       id: reportId,
-      reviewedAt: payload.status === "reviewed" ? createdAt : null,
-      resolvedAt: payload.status === "resolved" ? createdAt : null,
+      reviewedAt: payload.status === "reviewed"
+        ? createdAt
+        : null,
+      resolvedAt: payload.status === "resolved"
+        ? createdAt
+        : null,
     },
   }
 })

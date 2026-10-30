@@ -31,7 +31,9 @@ export function parseTrustedProxyList(configured: string | undefined) {
     }
 
     if (typeof rawPrefix === "undefined") {
-      blockList.addAddress(address, family === 4 ? "ipv4" : "ipv6")
+      blockList.addAddress(address, family === 4
+        ? "ipv4"
+        : "ipv6")
       continue
     }
 
@@ -41,14 +43,18 @@ export function parseTrustedProxyList(configured: string | undefined) {
     }
 
     const prefix = Number.parseInt(rawPrefix, 10)
-    const maximumPrefix = family === 4 ? 32 : 128
+    const maximumPrefix = family === 4
+      ? 32
+      : 128
     if (!Number.isInteger(prefix) || prefix < 0 || prefix > maximumPrefix) {
       invalidEntries.push(entry)
       continue
     }
 
     try {
-      blockList.addSubnet(address, prefix, family === 4 ? "ipv4" : "ipv6")
+      blockList.addSubnet(address, prefix, family === 4
+        ? "ipv4"
+        : "ipv6")
     }
     catch {
       invalidEntries.push(entry)
@@ -68,5 +74,7 @@ export function isTrustedProxyAddress(address: string | null | undefined, config
   if (invalidEntries.length)
     return false
 
-  return blockList.check(normalizedAddress, family === 4 ? "ipv4" : "ipv6")
+  return blockList.check(normalizedAddress, family === 4
+    ? "ipv4"
+    : "ipv6")
 }

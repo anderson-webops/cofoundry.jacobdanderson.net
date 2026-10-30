@@ -84,7 +84,9 @@ async function updateReportStatus(row: AdminReportRow, status: "reviewed" | "res
   catch (caughtError) {
     toastStore.push({
       title: "Report action failed",
-      message: caughtError instanceof Error ? caughtError.message : "The moderation update could not be saved.",
+      message: caughtError instanceof Error
+        ? caughtError.message
+        : "The moderation update could not be saved.",
       tone: "danger",
     })
   }

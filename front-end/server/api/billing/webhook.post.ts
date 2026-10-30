@@ -10,7 +10,9 @@ function getStripeObjectId(value: string | { id: string } | null | undefined) {
   if (!value)
     return null
 
-  return typeof value === "string" ? value : value.id
+  return typeof value === "string"
+    ? value
+    : value.id
 }
 
 async function handleCheckoutCompleted(event: H3Event, stripe: Stripe, checkoutSession: Stripe.Checkout.Session) {
@@ -78,7 +80,9 @@ async function handleStripeEvent(event: H3Event, stripe: Stripe, stripeEvent: St
 
 function getStripeEventObjectId(stripeEvent: Stripe.Event) {
   const dataObject = stripeEvent.data.object as { id?: unknown } | null
-  return typeof dataObject?.id === "string" ? dataObject.id : null
+  return typeof dataObject?.id === "string"
+    ? dataObject.id
+    : null
 }
 
 async function recordStripeWebhookTelemetry(
@@ -100,7 +104,9 @@ async function recordStripeWebhookTelemetry(
         stripeEventType: stripeEvent.type,
         stripeObjectId: getStripeEventObjectId(stripeEvent),
       },
-      severity: status === "failed" ? "error" : "info",
+      severity: status === "failed"
+        ? "error"
+        : "info",
       source: "stripe.webhook",
       targetId: stripeEvent.id,
       targetType: "stripe_event",
@@ -167,7 +173,9 @@ export default defineEventHandler(async (event) => {
     await recordStripeWebhookTelemetry(event, stripeEvent, handled ? "processed" : "unhandled")
   }
   catch (error) {
-    const message = error instanceof Error ? error.message : "Stripe webhook processing failed."
+    const message = error instanceof Error
+      ? error.message
+      : "Stripe webhook processing failed."
     await recordStripeWebhookTelemetry(event, stripeEvent, "failed", message)
     console.error("[billing] Signed Stripe webhook processing failed.", error)
     throw createError({

@@ -90,8 +90,12 @@ function isSupabaseEmailVerified(user: SupabaseAuthUser) {
 export function inferSupabaseOAuthProvider(user: SupabaseAuthUser, fallbackProvider?: SupportedOAuthProvider | null) {
   const candidates = [
     user.app_metadata?.provider,
-    ...(Array.isArray(user.app_metadata?.providers) ? user.app_metadata.providers : []),
-    ...(Array.isArray(user.identities) ? user.identities.map(identity => identity.provider) : []),
+    ...(Array.isArray(user.app_metadata?.providers)
+      ? user.app_metadata.providers
+      : []),
+    ...(Array.isArray(user.identities)
+      ? user.identities.map(identity => identity.provider)
+      : []),
     fallbackProvider,
   ]
 
@@ -157,7 +161,9 @@ function getSessionSignatureSecretForVerify() {
   if (configuredSecret)
     return configuredSecret
 
-  return isLocalDevelopmentEnvironment(process.env) ? localSessionSigningSecret : ""
+  return isLocalDevelopmentEnvironment(process.env)
+    ? localSessionSigningSecret
+    : ""
 }
 
 function createSessionSignature(encodedSession: string, secret = getSessionSignatureSecretForWrite()) {
@@ -400,7 +406,9 @@ export async function readAuthoritativeSession(event: H3Event) {
 
     const { seed, session } = await loadMemberWorkspaceState(event, buildIdentityInput(baseSession))
     const activeSession = resolveActiveSessionFromSeed(seed, session)
-    return activeSession?.email === decodedSession.email ? activeSession : null
+    return activeSession?.email === decodedSession.email
+      ? activeSession
+      : null
   }
 
   const persistedUser = await readSupabaseSessionUser(event, decodedSession)
@@ -421,7 +429,9 @@ export async function readAuthoritativeSession(event: H3Event) {
   })
   const activeSession = resolveActiveSessionFromSeed(seed, session)
 
-  return activeSession?.email === decodedSession.email ? activeSession : null
+  return activeSession?.email === decodedSession.email
+    ? activeSession
+    : null
 }
 
 export async function requireAuthenticatedSession(event: H3Event) {
@@ -535,7 +545,9 @@ export async function completeSupabaseOAuthCallback(event: H3Event, code: string
 
   const result = await client.auth.exchangeCodeForSession(code)
   const user = result.data.user
-  const provider = user ? inferSupabaseOAuthProvider(user, providerHint) : null
+  const provider = user
+    ? inferSupabaseOAuthProvider(user, providerHint)
+    : null
 
   if (result.error || !user || !provider)
     return getOAuthErrorRedirect(event, "oauth_failed")
@@ -554,7 +566,9 @@ export async function completeSupabaseOAuthCallback(event: H3Event, code: string
       ? Number(error.statusCode)
       : 500
 
-    return getOAuthErrorRedirect(event, statusCode === 403 ? "account_inactive" : "oauth_failed")
+    return getOAuthErrorRedirect(event, statusCode === 403
+      ? "account_inactive"
+      : "oauth_failed")
   }
   finally {
     try {

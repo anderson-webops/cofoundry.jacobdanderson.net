@@ -29,7 +29,9 @@ export default defineEventHandler(async (event) => {
   })
 
   const contract = getContractById(workspace.seed, contractId)
-  const currentVersion = contract ? getCurrentContractVersion(workspace.seed, contract) : undefined
+  const currentVersion = contract
+    ? getCurrentContractVersion(workspace.seed, contract)
+    : undefined
   if (!contract || !currentVersion)
     throw createError({ statusCode: 404, statusMessage: "Contract not found." })
 

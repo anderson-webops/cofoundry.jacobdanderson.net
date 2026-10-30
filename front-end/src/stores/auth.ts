@@ -47,7 +47,9 @@ export const useAuthStore = defineStore("auth", () => {
       return response.session
     }
     catch (caughtError) {
-      error.value = caughtError instanceof Error ? caughtError.message : "Unable to sign in."
+      error.value = caughtError instanceof Error
+        ? caughtError.message
+        : "Unable to sign in."
       throw caughtError
     }
     finally {
@@ -75,7 +77,9 @@ export const useAuthStore = defineStore("auth", () => {
       return response
     }
     catch (caughtError) {
-      error.value = caughtError instanceof Error ? caughtError.message : "Unable to create account."
+      error.value = caughtError instanceof Error
+        ? caughtError.message
+        : "Unable to create account."
       throw caughtError
     }
     finally {
@@ -106,7 +110,9 @@ export const useAuthStore = defineStore("auth", () => {
       return response.session
     }
     catch (caughtError) {
-      error.value = caughtError instanceof Error ? caughtError.message : "Unable to sign in."
+      error.value = caughtError instanceof Error
+        ? caughtError.message
+        : "Unable to sign in."
       throw caughtError
     }
     finally {

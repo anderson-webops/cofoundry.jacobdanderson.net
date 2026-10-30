@@ -26,7 +26,9 @@ export default defineEventHandler(async (event) => {
   const pendingScans = await listPendingFileScans(event, parseLimit(getQuery(event).limit))
 
   return {
-    mode: isSupabaseEnabled(event) ? "supabase" : "mock",
+    mode: isSupabaseEnabled(event)
+      ? "supabase"
+      : "mock",
     pendingScans,
   }
 })

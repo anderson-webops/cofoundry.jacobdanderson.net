@@ -26,7 +26,9 @@ export function usePageSeo(title: string, description = appDescription, options:
   const pageStructuredData = canonicalUrl
     ? {
         "@context": "https://schema.org",
-        "@type": options.ogType === "article" ? "Article" : "WebPage",
+        "@type": options.ogType === "article"
+          ? "Article"
+          : "WebPage",
         "description": description,
         "headline": fullTitle,
         "isPartOf": {
@@ -39,8 +41,14 @@ export function usePageSeo(title: string, description = appDescription, options:
       }
     : null
   const structuredEntries = [
-    ...(pageStructuredData ? [pageStructuredData] : []),
-    ...(Array.isArray(options.structuredData) ? options.structuredData : options.structuredData ? [options.structuredData] : []),
+    ...(pageStructuredData
+      ? [pageStructuredData]
+      : []),
+    ...(Array.isArray(options.structuredData)
+      ? options.structuredData
+      : options.structuredData
+        ? [options.structuredData]
+        : []),
   ]
 
   useSeoMeta({

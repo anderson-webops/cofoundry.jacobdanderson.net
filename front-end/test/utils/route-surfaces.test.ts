@@ -65,7 +65,9 @@ function listPageEntries() {
 }
 
 function routeToCandidates(route: string) {
-  const normalized = route === "/" ? "/index" : route
+  const normalized = route === "/"
+    ? "/index"
+    : route
   const directPath = `${normalized}.vue`
   const nestedPath = `${normalized}/index.vue`
   const segments = normalized.split("/").filter(Boolean)
@@ -113,7 +115,12 @@ describe("route surfaces", () => {
   })
 
   it("keeps private layouts covered by noindex robots policy", () => {
-    for (const layout of ["admin", "app", "auth", "investment-review"]) {
+    for (const layout of [
+      "admin",
+      "app",
+      "auth",
+      "investment-review"
+    ]) {
       const source = readFileSync(resolve(layoutsRoot, `${layout}.vue`), "utf8")
 
       expect(source, `${layout} layout should set noindex`).toContain("noindex, nofollow")
@@ -184,14 +191,40 @@ describe("route surfaces", () => {
   })
 
   it("classifies private surfaces without hiding public health checks", () => {
-    for (const route of ["/admin/readiness", "/app/inbox", "/app/investment", "/app/legal", "/auth/sign-in", "/auth/recover", "/investment-review", "/investment-review/case-1", "/legal-review/secret-token", "/onboarding", "/api/admin/readiness", "/api/investment/workspaces", "/api/investment-review/workspaces", "/api/legal-reviews/secret-token", "/api/operations/events", "/api/operations/mail-smoke", "/api/operations/realtime-events", "/api/workspace"])
+    for (const route of [
+      "/admin/readiness",
+      "/app/inbox",
+      "/app/investment",
+      "/app/legal",
+      "/auth/sign-in",
+      "/auth/recover",
+      "/investment-review",
+      "/investment-review/case-1",
+      "/legal-review/secret-token",
+      "/onboarding",
+      "/api/admin/readiness",
+      "/api/investment/workspaces",
+      "/api/investment-review/workspaces",
+      "/api/legal-reviews/secret-token",
+      "/api/operations/events",
+      "/api/operations/mail-smoke",
+      "/api/operations/realtime-events",
+      "/api/workspace"
+    ])
       expect(isPrivateSurfacePath(route), `${route} should be private`).toBe(true)
 
     const publicProfileRoute = getPublicRoutePaths(workspaceSeed).find(route => route.startsWith("/people/"))
 
     expect(publicProfileRoute, "seed should expose at least one generated public profile route").toBeDefined()
 
-    for (const route of ["/", "/find-cofounder", publicProfileRoute!, "/sitemap.xml", "/robots.txt", "/api/health"])
+    for (const route of [
+      "/",
+      "/find-cofounder",
+      publicProfileRoute!,
+      "/sitemap.xml",
+      "/robots.txt",
+      "/api/health"
+    ])
       expect(isPrivateSurfacePath(route), `${route} should remain public`).toBe(false)
   })
 
@@ -214,7 +247,10 @@ describe("route surfaces", () => {
   })
 
   it("keeps guide-page call-to-action routes coherent", () => {
-    const guideRoutes = [...trustCenterPages, ...contractGuidePages]
+    const guideRoutes = [
+      ...trustCenterPages,
+      ...contractGuidePages
+    ]
       .map(page => page.ctaTo)
       .filter(route => !route.startsWith("/auth/"))
 

@@ -38,7 +38,9 @@ const rows = computed(() => filterAdminBillingRows(buildAdminBillingRows(workspa
 const allRows = computed(() => buildAdminBillingRows(workspaceStore.data))
 
 const metrics = computed(() => {
-  const subscriptions = allRows.value.flatMap(row => row.subscription ? [row.subscription] : [])
+  const subscriptions = allRows.value.flatMap(row => row.subscription
+    ? [row.subscription]
+    : [])
   return {
     paid: subscriptions.filter(subscription => subscription.plan !== "free").length,
     pastDue: subscriptions.filter(subscription => subscription.status === "past_due").length,

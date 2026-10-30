@@ -25,7 +25,9 @@ export const useInvestmentReviewStore = defineStore("investment-review", () => {
 
     loading.value = true
     try {
-      const headers = import.meta.server ? useRequestHeaders(["cookie"]) : undefined
+      const headers = import.meta.server
+        ? useRequestHeaders(["cookie"])
+        : undefined
       snapshot.value = await $fetch<InvestmentReviewerSnapshot>("/api/investment-review/workspaces", { headers })
       loadedUserId.value = session.value.id
       lastSyncedAt.value = new Date().toISOString()
@@ -42,7 +44,9 @@ export const useInvestmentReviewStore = defineStore("investment-review", () => {
       if (existing)
         return existing
     }
-    const headers = import.meta.server ? useRequestHeaders(["cookie"]) : undefined
+    const headers = import.meta.server
+      ? useRequestHeaders(["cookie"])
+      : undefined
     const response = await $fetch<{
       fileUploads: InvestmentReviewerSnapshot["fileUploads"]
       reviewers: InvestmentReviewerSnapshot["reviewers"]
@@ -65,7 +69,9 @@ export const useInvestmentReviewStore = defineStore("investment-review", () => {
   }
 
   async function mutate(workspace: InvestmentWorkspaceDocument, mutation: InvestmentReviewerMutation) {
-    const headers = import.meta.server ? useRequestHeaders(["cookie"]) : undefined
+    const headers = import.meta.server
+      ? useRequestHeaders(["cookie"])
+      : undefined
     const response = await $fetch<{ workspace: InvestmentWorkspaceDocument }>(`/api/investment-review/workspaces/${workspace.id}/mutations`, {
       body: {
         expectedVersion: workspace.version,
@@ -74,13 +80,20 @@ export const useInvestmentReviewStore = defineStore("investment-review", () => {
       headers,
       method: "POST",
     })
-    snapshot.value.workspaces = snapshot.value.workspaces.map(item => item.id === response.workspace.id ? response.workspace : item)
+    snapshot.value.workspaces = snapshot.value.workspaces.map(item => item.id === response.workspace.id
+      ? response.workspace
+      : item)
     lastSyncedAt.value = new Date().toISOString()
     return response.workspace
   }
 
   function reset() {
-    snapshot.value = { fileUploads: [], reviewers: [], supplementalTermsVersion: "", workspaces: [] }
+    snapshot.value = {
+      fileUploads: [],
+      reviewers: [],
+      supplementalTermsVersion: "",
+      workspaces: []
+    }
     loadedUserId.value = ""
     lastSyncedAt.value = null
   }

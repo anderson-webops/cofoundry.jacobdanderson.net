@@ -18,7 +18,9 @@ export default defineEventHandler(async (event) => {
   const suppression = await recordEmailSuppression(event, payload)
 
   return {
-    mode: isSupabaseEnabled(event) ? "supabase" : "mock",
+    mode: isSupabaseEnabled(event)
+      ? "supabase"
+      : "mock",
     suppression,
   }
 })
