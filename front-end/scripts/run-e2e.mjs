@@ -1,7 +1,9 @@
 import { spawnSync } from "node:child_process"
 import process from "node:process"
 
-const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm"
+const npmCommand = process.platform === "win32"
+  ? "npm.cmd"
+  : "npm"
 const environment = {
   ...process.env,
   COFOUNDRY_LOCAL_DATA_DIR: "/var/lib/cofoundry",
@@ -16,7 +18,13 @@ const environment = {
 
 const steps = [
   {
-    args: ["exec", "--", "playwright", "install", "chromium"],
+    args: [
+      "exec",
+      "--",
+      "playwright",
+      "install",
+      "chromium"
+    ],
     label: "Install the Playwright Chromium runtime",
   },
   {

@@ -31,7 +31,9 @@ function rowToDocument(row: InvestmentWorkspaceRow) {
 function fileUploadIds(document: InvestmentWorkspaceDocument, sharedOnly: boolean) {
   return Array.from(new Set(document.dataRoomItems
     .filter(item => !sharedOnly || item.shareWithProgram)
-    .flatMap(item => item.fileUploadId ? [item.fileUploadId] : [])))
+    .flatMap(item => item.fileUploadId
+      ? [item.fileUploadId]
+      : [])))
 }
 
 function documentToRow(document: InvestmentWorkspaceDocument): InvestmentWorkspaceRow {
@@ -103,7 +105,9 @@ export async function getRawInvestmentWorkspaceDocument(event: H3Event, workspac
     .maybeSingle()
   if (error)
     throw error
-  return data ? rowToDocument(data as InvestmentWorkspaceRow) : null
+  return data
+    ? rowToDocument(data as InvestmentWorkspaceRow)
+    : null
 }
 
 export async function getRawInvestmentWorkspaceDocumentByApplicationId(event: H3Event, applicationId: string) {
@@ -120,7 +124,9 @@ export async function getRawInvestmentWorkspaceDocumentByApplicationId(event: H3
     .maybeSingle()
   if (error)
     throw error
-  return data ? rowToDocument(data as InvestmentWorkspaceRow) : null
+  return data
+    ? rowToDocument(data as InvestmentWorkspaceRow)
+    : null
 }
 
 export async function findRawInvestmentWorkspaceDocumentByResourceId(event: H3Event, resourceId: string) {
@@ -144,7 +150,9 @@ export async function findRawInvestmentWorkspaceDocumentByFileUploadId(event: H3
     .maybeSingle()
   if (error)
     throw error
-  return data ? rowToDocument(data as InvestmentWorkspaceRow) : null
+  return data
+    ? rowToDocument(data as InvestmentWorkspaceRow)
+    : null
 }
 
 export async function persistCreatedInvestmentWorkspaceDocument(event: H3Event, document: InvestmentWorkspaceDocument) {

@@ -30,7 +30,9 @@ function buildQueryPath(path: string, query: Record<string, string | undefined>)
   })
 
   const queryString = searchParams.toString()
-  return queryString ? `${path}?${queryString}` : path
+  return queryString
+    ? `${path}?${queryString}`
+    : path
 }
 
 export function resolveProductAccessPolicy(environment: ProductAccessEnvironment, isLocalDevelopment: boolean): ProductAccessPolicy {
@@ -89,11 +91,17 @@ export function getPricingTierCta(policy: ProductAccessPolicy, tierId: "free" | 
   if (tierId === "free") {
     return policy.accountsEnabled
       ? { label: "Start free", to: "/auth/sign-up" }
-      : { label: "Request access", to: buildAccessRequestPath(source, "access") }
+      : {
+          label: "Request access",
+          to: buildAccessRequestPath(source, "access")
+        }
   }
 
   if (tierId === "team") {
-    return { label: "Talk to the team", to: buildAccessRequestPath(source, "pricing") }
+    return {
+      label: "Talk to the team",
+      to: buildAccessRequestPath(source, "pricing")
+    }
   }
 
   if (policy.selfServeBillingEnabled)

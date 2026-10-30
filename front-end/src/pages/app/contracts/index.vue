@@ -10,7 +10,9 @@ usePageSeo("Contracts")
 
 const { authStore, workspaceStore } = useCurrentMember()
 
-const contracts = computed(() => authStore.currentUser ? getContractsForUser(workspaceStore.data, authStore.currentUser.id) : [])
+const contracts = computed(() => authStore.currentUser
+  ? getContractsForUser(workspaceStore.data, authStore.currentUser.id)
+  : [])
 </script>
 
 <template>

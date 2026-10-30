@@ -70,7 +70,9 @@ else {
   console.log(`- Billing mode: ${report.mode.billing}`)
   console.log(`- Demo access: ${report.mode.demoAccessEnabled ? "enabled" : "disabled"}`)
   console.log(`- Release: ${report.deployment.release || "(unset)"}`)
-  console.log(`- Commit: ${report.deployment.commitSha ? report.deployment.commitSha.slice(0, 12) : "(unset)"}`)
+  console.log(`- Commit: ${report.deployment.commitSha
+    ? report.deployment.commitSha.slice(0, 12)
+    : "(unset)"}`)
 
   console.log("\nChecks:")
   for (const check of report.checks) {
@@ -79,7 +81,9 @@ else {
       console.log(`       ${check.remediation}`)
   }
 
-  console.log(`\nSummary: ${report.failCount} failed, ${report.warningCount} warning${report.warningCount === 1 ? "" : "s"}.`)
+  console.log(`\nSummary: ${report.failCount} failed, ${report.warningCount} warning${report.warningCount === 1
+    ? ""
+    : "s"}.`)
 }
 
 if (!report.ok)

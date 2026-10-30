@@ -12,7 +12,9 @@ usePageSeo("Profile")
 const { profile, workspaceStore } = useCurrentMember()
 const tab = ref<"public" | "private">("public")
 
-const skillEntries = computed(() => profile.value ? getProfileSkills(workspaceStore.data, profile.value.id) : [])
+const skillEntries = computed(() => profile.value
+  ? getProfileSkills(workspaceStore.data, profile.value.id)
+  : [])
 const profileLinks = computed(() => {
   if (!profile.value)
     return []

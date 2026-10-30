@@ -10,7 +10,9 @@ interface RuntimeDeploymentConfig {
 }
 
 function readRuntimeString(value: unknown) {
-  return typeof value === "string" ? value : ""
+  return typeof value === "string"
+    ? value
+    : ""
 }
 
 export function readServerDeploymentMetadata(event: H3Event): DeploymentMetadata {

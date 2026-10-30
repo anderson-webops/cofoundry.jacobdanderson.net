@@ -7,7 +7,9 @@ const navigation = [
 ]
 
 useHead({
-  meta: [{ name: "robots", content: "noindex, nofollow" }],
+  meta: [
+    { name: "robots", content: "noindex, nofollow" }
+  ],
 })
 
 async function signOut() {

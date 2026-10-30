@@ -27,7 +27,9 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: "Contract id is required." })
 
   const context = await loadContractArtifactContext(event, contractId)
-  const format = query.format === "text" || query.format === "txt" ? "text" : "html"
+  const format = query.format === "text" || query.format === "txt"
+    ? "text"
+    : "html"
 
   if (format === "text") {
     setHeader(event, "Content-Type", "text/plain; charset=utf-8")

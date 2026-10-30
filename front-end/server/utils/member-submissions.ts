@@ -86,7 +86,9 @@ export async function createMemberReport(event: H3Event, session: SessionUser, p
     id: createId("notification"),
     userId: admin.id,
     type: "admin",
-    title: report.priority === "high" ? "High-priority safety report" : "New moderation report",
+    title: report.priority === "high"
+      ? "High-priority safety report"
+      : "New moderation report",
     body: report.details,
     href: "/admin/reports",
     readAt: null,

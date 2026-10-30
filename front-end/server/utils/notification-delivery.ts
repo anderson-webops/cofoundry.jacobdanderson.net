@@ -56,7 +56,9 @@ function resolvePreferenceFooterOptions(
   recipient?: { email: string, userId: string },
 ) {
   try {
-    const runtimeConfig = event ? useRuntimeConfig(event) : useRuntimeConfig()
+    const runtimeConfig = event
+      ? useRuntimeConfig(event)
+      : useRuntimeConfig()
     const publicConfig = runtimeConfig.public as Partial<Record<"appUrl" | "supportEmail", string | undefined>>
     const appUrl = stripTrailingSlash(publicConfig.appUrl)
     const settingsUrl = recipient
@@ -66,9 +68,13 @@ function resolvePreferenceFooterOptions(
           userId: recipient.userId,
         }, {
           appUrl,
-          fallbackUrl: appUrl ? `${appUrl}/app/settings` : "/app/settings",
+          fallbackUrl: appUrl
+            ? `${appUrl}/app/settings`
+            : "/app/settings",
         })
-      : appUrl ? `${appUrl}/app/settings` : "/app/settings"
+      : appUrl
+        ? `${appUrl}/app/settings`
+        : "/app/settings"
 
     return {
       settingsUrl,
@@ -117,7 +123,9 @@ export function buildNotificationPreferenceHeaders(
     : "CoFoundry relationship workflow email preference"
   const listUnsubscribeTargets = [
     `<mailto:${supportEmail}?subject=${encodeURIComponent(subject)}>`,
-    ...(isAbsoluteUrl(settingsUrl) ? [`<${settingsUrl}>`] : []),
+    ...(isAbsoluteUrl(settingsUrl)
+      ? [`<${settingsUrl}>`]
+      : []),
   ]
 
   return {
@@ -183,7 +191,9 @@ export async function recordNotificationDelivery(event: H3Event, session: Sessio
       channel: "email",
       body_preview: result.bodyPreview || null,
       event_type: result.eventType || "digest.unread",
-      status: result.delivered ? "sent" : result.configured ? "failed" : "skipped",
+      status: result.delivered
+        ? "sent"
+        : result.configured ? "failed" : "skipped",
       subject: result.subject,
       recipient: session.email,
       notification_count: result.unreadCount,
@@ -191,7 +201,9 @@ export async function recordNotificationDelivery(event: H3Event, session: Sessio
       metadata: result.metadata || {},
       target_id: result.targetId || null,
       target_type: result.targetType || null,
-      delivered_at: result.delivered ? new Date().toISOString() : null,
+      delivered_at: result.delivered
+        ? new Date().toISOString()
+        : null,
     })
 
   if (error)
@@ -275,7 +287,9 @@ export async function sendLifecycleNotification(
       ...baseResult,
       configured: false,
       delivered: false,
-      error: reason === "dry_run" ? "Dry run; no lifecycle email sent." : "Mock mode records lifecycle notifications without sending email.",
+      error: reason === "dry_run"
+        ? "Dry run; no lifecycle email sent."
+        : "Mock mode records lifecycle notifications without sending email.",
       reason,
       skipped: true,
     }
@@ -340,7 +354,9 @@ export async function sendLifecycleNotification(
       ...baseResult,
       configured: true,
       delivered: false,
-      error: error instanceof Error ? error.message : "Lifecycle email delivery failed",
+      error: error instanceof Error
+        ? error.message
+        : "Lifecycle email delivery failed",
       reason: "delivery_failed",
     }
     await recordNotificationDelivery(event, session, result)
@@ -442,7 +458,9 @@ export async function sendUnreadNotificationDigest(event: H3Event, seed: Workspa
       bodyPreview: buildLifecycleBodyPreview(body),
       configured: true,
       delivered: false,
-      error: error instanceof Error ? error.message : "Email delivery failed",
+      error: error instanceof Error
+        ? error.message
+        : "Email delivery failed",
       reason: "delivery_failed",
       subject,
       unreadCount: snapshot.actions.length,

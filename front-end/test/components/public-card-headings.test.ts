@@ -17,7 +17,9 @@ function stubs() {
 describe("public card headings", () => {
   it("renders profile cards as h3 by default with proof nested below", () => {
     const wrapper = mount(ProfileCard, {
-      global: { stubs: stubs() },
+      global: {
+        stubs: stubs()
+      },
       props: {
         profile,
         skills: ["Product Strategy"],
@@ -30,7 +32,9 @@ describe("public card headings", () => {
 
   it("can render profile cards as h2 on standalone public listing pages", () => {
     const wrapper = mount(ProfileCard, {
-      global: { stubs: stubs() },
+      global: {
+        stubs: stubs()
+      },
       props: {
         headingLevel: 2,
         profile,
@@ -45,7 +49,9 @@ describe("public card headings", () => {
 
   it("renders opportunity cards as h3 by default", () => {
     const wrapper = mount(OpportunityCard, {
-      global: { stubs: stubs() },
+      global: {
+        stubs: stubs()
+      },
       props: {
         opportunity,
       },
@@ -57,7 +63,9 @@ describe("public card headings", () => {
 
   it("can render opportunity cards as h2 on standalone public listing pages", () => {
     const wrapper = mount(OpportunityCard, {
-      global: { stubs: stubs() },
+      global: {
+        stubs: stubs()
+      },
       props: {
         headingLevel: 2,
         opportunity,

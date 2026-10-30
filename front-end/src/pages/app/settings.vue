@@ -16,7 +16,9 @@ usePageSeo("Settings")
 const toastStore = useToastStore()
 const { policy } = useProductAccess()
 const { authStore, profile, workspaceStore } = useCurrentMember()
-const currentUser = computed(() => authStore.currentUser ? workspaceStore.data.users.find(user => user.id === authStore.currentUser?.id) : null)
+const currentUser = computed(() => authStore.currentUser
+  ? workspaceStore.data.users.find(user => user.id === authStore.currentUser?.id)
+  : null)
 const contactRevealStage = ref<ContactRevealStage>(profile.value?.privacy.contactRevealStage || "matches")
 const exportingData = ref(false)
 const notificationPreferencesSaving = ref(false)
@@ -24,7 +26,9 @@ const privacyRequestDetails = ref("")
 const privacyRequestSubmitting = ref(false)
 const privacyRequestType = ref<PrivacyRequestType>("account_deletion")
 const trustVerificationPending = ref<TrustVerificationType | "">("")
-const trustTier = computed(() => profile.value ? buildProfileTrustTier(profile.value) : "level_a")
+const trustTier = computed(() => profile.value
+  ? buildProfileTrustTier(profile.value)
+  : "level_a")
 const unreadDigestEmailEnabled = computed(() => currentUser.value?.notificationPreferences?.unreadDigestEmail === true)
 const workflowEmailEnabled = computed(() => currentUser.value?.notificationPreferences?.workflowEmail === true)
 const privacyRequestOptions = [
@@ -68,7 +72,9 @@ async function downloadDataExport() {
 
   try {
     const payload = await $fetch("/api/account/export")
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" })
+    const blob = new Blob([
+      JSON.stringify(payload, null, 2)
+    ], { type: "application/json" })
     const href = URL.createObjectURL(blob)
     const link = document.createElement("a")
     link.href = href

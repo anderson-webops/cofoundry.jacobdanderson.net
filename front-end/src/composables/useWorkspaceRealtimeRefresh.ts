@@ -144,7 +144,9 @@ export function useWorkspaceRealtimeRefresh(options: WorkspaceRealtimeRefreshOpt
       isClient: import.meta.client,
       supportsEventSource: typeof EventSource !== "undefined",
     })) {
-      realtimeStatus.value = typeof EventSource === "undefined" ? "unsupported" : "closed"
+      realtimeStatus.value = typeof EventSource === "undefined"
+        ? "unsupported"
+        : "closed"
       closeRealtime()
       startIntervalFallback()
       return

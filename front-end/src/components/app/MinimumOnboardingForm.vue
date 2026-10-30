@@ -65,8 +65,26 @@ const steps = [
 ]
 
 const fieldsByStep = [
-  ["intentMode", "displayName", "photoUrl", "location", "profileVisibility"],
-  ["headline", "bio", "primaryRole", "roles", "timeCommitment", "weeklyAvailabilityHours", "startTimeline", "fullTimeBy", "runwayBucket", "equityPhilosophy", "remotePreference"],
+  [
+    "intentMode",
+    "displayName",
+    "photoUrl",
+    "location",
+    "profileVisibility"
+  ],
+  [
+    "headline",
+    "bio",
+    "primaryRole",
+    "roles",
+    "timeCommitment",
+    "weeklyAvailabilityHours",
+    "startTimeline",
+    "fullTimeBy",
+    "runwayBucket",
+    "equityPhilosophy",
+    "remotePreference"
+  ],
   ["industries", "companyPreferences"],
 ]
 
@@ -99,7 +117,9 @@ function fieldErrorsFor(issues: { path: PropertyKey[], message: string }[]) {
 
 function stepForField(field: string) {
   const stepIndex = fieldsByStep.findIndex(fields => fields.includes(field))
-  return stepIndex >= 0 ? stepIndex : 0
+  return stepIndex >= 0
+    ? stepIndex
+    : 0
 }
 
 function validateCurrentStep() {
@@ -121,7 +141,9 @@ function validateForSubmit() {
   if (!parsed.success) {
     const firstField = parsed.error.issues[0]?.path[0]
     errors.value = fieldErrorsFor(parsed.error.issues)
-    step.value = typeof firstField === "string" ? stepForField(firstField) : 0
+    step.value = typeof firstField === "string"
+      ? stepForField(firstField)
+      : 0
     return null
   }
 

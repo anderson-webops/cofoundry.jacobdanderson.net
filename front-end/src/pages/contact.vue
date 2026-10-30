@@ -48,7 +48,9 @@ function getTopicDefaults(topic: string) {
   }
 }
 
-const topicDefaults = getTopicDefaults(typeof route.query.topic === "string" ? route.query.topic : "")
+const topicDefaults = getTopicDefaults(typeof route.query.topic === "string"
+  ? route.query.topic
+  : "")
 
 const form = reactive({
   name: "",

@@ -49,10 +49,18 @@ const initialValues = computed(() => {
   }
 })
 
-const readiness = computed(() => profile.value ? buildProfileReadiness(profile.value) : null)
-const profilePreview = computed(() => profile.value ? recommendProfilesForProfile(workspaceStore.data, profile.value).slice(0, 3) : [])
-const opportunityPreview = computed(() => profile.value ? recommendOpportunitiesForProfile(workspaceStore.data, profile.value).slice(0, 3) : [])
-const shouldShowProfilePreview = computed(() => profile.value ? profile.value.hasIdea && !profile.value.wantsToJoinIdea : false)
+const readiness = computed(() => profile.value
+  ? buildProfileReadiness(profile.value)
+  : null)
+const profilePreview = computed(() => profile.value
+  ? recommendProfilesForProfile(workspaceStore.data, profile.value).slice(0, 3)
+  : [])
+const opportunityPreview = computed(() => profile.value
+  ? recommendOpportunitiesForProfile(workspaceStore.data, profile.value).slice(0, 3)
+  : [])
+const shouldShowProfilePreview = computed(() => profile.value
+  ? profile.value.hasIdea && !profile.value.wantsToJoinIdea
+  : false)
 
 async function submitProfile(payload: any) {
   if (!authStore.currentUser)

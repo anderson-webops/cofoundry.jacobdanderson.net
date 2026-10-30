@@ -1031,7 +1031,11 @@ export async function persistServerCollaborationState(
     }>
   },
 ) {
-  const userIds = [...new Set((Array.isArray(userIdOrIds) ? userIdOrIds : [userIdOrIds]).filter(Boolean))]
+  const userIds = [
+    ...new Set((Array.isArray(userIdOrIds)
+      ? userIdOrIds
+      : [userIdOrIds]).filter(Boolean))
+  ]
   if (!userIds.length)
     throw createError({ statusCode: 400, statusMessage: "At least one collaboration participant is required." })
 

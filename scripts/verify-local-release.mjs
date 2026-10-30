@@ -43,6 +43,11 @@ const steps = [
     label: "Install exact workspace dependencies",
   },
   {
+    args: ["ls", "--all", "--workspaces", "--include-workspace-root"],
+    id: "dependency-tree",
+    label: "Verify installed dependency tree",
+  },
+  {
     args: ["run", "audit"],
     id: "audit",
     label: "Check dependency advisories",

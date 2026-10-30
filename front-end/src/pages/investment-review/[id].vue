@@ -40,11 +40,18 @@ const tabs: Array<{ id: TabId, icon: string, label: string }> = [
   { id: "handoffs", icon: "i-carbon-connect", label: "Handoffs" },
   { id: "audit", icon: "i-carbon-document-tasks", label: "Audit" },
 ]
-const activeTab = computed<TabId>(() => tabs.some(tab => tab.id === route.query.view) ? route.query.view as TabId : "overview")
+const activeTab = computed<TabId>(() => tabs.some(tab => tab.id === route.query.view)
+  ? route.query.view as TabId
+  : "overview")
 
 const reviewForm = reactive({ priority: "standard" as InvestmentReviewPriority, riskFlags: "", stageSummary: "" })
 const informationForm = reactive({ dueAt: "", request: "", title: "" })
-const diligenceForm = reactive({ category: "financial" as InvestmentDataRoomCategory, description: "", dueAt: "", title: "" })
+const diligenceForm = reactive({
+  category: "financial" as InvestmentDataRoomCategory,
+  description: "",
+  dueAt: "",
+  title: ""
+})
 const noteForm = reactive({ body: "", category: "screening" as InvestmentReviewNoteCategory })
 const decisionForm = reactive({ internalRationale: "", outcome: "hold" as InvestmentDecisionOutcome, publicRationale: "" })
 const handoffForm = reactive({
@@ -66,7 +73,9 @@ const allowedStatuses = computed<InvestmentProgramApplicationStatus[]>(() => {
     submitted: ["under_review", "information_requested", "diligence"],
     under_review: ["information_requested", "diligence", "committee_review"],
   }
-  return status ? map[status] || [] : []
+  return status
+    ? map[status] || []
+    : []
 })
 
 function allowedHandoffStatuses(status: InvestmentPartnerHandoffStatus) {
@@ -93,19 +102,36 @@ function statusLabel(status: string) {
 function statusTone(status: string) {
   if (["accepted", "acknowledged", "closed"].includes(status))
     return "success" as const
-  if (["declined", "information_requested", "urgent", "canceled"].includes(status))
+  if ([
+    "declined",
+    "information_requested",
+    "urgent",
+    "canceled"
+  ].includes(status)) {
     return "warning" as const
-  if (["under_review", "diligence", "committee_review", "ready", "sent"].includes(status))
+  }
+  if ([
+    "under_review",
+    "diligence",
+    "committee_review",
+    "ready",
+    "sent"
+  ].includes(status)) {
     return "accent" as const
+  }
   return "neutral" as const
 }
 
 function formatDate(value: string | null) {
-  return value ? new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(new Date(value)) : "Not set"
+  return value
+    ? new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(new Date(value))
+    : "Not set"
 }
 
 function fileUpload(uploadId: string | null) {
-  return uploadId ? reviewStore.snapshot.fileUploads.find(item => item.id === uploadId) || null : null
+  return uploadId
+    ? reviewStore.snapshot.fileUploads.find(item => item.id === uploadId) || null
+    : null
 }
 
 function fileIsDownloadable(uploadId: string | null) {
@@ -114,7 +140,9 @@ function fileIsDownloadable(uploadId: string | null) {
 }
 
 function toIsoDate(value: string) {
-  return value ? new Date(`${value}T17:00:00`).toISOString() : null
+  return value
+    ? new Date(`${value}T17:00:00`).toISOString()
+    : null
 }
 
 function reviewerName(userId: string | null) {
@@ -127,7 +155,14 @@ function errorMessage(error: unknown) {
 }
 
 async function selectTab(tab: TabId) {
-  await router.replace({ query: { ...route.query, view: tab === "overview" ? undefined : tab } })
+  await router.replace({
+    query: {
+      ...route.query,
+      view: tab === "overview"
+        ? undefined
+        : tab
+    }
+  })
 }
 
 async function mutate(mutation: InvestmentReviewerMutation, message: string) {
@@ -141,7 +176,11 @@ async function mutate(mutation: InvestmentReviewerMutation, message: string) {
   }
   catch (error) {
     await reviewStore.loadCase(workspaceId.value, true).catch(() => undefined)
-    toastStore.push({ message: errorMessage(error), title: "Change not saved", tone: "danger" })
+    toastStore.push({
+      message: errorMessage(error),
+      title: "Change not saved",
+      tone: "danger"
+    })
     return null
   }
   finally {
@@ -174,16 +213,34 @@ async function saveReview() {
 }
 
 async function requestInformation() {
-  if (!await mutate({ action: "request_information", dueAt: toIsoDate(informationForm.dueAt), request: informationForm.request, title: informationForm.title }, "Information request sent to the applicant."))
+  if (!await mutate({
+    action: "request_information",
+    dueAt: toIsoDate(informationForm.dueAt),
+    request: informationForm.request,
+    title: informationForm.title
+  }, "Information request sent to the applicant.")) {
     return
+  }
   Object.assign(informationForm, { dueAt: "", request: "", title: "" })
   dialog.value = ""
 }
 
 async function createDiligence() {
-  if (!await mutate({ action: "create_diligence_item", category: diligenceForm.category, description: diligenceForm.description, dueAt: toIsoDate(diligenceForm.dueAt), title: diligenceForm.title }, "Diligence item opened."))
+  if (!await mutate({
+    action: "create_diligence_item",
+    category: diligenceForm.category,
+    description: diligenceForm.description,
+    dueAt: toIsoDate(diligenceForm.dueAt),
+    title: diligenceForm.title
+  }, "Diligence item opened.")) {
     return
-  Object.assign(diligenceForm, { category: "financial", description: "", dueAt: "", title: "" })
+  }
+  Object.assign(diligenceForm, {
+    category: "financial",
+    description: "",
+    dueAt: "",
+    title: ""
+  })
   dialog.value = ""
 }
 
@@ -204,7 +261,13 @@ async function recordDecision() {
 async function createHandoff() {
   if (!await mutate({ action: "create_partner_handoff", ...handoffForm }, "Regulated-partner handoff prepared."))
     return
-  Object.assign(handoffForm, { internalNotes: "", partnerName: "", partnerType: "broker_dealer", partnerUrl: "", sharedDataRoomItemIds: [] })
+  Object.assign(handoffForm, {
+    internalNotes: "",
+    partnerName: "",
+    partnerType: "broker_dealer",
+    partnerUrl: "",
+    sharedDataRoomItemIds: []
+  })
   dialog.value = ""
 }
 

@@ -315,8 +315,12 @@ export function renderContractCertificateText(certificate: ContractExecutionCert
         "Provider Evidence",
         ...certificate.providerEvidence.flatMap(evidence => [
           `- ${evidence.provider} envelope ${evidence.providerEnvelopeId}: ${evidence.status} at ${evidence.occurredAt}`,
-          evidence.completedPdfSha256 ? `  Completed PDF SHA-256: ${evidence.completedPdfSha256}` : "  Completed PDF SHA-256: not reported",
-          evidence.signedByUserIds.length ? `  Provider-reported signers: ${evidence.signedByUserIds.join(", ")}` : "  Provider-reported signers: none",
+          evidence.completedPdfSha256
+            ? `  Completed PDF SHA-256: ${evidence.completedPdfSha256}`
+            : "  Completed PDF SHA-256: not reported",
+          evidence.signedByUserIds.length
+            ? `  Provider-reported signers: ${evidence.signedByUserIds.join(", ")}`
+            : "  Provider-reported signers: none",
         ]),
         "",
       ]

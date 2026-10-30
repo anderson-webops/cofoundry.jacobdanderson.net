@@ -181,7 +181,9 @@ function toTime(value?: string | null) {
     return null
 
   const time = new Date(value).getTime()
-  return Number.isFinite(time) ? time : null
+  return Number.isFinite(time)
+    ? time
+    : null
 }
 
 function daysBetween(start: string | null, end: string | null) {
@@ -272,8 +274,14 @@ function readinessHref(checkId: string) {
   if (checkId.includes("privacy-request"))
     return "/admin/privacy"
 
-  if (["backup", "file-scanning", "notification", "operational-events"].some(value => checkId.includes(value)))
+  if ([
+    "backup",
+    "file-scanning",
+    "notification",
+    "operational-events"
+  ].some(value => checkId.includes(value))) {
     return "/admin/operations"
+  }
 
   return "/admin/readiness"
 }
@@ -334,20 +342,28 @@ function enrichAdminCommandQueueItem(seed: WorkspaceSeed, generatedAt: string, i
   const evidenceReview = getLatestAdminActionByType(seed, item.targetType, item.targetId, ["review_evidence"])
   const slaState = buildSlaState(item.createdAt, item.priority, generatedAt)
   const assignedOwnerUserId = assignment?.metadata?.assignedAdminUserId || assignment?.adminUserId || null
-  const assignedByUserId = assignment && assignedOwnerUserId !== assignment.adminUserId ? assignment.adminUserId : null
+  const assignedByUserId = assignment && assignedOwnerUserId !== assignment.adminUserId
+    ? assignment.adminUserId
+    : null
   const escalationQueue = escalation?.metadata?.escalationQueue || null
 
   return {
     ...item,
     assignedAt: assignment?.createdAt || null,
-    assignedByLabel: assignedByUserId ? resolveAdminUserLabel(seed, assignedByUserId) : null,
+    assignedByLabel: assignedByUserId
+      ? resolveAdminUserLabel(seed, assignedByUserId)
+      : null,
     assignedByUserId,
     dueAt: slaState.dueAt,
     escalatedAt: escalation?.createdAt || null,
-    escalationLabel: escalationQueue ? formatAdminEscalationQueue(escalationQueue) : null,
+    escalationLabel: escalationQueue
+      ? formatAdminEscalationQueue(escalationQueue)
+      : null,
     escalationQueue,
     evidenceReviewedAt: evidenceReview?.createdAt || null,
-    ownerLabel: assignedOwnerUserId ? resolveAdminUserLabel(seed, assignedOwnerUserId) : "Unassigned",
+    ownerLabel: assignedOwnerUserId
+      ? resolveAdminUserLabel(seed, assignedOwnerUserId)
+      : "Unassigned",
     ownerUserId: assignedOwnerUserId,
     slaLabel: slaState.slaLabel,
     slaStatus: slaState.slaStatus,
@@ -596,8 +612,12 @@ export function buildAdminBillingRows(seed: WorkspaceSeed): AdminBillingRow[] {
       }
     })
     .sort((left, right) => {
-      const leftPaid = left.subscription?.plan === "free" ? 0 : 1
-      const rightPaid = right.subscription?.plan === "free" ? 0 : 1
+      const leftPaid = left.subscription?.plan === "free"
+        ? 0
+        : 1
+      const rightPaid = right.subscription?.plan === "free"
+        ? 0
+        : 1
 
       if (rightPaid !== leftPaid)
         return rightPaid - leftPaid
@@ -707,8 +727,12 @@ export function buildAdminCommandQueue(input: AdminCommandQueueInput) {
         createdAt: opportunity.updatedAt || opportunity.createdAt,
         detail: [
           opportunity.oneLinePitch,
-          opportunity.officialWebsite ? `Website: ${opportunity.officialWebsite}` : "",
-          hasRiskFlags ? `Risk flags: ${opportunity.riskFlags.join("; ")}` : "",
+          opportunity.officialWebsite
+            ? `Website: ${opportunity.officialWebsite}`
+            : "",
+          hasRiskFlags
+            ? `Risk flags: ${opportunity.riskFlags.join("; ")}`
+            : "",
         ].filter(Boolean).join(" "),
         href: "/admin/queue",
         id: `opportunity:${opportunity.id}`,
@@ -734,10 +758,14 @@ export function buildAdminCommandQueue(input: AdminCommandQueueInput) {
       const ageDays = daysBetween(request.createdAt, generatedAt)
       const inviteExpired = request.status === "invited" && !request.inviteAcceptedAt && Boolean(toTime(request.inviteExpiresAt) && toTime(request.inviteExpiresAt)! < toTime(generatedAt)!)
       const stale = request.status === "open" && ageDays !== null && ageDays > 7
-      const priority: AdminCommandQueuePriority = inviteExpired || stale || request.status === "approved" ? "high" : "standard"
+      const priority: AdminCommandQueuePriority = inviteExpired || stale || request.status === "approved"
+        ? "high"
+        : "standard"
 
       return {
-        actionLabel: request.status === "approved" ? "Issue invite" : "Review access",
+        actionLabel: request.status === "approved"
+          ? "Issue invite"
+          : "Review access",
         createdAt: request.createdAt,
         detail: request.useCase,
         href: "/admin/access-requests",
@@ -745,11 +773,15 @@ export function buildAdminCommandQueue(input: AdminCommandQueueInput) {
         kind: "access",
         priority,
         sourceLabel: request.company || request.email,
-        statusLabel: inviteExpired ? "Invite expired" : formatAccessStatus(request.status),
+        statusLabel: inviteExpired
+          ? "Invite expired"
+          : formatAccessStatus(request.status),
         summary: `${request.name} · ${formatMachineLabel(request.role)} · ${formatMachineLabel(request.timeline)}`,
         targetId: request.id,
         targetType: "access_request",
-        title: request.status === "approved" ? "Approved access request needs invite" : "Access request",
+        title: request.status === "approved"
+          ? "Approved access request needs invite"
+          : "Access request",
       }
     })
 
@@ -757,7 +789,9 @@ export function buildAdminCommandQueue(input: AdminCommandQueueInput) {
     .filter(request => request.status !== "resolved")
     .map((request) => {
       const ageDays = daysBetween(request.createdAt, generatedAt)
-      const priority: AdminCommandQueuePriority = ageDays !== null && ageDays > 3 ? "high" : "standard"
+      const priority: AdminCommandQueuePriority = ageDays !== null && ageDays > 3
+        ? "high"
+        : "standard"
 
       return {
         actionLabel: "Review privacy request",
@@ -786,9 +820,13 @@ export function buildAdminCommandQueue(input: AdminCommandQueueInput) {
         href: readinessHref(check.id),
         id: `readiness:${check.id}`,
         kind: "readiness",
-        priority: check.status === "fail" ? "critical" : "high",
+        priority: check.status === "fail"
+          ? "critical"
+          : "high",
         sourceLabel: check.groupTitle || "Readiness",
-        statusLabel: check.status === "fail" ? "Failing check" : "Warning check",
+        statusLabel: check.status === "fail"
+          ? "Failing check"
+          : "Warning check",
         summary: check.summary,
         targetId: check.id,
         targetType: "readiness_check",
@@ -796,6 +834,12 @@ export function buildAdminCommandQueue(input: AdminCommandQueueInput) {
       }
     })
 
-  return sortAdminCommandQueueItems([...reportItems, ...opportunityItems, ...accessItems, ...privacyItems, ...readinessItems]
+  return sortAdminCommandQueueItems([
+    ...reportItems,
+    ...opportunityItems,
+    ...accessItems,
+    ...privacyItems,
+    ...readinessItems
+  ]
     .map(item => enrichAdminCommandQueueItem(input.seed, generatedAt, item)))
 }

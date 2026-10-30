@@ -10,8 +10,12 @@ usePageSeo("Account access help")
 
 const route = useRoute()
 const toastStore = useToastStore()
-const initialEmail = typeof route.query.email === "string" ? route.query.email.trim() : ""
-const initialSource = typeof route.query.source === "string" ? route.query.source.trim() : "auth-recovery"
+const initialEmail = typeof route.query.email === "string"
+  ? route.query.email.trim()
+  : ""
+const initialSource = typeof route.query.source === "string"
+  ? route.query.source.trim()
+  : "auth-recovery"
 
 const form = reactive({
   company: "",
@@ -71,7 +75,9 @@ async function submitRecoveryRequest() {
   }
   catch (caughtError) {
     errors.value = {
-      form: caughtError instanceof Error ? caughtError.message : "The account-help request could not be submitted.",
+      form: caughtError instanceof Error
+        ? caughtError.message
+        : "The account-help request could not be submitted.",
     }
   }
   finally {

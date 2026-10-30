@@ -41,7 +41,9 @@ const provisioningTasks = computed(() => {
     pass: 3,
   }
 
-  return [...(data.value?.provisioningTasks || [])].sort((left, right) => {
+  return [
+    ...(data.value?.provisioningTasks || [])
+  ].sort((left, right) => {
     const statusDiff = statusRank[left.status] - statusRank[right.status]
     if (statusDiff !== 0)
       return statusDiff
@@ -67,7 +69,9 @@ function shortCommit(value?: string) {
   if (!value)
     return ""
 
-  return value.length > 12 ? value.slice(0, 12) : value
+  return value.length > 12
+    ? value.slice(0, 12)
+    : value
 }
 </script>
 

@@ -44,37 +44,44 @@ function environmentSnapshot(overrides: Partial<EnvironmentSnapshot["public"]> =
 }
 
 const healthyOperations = {
-  backupRuns: [{
-    completed_at: generatedAt,
-    created_at: generatedAt,
-    id: "backup_healthy",
-    started_at: generatedAt,
-    status: "succeeded",
-  }],
+  backupRuns: [
+    {
+      completed_at: generatedAt,
+      created_at: generatedAt,
+      id: "backup_healthy",
+      started_at: generatedAt,
+      status: "succeeded",
+    }
+  ],
   contractEnvelopeEvents: [],
   emailSuppressions: [],
-  fileUploads: [{
-    created_at: generatedAt,
-    id: "upload_clean",
-    scan_status: "clean",
-    status: "uploaded",
-    updated_at: generatedAt,
-  }],
+  fileUploads: [
+    {
+      created_at: generatedAt,
+      id: "upload_clean",
+      scan_status: "clean",
+      status: "uploaded",
+      updated_at: generatedAt,
+    }
+  ],
   mode: "mock",
-  notificationDeliveries: [{
-    created_at: generatedAt,
-    event_type: "digest.unread",
-    id: "delivery_healthy",
-    notification_count: 1,
-    status: "sent",
-  }, {
-    created_at: generatedAt,
-    delivered_at: generatedAt,
-    event_type: "mail.smoke",
-    id: "delivery_mail_smoke",
-    notification_count: 0,
-    status: "sent",
-  }],
+  notificationDeliveries: [
+    {
+      created_at: generatedAt,
+      event_type: "digest.unread",
+      id: "delivery_healthy",
+      notification_count: 1,
+      status: "sent",
+    },
+    {
+      created_at: generatedAt,
+      delivered_at: generatedAt,
+      event_type: "mail.smoke",
+      id: "delivery_mail_smoke",
+      notification_count: 0,
+      status: "sent",
+    }
+  ],
   operationalEvents: [
     {
       created_at: generatedAt,
@@ -564,8 +571,22 @@ describe("production readiness snapshot", () => {
     const warningCheckIds = snapshot.groups.flatMap(group => group.checks).filter(check => check.status === "warn").map(check => check.id)
 
     expect(snapshot.overallStatus).toBe("fail")
-    expect(failedCheckIds).toEqual(expect.arrayContaining(["environment-validation", "public-app-url", "session-signing-secret", "active-admin-access"]))
-    expect(warningCheckIds).toEqual(expect.arrayContaining(["mail-transport", "operations-worker-token", "local-durable-store", "backup-recency", "notification-digests", "restore-drill", "monitoring-heartbeat", "alert-webhook-destination"]))
+    expect(failedCheckIds).toEqual(expect.arrayContaining([
+      "environment-validation",
+      "public-app-url",
+      "session-signing-secret",
+      "active-admin-access"
+    ]))
+    expect(warningCheckIds).toEqual(expect.arrayContaining([
+      "mail-transport",
+      "operations-worker-token",
+      "local-durable-store",
+      "backup-recency",
+      "notification-digests",
+      "restore-drill",
+      "monitoring-heartbeat",
+      "alert-webhook-destination"
+    ]))
     expect(snapshot.provisioningTasks).toEqual(expect.arrayContaining([
       expect.objectContaining({
         command: "SESSION_SIGNING_SECRET=<vault-managed-random-secret>",
@@ -593,26 +614,28 @@ describe("production readiness snapshot", () => {
 
   it("warns on stale operator queues and fails flagged file scans", () => {
     const snapshot = buildProductionReadinessSnapshot({
-      accessRequests: [{
-        adminNotes: null,
-        company: "LedgerLoop",
-        companyStage: "prototype",
-        createdAt: "2026-05-01T00:00:00.000Z",
-        email: "founder@example.com",
-        id: "access_stale",
-        inviteAcceptedAt: null,
-        inviteExpiresAt: null,
-        inviteTokenIssuedAt: null,
-        name: "Founder",
-        reviewedAt: null,
-        reviewedByUserId: null,
-        role: "founder",
-        source: "test",
-        status: "open",
-        timeline: "30_days",
-        updatedAt: "2026-05-01T00:00:00.000Z",
-        useCase: "I need a founder matching workspace for a serious collaborator search.",
-      }],
+      accessRequests: [
+        {
+          adminNotes: null,
+          company: "LedgerLoop",
+          companyStage: "prototype",
+          createdAt: "2026-05-01T00:00:00.000Z",
+          email: "founder@example.com",
+          id: "access_stale",
+          inviteAcceptedAt: null,
+          inviteExpiresAt: null,
+          inviteTokenIssuedAt: null,
+          name: "Founder",
+          reviewedAt: null,
+          reviewedByUserId: null,
+          role: "founder",
+          source: "test",
+          status: "open",
+          timeline: "30_days",
+          updatedAt: "2026-05-01T00:00:00.000Z",
+          useCase: "I need a founder matching workspace for a serious collaborator search.",
+        }
+      ],
       adminPosture: healthyAdminPosture,
       contactMailConfigured: true,
       environment: environmentSnapshot(),
@@ -626,28 +649,32 @@ describe("production readiness snapshot", () => {
       isLocalDevelopment: false,
       operations: {
         ...healthyOperations,
-        fileUploads: [{
-          created_at: generatedAt,
-          id: "upload_flagged",
-          scan_status: "flagged",
-          status: "blocked",
-          updated_at: generatedAt,
-        }],
+        fileUploads: [
+          {
+            created_at: generatedAt,
+            id: "upload_flagged",
+            scan_status: "flagged",
+            status: "blocked",
+            updated_at: generatedAt,
+          }
+        ],
       },
-      privacyRequests: [{
-        createdAt: "2026-05-30T00:00:00.000Z",
-        details: "Please review a trust evidence package and privacy concern for this workspace.",
-        id: "privacy_stale",
-        resolutionNotes: null,
-        resolvedAt: null,
-        resolvedByUserId: null,
-        reviewNotes: null,
-        reviewedAt: null,
-        reviewedByUserId: null,
-        status: "open",
-        type: "safety_privacy",
-        userId: "user_founder",
-      }],
+      privacyRequests: [
+        {
+          createdAt: "2026-05-30T00:00:00.000Z",
+          details: "Please review a trust evidence package and privacy concern for this workspace.",
+          id: "privacy_stale",
+          resolutionNotes: null,
+          resolvedAt: null,
+          resolvedByUserId: null,
+          reviewNotes: null,
+          reviewedAt: null,
+          reviewedByUserId: null,
+          status: "open",
+          type: "safety_privacy",
+          userId: "user_founder",
+        }
+      ],
     })
 
     const checkById = new Map(snapshot.groups.flatMap(group => group.checks).map(check => [check.id, check]))
@@ -674,13 +701,15 @@ describe("production readiness snapshot", () => {
       isLocalDevelopment: false,
       operations: {
         ...healthyOperations,
-        operationalEvents: [{
-          created_at: generatedAt,
-          event_type: "worker.heartbeat",
-          id: "event_worker_only",
-          severity: "info",
-          source: "operations-worker",
-        }],
+        operationalEvents: [
+          {
+            created_at: generatedAt,
+            event_type: "worker.heartbeat",
+            id: "event_worker_only",
+            severity: "info",
+            source: "operations-worker",
+          }
+        ],
       },
       privacyRequests: [],
     })
@@ -841,16 +870,18 @@ describe("production readiness snapshot", () => {
       isLocalDevelopment: false,
       operations: {
         ...healthyOperations,
-        trustVerificationEvents: [{
-          created_at: generatedAt,
-          id: "trust_event_healthy",
-          occurred_at: generatedAt,
-          provider: "persona",
-          status: "verified",
-          target_id: "profile_user_olivia",
-          target_type: "profile",
-          verification_type: "government_id",
-        }],
+        trustVerificationEvents: [
+          {
+            created_at: generatedAt,
+            id: "trust_event_healthy",
+            occurred_at: generatedAt,
+            provider: "persona",
+            status: "verified",
+            target_id: "profile_user_olivia",
+            target_type: "profile",
+            verification_type: "government_id",
+          }
+        ],
       },
       privacyRequests: [],
     })
@@ -1008,18 +1039,20 @@ describe("production readiness snapshot", () => {
       isLocalDevelopment: false,
       operations: {
         ...healthyOperations,
-        contractEnvelopeEvents: [{
-          completed_pdf_sha256: "a".repeat(64),
-          contract_id: "contract_ledgerloop",
-          contract_version_id: "version_1",
-          created_at: generatedAt,
-          id: "contract_provider_event_1",
-          occurred_at: generatedAt,
-          provider: "docusign",
-          provider_envelope_id: "envelope_123",
-          signed_by_user_ids: ["user_olivia", "user_malik"],
-          status: "completed",
-        }],
+        contractEnvelopeEvents: [
+          {
+            completed_pdf_sha256: "a".repeat(64),
+            contract_id: "contract_ledgerloop",
+            contract_version_id: "version_1",
+            created_at: generatedAt,
+            id: "contract_provider_event_1",
+            occurred_at: generatedAt,
+            provider: "docusign",
+            provider_envelope_id: "envelope_123",
+            signed_by_user_ids: ["user_olivia", "user_malik"],
+            status: "completed",
+          }
+        ],
       },
       privacyRequests: [],
     })
@@ -1086,16 +1119,18 @@ describe("production readiness snapshot", () => {
       isLocalDevelopment: false,
       operations: {
         ...healthyOperations,
-        emailSuppressions: [{
-          category: "all",
-          created_at: generatedAt,
-          email: "suppressed@example.com",
-          id: "email_suppression_1",
-          provider: "postmark",
-          reason: "complaint",
-          source_event_id: "provider_suppression_event_1",
-          suppressed_at: generatedAt,
-        }],
+        emailSuppressions: [
+          {
+            category: "all",
+            created_at: generatedAt,
+            email: "suppressed@example.com",
+            id: "email_suppression_1",
+            provider: "postmark",
+            reason: "complaint",
+            source_event_id: "provider_suppression_event_1",
+            suppressed_at: generatedAt,
+          }
+        ],
       },
       privacyRequests: [],
     })

@@ -18,9 +18,15 @@ const toastStore = useToastStore()
 const route = useRoute()
 const { buildAccessRequestPath, policy } = useProductAccess()
 const pricingPath = buildAccessRequestPath("auth-sign-up", "pricing")
-const inviteToken = typeof route.query.invite === "string" ? route.query.invite.trim() : ""
-const inviteEmail = typeof route.query.email === "string" ? route.query.email.trim() : ""
-const requestSource = typeof route.query.source === "string" ? route.query.source.trim() : "auth-sign-up"
+const inviteToken = typeof route.query.invite === "string"
+  ? route.query.invite.trim()
+  : ""
+const inviteEmail = typeof route.query.email === "string"
+  ? route.query.email.trim()
+  : ""
+const requestSource = typeof route.query.source === "string"
+  ? route.query.source.trim()
+  : "auth-sign-up"
 const inviteValidation = ref<InviteValidation>({ request: null, valid: false })
 
 if (inviteToken) {
@@ -154,7 +160,9 @@ async function submitAccessRequest() {
   }
   catch (caughtError) {
     accessErrors.value = {
-      form: caughtError instanceof Error ? caughtError.message : "The request could not be submitted.",
+      form: caughtError instanceof Error
+        ? caughtError.message
+        : "The request could not be submitted.",
     }
   }
   finally {

@@ -64,7 +64,9 @@ export function formatContractLegalReviewStatus(status: ContractLegalReviewStatu
 }
 
 export function formatContractLegalReviewerType(type: ContractLegalReviewerType) {
-  return type === "in_house_counsel" ? "In-house or team counsel" : "Outside counsel"
+  return type === "in_house_counsel"
+    ? "In-house or team counsel"
+    : "Outside counsel"
 }
 
 export function formatContractLegalReviewScope(scope: ContractLegalReviewScope) {

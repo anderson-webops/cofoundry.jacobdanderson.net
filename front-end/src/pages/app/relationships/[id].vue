@@ -15,7 +15,9 @@ const route = useRoute()
 const toastStore = useToastStore()
 const { authStore, workspaceStore } = useCurrentMember()
 const matchId = computed(() => String(route.params.id || ""))
-const requestHeaders = import.meta.server ? useRequestHeaders(["cookie"]) : undefined
+const requestHeaders = import.meta.server
+  ? useRequestHeaders(["cookie"])
+  : undefined
 const timelineFilter = ref<RelationshipTimelineKind | "all">("all")
 const fileInput = ref<HTMLInputElement | null>(null)
 const uploadPending = ref(false)
@@ -44,8 +46,12 @@ const allowedUploadMimeTypes = new Set([
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ])
 const relationship = computed(() => data.value?.relationship || null)
-const latestMessages = computed(() => [...(relationship.value?.latestMessages || [])].reverse())
-const currentProfile = computed(() => authStore.currentUser ? getProfileByUserId(workspaceStore.data, authStore.currentUser.id) : null)
+const latestMessages = computed(() => [
+  ...(relationship.value?.latestMessages || [])
+].reverse())
+const currentProfile = computed(() => authStore.currentUser
+  ? getProfileByUserId(workspaceStore.data, authStore.currentUser.id)
+  : null)
 const relationshipUploadTarget = computed<{ label: string, purpose: FileUploadPurpose, relatedId: string, relatedType: FileUploadRelatedType } | null>(() => {
   if (!relationship.value)
     return null
@@ -282,7 +288,9 @@ async function uploadRelationshipFile(event: Event) {
       body: file,
       headers: {
         "content-type": mimeType,
-        ...(policy.uploadToken ? { "x-cofoundry-upload-token": policy.uploadToken } : {}),
+        ...(policy.uploadToken
+          ? { "x-cofoundry-upload-token": policy.uploadToken }
+          : {}),
       },
       method: policy.method,
     })
@@ -295,7 +303,9 @@ async function uploadRelationshipFile(event: Event) {
     uploadNotice.value = `Uploaded ${file.name}. It will remain marked pending until the file scanner records a result.`
   }
   catch (error) {
-    uploadError.value = error instanceof Error ? error.message : "The file could not be uploaded."
+    uploadError.value = error instanceof Error
+      ? error.message
+      : "The file could not be uploaded."
   }
   finally {
     uploadPending.value = false
@@ -328,7 +338,9 @@ async function addDecisionLogEntry() {
     })
   }
   catch (error) {
-    decisionLogError.value = error instanceof Error ? error.message : "The decision note could not be saved."
+    decisionLogError.value = error instanceof Error
+      ? error.message
+      : "The decision note could not be saved."
   }
   finally {
     decisionLogPending.value = false

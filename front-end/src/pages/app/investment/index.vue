@@ -38,13 +38,21 @@ function statusTone(status: string) {
     return "success" as const
   if (["declined", "information_requested", "withdrawn"].includes(status))
     return "warning" as const
-  if (["under_review", "diligence", "committee_review", "submitted"].includes(status))
+  if ([
+    "under_review",
+    "diligence",
+    "committee_review",
+    "submitted"
+  ].includes(status)) {
     return "accent" as const
+  }
   return "neutral" as const
 }
 
 function formatDate(value: string | null) {
-  return value ? new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(new Date(value)) : "Not set"
+  return value
+    ? new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(new Date(value))
+    : "Not set"
 }
 
 function errorMessage(error: unknown) {
@@ -67,7 +75,11 @@ async function createWorkspace() {
     await navigateTo(`/app/investment/${workspace.id}`)
   }
   catch (error) {
-    toastStore.push({ message: errorMessage(error), title: "Workspace not created", tone: "danger" })
+    toastStore.push({
+      message: errorMessage(error),
+      title: "Workspace not created",
+      tone: "danger"
+    })
   }
   finally {
     pending.value = false

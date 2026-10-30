@@ -94,7 +94,11 @@ export function buildDraftMemberWorkspaceState(session: SessionUser, createdAt =
       bio: "Add your background, experience, and operating style to start matching with the right people.",
       location: "Remote",
       remotePreference: "remote",
-      roles: [session.role === "founder" ? "Founder" : "Collaborator"],
+      roles: [
+        session.role === "founder"
+          ? "Founder"
+          : "Collaborator"
+      ],
       yearsExperience: 0,
       industries: [],
       startupStagePreferences: ["idea"],
@@ -109,12 +113,16 @@ export function buildDraftMemberWorkspaceState(session: SessionUser, createdAt =
       },
       governancePreferences: {
         equityPhilosophy: "equal_unless_strong_reason",
-        leadershipPreference: session.role === "founder" ? "wants_ceo_role" : "prefers_non_ceo_role",
+        leadershipPreference: session.role === "founder"
+          ? "wants_ceo_role"
+          : "prefers_non_ceo_role",
         decisionModelPreference: "area_owner_decides",
         deadlockPreference: "advisor_tiebreaker",
       },
       roleScope: {
-        primaryRole: session.role === "founder" ? "Founder" : "Collaborator",
+        primaryRole: session.role === "founder"
+          ? "Founder"
+          : "Collaborator",
         nonResponsibilities: [],
         accountabilityMilestones: [],
       },

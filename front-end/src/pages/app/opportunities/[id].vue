@@ -17,10 +17,16 @@ const reportDialogOpen = ref(false)
 const introDialogOpen = ref(false)
 
 const opportunity = computed(() => workspaceStore.data.opportunities.find(item => item.id === route.params.id))
-const ownerProfile = computed(() => opportunity.value ? getProfileByUserId(workspaceStore.data, opportunity.value.ownerUserId) : null)
+const ownerProfile = computed(() => opportunity.value
+  ? getProfileByUserId(workspaceStore.data, opportunity.value.ownerUserId)
+  : null)
 const roles = computed(() => workspaceStore.data.opportunityRoles.filter(role => role.opportunityId === route.params.id))
-const currentProfile = computed(() => authStore.currentUser ? getProfileByUserId(workspaceStore.data, authStore.currentUser.id) : null)
-const usage = computed(() => authStore.currentUser ? buildSubscriptionUsage(workspaceStore.data, authStore.currentUser.id, subscription.value || undefined) : null)
+const currentProfile = computed(() => authStore.currentUser
+  ? getProfileByUserId(workspaceStore.data, authStore.currentUser.id)
+  : null)
+const usage = computed(() => authStore.currentUser
+  ? buildSubscriptionUsage(workspaceStore.data, authStore.currentUser.id, subscription.value || undefined)
+  : null)
 
 usePageSeo("Opportunity details")
 
@@ -36,7 +42,9 @@ async function expressInterest(payload: { note: string, structuredIntro: Structu
   if (!sent) {
     toastStore.push({
       title: "Verification needed",
-      message: currentProfile.value ? getOutreachUnlockMessage(currentProfile.value) : "Finish your profile and phone verification before sending outreach requests.",
+      message: currentProfile.value
+        ? getOutreachUnlockMessage(currentProfile.value)
+        : "Finish your profile and phone verification before sending outreach requests.",
       tone: "warning",
     })
     return

@@ -34,19 +34,39 @@ const commentSectionOptions: { label: string, value: ProposalSectionKey }[] = pr
 }))
 
 const proposal = computed(() => getProposalById(workspaceStore.data, route.params.id as string))
-const version = computed(() => proposal.value ? getCurrentProposalVersion(workspaceStore.data, proposal.value) : undefined)
-const versions = computed(() => proposal.value ? getProposalVersions(workspaceStore.data, proposal.value.id) : [])
-const comments = computed(() => proposal.value ? getProposalComments(workspaceStore.data, proposal.value.id) : [])
-const sections = computed(() => proposal.value && version.value ? buildProposalSectionSummaries(version.value, comments.value, proposal.value.status) : [])
+const version = computed(() => proposal.value
+  ? getCurrentProposalVersion(workspaceStore.data, proposal.value)
+  : undefined)
+const versions = computed(() => proposal.value
+  ? getProposalVersions(workspaceStore.data, proposal.value.id)
+  : [])
+const comments = computed(() => proposal.value
+  ? getProposalComments(workspaceStore.data, proposal.value.id)
+  : [])
+const sections = computed(() => proposal.value && version.value
+  ? buildProposalSectionSummaries(version.value, comments.value, proposal.value.status)
+  : [])
 const unresolvedSections = computed(() => buildProposalUnresolvedItems(sections.value))
-const timeline = computed(() => proposal.value ? buildProposalTimeline(proposal.value, versions.value) : [])
-const termsSummary = computed(() => version.value ? buildProposalTermsSummary(version.value) : [])
-const authorProfile = computed(() => proposal.value ? getProfileByUserId(workspaceStore.data, proposal.value.createdByUserId) : null)
-const recipientProfile = computed(() => proposal.value ? getProfileByUserId(workspaceStore.data, proposal.value.recipientUserId) : null)
+const timeline = computed(() => proposal.value
+  ? buildProposalTimeline(proposal.value, versions.value)
+  : [])
+const termsSummary = computed(() => version.value
+  ? buildProposalTermsSummary(version.value)
+  : [])
+const authorProfile = computed(() => proposal.value
+  ? getProfileByUserId(workspaceStore.data, proposal.value.createdByUserId)
+  : null)
+const recipientProfile = computed(() => proposal.value
+  ? getProfileByUserId(workspaceStore.data, proposal.value.recipientUserId)
+  : null)
 const contractId = computed(() => workspaceStore.data.contracts.find(contract => contract.proposalId === route.params.id)?.id)
-const relationshipHref = computed(() => proposal.value && authStore.currentUser ? getRelationshipHrefForProposal(workspaceStore.data, authStore.currentUser.id, proposal.value.id) : null)
+const relationshipHref = computed(() => proposal.value && authStore.currentUser
+  ? getRelationshipHrefForProposal(workspaceStore.data, authStore.currentUser.id, proposal.value.id)
+  : null)
 const entitlements = computed(() => getSubscriptionEntitlements(subscription.value || undefined))
-const usage = computed(() => authStore.currentUser ? buildSubscriptionUsage(workspaceStore.data, authStore.currentUser.id, subscription.value || undefined) : null)
+const usage = computed(() => authStore.currentUser
+  ? buildSubscriptionUsage(workspaceStore.data, authStore.currentUser.id, subscription.value || undefined)
+  : null)
 const canRespondToCurrentVersion = computed(() =>
   Boolean(
     proposal.value
@@ -135,7 +155,9 @@ function sectionTone(state: ProposalSectionState) {
 }
 
 function contractQuotaText() {
-  return usage.value ? formatUsageQuota(usage.value.contractDrafts) : ""
+  return usage.value
+    ? formatUsageQuota(usage.value.contractDrafts)
+    : ""
 }
 </script>
 

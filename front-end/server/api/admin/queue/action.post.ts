@@ -109,7 +109,12 @@ export default defineEventHandler(async (event) => {
   })
 
   const payload = validateAdminCommandQueueActionPayload(await readBody(event))
-  if (payload.action === "review_evidence" && !["file_upload", "opportunity", "privacy_request", "report"].includes(payload.targetType)) {
+  if (payload.action === "review_evidence" && ![
+    "file_upload",
+    "opportunity",
+    "privacy_request",
+    "report"
+  ].includes(payload.targetType)) {
     throw createError({
       statusCode: 400,
       statusMessage: "Evidence review is not available for this queue target type.",

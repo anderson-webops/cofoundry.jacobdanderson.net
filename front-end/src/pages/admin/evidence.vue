@@ -180,7 +180,9 @@ async function recordEvidenceReview(item: AdminEvidencePackage) {
   catch (caughtError) {
     toastStore.push({
       title: "Evidence review failed",
-      message: caughtError instanceof Error ? caughtError.message : "The evidence review could not be saved.",
+      message: caughtError instanceof Error
+        ? caughtError.message
+        : "The evidence review could not be saved.",
       tone: "danger",
     })
   }
@@ -207,15 +209,21 @@ async function recordFileScan(item: AdminEvidencePackage, scanStatus: "clean" | 
     await refreshEvidence()
 
     toastStore.push({
-      title: scanStatus === "clean" ? "File marked clean" : "File flagged",
+      title: scanStatus === "clean"
+        ? "File marked clean"
+        : "File flagged",
       message: "The scan result has been persisted and operations data was refreshed.",
-      tone: scanStatus === "clean" ? "success" : "warning",
+      tone: scanStatus === "clean"
+        ? "success"
+        : "warning",
     })
   }
   catch (caughtError) {
     toastStore.push({
       title: "Scan update failed",
-      message: caughtError instanceof Error ? caughtError.message : "The file scan status could not be saved.",
+      message: caughtError instanceof Error
+        ? caughtError.message
+        : "The file scan status could not be saved.",
       tone: "danger",
     })
   }

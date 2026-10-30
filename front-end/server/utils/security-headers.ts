@@ -45,7 +45,9 @@ function originFor(value?: string) {
 }
 
 function uniqueValues(values: Array<string | null | undefined>) {
-  return [...new Set(values.filter((value): value is string => Boolean(value)))]
+  return [
+    ...new Set(values.filter((value): value is string => Boolean(value)))
+  ]
 }
 
 function directive(name: string, values: Array<string | null | undefined>) {
@@ -58,15 +60,29 @@ export function shouldDefaultApiResponseToNoStore(pathname: string) {
 
 export function buildContentSecurityPolicyDirectives(options: SecurityHeaderOptions = {}) {
   const appOrigin = originFor(options.appUrl)
-  const supabaseOrigin = options.backendMode === "supabase" ? originFor(options.supabaseUrl) : null
+  const supabaseOrigin = options.backendMode === "supabase"
+    ? originFor(options.supabaseUrl)
+    : null
   const stripeEnabled = options.billingMode === "stripe" || Boolean(options.stripePublishableKey)
-  const stripeScriptOrigins = stripeEnabled ? ["https://js.stripe.com"] : []
-  const stripeFrameOrigins = stripeEnabled ? ["https://checkout.stripe.com", "https://js.stripe.com"] : []
-  const stripeConnectOrigins = stripeEnabled ? stripeOrigins : []
+  const stripeScriptOrigins = stripeEnabled
+    ? ["https://js.stripe.com"]
+    : []
+  const stripeFrameOrigins = stripeEnabled
+    ? ["https://checkout.stripe.com", "https://js.stripe.com"]
+    : []
+  const stripeConnectOrigins = stripeEnabled
+    ? stripeOrigins
+    : []
 
   return {
     "base-uri": ["'none'"],
-    "connect-src": uniqueValues(["'self'", appOrigin, supabaseOrigin, ...analyticsOrigins, ...stripeConnectOrigins]),
+    "connect-src": uniqueValues([
+      "'self'",
+      appOrigin,
+      supabaseOrigin,
+      ...analyticsOrigins,
+      ...stripeConnectOrigins
+    ]),
     "default-src": ["'self'"],
     "font-src": ["'self'", "data:"],
     "form-action": ["'self'"],
@@ -76,7 +92,13 @@ export function buildContentSecurityPolicyDirectives(options: SecurityHeaderOpti
     "manifest-src": ["'self'"],
     "media-src": ["'self'", "data:", "blob:"],
     "object-src": ["'none'"],
-    "script-src": uniqueValues(["'self'", "'strict-dynamic'", "'nonce-{{nonce}}'", ...analyticsOrigins, ...stripeScriptOrigins]),
+    "script-src": uniqueValues([
+      "'self'",
+      "'strict-dynamic'",
+      "'nonce-{{nonce}}'",
+      ...analyticsOrigins,
+      ...stripeScriptOrigins
+    ]),
     "script-src-attr": ["'none'"],
     "style-src": ["'self'", "'unsafe-inline'"],
     "upgrade-insecure-requests": isHttpsUrl(options.appUrl),
@@ -90,7 +112,11 @@ export function buildContentSecurityPolicy(options: SecurityHeaderOptions = {}) 
       if (values === false)
         return []
 
-      return Array.isArray(values) ? [directive(name, values)] : [name]
+      return Array.isArray(values)
+        ? [
+            directive(name, values)
+          ]
+        : [name]
     })
     .join("; ")
 }

@@ -131,7 +131,9 @@ function createBaseSeed() {
 }
 
 function safeBootstrapRole(role: User["role"]): "collaborator" | "founder" {
-  return role === "collaborator" ? "collaborator" : "founder"
+  return role === "collaborator"
+    ? "collaborator"
+    : "founder"
 }
 
 function buildBootstrapSession(
@@ -144,7 +146,9 @@ function buildBootstrapSession(
     id: identity.id,
     name: identity.name.trim() || email.split("@")[0] || "Member",
     onboardingCompleted: options.preserveAuthoritativeRole ? identity.onboardingCompleted : false,
-    role: options.preserveAuthoritativeRole ? identity.role : safeBootstrapRole(identity.role),
+    role: options.preserveAuthoritativeRole
+      ? identity.role
+      : safeBootstrapRole(identity.role),
     subscriptionPlan: "free",
   }
 }
@@ -207,7 +211,9 @@ async function mergeLocalParticipantSubscriptions(seed: WorkspaceSeed) {
       subscriptionsByUserId.set(state.user.id, state.subscription)
   }
 
-  return replaceParticipantSubscriptions(seed, participantIds, [...subscriptionsByUserId.values()])
+  return replaceParticipantSubscriptions(seed, participantIds, [
+    ...subscriptionsByUserId.values()
+  ])
 }
 
 function syncWorkspaceVerificationState(state: MemberWorkspaceState): MemberWorkspaceState {
@@ -263,7 +269,12 @@ export function applyAuthoritativeTrustEvents(state: MemberWorkspaceState, event
       verificationBadges: {
         ...state.profile.verificationBadges,
         emailVerified: state.user.verifiedEmail,
-        linkedAccounts: [linkedInVerified, githubVerified, workDomainVerified, websiteVerified].some(Boolean),
+        linkedAccounts: [
+          linkedInVerified,
+          githubVerified,
+          workDomainVerified,
+          websiteVerified
+        ].some(Boolean),
       },
     },
   }
@@ -767,13 +778,15 @@ function sanitizeBookmarkWrites(
     const existing = current.state.bookmarks.find(item =>
       item.targetType === bookmark.targetType && item.targetId === bookmark.targetId,
     )
-    return [{
-      id: existing?.id || createServerId("bookmark"),
-      userId: current.state.user.id,
-      targetType: bookmark.targetType,
-      targetId: bookmark.targetId,
-      createdAt: existing?.createdAt || createdAt,
-    }]
+    return [
+      {
+        id: existing?.id || createServerId("bookmark"),
+        userId: current.state.user.id,
+        targetType: bookmark.targetType,
+        targetId: bookmark.targetId,
+        createdAt: existing?.createdAt || createdAt,
+      }
+    ]
   })
 }
 
@@ -828,7 +841,9 @@ export async function listAdminOpportunityWorkspaceSlice(event: H3Event): Promis
 
   const opportunityRows = await selectAllOpportunities(adminClient)
   const opportunities = fromOpportunityRows(opportunityRows)
-  const ownerUserIds = [...new Set(opportunities.map(opportunity => opportunity.ownerUserId))]
+  const ownerUserIds = [
+    ...new Set(opportunities.map(opportunity => opportunity.ownerUserId))
+  ]
   const [userRows, profileRows] = await Promise.all([
     selectUsersByIds(adminClient, ownerUserIds),
     selectProfileStatesByUserIds(adminClient, ownerUserIds),
@@ -1056,7 +1071,9 @@ export async function persistMemberWorkspaceWritePayload(event: H3Event, identit
 
   await persistWholeMemberWorkspaceState(event, nextState)
 
-  const seed = isSupabaseEnabled(event) ? buildMergedSeed(nextState) : await buildLocalRuntimeSeed(nextState)
+  const seed = isSupabaseEnabled(event)
+    ? buildMergedSeed(nextState)
+    : await buildLocalRuntimeSeed(nextState)
   return {
     seed,
     session: resolveSessionUserFromWorkspace(seed, {

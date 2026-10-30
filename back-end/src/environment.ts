@@ -69,7 +69,9 @@ export function releaseTagFromPackageVersion(version: string) {
 function readBackendPackageVersion() {
   try {
     const packageJson = JSON.parse(readFileSync(backendPackagePath, "utf8")) as { version?: unknown }
-    return typeof packageJson.version === "string" ? packageJson.version : ""
+    return typeof packageJson.version === "string"
+      ? packageJson.version
+      : ""
   }
   catch {
     return ""
@@ -81,17 +83,23 @@ function stripTrailingSlash(value: string) {
 }
 
 function normalizeBackendMode(value: string): BackendMode {
-  return value === "supabase" ? "supabase" : "mock"
+  return value === "supabase"
+    ? "supabase"
+    : "mock"
 }
 
 function normalizeBillingMode(value: string): BillingMode {
-  return value === "stripe" ? "stripe" : "mock"
+  return value === "stripe"
+    ? "stripe"
+    : "mock"
 }
 
 function parseAbsoluteHttpUrl(value: string) {
   try {
     const url = new URL(value)
-    return ["http:", "https:"].includes(url.protocol) && url.host ? url : null
+    return ["http:", "https:"].includes(url.protocol) && url.host
+      ? url
+      : null
   }
   catch {
     return null
@@ -150,8 +158,12 @@ function isExactTrustedProxyList(value: string) {
 export function isValidSupportEmail(value: string) {
   const email = value.trim()
   const atIndex = email.indexOf("@")
-  const localPart = atIndex > 0 ? email.slice(0, atIndex) : ""
-  const domain = atIndex > 0 ? email.slice(atIndex + 1) : ""
+  const localPart = atIndex > 0
+    ? email.slice(0, atIndex)
+    : ""
+  const domain = atIndex > 0
+    ? email.slice(atIndex + 1)
+    : ""
 
   return Boolean(
     email.length <= 254
@@ -187,7 +199,9 @@ export function readPublicEnvironment(env: EnvironmentSource): PublicEnvironment
   const configuredAppUrl = stripTrailingSlash(readValue(env, "NUXT_PUBLIC_APP_URL"))
 
   return {
-    appUrl: configuredAppUrl || (isLocalDevelopmentEnvironment(env) ? localDevelopmentAppUrl : ""),
+    appUrl: configuredAppUrl || (isLocalDevelopmentEnvironment(env)
+      ? localDevelopmentAppUrl
+      : ""),
     backendMode: normalizeBackendMode(readValue(env, "NUXT_PUBLIC_BACKEND_MODE")),
     billingMode: normalizeBillingMode(readValue(env, "NUXT_PUBLIC_BILLING_MODE")),
     enableDemoAccess: readValue(env, "NUXT_PUBLIC_ENABLE_DEMO_ACCESS") === "true",
@@ -213,7 +227,13 @@ export function readSecretEnvironment(env: EnvironmentSource): SecretEnvironment
 
 export function readDeploymentMetadata(env: EnvironmentSource, fallback: Partial<DeploymentMetadata> = {}): DeploymentMetadata {
   return {
-    commitSha: readFirstValue(env, ["COFOUNDRY_COMMIT_SHA", "GIT_COMMIT", "COMMIT_SHA", "SOURCE_VERSION", "VERCEL_GIT_COMMIT_SHA"]) || fallback.commitSha?.trim() || "",
+    commitSha: readFirstValue(env, [
+      "COFOUNDRY_COMMIT_SHA",
+      "GIT_COMMIT",
+      "COMMIT_SHA",
+      "SOURCE_VERSION",
+      "VERCEL_GIT_COMMIT_SHA"
+    ]) || fallback.commitSha?.trim() || "",
     deployedAt: readFirstValue(env, ["COFOUNDRY_DEPLOYED_AT", "DEPLOYED_AT", "BUILD_TIMESTAMP"]) || fallback.deployedAt?.trim() || "",
     release: readFirstValue(env, ["COFOUNDRY_RELEASE", "RELEASE_VERSION", "APP_VERSION"]) || fallback.release?.trim() || "",
   }

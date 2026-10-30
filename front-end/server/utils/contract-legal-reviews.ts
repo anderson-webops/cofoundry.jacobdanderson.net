@@ -261,7 +261,9 @@ export async function getContractLegalReview(event: H3Event, reviewId: string) {
   if (error)
     throw error
 
-  return data ? fromRow(data as PersistedContractLegalReviewRow) : null
+  return data
+    ? fromRow(data as PersistedContractLegalReviewRow)
+    : null
 }
 
 export async function createContractLegalReview(event: H3Event, review: ContractLegalReview) {
@@ -316,7 +318,9 @@ export async function updateContractLegalReview(
   if (!isSupabaseEnabled(event)) {
     return updateStore((store) => {
       const index = store.reviews.findIndex(review => review.id === current.id)
-      const existing = index >= 0 ? store.reviews[index] : null
+      const existing = index >= 0
+        ? store.reviews[index]
+        : null
       if (!existing || existing.updatedAt !== current.updatedAt || existing.status !== current.status)
         throw conflict()
 
@@ -363,7 +367,12 @@ export async function supersedeContractLegalReviews(
   currentVersionId: string,
   updatedAt: string,
 ) {
-  const supersedableStatuses: ContractLegalReview["status"][] = ["requested", "opened", "changes_requested", "approved"]
+  const supersedableStatuses: ContractLegalReview["status"][] = [
+    "requested",
+    "opened",
+    "changes_requested",
+    "approved"
+  ]
 
   if (!isSupabaseEnabled(event)) {
     return updateStore((store) => {

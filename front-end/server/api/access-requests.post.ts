@@ -75,7 +75,9 @@ export default defineEventHandler(async (event) => {
       notified = true
     }
     catch (error) {
-      notificationError = error instanceof Error ? error.message : "Notification delivery failed."
+      notificationError = error instanceof Error
+        ? error.message
+        : "Notification delivery failed."
     }
   }
 

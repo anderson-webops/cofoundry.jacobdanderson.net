@@ -43,7 +43,9 @@ function toTime(value?: string | null) {
     return null
 
   const time = new Date(value).getTime()
-  return Number.isFinite(time) ? time : null
+  return Number.isFinite(time)
+    ? time
+    : null
 }
 
 function hoursBetween(start?: string | null, end?: string | null) {
@@ -104,7 +106,9 @@ function requiredSignerIdsForContract(seed: WorkspaceSeed, contract: Contract) {
   if (!proposal)
     return []
 
-  return [...new Set([proposal.createdByUserId, proposal.recipientUserId])]
+  return [
+    ...new Set([proposal.createdByUserId, proposal.recipientUserId])
+  ]
 }
 
 function signedUserIdsForContract(seed: WorkspaceSeed, contract: Contract) {
@@ -137,8 +141,11 @@ function fullySignedAt(seed: WorkspaceSeed, contract: Contract) {
     return null
 
   const latestSignatureTime = Math.max(...signatures.map(signature => new Date(signature.signedAt).getTime()))
-  if (!Number.isFinite(latestSignatureTime))
-    return contract.status === "signed" ? contract.updatedAt : null
+  if (!Number.isFinite(latestSignatureTime)) {
+    return contract.status === "signed"
+      ? contract.updatedAt
+      : null
+  }
 
   return new Date(latestSignatureTime).toISOString()
 }
@@ -184,7 +191,9 @@ function buildBottlenecks(seed: WorkspaceSeed): RelationshipAnalyticsBottleneck[
           label: "Pending intros",
           severity: "medium" as const,
           count: pendingIntros,
-          summary: `${pendingIntros} intro request${pendingIntros === 1 ? "" : "s"} still need a response.`,
+          summary: `${pendingIntros} intro request${pendingIntros === 1
+            ? ""
+            : "s"} still need a response.`,
           action: "Drive members back to the inbox before adding more discovery volume.",
         }
       : null,
@@ -194,7 +203,9 @@ function buildBottlenecks(seed: WorkspaceSeed): RelationshipAnalyticsBottleneck[
           label: "Matches without trial sprints",
           severity: "low" as const,
           count: matchesWithoutTrials,
-          summary: `${matchesWithoutTrials} match${matchesWithoutTrials === 1 ? "" : "es"} have not been pressure-tested with a trial sprint.`,
+          summary: `${matchesWithoutTrials} match${matchesWithoutTrials === 1
+            ? ""
+            : "es"} have not been pressure-tested with a trial sprint.`,
           action: "Prompt matched members to define a short trial before negotiating long-form terms.",
         }
       : null,
@@ -204,7 +215,9 @@ function buildBottlenecks(seed: WorkspaceSeed): RelationshipAnalyticsBottleneck[
           label: "Matches without proposals",
           severity: "medium" as const,
           count: matchesWithoutProposals,
-          summary: `${matchesWithoutProposals} match${matchesWithoutProposals === 1 ? "" : "es"} have no structured proposal yet.`,
+          summary: `${matchesWithoutProposals} match${matchesWithoutProposals === 1
+            ? ""
+            : "es"} have no structured proposal yet.`,
           action: "Use relationship workspace nudges to convert active conversations into proposal drafts.",
         }
       : null,
@@ -214,7 +227,9 @@ function buildBottlenecks(seed: WorkspaceSeed): RelationshipAnalyticsBottleneck[
           label: "Proposals without agreement drafts",
           severity: "medium" as const,
           count: proposalsWithoutContracts,
-          summary: `${proposalsWithoutContracts} proposal${proposalsWithoutContracts === 1 ? "" : "s"} have not generated an agreement draft.`,
+          summary: `${proposalsWithoutContracts} proposal${proposalsWithoutContracts === 1
+            ? ""
+            : "s"} have not generated an agreement draft.`,
           action: "Keep proposal status, comments, and next actions visible until terms are ready for agreement review.",
         }
       : null,
@@ -224,7 +239,9 @@ function buildBottlenecks(seed: WorkspaceSeed): RelationshipAnalyticsBottleneck[
           label: "Contracts awaiting signatures",
           severity: "high" as const,
           count: contractsAwaitingSignatures,
-          summary: `${contractsAwaitingSignatures} agreement draft${contractsAwaitingSignatures === 1 ? "" : "s"} still need every required signature.`,
+          summary: `${contractsAwaitingSignatures} agreement draft${contractsAwaitingSignatures === 1
+            ? ""
+            : "s"} still need every required signature.`,
           action: "Prioritize signature reminders and unresolved agreement blockers in the inbox.",
         }
       : null,

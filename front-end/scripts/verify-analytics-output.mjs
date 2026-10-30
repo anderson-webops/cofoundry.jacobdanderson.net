@@ -20,7 +20,9 @@ function collectFiles(directory) {
     if (entry.isDirectory())
       return collectFiles(entryPath)
 
-    return readableExtensions.has(extname(entry.name)) ? [entryPath] : []
+    return readableExtensions.has(extname(entry.name))
+      ? [entryPath]
+      : []
   })
 }
 

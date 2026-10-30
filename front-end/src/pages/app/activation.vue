@@ -11,8 +11,12 @@ usePageSeo("Activation plan")
 
 const { authStore, profile, workspaceStore } = useCurrentMember()
 const currentUserId = computed(() => authStore.currentUser?.id || "")
-const activationPlan = computed(() => currentUserId.value ? buildActivationPlan(workspaceStore.data, currentUserId.value) : null)
-const readiness = computed(() => profile.value ? buildProfileReadiness(profile.value) : null)
+const activationPlan = computed(() => currentUserId.value
+  ? buildActivationPlan(workspaceStore.data, currentUserId.value)
+  : null)
+const readiness = computed(() => profile.value
+  ? buildProfileReadiness(profile.value)
+  : null)
 const openTrustItems = computed(() => readiness.value?.trustChecklist.filter(item => !item.complete) || [])
 const openProfileItems = computed(() => readiness.value?.checklist.filter(item => !item.complete) || [])
 </script>

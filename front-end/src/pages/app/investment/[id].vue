@@ -53,7 +53,9 @@ const tabs: Array<{ id: TabId, icon: string, label: string }> = [
   { id: "updates", icon: "i-carbon-report-data", label: "Updates" },
   { id: "audit", icon: "i-carbon-document-tasks", label: "Audit" },
 ]
-const activeTab = computed<TabId>(() => tabs.some(tab => tab.id === route.query.view) ? route.query.view as TabId : "overview")
+const activeTab = computed<TabId>(() => tabs.some(tab => tab.id === route.query.view)
+  ? route.query.view as TabId
+  : "overview")
 const editableApplication = computed(() => ["draft", "information_requested"].includes(workspace.value?.application.status || ""))
 const canSubmit = computed(() => {
   const application = workspace.value?.application
@@ -89,14 +91,68 @@ const readinessForm = reactive({
   notes: "",
   targetCloseAt: "",
 })
-const roundForm = reactive({ discount: "", instrument: "safe" as InvestmentInstrument, minimumInvestment: "", openedAt: "", targetAmount: "", targetCloseAt: "", title: "", useOfFunds: "", valuationCap: "" })
-const prospectForm = reactive({ email: "", expectedCheckSize: "", firm: "", kind: "fund" as InvestmentProspectKind, name: "", nextStep: "", nextStepAt: "", notes: "", source: "", status: "researching" as InvestmentProspectStatus, website: "" })
-const interactionForm = reactive({ nextStep: "", occurredAt: "", summary: "", type: "note" as InvestmentInteractionType })
-const dataRoomForm = reactive({ category: "pitch" as InvestmentDataRoomCategory, description: "", externalUrl: "", fileUploadId: null as string | null, shareWithProgram: false, title: "" })
-const applicationForm = reactive({ companySummary: "", deckUrl: "", fundraisingHistory: "", instrument: "safe" as InvestmentInstrument, reason: "", requestedAmount: "", teamSummary: "", traction: "", useOfFunds: "" })
-const termsForm = reactive({ authorizedToSubmit: false, informationAccurate: false, noFundingGuarantee: false, regulatedExecutionAcknowledged: false })
+const roundForm = reactive({
+  discount: "",
+  instrument: "safe" as InvestmentInstrument,
+  minimumInvestment: "",
+  openedAt: "",
+  targetAmount: "",
+  targetCloseAt: "",
+  title: "",
+  useOfFunds: "",
+  valuationCap: ""
+})
+const prospectForm = reactive({
+  email: "",
+  expectedCheckSize: "",
+  firm: "",
+  kind: "fund" as InvestmentProspectKind,
+  name: "",
+  nextStep: "",
+  nextStepAt: "",
+  notes: "",
+  source: "",
+  status: "researching" as InvestmentProspectStatus,
+  website: ""
+})
+const interactionForm = reactive({
+  nextStep: "",
+  occurredAt: "",
+  summary: "",
+  type: "note" as InvestmentInteractionType
+})
+const dataRoomForm = reactive({
+  category: "pitch" as InvestmentDataRoomCategory,
+  description: "",
+  externalUrl: "",
+  fileUploadId: null as string | null,
+  shareWithProgram: false,
+  title: ""
+})
+const applicationForm = reactive({
+  companySummary: "",
+  deckUrl: "",
+  fundraisingHistory: "",
+  instrument: "safe" as InvestmentInstrument,
+  reason: "",
+  requestedAmount: "",
+  teamSummary: "",
+  traction: "",
+  useOfFunds: ""
+})
+const termsForm = reactive({
+  authorizedToSubmit: false,
+  informationAccurate: false,
+  noFundingGuarantee: false,
+  regulatedExecutionAcknowledged: false
+})
 const responseForm = reactive({ evidenceDataRoomItemIds: [] as string[], response: "", status: "submitted" as "in_progress" | "submitted" })
-const updateForm = reactive({ body: "", metrics: "", shareWithProgram: false, title: "" })
+const updateForm = reactive({
+  body: "",
+  metrics: "",
+  shareWithProgram: false,
+  title: ""
+})
 const withdrawalReason = ref("")
 
 watch(workspace, (current) => {
@@ -131,21 +187,47 @@ function statusLabel(status: string) {
 }
 
 function statusTone(status: string) {
-  if (["accepted", "closed", "committed", "uploaded", "accepted"].includes(status))
+  if ([
+    "accepted",
+    "closed",
+    "committed",
+    "uploaded",
+    "accepted"
+  ].includes(status)) {
     return "success" as const
-  if (["declined", "information_requested", "withdrawn", "passed", "blocked"].includes(status))
+  }
+  if ([
+    "declined",
+    "information_requested",
+    "withdrawn",
+    "passed",
+    "blocked"
+  ].includes(status)) {
     return "warning" as const
-  if (["submitted", "under_review", "diligence", "committee_review", "open", "meeting"].includes(status))
+  }
+  if ([
+    "submitted",
+    "under_review",
+    "diligence",
+    "committee_review",
+    "open",
+    "meeting"
+  ].includes(status)) {
     return "accent" as const
+  }
   return "neutral" as const
 }
 
 function formatDate(value: string | null) {
-  return value ? new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(new Date(value)) : "Not set"
+  return value
+    ? new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(new Date(value))
+    : "Not set"
 }
 
 function fileUpload(uploadId: string | null) {
-  return uploadId ? investmentStore.snapshot.fileUploads.find(item => item.id === uploadId) || null : null
+  return uploadId
+    ? investmentStore.snapshot.fileUploads.find(item => item.id === uploadId) || null
+    : null
 }
 
 function fileIsDownloadable(uploadId: string | null) {
@@ -154,7 +236,9 @@ function fileIsDownloadable(uploadId: string | null) {
 }
 
 function toIsoDate(value: string) {
-  return value ? new Date(`${value}T17:00:00`).toISOString() : null
+  return value
+    ? new Date(`${value}T17:00:00`).toISOString()
+    : null
 }
 
 function errorMessage(error: unknown) {
@@ -163,7 +247,14 @@ function errorMessage(error: unknown) {
 }
 
 async function selectTab(tab: TabId) {
-  await router.replace({ query: { ...route.query, view: tab === "overview" ? undefined : tab } })
+  await router.replace({
+    query: {
+      ...route.query,
+      view: tab === "overview"
+        ? undefined
+        : tab
+    }
+  })
 }
 
 async function mutate(mutation: InvestmentApplicantMutation, message: string) {
@@ -177,7 +268,11 @@ async function mutate(mutation: InvestmentApplicantMutation, message: string) {
   }
   catch (error) {
     await investmentStore.load(true).catch(() => undefined)
-    toastStore.push({ message: errorMessage(error), title: "Change not saved", tone: "danger" })
+    toastStore.push({
+      message: errorMessage(error),
+      title: "Change not saved",
+      tone: "danger"
+    })
     return null
   }
   finally {
@@ -201,7 +296,9 @@ async function updateOrganization(event: Event) {
   await mutate({
     action: "update_workspace",
     organizationId: (event.target as HTMLSelectElement).value || null,
-    status: workspace.value.status === "closed" ? "paused" : workspace.value.status,
+    status: workspace.value.status === "closed"
+      ? "paused"
+      : workspace.value.status,
   }, "Organization link updated.")
 }
 
@@ -238,7 +335,17 @@ async function createRound() {
   }, `${roundForm.title} created.`)) {
     return
   }
-  Object.assign(roundForm, { discount: "", instrument: "safe", minimumInvestment: "", openedAt: "", targetAmount: "", targetCloseAt: "", title: "", useOfFunds: "", valuationCap: "" })
+  Object.assign(roundForm, {
+    discount: "",
+    instrument: "safe",
+    minimumInvestment: "",
+    openedAt: "",
+    targetAmount: "",
+    targetCloseAt: "",
+    title: "",
+    useOfFunds: "",
+    valuationCap: ""
+  })
   dialog.value = ""
 }
 
@@ -263,9 +370,26 @@ async function updateRoundStatus(roundId: string, event: Event) {
 }
 
 async function createProspect() {
-  if (!await mutate({ action: "create_prospect", ...prospectForm, nextStepAt: toIsoDate(prospectForm.nextStepAt) }, `${prospectForm.name || prospectForm.firm} added to your private pipeline.`))
+  if (!await mutate({
+    action: "create_prospect",
+    ...prospectForm,
+    nextStepAt: toIsoDate(prospectForm.nextStepAt)
+  }, `${prospectForm.name || prospectForm.firm} added to your private pipeline.`)) {
     return
-  Object.assign(prospectForm, { email: "", expectedCheckSize: "", firm: "", kind: "fund", name: "", nextStep: "", nextStepAt: "", notes: "", source: "", status: "researching", website: "" })
+  }
+  Object.assign(prospectForm, {
+    email: "",
+    expectedCheckSize: "",
+    firm: "",
+    kind: "fund",
+    name: "",
+    nextStep: "",
+    nextStepAt: "",
+    notes: "",
+    source: "",
+    status: "researching",
+    website: ""
+  })
   dialog.value = ""
 }
 
@@ -309,7 +433,12 @@ async function recordInteraction() {
   }, "Private interaction recorded.")) {
     return
   }
-  Object.assign(interactionForm, { nextStep: "", occurredAt: "", summary: "", type: "note" })
+  Object.assign(interactionForm, {
+    nextStep: "",
+    occurredAt: "",
+    summary: "",
+    type: "note"
+  })
   selectedProspectId.value = ""
   dialog.value = ""
 }
@@ -318,7 +447,13 @@ function inferMimeType(file: File) {
   if (file.type)
     return file.type
   const extension = file.name.split(".").pop()?.toLowerCase()
-  return extension === "pdf" ? "application/pdf" : extension === "docx" ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" : extension === "txt" ? "text/plain" : ""
+  return extension === "pdf"
+    ? "application/pdf"
+    : extension === "docx"
+      ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      : extension === "txt"
+        ? "text/plain"
+        : ""
 }
 
 async function uploadDataRoomFile(event: Event) {
@@ -346,7 +481,12 @@ async function uploadDataRoomFile(event: Event) {
       throw new Error("Upload URL was not created.")
     const response = await fetch(policy.signedUploadUrl, {
       body: file,
-      headers: { "content-type": mimeType, ...(policy.uploadToken ? { "x-cofoundry-upload-token": policy.uploadToken } : {}) },
+      headers: {
+        "content-type": mimeType,
+        ...(policy.uploadToken
+          ? { "x-cofoundry-upload-token": policy.uploadToken }
+          : {})
+      },
       method: policy.method,
     })
     if (!response.ok)
@@ -368,7 +508,14 @@ async function uploadDataRoomFile(event: Event) {
 async function addDataRoomItem() {
   if (!await mutate({ action: "add_data_room_item", ...dataRoomForm }, `${dataRoomForm.title} added to the data room.`))
     return
-  Object.assign(dataRoomForm, { category: "pitch", description: "", externalUrl: "", fileUploadId: null, shareWithProgram: false, title: "" })
+  Object.assign(dataRoomForm, {
+    category: "pitch",
+    description: "",
+    externalUrl: "",
+    fileUploadId: null,
+    shareWithProgram: false,
+    title: ""
+  })
   uploadNotice.value = ""
   dialog.value = ""
   await investmentStore.load(true)
@@ -394,7 +541,10 @@ async function saveApplication() {
 }
 
 async function acceptTerms() {
-  await mutate({ action: "accept_supplemental_terms", attestations: { ...termsForm } }, `Supplemental terms ${investmentStore.snapshot.supplementalTermsVersion} accepted.`)
+  await mutate({
+    action: "accept_supplemental_terms",
+    attestations: { ...termsForm }
+  }, `Supplemental terms ${investmentStore.snapshot.supplementalTermsVersion} accepted.`)
 }
 
 async function submitApplication() {
@@ -448,7 +598,12 @@ async function respondToDiligence() {
 async function publishUpdate() {
   if (!await mutate({ action: "publish_founder_update", ...updateForm }, `${updateForm.title} published.`))
     return
-  Object.assign(updateForm, { body: "", metrics: "", shareWithProgram: false, title: "" })
+  Object.assign(updateForm, {
+    body: "",
+    metrics: "",
+    shareWithProgram: false,
+    title: ""
+  })
   dialog.value = ""
 }
 
@@ -456,7 +611,14 @@ async function toggleUpdateSharing(updateId: string, event: Event) {
   const update = workspace.value?.founderUpdates.find(item => item.id === updateId)
   if (!update)
     return
-  await mutate({ action: "update_founder_update", body: update.body, founderUpdateId: update.id, metrics: update.metrics, shareWithProgram: (event.target as HTMLInputElement).checked, title: update.title }, `${update.title} sharing updated.`)
+  await mutate({
+    action: "update_founder_update",
+    body: update.body,
+    founderUpdateId: update.id,
+    metrics: update.metrics,
+    shareWithProgram: (event.target as HTMLInputElement).checked,
+    title: update.title
+  }, `${update.title} sharing updated.`)
 }
 </script>
 

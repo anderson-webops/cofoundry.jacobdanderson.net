@@ -14,7 +14,9 @@ const { authStore, workspaceStore } = useCurrentMember()
 const currentUserId = computed(() => authStore.currentUser?.id || "")
 const digestPending = ref(false)
 
-const inboxSnapshot = computed(() => currentUserId.value ? buildInboxSnapshot(workspaceStore.data, currentUserId.value) : null)
+const inboxSnapshot = computed(() => currentUserId.value
+  ? buildInboxSnapshot(workspaceStore.data, currentUserId.value)
+  : null)
 const hasInboxActions = computed(() => Boolean(inboxSnapshot.value?.actions.length))
 
 async function markNotificationRead(notificationId: string) {
@@ -45,9 +47,13 @@ async function sendDigest() {
     }
 
     toastStore.push({
-      title: response.delivered ? "Digest sent" : response.configured ? "Digest could not be sent" : "Email not configured",
+      title: response.delivered
+        ? "Digest sent"
+        : response.configured ? "Digest could not be sent" : "Email not configured",
       message: response.delivered
-        ? `${response.unreadCount} unread workspace item${response.unreadCount === 1 ? "" : "s"} sent to your account email.`
+        ? `${response.unreadCount} unread workspace item${response.unreadCount === 1
+          ? ""
+          : "s"} sent to your account email.`
         : response.configured
           ? "The server accepted the request, but the mail provider rejected delivery."
           : "The server will record digest attempts once SMTP or sendmail is configured.",

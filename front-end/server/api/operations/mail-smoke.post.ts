@@ -36,7 +36,9 @@ export default defineEventHandler(async (event) => {
   const metadata = {
     ...payload.metadata,
     dryRun: payload.dryRun,
-    mode: isSupabaseEnabled(event) ? "supabase" : "mock",
+    mode: isSupabaseEnabled(event)
+      ? "supabase"
+      : "mock",
     source: "operations-mail-smoke",
   }
   const body = [
@@ -130,7 +132,9 @@ export default defineEventHandler(async (event) => {
     }
   }
   catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Mail smoke delivery failed."
+    const errorMessage = error instanceof Error
+      ? error.message
+      : "Mail smoke delivery failed."
 
     await recordNotificationDelivery(event, session, {
       bodyPreview: body,

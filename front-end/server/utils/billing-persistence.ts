@@ -25,7 +25,9 @@ function getStripeId(value: string | { id: string } | null | undefined) {
   if (!value)
     return null
 
-  return typeof value === "string" ? value : value.id
+  return typeof value === "string"
+    ? value
+    : value.id
 }
 
 export function toSubscriptionStatus(status: Stripe.Subscription.Status): SubscriptionStatus {
@@ -62,7 +64,9 @@ function getFirstSubscriptionItem(subscription: Stripe.Subscription) {
 
 function getPeriodEnd(item: Stripe.SubscriptionItem | undefined) {
   const periodEnd = item?.current_period_end
-  return typeof periodEnd === "number" ? new Date(periodEnd * 1000).toISOString() : null
+  return typeof periodEnd === "number"
+    ? new Date(periodEnd * 1000).toISOString()
+    : null
 }
 
 export function resolveStripePlanFromPriceId(event: H3Event, priceId?: string | null): SubscriptionPlan | null {
@@ -111,7 +115,9 @@ function buildMockSubscription(current: Subscription | undefined, session: Sessi
     plan,
     status: paid ? "active" : "inactive",
     billingCycle,
-    renewsAt: paid ? addBillingPeriod(now, billingCycle) : null,
+    renewsAt: paid
+      ? addBillingPeriod(now, billingCycle)
+      : null,
     cancelAtPeriodEnd: false,
     ...subscriptionCapabilities(plan),
     stripeCheckoutSessionId: checkoutSessionId || current?.stripeCheckoutSessionId || null,
@@ -375,7 +381,9 @@ export async function syncStripeSubscription(
       user_id: userId,
       plan,
       status,
-      billing_cycle: item?.price.recurring?.interval === "year" ? "annual" : "monthly",
+      billing_cycle: item?.price.recurring?.interval === "year"
+        ? "annual"
+        : "monthly",
       renews_at: currentPeriodEnd,
       cancel_at_period_end: subscription.cancel_at_period_end,
       stripe_customer_id: customerId,

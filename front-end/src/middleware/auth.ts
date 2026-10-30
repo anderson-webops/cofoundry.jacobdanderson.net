@@ -6,6 +6,8 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   if (session.role === "investor_admin" && to.path.startsWith("/app")) {
     const runtimeConfig = useRuntimeConfig()
-    return navigateTo(runtimeConfig.public.featureInvestmentModule === true ? "/investment-review" : "/")
+    return navigateTo(runtimeConfig.public.featureInvestmentModule === true
+      ? "/investment-review"
+      : "/")
   }
 })

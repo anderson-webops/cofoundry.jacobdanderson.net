@@ -8,7 +8,9 @@ export default defineEventHandler((event) => {
 
   return {
     providers: isSupabaseEnabled(event)
-      ? [...readConfiguredOAuthProviders(process.env)]
+      ? [
+          ...readConfiguredOAuthProviders(process.env)
+        ]
       : [],
   }
 })

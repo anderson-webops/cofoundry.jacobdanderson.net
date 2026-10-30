@@ -14,7 +14,9 @@ function createJsonFetch(handler?: (_request: CapturedRequest) => unknown | Resp
   const requests: CapturedRequest[] = []
   const fetchImpl: typeof fetch = async (input, init = {}) => {
     const request: CapturedRequest = {
-      body: init.body ? JSON.parse(String(init.body)) : null,
+      body: init.body
+        ? JSON.parse(String(init.body))
+        : null,
       headers: new Headers(init.headers),
       method: init.method || "GET",
       url: String(input),
@@ -108,10 +110,12 @@ test("operations backup worker reports running and succeeded lifecycle rows", as
     },
   })
 
-  assert.deepEqual(commands, [{
-    args: ["backup", "/srv/cofoundry"],
-    executable: "restic",
-  }])
+  assert.deepEqual(commands, [
+    {
+      args: ["backup", "/srv/cofoundry"],
+      executable: "restic",
+    }
+  ])
   assert.equal(requests.length, 2)
   assert.equal(requests[0].url, "https://cofoundry.example.com/api/operations/backup-runs")
   assert.equal(requests[0].headers.get("authorization"), "Bearer test-worker-token-at-least-32-characters")
@@ -131,7 +135,13 @@ test("operations backup worker reports running and succeeded lifecycle rows", as
 test("operations digest worker sends safe dry-run payloads", async () => {
   const { fetchImpl, requests } = createJsonFetch(() => ({ dryRun: true, processed: 2 }))
 
-  await runOperationsWorker(["digest", "--dry-run", "--max-users", "25", "--include-read"], {
+  await runOperationsWorker([
+    "digest",
+    "--dry-run",
+    "--max-users",
+    "25",
+    "--include-read"
+  ], {
     env: workerEnv,
     fetch: fetchImpl,
     log: () => {},
@@ -209,7 +219,10 @@ test("operations lifecycle notification worker sends event-specific payloads", a
 })
 
 test("operations email suppression worker sends provider suppression payloads", async () => {
-  const { fetchImpl, requests } = createJsonFetch(() => ({ mode: "mock", suppression: { id: "suppression_1" } }))
+  const { fetchImpl, requests } = createJsonFetch(() => ({
+    mode: "mock",
+    suppression: { id: "suppression_1" }
+  }))
 
   await runOperationsWorker([
     "email-suppression",
@@ -247,7 +260,10 @@ test("operations email suppression worker sends provider suppression payloads", 
 })
 
 test("operations contract envelope worker sends provider envelope payloads", async () => {
-  const { fetchImpl, requests } = createJsonFetch(() => ({ envelopeEvent: { id: "envelope_event_1" }, mode: "mock" }))
+  const { fetchImpl, requests } = createJsonFetch(() => ({
+    envelopeEvent: { id: "envelope_event_1" },
+    mode: "mock"
+  }))
 
   await runOperationsWorker([
     "contract-envelope",
@@ -299,7 +315,10 @@ test("operations contract envelope worker sends provider envelope payloads", asy
 })
 
 test("operations trust verification worker sends provider verification payloads", async () => {
-  const { fetchImpl, requests } = createJsonFetch(() => ({ mode: "mock", verificationEvent: { id: "trust_event_1" } }))
+  const { fetchImpl, requests } = createJsonFetch(() => ({
+    mode: "mock",
+    verificationEvent: { id: "trust_event_1" }
+  }))
 
   await runOperationsWorker([
     "trust-verification",
@@ -510,23 +529,25 @@ test("operations realtime smoke worker emits readiness-recognized fanout evidenc
     createdAt: "2026-06-13T12:15:00.000Z",
     eventType: "workspace-change",
     idScope: "operations.realtime_smoke:realtime-smoke-test",
-    messages: [{
-      message: {
-        data: JSON.stringify({
-          createdAt: "2026-06-13T12:15:00.000Z",
-          metadata: {
-            purpose: "realtime-fanout-smoke",
-            runbook: "test",
-          },
-          source: "operations.realtime_smoke",
-          userId: "user_ava",
-        }),
-        event: "workspace-change",
-        id: "2026-06-13T12:15:00.000Z:user_ava:operations.realtime_smoke:realtime-smoke-test",
-        retry: 5000,
-      },
-      userId: "user_ava",
-    }],
+    messages: [
+      {
+        message: {
+          data: JSON.stringify({
+            createdAt: "2026-06-13T12:15:00.000Z",
+            metadata: {
+              purpose: "realtime-fanout-smoke",
+              runbook: "test",
+            },
+            source: "operations.realtime_smoke",
+            userId: "user_ava",
+          }),
+          event: "workspace-change",
+          id: "2026-06-13T12:15:00.000Z:user_ava:operations.realtime_smoke:realtime-smoke-test",
+          retry: 5000,
+        },
+        userId: "user_ava",
+      }
+    ],
     sourceInstanceId: "operations-worker",
     version: 1,
   })
@@ -675,12 +696,14 @@ test("operations scanner downloads local app URLs with worker auth and blocks fl
     if (request.url.endsWith("/api/operations/file-scans/pending?limit=5")) {
       return {
         mode: "mock",
-        pendingScans: [{
-          id: "upload_1",
-          originalFilename: "evidence.txt",
-          signedDownloadUrl: "https://cofoundry.example.com/api/operations/file-scans/upload_1/download",
-          sizeBytes: 6,
-        }],
+        pendingScans: [
+          {
+            id: "upload_1",
+            originalFilename: "evidence.txt",
+            signedDownloadUrl: "https://cofoundry.example.com/api/operations/file-scans/upload_1/download",
+            sizeBytes: 6,
+          }
+        ],
       }
     }
 
@@ -693,7 +716,13 @@ test("operations scanner downloads local app URLs with worker auth and blocks fl
     return { ok: true }
   })
 
-  await runOperationsWorker(["scan", "--limit", "5", "--scanner-command", "scanner --path {file} --id {id}"], {
+  await runOperationsWorker([
+    "scan",
+    "--limit",
+    "5",
+    "--scanner-command",
+    "scanner --path {file} --id {id}"
+  ], {
     env: workerEnv,
     fetch: fetchImpl,
     log: () => {},
@@ -724,19 +753,27 @@ test("operations scanner rejects unapproved file download origins", async () => 
     if (request.url.endsWith("/api/operations/file-scans/pending?limit=5")) {
       return {
         mode: "supabase",
-        pendingScans: [{
-          id: "upload_untrusted",
-          originalFilename: "evidence.txt",
-          signedDownloadUrl: "https://untrusted.example.net/private/evidence.txt",
-          sizeBytes: 6,
-        }],
+        pendingScans: [
+          {
+            id: "upload_untrusted",
+            originalFilename: "evidence.txt",
+            signedDownloadUrl: "https://untrusted.example.net/private/evidence.txt",
+            sizeBytes: 6,
+          }
+        ],
       }
     }
 
     return { ok: true }
   })
 
-  await runOperationsWorker(["scan", "--limit", "5", "--scanner-command", "scanner {file}"], {
+  await runOperationsWorker([
+    "scan",
+    "--limit",
+    "5",
+    "--scanner-command",
+    "scanner {file}"
+  ], {
     env: {
       ...workerEnv,
       NUXT_PUBLIC_SUPABASE_URL: "https://project-ref.supabase.co",
@@ -755,7 +792,15 @@ test("operations scanner rejects unapproved file download origins", async () => 
 test("operations restore drill worker reports start and success events", async () => {
   const { fetchImpl, requests } = createJsonFetch()
 
-  await runOperationsWorker(["restore-drill", "--id", "restore-2026-06", "--metadata", "scope=mock-store", "--", "npm run smoke"], {
+  await runOperationsWorker([
+    "restore-drill",
+    "--id",
+    "restore-2026-06",
+    "--metadata",
+    "scope=mock-store",
+    "--",
+    "npm run smoke"
+  ], {
     env: workerEnv,
     fetch: fetchImpl,
     log: () => {},
@@ -775,7 +820,12 @@ test("operations restore drill worker reports start and success events", async (
 
 test("executable command parsing preserves quoted argv without invoking a shell", () => {
   assert.deepEqual(parseExecutableCommand("scanner --path \"Bob's file.txt\" --literal '$(touch nope)'"), {
-    args: ["--path", "Bob's file.txt", "--literal", "$(touch nope)"],
+    args: [
+      "--path",
+      "Bob's file.txt",
+      "--literal",
+      "$(touch nope)"
+    ],
     executable: "scanner",
   })
   assert.throws(() => parseExecutableCommand("scanner 'unterminated"), /unterminated quote or escape/)

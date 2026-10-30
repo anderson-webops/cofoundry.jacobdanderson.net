@@ -16,7 +16,9 @@ const backendServerStates = new WeakMap<Server, BackendServerState>()
 
 export function resolveBackendPort() {
   const configuredPort = Number(process.env.BACKEND_PORT)
-  return Number.isInteger(configuredPort) && configuredPort > 0 && configuredPort <= 65_535 ? configuredPort : 3008
+  return Number.isInteger(configuredPort) && configuredPort > 0 && configuredPort <= 65_535
+    ? configuredPort
+    : 3008
 }
 
 export function resolveBackendHost(env: Record<string, string | undefined> = process.env) {
@@ -70,7 +72,9 @@ function readMetadataToken(request: IncomingMessage) {
     return authorization.slice(bearerPrefix.length).trim()
 
   const alternateHeader = request.headers["x-cofoundry-operations-token"]
-  return (Array.isArray(alternateHeader) ? alternateHeader[0] : alternateHeader)?.trim() || ""
+  return (Array.isArray(alternateHeader)
+    ? alternateHeader[0]
+    : alternateHeader)?.trim() || ""
 }
 
 function isMetadataAuthorized(request: IncomingMessage) {
@@ -99,7 +103,12 @@ export function handleRequest(request: IncomingMessage, response: ServerResponse
   }
   const method = request.method || "GET"
   const pathname = new URL(request.url || "/", "http://127.0.0.1").pathname
-  const knownPath = ["/health", "/healthz", "/readyz", "/metadata"].includes(pathname)
+  const knownPath = [
+    "/health",
+    "/healthz",
+    "/readyz",
+    "/metadata"
+  ].includes(pathname)
 
   if (knownPath && method !== "GET" && method !== "HEAD") {
     response.writeHead(405, {
@@ -118,19 +127,25 @@ export function handleRequest(request: IncomingMessage, response: ServerResponse
       deployment: readBackendDeploymentMetadata(process.env),
       now: new Date().toISOString(),
     })
-    response.end(method === "HEAD" ? undefined : body)
+    response.end(method === "HEAD"
+      ? undefined
+      : body)
     return
   }
 
   if (pathname === "/healthz") {
     response.writeHead(200, headers)
-    response.end(method === "HEAD" ? undefined : JSON.stringify({ ok: true }))
+    response.end(method === "HEAD"
+      ? undefined
+      : JSON.stringify({ ok: true }))
     return
   }
 
   if (pathname === "/readyz") {
     response.writeHead(ready ? 200 : 503, headers)
-    response.end(method === "HEAD" ? undefined : JSON.stringify({ ok: ready }))
+    response.end(method === "HEAD"
+      ? undefined
+      : JSON.stringify({ ok: ready }))
     return
   }
 
@@ -140,12 +155,16 @@ export function handleRequest(request: IncomingMessage, response: ServerResponse
         ...headers,
         "www-authenticate": "Bearer",
       })
-      response.end(method === "HEAD" ? undefined : JSON.stringify({ error: "Unauthorized" }))
+      response.end(method === "HEAD"
+        ? undefined
+        : JSON.stringify({ error: "Unauthorized" }))
       return
     }
 
     response.writeHead(200, headers)
-    response.end(method === "HEAD" ? undefined : JSON.stringify(buildMetadataPayload()))
+    response.end(method === "HEAD"
+      ? undefined
+      : JSON.stringify(buildMetadataPayload()))
     return
   }
 
@@ -223,7 +242,9 @@ export async function startBackendServer(port = resolveBackendPort(), host = res
   return server
 }
 
-const isMainModule = process.argv[1] ? resolve(process.argv[1]) === fileURLToPath(import.meta.url) : false
+const isMainModule = process.argv[1]
+  ? resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+  : false
 
 if (isMainModule) {
   startBackendServer()

@@ -32,7 +32,9 @@ function isInvestorAdmin(user: AdminPostureUser) {
 
 function actionTime(action: AdminAction) {
   const time = new Date(action.createdAt).getTime()
-  return Number.isFinite(time) ? time : 0
+  return Number.isFinite(time)
+    ? time
+    : 0
 }
 
 function indicatesAdminBootstrap(action: AdminAction, activeAdminIds: Set<string>) {

@@ -10,7 +10,10 @@ const stageHubs = directory.stageHubs
 const { buildAccessRequestPath, policy } = useProductAccess()
 const directoryAccessCta = computed(() => policy.value.accountsEnabled
   ? { label: "Create your profile", to: "/auth/sign-up" }
-  : { label: "Request access", to: buildAccessRequestPath("find-cofounder", "access") })
+  : {
+      label: "Request access",
+      to: buildAccessRequestPath("find-cofounder", "access")
+    })
 
 usePageSeo(
   "Find a cofounder",

@@ -80,16 +80,22 @@ export async function persistAdminUserSecurityAction(event: H3Event, input: {
     p_action_id: input.action.id,
     p_actor_user_id: input.action.adminUserId,
     p_created_at: input.action.createdAt,
-    p_new_role: input.mutation.kind === "change_role" ? input.mutation.role : null,
+    p_new_role: input.mutation.kind === "change_role"
+      ? input.mutation.role
+      : null,
     p_notes: input.action.notes,
     p_operation: input.mutation.kind,
-    p_status_action: input.mutation.kind === "change_status" ? input.mutation.action : null,
+    p_status_action: input.mutation.kind === "change_status"
+      ? input.mutation.action
+      : null,
     p_target_user_id: input.action.targetId,
   })
 
   if (error) {
     throw createError({
-      statusCode: error.message.includes("not found") ? 404 : 409,
+      statusCode: error.message.includes("not found")
+        ? 404
+        : 409,
       statusMessage: error.message,
     })
   }
@@ -131,7 +137,9 @@ export async function persistAdminAction(event: H3Event, action: AdminAction) {
 
   if (error) {
     throw createError({
-      statusCode: error.message.includes("active full admin") ? 403 : 400,
+      statusCode: error.message.includes("active full admin")
+        ? 403
+        : 400,
       statusMessage: error.message.includes("active full admin")
         ? "An active full admin account is required for this action."
         : "The queue action could not be recorded.",
@@ -147,7 +155,12 @@ export async function listPersistedAdminActions(event: H3Event) {
       listLocalOperationsAdminActions(),
       listLocalPrivacyAdminActions(),
     ])
-    return [...store.actions, ...accessActions, ...operationsActions, ...privacyActions]
+    return [
+      ...store.actions,
+      ...accessActions,
+      ...operationsActions,
+      ...privacyActions
+    ]
       .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
       .slice(0, 500)
   }
@@ -218,7 +231,9 @@ export async function persistAdminReportStatusAction(event: H3Event, input: {
   if (error) {
     const stale = error.message.includes("changed after")
     throw createError({
-      statusCode: error.message.includes("not found") ? 404 : stale ? 409 : 400,
+      statusCode: error.message.includes("not found")
+        ? 404
+        : stale ? 409 : 400,
       statusMessage: stale
         ? "The report changed after this review began. Refresh and review the current state."
         : error.message.includes("not found")
@@ -319,7 +334,9 @@ export async function persistAdminPrivacyRequestStatusAction(event: H3Event, inp
   if (error) {
     const stale = error.message.includes("changed after")
     throw createError({
-      statusCode: error.message.includes("not found") ? 404 : stale ? 409 : 400,
+      statusCode: error.message.includes("not found")
+        ? 404
+        : stale ? 409 : 400,
       statusMessage: stale
         ? "The privacy request changed after this review began. Refresh and review the current state."
         : error.message.includes("not found")

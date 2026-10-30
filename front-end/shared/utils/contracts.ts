@@ -13,7 +13,9 @@ export function buildContractVersionFromProposal(
     contractId,
     versionNumber,
     parties: partyNames,
-    roleTitle: `${proposalVersion.roleTitle} ${proposalVersion.relationshipType === "advisor" ? "Advisor" : "Collaboration"} Agreement`,
+    roleTitle: `${proposalVersion.roleTitle} ${proposalVersion.relationshipType === "advisor"
+      ? "Advisor"
+      : "Collaboration"} Agreement`,
     scope: `${proposalVersion.responsibilities.join(" ")} Trial scope: ${proposalVersion.trialScope}`,
     timeCommitment: `Expected weekly commitment: ${proposalVersion.weeklyTimeCommitment} hours beginning ${proposalVersion.startDate}. Full-time trigger: ${proposalVersion.fullTimeTrigger}`,
     compensation: proposalVersion.cashCompensation,

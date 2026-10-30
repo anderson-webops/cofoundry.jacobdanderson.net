@@ -13,7 +13,13 @@ const view = ref<"active" | "mine" | "completed">("active")
 
 await reviewStore.load()
 
-const activeStatuses = new Set(["submitted", "under_review", "information_requested", "diligence", "committee_review"])
+const activeStatuses = new Set([
+  "submitted",
+  "under_review",
+  "information_requested",
+  "diligence",
+  "committee_review"
+])
 const completedStatuses = new Set(["accepted", "declined", "closed"])
 const cases = computed(() => reviewStore.snapshot.workspaces.filter((workspace) => {
   const matchesQuery = !query.value.trim()

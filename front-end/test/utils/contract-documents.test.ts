@@ -36,15 +36,17 @@ describe("contract document helpers", () => {
       contract: contract!,
       documentText,
       generatedAt: "2026-06-13T12:00:00.000Z",
-      providerEvidence: [{
-        completedPdfFileUploadId: "upload_completed_pdf",
-        completedPdfSha256: "d".repeat(64),
-        occurredAt: "2026-06-13T12:05:00.000Z",
-        provider: "docusign",
-        providerEnvelopeId: "envelope_123",
-        signedByUserIds: ["user_olivia"],
-        status: "completed",
-      }],
+      providerEvidence: [
+        {
+          completedPdfFileUploadId: "upload_completed_pdf",
+          completedPdfSha256: "d".repeat(64),
+          occurredAt: "2026-06-13T12:05:00.000Z",
+          provider: "docusign",
+          providerEnvelopeId: "envelope_123",
+          signedByUserIds: ["user_olivia"],
+          status: "completed",
+        }
+      ],
       seed: workspaceSeed,
       signatures,
       version: version!,

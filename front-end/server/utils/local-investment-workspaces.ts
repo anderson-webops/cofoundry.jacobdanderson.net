@@ -45,7 +45,9 @@ async function readStore() {
   return {
     ...emptyStore(),
     ...parsed,
-    documents: Array.isArray(parsed.documents) ? parsed.documents : [],
+    documents: Array.isArray(parsed.documents)
+      ? parsed.documents
+      : [],
   } as LocalInvestmentWorkspaceStore
 }
 
@@ -72,12 +74,16 @@ export async function listLocalInvestmentWorkspaceDocuments() {
 
 export async function getLocalInvestmentWorkspaceDocument(workspaceId: string) {
   const document = (await readStore()).documents.find(item => item.id === workspaceId)
-  return document ? cloneValue(document) : null
+  return document
+    ? cloneValue(document)
+    : null
 }
 
 export async function getLocalInvestmentWorkspaceDocumentByApplicationId(applicationId: string) {
   const document = (await readStore()).documents.find(item => item.application.id === applicationId)
-  return document ? cloneValue(document) : null
+  return document
+    ? cloneValue(document)
+    : null
 }
 
 export async function createLocalInvestmentWorkspaceDocument(document: InvestmentWorkspaceDocument) {

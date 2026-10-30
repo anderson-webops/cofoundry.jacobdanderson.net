@@ -79,8 +79,12 @@ describe("validation schemas", () => {
   })
 
   it("bounds public email preference tokens", () => {
-    expect(emailPreferenceApplySchema.safeParse({ token: "x".repeat(20) }).success).toBe(true)
-    expect(emailPreferenceApplySchema.safeParse({ token: "x".repeat(4097) }).success).toBe(false)
+    expect(emailPreferenceApplySchema.safeParse({
+      token: "x".repeat(20)
+    }).success).toBe(true)
+    expect(emailPreferenceApplySchema.safeParse({
+      token: "x".repeat(4097)
+    }).success).toBe(false)
   })
 
   it("strictly validates OAuth and typing requests", () => {

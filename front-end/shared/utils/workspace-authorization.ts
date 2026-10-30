@@ -175,7 +175,9 @@ export function projectWorkspaceForSession(seed: WorkspaceSeed, session: Session
       .filter(contract => contractIds.has(contract.id))
       .flatMap((contract) => {
         const proposal = source.proposals.find(item => item.id === contract.proposalId)
-        return proposal ? [proposal.createdByUserId, proposal.recipientUserId] : []
+        return proposal
+          ? [proposal.createdByUserId, proposal.recipientUserId]
+          : []
       }),
   )
   const canRevealContact = (profileOwnerId: string) => {
@@ -209,7 +211,9 @@ export function projectWorkspaceForSession(seed: WorkspaceSeed, session: Session
     return Boolean(ownerProfile && ownerProfile.privacy.opportunityVisibility !== "private")
   }).map(opportunity => ({
     ...opportunity,
-    riskFlags: opportunity.ownerUserId === userId ? opportunity.riskFlags : [],
+    riskFlags: opportunity.ownerUserId === userId
+      ? opportunity.riskFlags
+      : [],
   }))
   const visibleOpportunityIds = new Set(visibleOpportunities.map(opportunity => opportunity.id))
   const visibleUserIds = new Set([
@@ -228,7 +232,9 @@ export function projectWorkspaceForSession(seed: WorkspaceSeed, session: Session
     ...source,
     users: source.users
       .filter(user => visibleUserIds.has(user.id))
-      .map(user => user.id === userId ? user : redactUser(user, canRevealContact(user.id))),
+      .map(user => user.id === userId
+        ? user
+        : redactUser(user, canRevealContact(user.id))),
     profiles: visibleProfiles.map(profile =>
       profile.userId === userId
         ? profile

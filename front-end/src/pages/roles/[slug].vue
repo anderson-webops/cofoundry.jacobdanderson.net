@@ -16,7 +16,10 @@ const relatedStages = pickRelatedHubEntries(directory.stageHubs, "", 3)
 const { buildAccessRequestPath, policy } = useProductAccess()
 const roleHubCta = computed(() => policy.value.accountsEnabled
   ? { label: "Create your profile", to: "/auth/sign-up" }
-  : { label: "Request access", to: buildAccessRequestPath(`role-hub-${hub.slug}`, "access") })
+  : {
+      label: "Request access",
+      to: buildAccessRequestPath(`role-hub-${hub.slug}`, "access")
+    })
 
 usePageSeo(`${hub.label} searches`, hub.description, {
   canonicalPath: `/roles/${hub.slug}`,
