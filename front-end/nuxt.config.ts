@@ -114,7 +114,7 @@ export default defineNuxtConfig({
   ],
 
   devtools: {
-    enabled: !isProductionLike,
+    enabled: !isProductionLike && process.env.NUXT_DEVTOOLS_ENABLED !== "false",
   },
 
   app: {

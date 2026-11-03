@@ -216,7 +216,6 @@ jobs:
           COFOUNDRY_COMMIT_SHA: ${{ github.sha }}
           COFOUNDRY_DEPLOYED_AT: "2026-01-01T00:00:00.000Z"
           COFOUNDRY_OPERATIONS_TOKEN: synthetic-ci-build-operations-token-0001
-          COFOUNDRY_RELEASE: ci
           NODE_ENV: production
           NUXT_PUBLIC_APP_URL: https://cofoundry.example.com
           NUXT_PUBLIC_BACKEND_MODE: mock

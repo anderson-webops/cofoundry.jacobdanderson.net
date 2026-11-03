@@ -15,7 +15,7 @@ import tarfile
 
 assert os.geteuid() == 0
 SOURCE = Path("/source")
-STUB = r'''#!/usr/bin/python3
+STUB = r'''#!/runtime/python-home/bin/python3
 import json, os, pathlib, signal, sys
 root = pathlib.Path(os.environ["FIXTURE_ROOT"])
 mode = os.environ["FIXTURE_MODE"]
