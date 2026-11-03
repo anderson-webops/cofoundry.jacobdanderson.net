@@ -12,7 +12,7 @@ command -v bwrap >/dev/null
 command -v timeout >/dev/null
 
 timeout -k 5 120 bwrap --unshare-all --die-with-parent --new-session --uid 0 --gid 0 \
-  --ro-bind /usr /usr --symlink usr/bin /bin --symlink usr/lib /lib \
+  --ro-bind /usr /usr --symlink usr/bin /bin --symlink usr/lib /lib --symlink usr/lib64 /lib64 \
   --ro-bind /etc/passwd /etc/passwd --ro-bind /etc/group /etc/group \
   --ro-bind "$python_prefix" /runtime/python-home --tmpfs /usr/local --ro-bind "$node" /runtime/node \
   --proc /proc --dev /dev --tmpfs /tmp \

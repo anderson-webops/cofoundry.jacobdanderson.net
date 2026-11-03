@@ -217,7 +217,7 @@ jobs:
           COFOUNDRY_DEPLOYED_AT: "2026-01-01T00:00:00.000Z"
           COFOUNDRY_OPERATIONS_TOKEN: synthetic-ci-build-operations-token-0001
           NODE_ENV: production
-          NUXT_PUBLIC_APP_URL: https://cofoundry.example.com
+          NUXT_PUBLIC_APP_URL: https://cofoundry.jacobdanderson.net
           NUXT_PUBLIC_BACKEND_MODE: mock
           NUXT_PUBLIC_BILLING_MODE: mock
           NUXT_PUBLIC_ENABLE_DEMO_ACCESS: "false"
