@@ -231,6 +231,16 @@ try {
   assert(!JSON.stringify(health).includes("verify-production-session-secret"), "/api/health must not expose session secret")
   assert(header(healthResponse, "cache-control").includes("no-store"), "/api/health should be no-store")
 
+  const { body: releaseIdentity, response: releaseResponse } = await fetchJson("/release.json")
+  assert(releaseResponse.status === 200, "/release.json should return 200")
+  assert(header(releaseResponse, "cache-control").includes("no-store"), "/release.json should be no-store")
+  assert(releaseIdentity.site === "cofoundry.jacobdanderson.net", "/release.json should identify this site")
+  assert(releaseIdentity.version === release.replace(/^v/, ""), "/release.json should expose the selected version")
+  assert(releaseIdentity.tag === release, "/release.json should expose the selected tag")
+  assert(releaseIdentity.commit === commitSha, "/release.json should expose the selected commit")
+  assert(!JSON.stringify(releaseIdentity).includes(sessionSigningSecret), "/release.json must not expose the session secret")
+  assert(!JSON.stringify(releaseIdentity).includes(operationsToken), "/release.json must not expose the operations token")
+
   const healthHead = await fetchText("/api/health", { method: "HEAD" })
   assert(healthHead.response.status === 200, "/api/health HEAD should return 200")
   assert(header(healthHead.response, "cache-control").includes("no-store"), "/api/health HEAD should be no-store")

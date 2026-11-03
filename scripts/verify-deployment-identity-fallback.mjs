@@ -124,7 +124,8 @@ async function main() {
   child.stderr.on("data", chunk => output.push(chunk.toString()))
 
   try {
-    const body = await waitForHealth(`http://127.0.0.1:${port}`, child, output)
+    const baseUrl = `http://127.0.0.1:${port}`
+    const body = await waitForHealth(baseUrl, child, output)
     const commitSha = body?.deployment?.commitSha
     const release = body?.deployment?.release
     const serializedBody = JSON.stringify(body)
@@ -133,6 +134,12 @@ async function main() {
     assert(release === expectedRelease, `/api/health should expose package release fallback ${expectedRelease}; received ${release || "<empty>"}.`)
     assert(!serializedBody.includes(operationsToken), "/api/health must not expose the operations token.")
     assert(!serializedBody.includes(sessionSigningSecret), "/api/health must not expose the session signing secret.")
+    const releaseResponse = await fetch(`${baseUrl}/release.json`)
+    const releaseBody = await releaseResponse.json()
+    assert(releaseResponse.ok, "/release.json should return 200 without runtime identity overrides.")
+    assert(releaseResponse.headers.get("cache-control")?.includes("no-store"), "/release.json should not cache selected identity.")
+    assert(releaseBody.tag === expectedRelease, `/release.json should expose package release fallback ${expectedRelease}.`)
+    assert(releaseBody.commit === expectedCommit, `/release.json should expose baked commit fallback ${expectedCommit}.`)
     console.log(`Deployment identity fallback verified: ${expectedRelease} (${commitSha})`)
   }
   finally {
