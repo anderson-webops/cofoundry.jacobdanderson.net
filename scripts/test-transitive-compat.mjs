@@ -23,6 +23,19 @@ test("Nuxt DevTools 4 keeps its 0.8 APIs separate from existing 0.7 consumers", 
   }
 })
 
+test("the backend runs TypeScript 7 while Vue retains its required compiler API", () => {
+  const frontend = createRequire(new URL("../front-end/package.json", import.meta.url))
+  const backend = createRequire(new URL("../back-end/package.json", import.meta.url))
+  assert.equal(typeof frontend("typescript").createProgram, "function")
+  assert.equal(typeof frontend("typescript").createSourceFile, "function")
+  assert.match(backend("typescript").version, /^7\./u)
+  for (const scope of [frontend, backend])
+    assert.match(scope("@types/node/package.json").version, /^26\./u)
+  const metadataPath = backend.resolve("typescript/package.json")
+  const compiler = join(dirname(metadataPath), backend("typescript/package.json").bin.tsc)
+  assert.match(execFileSync(process.execPath, [compiler, "--version"], { encoding: "utf8", timeout: 30_000 }), /Version 7\./u)
+})
+
 test("the Node lint plugin reads its supported JS-YAML 5 workspace format", async (context) => {
   const yaml = nodePlugin("js-yaml")
   assert.match(nodePlugin("js-yaml/package.json").version, /^5\./u)
