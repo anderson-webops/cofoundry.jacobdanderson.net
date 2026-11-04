@@ -12,6 +12,17 @@ const lintConfig = createRequire(require.resolve("@antfu/eslint-config"))
 const pluginEntry = lintConfig.resolve("eslint-plugin-n")
 const nodePlugin = createRequire(pluginEntry)
 
+test("Nuxt DevTools 4 keeps its 0.8 APIs separate from existing 0.7 consumers", () => {
+  const frontend = createRequire(new URL("../front-end/package.json", import.meta.url))
+  const devtools = createRequire(frontend.resolve("@nuxt/devtools"))
+  assert.match(frontend("@nuxt/devtools/package.json").version, /^4\./u)
+  for (const name of ["@vitejs/devtools", "@vitejs/devtools-kit"]) {
+    assert.match(frontend(`${name}/package.json`).version, /^0\.7\./u)
+    assert.match(devtools(`${name}/package.json`).version, /^0\.8\./u)
+    assert.notEqual(frontend.resolve(name), devtools.resolve(name))
+  }
+})
+
 test("the Node lint plugin reads its supported JS-YAML 5 workspace format", async (context) => {
   const yaml = nodePlugin("js-yaml")
   assert.match(nodePlugin("js-yaml/package.json").version, /^5\./u)
