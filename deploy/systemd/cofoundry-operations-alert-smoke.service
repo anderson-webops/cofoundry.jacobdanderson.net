@@ -9,8 +9,8 @@ User=cofoundry
 Group=cofoundry
 WorkingDirectory=/srv/cofoundry/current
 EnvironmentFile=/etc/cofoundry/operations.env
-Environment=PATH=/opt/node-24.18.1/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
-ExecStart=/opt/node-24.18.1/bin/node back-end/dist/operations-worker.js alert-smoke --metadata runbook=systemd-manual
+Environment=PATH=/opt/node-26.13.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+ExecStart=/opt/node-26.13.0/bin/node back-end/dist/operations-worker.js alert-smoke --metadata runbook=systemd-manual
 SyslogIdentifier=cofoundry-operations-alert-smoke
 AmbientCapabilities=
 CapabilityBoundingSet=

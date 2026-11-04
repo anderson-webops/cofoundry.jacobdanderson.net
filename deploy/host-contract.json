@@ -3,18 +3,20 @@
   "site": "cofoundry.jacobdanderson.net",
   "adapter": {
     "id": "cofoundry-native",
-    "minimum_version": 1
+    "minimum_version": 2
   },
   "runtime": {
-    "node": "24.18.1",
-    "npm": "12.0.2",
+    "node": "26.13.0",
+    "npm": "12.2.1",
     "architecture": "arm64"
   },
   "artifact_format": "signed-native-tar-v1",
   "requires": [
     "artifact:mac-signed",
     "rollback:retained-artifact",
-    "acceptance:origin-dual-stack"
+    "acceptance:origin-dual-stack",
+    "runtime:node-26.13.0",
+    "rollback:retained-node24-artifact"
   ],
   "database": {
     "change": "review-required"

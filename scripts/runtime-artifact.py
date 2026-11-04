@@ -39,6 +39,10 @@ def load_contract():
     value = json.loads(CONTRACT_PATH.read_text())
     if not isinstance(value, dict) or value.get("version") != 1:
         raise ValueError("unsupported runtime artifact contract")
+    if value.get("runtime") != {
+        "os": "linux", "arch": "arm64", "node": "26.13.0", "npmBuildOnly": "12.2.1",
+    }:
+        raise ValueError("candidate contract must require the reviewed Node 26 toolchain")
     return value
 
 

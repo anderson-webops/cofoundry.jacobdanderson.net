@@ -15,7 +15,7 @@ readiness_url="${READINESS_URL:-http://127.0.0.1:4013/readyz}"
 identity_url="${IDENTITY_URL:-http://127.0.0.1:4013/api/health}"
 backend_health_url="${BACKEND_HEALTH_URL:-http://127.0.0.1:3015/healthz}"
 backend_readiness_url="${BACKEND_READINESS_URL:-http://127.0.0.1:3015/readyz}"
-node_bin_dir="${NODE_BIN_DIR:-/opt/node-24.18.1/bin}"
+node_bin_dir="${NODE_BIN_DIR:-/opt/node-26.13.0/bin}"
 node="$node_bin_dir/node"
 
 if [[ $# -ne 4 ]]; then
@@ -48,8 +48,8 @@ if [[ ! "$archive_sha" =~ ^[0-9a-f]{64}$ || ! "$commit" =~ ^[0-9a-f]{40}$ ]]; th
   echo "Pass the independently reviewed archive digest and exact source commit." >&2
   exit 1
 fi
-if [[ ! -x "$node" || "$("$node" --version)" != v24.18.1 ]]; then
-  echo "NODE_BIN_DIR must select the approved Node 24.18.1 runtime." >&2
+if [[ ! -x "$node" || "$("$node" --version)" != v26.13.0 ]]; then
+  echo "NODE_BIN_DIR must select the approved Node 26.13.0 runtime." >&2
   exit 1
 fi
 

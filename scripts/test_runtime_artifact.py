@@ -9,6 +9,7 @@ import sys
 import tarfile
 import tempfile
 import unittest
+from unittest.mock import patch
 
 
 SCRIPT = Path(__file__).with_name("runtime-artifact.py")
@@ -87,6 +88,21 @@ class RuntimeArtifactTests(unittest.TestCase):
 
     def test_valid_tree(self):
         artifact.validate(self.root, self.manifest())
+
+    def test_candidate_contract_requires_exact_reviewed_toolchain(self):
+        original = json.loads(artifact.CONTRACT_PATH.read_text())
+        for runtime in (
+            {"os": "linux", "arch": "arm64", "node": "24.18.1", "npmBuildOnly": "12.0.2"},
+            {"os": "linux", "arch": "arm64", "node": "26.13.0", "npmBuildOnly": "12.0.2"},
+            {"os": "linux", "arch": "x64", "node": "26.13.0", "npmBuildOnly": "12.2.1"},
+        ):
+            with self.subTest(runtime=runtime):
+                candidate = {**original, "runtime": runtime}
+                contract_path = self.root / "contract.json"
+                contract_path.write_text(json.dumps(candidate))
+                with patch.object(artifact, "CONTRACT_PATH", contract_path):
+                    with self.assertRaisesRegex(ValueError, "reviewed Node 26"):
+                        artifact.load_contract()
 
     def test_identity_writer_is_readable_under_restrictive_umasks(self):
         identity = self.root / artifact.IDENTITY

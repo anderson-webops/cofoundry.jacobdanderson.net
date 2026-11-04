@@ -11,7 +11,7 @@ Artifact-only intake is a separate protected host capability. This source workfl
 ## Application service
 
 1. Create the unprivileged `cofoundry` user, `/srv/cofoundry/releases`, `/var/lib/cofoundry`, `/run/cofoundry`, and `/var/backups/cofoundry` using the host's normal account-management process. Writable state remains outside immutable releases and must survive both promotion and rollback.
-2. On a clean Linux ARM64 checkout, run `npm run package:runtime -- .ai-work/runs/<empty-run>`. The packager requires Node 24.18.1/npm 12.0.2, uses the full locked graph to build the exact commit, stages only the backend production dependency closure, writes a source-bound manifest, and exercises the unpacked frontend, backend, operations worker, probes, graceful shutdown, post-copy verification, and missing-module failure in a network-isolated sandbox without the source checkout or development dependencies. It also emits a separate digest-bound host-control bundle containing the systemd unit, installer, promoter, and verifiers.
+2. On a clean Linux ARM64 checkout, run `npm run package:runtime -- .ai-work/runs/<empty-run>`. The packager requires Node 26.13.0/npm 12.2.1, uses the full locked graph to build the exact commit, stages only the backend production dependency closure, writes a source-bound manifest, and exercises the unpacked frontend, backend, operations worker, probes, graceful shutdown, post-copy verification, and missing-module failure in a network-isolated sandbox without the source checkout or development dependencies. It also emits a separate digest-bound host-control bundle containing the systemd unit, installer, promoter, and verifiers.
 3. Transfer both archives, both SHA-256 values, the exact commit, and the accepted unpacked runtime tree through the protected release intake. Make the staged tree and archives root-owned and not group/world writable. Never copy credentials, host env files, local databases, uploads, caches, or writable queues into a release.
 4. Preview and install the host controls from the immutable Git object and reviewed control archive. Do not run a privileged multi-file copy directly from a mutable checkout:
 
@@ -117,9 +117,9 @@ journalctl -u cofoundry-operations-mail-smoke.service -n 100 --no-pager
 
 ### Notes
 
-- The application uses the checked-in `cofoundry-app.service`; the worker templates remain separate so a worker failure cannot replace or broaden the public listener. Production units invoke the pinned Node 24.18.1 binary and compiled JavaScript directly, without npm, tsx, or development dependencies.
+- The application uses the checked-in `cofoundry-app.service`; the worker templates remain separate so a worker failure cannot replace or broaden the public listener. Production units invoke the pinned Node 26.13.0 binary and compiled JavaScript directly, without npm, tsx, or development dependencies.
 - `COFOUNDRY_OPERATIONS_TOKEN` must match the token injected into the Nuxt server process.
 - `COFOUNDRY_BACKUP_COMMAND`, `COFOUNDRY_RESTORE_DRILL_COMMAND`, and `COFOUNDRY_FILE_SCANNER_COMMAND` are parsed into an executable plus arguments and are never passed to a shell. Put pipes, redirects, or other compound logic inside a reviewed, host-owned wrapper executable instead of the env value.
 - The service sandbox allows writes only under `/var/lib/cofoundry`, `/run/cofoundry`, and the optional `/var/backups/cofoundry` path. Keep provider caches and generated artifacts in those locations.
 - `COFOUNDRY_ALERT_WEBHOOK_URL` and `COFOUNDRY_MAIL_SMOKE_TO_EMAIL` belong in `/etc/cofoundry/operations.env` or the host's Vault-managed env material, not in the repository. Keep realtime relay and smoke settings unset in production.
-- Keep Supabase and Stripe disabled unless the cutover checklist in `docs/operations-runbook.md` has been completed.
+- Supabase and Stripe activation require independent protected provider acceptance; `docs/configuration-contract.md` documents their source configuration boundaries.

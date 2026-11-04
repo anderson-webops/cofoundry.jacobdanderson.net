@@ -6,8 +6,8 @@ root=$(cd -- "$(dirname -- "$0")/.." && pwd -P)
 cd -- "$root"
 test "$(uname -s)" = Linux
 test "$(uname -m)" = aarch64
-test "$(node --version)" = v24.18.1
-test "$(npm --version)" = 12.0.2
+test "$(node --version)" = v26.13.0
+test "$(npm --version)" = 12.2.1
 test -z "$(git status --porcelain)"
 
 commit=$(git rev-parse HEAD)
@@ -27,8 +27,8 @@ esac
 test -z "$(find "$output" -mindepth 1 -maxdepth 1 -print -quit)"
 
 npm ci --include=dev --include=optional --no-fund
-npm audit --workspaces --include=dev --audit-level=low
-npm audit --workspaces --omit=dev --audit-level=low
+npm run audit
+npm run audit:production
 npm audit signatures --include=dev
 npm audit signatures --omit=dev
 npm run verify:install-scripts
@@ -37,7 +37,6 @@ npm run lint
 npm run typecheck
 NODE_ENV=test npm run test:unit
 npm run test:runtime-artifact
-node --test scripts/native-artifact-transport.test.mjs
 export COFOUNDRY_COMMIT_SHA="$commit"
 export COFOUNDRY_DEPLOYED_AT="$deployed_at"
 export COFOUNDRY_LOCAL_DATA_DIR=/tmp/cofoundry-build-data

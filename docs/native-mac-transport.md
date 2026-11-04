@@ -1,12 +1,14 @@
 # Native Mac artifact transport
 
 This application uses the shared analytics Ed25519 transport format with its own
-native runtime contract. The canonical native codec is maintained in Scheduler;
-the mirrored codec and regression suite are byte-identical across these three
-applications. Existing analytics enrollment is independent of these native profiles.
+native runtime contract. The common envelope and codec originate in Scheduler;
+this application declares its own Node 26 runtime policy without changing peer
+applications' independently reviewed profiles. Existing analytics enrollment is
+independent of these native profiles. Retained Node 24 artifacts keep their exact
+original verifier/profile and require separate recovery acceptance.
 
 `deploy/mac-artifact-profile.json` declares application `cofoundry.jacobdanderson.net`, builder
-`jacob-m3`, Linux ARM64/glibc, Node 24.18.1 and build-only npm 12.0.2.
+`jacob-m3`, Linux ARM64/glibc, Node 26.13.0 and build-only npm 12.2.1.
 No external public build-environment overrides are declared. The clean source
 recipe fixes the public origin to `https://cofoundry.jacobdanderson.net`, backend
 and billing modes to `mock`, and demo/investment features to `false`. These
