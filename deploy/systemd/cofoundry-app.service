@@ -17,7 +17,7 @@ Environment=NITRO_SHUTDOWN_TIMEOUT=25000
 Environment=COFOUNDRY_EXPECT_MULTI_INSTANCE=false
 Environment=COFOUNDRY_APP_INSTANCE_COUNT=1
 ExecStartPre=/usr/bin/test -f /srv/cofoundry/current/front-end/.output/server/index.mjs
-ExecStart=/opt/node-24.18.1/bin/node front-end/.output/server/index.mjs
+ExecStart=/opt/node-26.13.0/bin/node front-end/.output/server/index.mjs
 Restart=on-failure
 RestartSec=5s
 SyslogIdentifier=cofoundry-app

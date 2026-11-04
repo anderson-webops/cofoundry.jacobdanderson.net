@@ -24,10 +24,15 @@ async function fixture(context, site = sites[2]) {
 		site,
 		repository: `anderson-webops/${site}`,
 		builder_id: "jacob-m3",
-		runtime: { os: "linux", architecture: "arm64", libc: "glibc", node: site === sites[2] ? "24.22.1" : "24.18.1", npm: "12.0.2", package_manager: "npm@12.0.2" },
+		runtime: {
+			os: "linux", architecture: "arm64", libc: "glibc",
+			node: site === sites[0] ? "26.13.0" : site === sites[2] ? "24.22.1" : "24.18.1",
+			npm: site === sites[0] ? "12.2.1" : "12.0.2",
+			package_manager: site === sites[0] ? "npm@12.2.1" : "npm@12.0.2"
+		},
 		environment: {}
 	};
-	const contract = { version: 1, application: site, required: ["package.json", "entry.mjs"], allowedFiles: ["package.json", "entry.mjs"], allowedRoots: ["empty"], nativeBindings: [], runtime: { os: "linux", arch: "arm64", node: profile.runtime.node, npmBuildOnly: "12.0.2" } };
+	const contract = { version: 1, application: site, required: ["package.json", "entry.mjs"], allowedFiles: ["package.json", "entry.mjs"], allowedRoots: ["empty"], nativeBindings: [], runtime: { os: "linux", arch: "arm64", node: profile.runtime.node, npmBuildOnly: profile.runtime.npm } };
 	const contractBytes = Buffer.from(`${JSON.stringify(contract)}\n`);
 	const files = {};
 	for (const [name, content] of [["package.json", JSON.stringify({ version: tag.slice(1) })], ["entry.mjs", "throw Error('fixture entrypoint must never execute');\n"]]) {
@@ -66,6 +71,23 @@ for (const site of sites) {
 		assert.equal((await fs.readdir(input.outputDir)).length, 6);
 	});
 }
+
+test("CoFoundry rejects legacy and mixed toolchains without changing peer profiles", async (context) => {
+	for (const runtime of [
+		{ node: "24.18.1", npm: "12.0.2", package_manager: "npm@12.0.2" },
+		{ node: "26.13.0", npm: "12.0.2", package_manager: "npm@12.0.2" },
+		{ node: "26.13.0", npm: "12.2.1", package_manager: "npm@12.0.2" }
+	]) {
+		const input = await fixture(context, sites[0]);
+		Object.assign(input.profile.runtime, runtime);
+		await assert.rejects(prepareNativeTransport(input), /profile/);
+	}
+	for (const site of sites.slice(1)) {
+		const input = await fixture(context, site);
+		Object.assign(input.profile.runtime, { node: "26.13.0", npm: "12.2.1", package_manager: "npm@12.2.1" });
+		await assert.rejects(prepareNativeTransport(input), /profile/);
+	}
+});
 
 test("receipt requires exact identity and all four true checks", async (context) => {
 	for (const mutate of [

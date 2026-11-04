@@ -421,8 +421,10 @@ function assertProfile(profile) {
 		|| profile.repository.toLowerCase() !== `anderson-webops/${profile.site}`
 		|| !exactKeys(profile.runtime, ["os", "architecture", "libc", "node", "npm", "package_manager"])
 		|| profile.runtime.os !== "linux" || profile.runtime.architecture !== "arm64"
-		|| profile.runtime.libc !== "glibc" || !["24.18.1", "24.22.1"].includes(profile.runtime.node)
-		|| profile.runtime.npm !== "12.0.2" || profile.runtime.package_manager !== "npm@12.0.2"
+		|| profile.runtime.libc !== "glibc"
+		|| (profile.site === "cofoundry.jacobdanderson.net"
+			? profile.runtime.node !== "26.13.0" || profile.runtime.npm !== "12.2.1" || profile.runtime.package_manager !== "npm@12.2.1"
+			: !["24.18.1", "24.22.1"].includes(profile.runtime.node) || profile.runtime.npm !== "12.0.2" || profile.runtime.package_manager !== "npm@12.0.2")
 		|| !exactKeys(profile.environment, [])) {
 		throw new Error("Unsupported native application transport profile.");
 	}

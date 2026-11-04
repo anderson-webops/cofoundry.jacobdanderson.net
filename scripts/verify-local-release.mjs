@@ -53,6 +53,11 @@ const steps = [
     label: "Check dependency advisories",
   },
   {
+    args: ["run", "audit:production"],
+    id: "production-audit",
+    label: "Check production advisories including root tools",
+  },
+  {
     args: ["run", "verify:install-scripts"],
     id: "install-script-policy",
     label: "Verify dependency install-script policy",

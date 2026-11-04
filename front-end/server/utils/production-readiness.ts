@@ -347,7 +347,7 @@ function task(
   detail: string,
   action: string,
   command: string,
-  docsPath = "docs/operations-runbook.md",
+  docsPath = "docs/configuration-contract.md",
 ): ProductionReadinessProvisioningTask {
   return {
     action,
@@ -368,7 +368,7 @@ function phase(
   summary: string,
   detail: string,
   action: string,
-  docsPath = "docs/operations-runbook.md",
+  docsPath = "docs/configuration-contract.md",
 ): ProductionReadinessCutoverPhase {
   return {
     action,
@@ -478,7 +478,7 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
         ? "Run a staging provider sign-in smoke and confirm the successful OAuth callback appears in readiness evidence."
         : "Leave OAuth provider markers unset until the identity provider and callback flow are ready for a deliberate cutover.",
       "COFOUNDRY_OAUTH_PROVIDER=<provider-name>\n# Verify /auth/sign-in provider flow and confirm auth.oauth.signed_in telemetry.",
-      "docs/operations-runbook.md",
+      "docs/configuration-contract.md",
     ),
     task(
       "worker-token-provisioning",
@@ -622,7 +622,7 @@ function buildProvisioningTasks(input: ProductionReadinessInput, checkById: Map<
       "Supabase-backed production should have an auditable first-admin promotion before operators rely on the console.",
       "Run the bootstrap script from a server environment with Vault-injected Supabase service-role credentials.",
       "BOOTSTRAP_ADMIN_EMAIL=operator@example.com npm run -w back-end bootstrap-admin",
-      "docs/operations-runbook.md",
+      "docs/configuration-contract.md",
     ),
     task(
       "stripe-cutover-provisioning",
@@ -729,7 +729,7 @@ function buildCutoverPhases(input: ProductionReadinessInput, checkById: Map<stri
       input.contactMailConfigured
         ? "Keep recent mail-smoke evidence current and wire suppression callbacks before enabling scheduled real digests."
         : "Choose the transactional email provider, configure server-only credentials, and run the mail-smoke worker.",
-      "docs/operations-runbook.md",
+      "docs/configuration-contract.md",
     ),
     phase(
       "operations-automation",
@@ -755,7 +755,7 @@ function buildCutoverPhases(input: ProductionReadinessInput, checkById: Map<stri
       input.expectsMultiInstanceRuntime || input.hasRealtimeFanoutConfigured
         ? "Run one production app process. Implement and validate a shared atomic rate limiter before re-enabling horizontal scaling or relying on the realtime relay."
         : "No action is required while the production app runs as a single Node process.",
-      "docs/operations-runbook.md",
+      "docs/configuration-contract.md",
     ),
     phase(
       "supabase-persistence-cutover",
@@ -778,7 +778,7 @@ function buildCutoverPhases(input: ProductionReadinessInput, checkById: Map<stri
       publicEnvironment.featureInvestmentModule
         ? "Confirm the environment gate, migration, applicant and reviewer browser evidence, file isolation, supplemental terms, and rollback path before public use."
         : "Keep the feature flag off until counsel and the accountable operator approve the live program.",
-      "docs/operations-runbook.md",
+      "docs/configuration-contract.md",
     ),
     phase(
       "external-auth-cutover",
