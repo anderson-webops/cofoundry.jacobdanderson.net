@@ -25,10 +25,6 @@ export interface SessionResolutionInput {
 
 const fallbackNameSplitPattern = /[._-]+/
 
-function now() {
-  return new Date().toISOString()
-}
-
 function formatFallbackName(email: string) {
   const localPart = normalizeWorkspaceEmail(email).split("@")[0] || "member"
   return localPart
@@ -70,7 +66,7 @@ export function resolveSessionUserFromWorkspace(seed: WorkspaceSeed, input: Sess
   }
 }
 
-export function buildDraftMemberWorkspaceState(session: SessionUser, createdAt = now(), options: { verifiedEmail?: boolean } = {}): MemberWorkspaceState {
+export function buildDraftMemberWorkspaceState(session: SessionUser, createdAt = new Date().toISOString(), options: { verifiedEmail?: boolean } = {}): MemberWorkspaceState {
   const verifiedEmail = options.verifiedEmail === true
 
   return {

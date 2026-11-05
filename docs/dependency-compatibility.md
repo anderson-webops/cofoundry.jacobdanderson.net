@@ -1,15 +1,22 @@
 # Dependency compatibility
 
-The npm workspace lock is authoritative. Nuxt DevTools 4 uses Vite DevTools and
-its kit on the 0.8 API line. The current Unhead bundler and Vue DevTools plugin
-declare the 0.7 API line. The frontend declares compatible 0.7 packages so npm
-can install DevTools 4's independent 0.8 dependencies rather than hoisting one
-incompatible version over the other consumers.
+The npm workspace lock is authoritative. The frontend and Nuxt DevTools 4 use
+the matching Vite DevTools 0.8.2 host and kit. The current Unhead bundler and
+registry Vue DevTools 9.0.0-rc.2 plugin require the separate 0.7 API line. Root
+tooling anchors that plugin and its supported kit so ordinary npm resolution
+preserves those consumers without rebinding them to the newer host API.
 
 This uses ordinary dependency resolution, without forced peer ranges or an
 ignored peer check. `npm ls --all` and `scripts/test-transitive-compat.mjs`
-verify the installed graph and separate resolution paths. Review the bridge
-dependencies when these consumers support the same API line.
+verify the installed graph and separate resolution paths. The reviewed template
+provider fixtures additionally verify the registry plugin's metadata and all
+38 payload hashes, then initialize its actual dock, HMR injection and client
+assets inside a loopback-only Vite 0.8 host. Review the bridge dependencies when
+these consumers support the same API line.
+
+Both application workspaces use Supabase JS 2.119.0. The generic template's
+vendored `qs` parser is not installed in this application's graph; adding its
+unrelated Express backend would replace CoFoundry's existing operations service.
 
 The same regression suite exercises the installed JS-YAML workspace reader,
 the beautifier's glob integration and Markdown math rendering with untrusted

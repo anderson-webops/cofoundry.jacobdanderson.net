@@ -621,6 +621,86 @@ export async function verifyCredentials(event: H3Event, email: string, password:
   })
 }
 
+async function createSupabaseAccount(
+  event: H3Event,
+  payload: Parameters<typeof createMockAccount>[1],
+  acceptedInvite: Awaited<ReturnType<typeof validateAccessInvite>>,
+) {
+  const normalizedEmail = payload.email.trim().toLowerCase()
+  const verifiedEmail = Boolean(acceptedInvite)
+  const adminClient = createSupabaseAdminClient(event)
+  const result = verifiedEmail
+    ? await adminClient?.auth.admin.createUser({
+        email: normalizedEmail,
+        password: payload.password,
+        email_confirm: true,
+        user_metadata: { name: payload.name },
+      })
+    : await createSupabaseServerClient(event)?.auth.signUp({
+        email: normalizedEmail,
+        password: payload.password,
+        options: {
+          data: { name: payload.name },
+          emailRedirectTo: new URL("/auth/sign-in?confirmed=1", resolveServerAppUrl(event)).toString(),
+        },
+      })
+
+  if (result?.error || !result?.data.user) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "Unable to create the account. Sign in or use account recovery if this email is already registered.",
+    })
+  }
+
+  if (!isSupabaseEmailVerified(result.data.user))
+    return null
+
+  const fallbackSession = resolveSessionUserFromWorkspace(workspaceSeed, {
+    id: result.data.user.id,
+    email: normalizedEmail,
+    name: payload.name,
+    onboardingCompleted: false,
+    role: "founder",
+    subscriptionPlan: "free",
+  })
+  const bootstrapState = buildMemberWorkspaceState(workspaceSeed, fallbackSession.id) || buildDraftMemberWorkspaceState(fallbackSession, undefined, { verifiedEmail })
+  try {
+    await persistWholeMemberWorkspaceState(event, bootstrapState, acceptedInvite && payload.inviteToken
+      ? {
+          accessInvite: {
+            acceptedAt: new Date().toISOString(),
+            email: normalizedEmail,
+            tokenHash: hashAccessInviteToken(payload.inviteToken),
+          },
+        }
+      : {})
+  }
+  catch (error) {
+    try {
+      await adminClient?.auth.admin.deleteUser(result.data.user.id)
+    }
+    catch (cleanupError) {
+      console.warn("[auth] Account provisioning failed and the Supabase Auth user could not be cleaned up.", cleanupError)
+    }
+
+    if (acceptedInvite) {
+      throw createError({
+        statusCode: 409,
+        statusMessage: "The access invite is invalid or no longer available.",
+      })
+    }
+    console.error("[auth] Account workspace provisioning failed.", error)
+    throw createError({
+      statusCode: 500,
+      statusMessage: "Unable to finish account setup. Please try again.",
+    })
+  }
+
+  const { session } = await loadMemberWorkspaceState(event, buildIdentityInput(fallbackSession))
+  writeSession(event, session)
+  return session
+}
+
 export async function createMockAccount(event: H3Event, payload: { email: string, inviteToken?: string, name: string, password: string }) {
   const normalizedEmail = payload.email.trim().toLowerCase()
   const existing = getSessionForEmail(normalizedEmail)
@@ -641,79 +721,8 @@ export async function createMockAccount(event: H3Event, payload: { email: string
   }
   const verifiedEmail = Boolean(acceptedInvite)
 
-  if (isSupabaseEnabled(event)) {
-    const adminClient = createSupabaseAdminClient(event)
-    const result = verifiedEmail
-      ? await adminClient?.auth.admin.createUser({
-          email: normalizedEmail,
-          password: payload.password,
-          email_confirm: true,
-          user_metadata: { name: payload.name },
-        })
-      : await createSupabaseServerClient(event)?.auth.signUp({
-          email: normalizedEmail,
-          password: payload.password,
-          options: {
-            data: { name: payload.name },
-            emailRedirectTo: new URL("/auth/sign-in?confirmed=1", resolveServerAppUrl(event)).toString(),
-          },
-        })
-
-    if (result?.error || !result?.data.user) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: "Unable to create the account. Sign in or use account recovery if this email is already registered.",
-      })
-    }
-
-    if (!isSupabaseEmailVerified(result.data.user))
-      return null
-
-    const fallbackSession = resolveSessionUserFromWorkspace(workspaceSeed, {
-      id: result.data.user.id,
-      email: normalizedEmail,
-      name: payload.name,
-      onboardingCompleted: false,
-      role: "founder",
-      subscriptionPlan: "free",
-    })
-    const bootstrapState = buildMemberWorkspaceState(workspaceSeed, fallbackSession.id) || buildDraftMemberWorkspaceState(fallbackSession, undefined, { verifiedEmail })
-    try {
-      await persistWholeMemberWorkspaceState(event, bootstrapState, acceptedInvite && payload.inviteToken
-        ? {
-            accessInvite: {
-              acceptedAt: new Date().toISOString(),
-              email: normalizedEmail,
-              tokenHash: hashAccessInviteToken(payload.inviteToken),
-            },
-          }
-        : {})
-    }
-    catch (error) {
-      try {
-        await adminClient?.auth.admin.deleteUser(result.data.user.id)
-      }
-      catch (cleanupError) {
-        console.warn("[auth] Account provisioning failed and the Supabase Auth user could not be cleaned up.", cleanupError)
-      }
-
-      if (acceptedInvite) {
-        throw createError({
-          statusCode: 409,
-          statusMessage: "The access invite is invalid or no longer available.",
-        })
-      }
-      console.error("[auth] Account workspace provisioning failed.", error)
-      throw createError({
-        statusCode: 500,
-        statusMessage: "Unable to finish account setup. Please try again.",
-      })
-    }
-
-    const { session } = await loadMemberWorkspaceState(event, buildIdentityInput(fallbackSession))
-    writeSession(event, session)
-    return session
-  }
+  if (isSupabaseEnabled(event))
+    return createSupabaseAccount(event, payload, acceptedInvite)
 
   const session = await createLocalAuthAccount(payload)
   if (!session)

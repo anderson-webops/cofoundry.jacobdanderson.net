@@ -773,6 +773,119 @@ describe("production readiness snapshot", () => {
     expect(failedSmokeCheckById.get("mail-transport")?.status).toBe("fail")
   })
 
+  it.each([
+    {
+      name: "current successful delivery",
+      configured: true,
+      deliveries: [
+        { status: "sent", timestamp: generatedAt }
+      ],
+      status: "pass",
+      summary: "sent smoke, 0 days old",
+    },
+    {
+      name: "one-day successful delivery",
+      configured: true,
+      deliveries: [
+        { status: "sent", timestamp: "2026-06-11T12:00:00.000Z" }
+      ],
+      status: "pass",
+      summary: "sent smoke, 1 day old",
+    },
+    {
+      name: "stale successful delivery",
+      configured: true,
+      deliveries: [
+        { status: "sent", timestamp: "2026-05-12T12:00:00.000Z" }
+      ],
+      status: "warn",
+      summary: "sent smoke, 31 days old",
+    },
+    {
+      name: "new failure after a success",
+      configured: true,
+      deliveries: [
+        { status: "sent", timestamp: "2026-06-11T12:00:00.000Z" },
+        { status: "failed", timestamp: generatedAt },
+      ],
+      status: "fail",
+      summary: "failed smoke, 0 days old",
+    },
+    {
+      name: "successful recovery after a failure",
+      configured: true,
+      deliveries: [
+        { status: "failed", timestamp: "2026-06-11T12:00:00.000Z" },
+        { status: "sent", timestamp: generatedAt },
+      ],
+      status: "pass",
+      summary: "sent smoke, 0 days old",
+    },
+    {
+      name: "failure tied with a success",
+      configured: true,
+      deliveries: [
+        { status: "sent", timestamp: generatedAt },
+        { status: "failed", timestamp: generatedAt },
+      ],
+      status: "fail",
+      summary: "failed smoke, 0 days old",
+    },
+    {
+      name: "recorded success with unknown age",
+      configured: true,
+      deliveries: [
+        { status: "sent", timestamp: "" }
+      ],
+      status: "pass",
+      summary: "sent smoke",
+    },
+    {
+      name: "unconfigured transport with retained evidence",
+      configured: false,
+      deliveries: [
+        { status: "sent", timestamp: generatedAt }
+      ],
+      status: "warn",
+      summary: "Not configured",
+    },
+  ])("preserves mail readiness and provisioning for $name", ({ configured, deliveries, status, summary }) => {
+    const snapshot = buildProductionReadinessSnapshot({
+      accessRequests: [],
+      adminPosture: healthyAdminPosture,
+      contactMailConfigured: configured,
+      environment: environmentSnapshot(),
+      environmentValidationErrors: [],
+      generatedAt,
+      hasAlertWebhookConfigured: true,
+      hasDurableLocalDataDir: true,
+      hasOperationsWorkerToken: true,
+      hasSessionSigningSecret: true,
+      hasTrustVerificationProviderConfigured: false,
+      isLocalDevelopment: false,
+      operations: {
+        ...healthyOperations,
+        notificationDeliveries: deliveries.map((delivery, index) => ({
+          created_at: delivery.timestamp,
+          delivered_at: delivery.timestamp,
+          event_type: "mail.smoke",
+          id: `synthetic-mail-${index}`,
+          status: delivery.status,
+        })),
+      },
+      privacyRequests: [],
+    })
+    expect(snapshot.groups.flatMap(group => group.checks).find(check => check.id === "mail-transport")).toMatchObject({ status, summary })
+    expect(snapshot.provisioningTasks.find(task => task.id === "mail-provisioning")).toMatchObject({ status, summary })
+    expect(snapshot.groups.map(group => group.id)).toEqual([
+      "deployment",
+      "security",
+      "admin-control",
+      "queues",
+      "workers"
+    ])
+  })
+
   it("fails when the latest restore drill failed", () => {
     const snapshot = buildProductionReadinessSnapshot({
       accessRequests: [],

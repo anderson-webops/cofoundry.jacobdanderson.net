@@ -351,9 +351,8 @@ export async function createOrganizationWorkspace(event: H3Event, session: Sessi
   return projectOrganizationWorkspaceForSession(created, session)!
 }
 
-async function assertVisibleResource(
+async function canonicalInvestmentResourceVisible(
   event: H3Event,
-  seed: WorkspaceSeed,
   session: SessionUser,
   organization: OrganizationWorkspaceDocument,
   mutation: OrganizationMutation,
@@ -364,22 +363,34 @@ async function assertVisibleResource(
     : investmentEnabled && mutation.action === "request_approval" && mutation.targetType === "investment_application"
       ? await findRawInvestmentWorkspaceDocumentByResourceId(event, mutation.targetId)
       : null
-  const canonicalInvestmentVisible = Boolean(canonicalInvestmentResource && (
+  return Boolean(canonicalInvestmentResource && (
     canonicalInvestmentResource.applicantUserId === session.id
     || canonicalInvestmentResource.organizationId === organization.organization.id
     || organization.resourceLinks.some(link => link.resourceType === "investment_application" && [canonicalInvestmentResource.id, canonicalInvestmentResource.application.id].includes(link.resourceId))
   ))
+}
+
+function workspaceResourceVisible(seed: WorkspaceSeed, type: string, id: string, canonicalInvestmentVisible: boolean) {
+  switch (type) {
+    case "contract": return seed.contracts.some(item => item.id === id)
+    case "proposal": return seed.proposals.some(item => item.id === id)
+    case "opportunity": return seed.opportunities.some(item => item.id === id)
+    case "investment_application": return canonicalInvestmentVisible || seed.investmentApplications.some(item => item.id === id)
+    default: return seed.matches.some(item => item.id === id)
+  }
+}
+
+async function assertVisibleResource(
+  event: H3Event,
+  seed: WorkspaceSeed,
+  session: SessionUser,
+  organization: OrganizationWorkspaceDocument,
+  mutation: OrganizationMutation,
+) {
+  const canonicalInvestmentVisible = await canonicalInvestmentResourceVisible(event, session, organization, mutation)
 
   if (mutation.action === "link_resource") {
-    const visible = mutation.resourceType === "contract"
-      ? seed.contracts.some(item => item.id === mutation.resourceId)
-      : mutation.resourceType === "proposal"
-        ? seed.proposals.some(item => item.id === mutation.resourceId)
-        : mutation.resourceType === "opportunity"
-          ? seed.opportunities.some(item => item.id === mutation.resourceId)
-          : mutation.resourceType === "investment_application"
-            ? canonicalInvestmentVisible || seed.investmentApplications.some(item => item.id === mutation.resourceId)
-            : seed.matches.some(item => item.id === mutation.resourceId)
+    const visible = workspaceResourceVisible(seed, mutation.resourceType, mutation.resourceId, canonicalInvestmentVisible)
     if (!visible)
       throw createError({ statusCode: 404, statusMessage: "The selected workspace resource is not available to you." })
   }
@@ -389,13 +400,7 @@ async function assertVisibleResource(
     "opportunity",
     "investment_application"
   ].includes(mutation.targetType)) {
-    const visible = mutation.targetType === "contract"
-      ? seed.contracts.some(item => item.id === mutation.targetId)
-      : mutation.targetType === "proposal"
-        ? seed.proposals.some(item => item.id === mutation.targetId)
-        : mutation.targetType === "opportunity"
-          ? seed.opportunities.some(item => item.id === mutation.targetId)
-          : canonicalInvestmentVisible || seed.investmentApplications.some(item => item.id === mutation.targetId)
+    const visible = workspaceResourceVisible(seed, mutation.targetType, mutation.targetId, canonicalInvestmentVisible)
     if (!visible)
       throw createError({ statusCode: 404, statusMessage: "The selected approval target is not available to you." })
   }

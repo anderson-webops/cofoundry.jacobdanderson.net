@@ -7,6 +7,45 @@ function normalizeIp(address: string) {
     : value
 }
 
+function addTrustedProxyEntry(blockList: BlockList, entry: string) {
+  const parts = entry.split("/")
+  if (parts.length > 2)
+    return false
+
+  const [rawAddress, rawPrefix] = parts
+  const address = normalizeIp(rawAddress || "")
+  const family = isIP(address)
+  if (!family)
+    return false
+
+  if (typeof rawPrefix === "undefined") {
+    blockList.addAddress(address, family === 4
+      ? "ipv4"
+      : "ipv6")
+    return true
+  }
+
+  if (!/^\d+$/.test(rawPrefix))
+    return false
+
+  const prefix = Number.parseInt(rawPrefix, 10)
+  const maximumPrefix = family === 4
+    ? 32
+    : 128
+  if (!Number.isInteger(prefix) || prefix < 0 || prefix > maximumPrefix)
+    return false
+
+  try {
+    blockList.addSubnet(address, prefix, family === 4
+      ? "ipv4"
+      : "ipv6")
+  }
+  catch {
+    return false
+  }
+  return true
+}
+
 export function parseTrustedProxyList(configured: string | undefined) {
   const entries = (configured || "")
     .split(",")
@@ -16,49 +55,8 @@ export function parseTrustedProxyList(configured: string | undefined) {
   const invalidEntries: string[] = []
 
   for (const entry of entries) {
-    const parts = entry.split("/")
-    if (parts.length > 2) {
+    if (!addTrustedProxyEntry(blockList, entry))
       invalidEntries.push(entry)
-      continue
-    }
-
-    const [rawAddress, rawPrefix] = parts
-    const address = normalizeIp(rawAddress || "")
-    const family = isIP(address)
-    if (!family) {
-      invalidEntries.push(entry)
-      continue
-    }
-
-    if (typeof rawPrefix === "undefined") {
-      blockList.addAddress(address, family === 4
-        ? "ipv4"
-        : "ipv6")
-      continue
-    }
-
-    if (!/^\d+$/.test(rawPrefix)) {
-      invalidEntries.push(entry)
-      continue
-    }
-
-    const prefix = Number.parseInt(rawPrefix, 10)
-    const maximumPrefix = family === 4
-      ? 32
-      : 128
-    if (!Number.isInteger(prefix) || prefix < 0 || prefix > maximumPrefix) {
-      invalidEntries.push(entry)
-      continue
-    }
-
-    try {
-      blockList.addSubnet(address, prefix, family === 4
-        ? "ipv4"
-        : "ipv6")
-    }
-    catch {
-      invalidEntries.push(entry)
-    }
   }
 
   return { blockList, invalidEntries }

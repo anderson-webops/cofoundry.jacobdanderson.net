@@ -1,5 +1,12 @@
 import { expect, test } from "@playwright/test"
 
+test.beforeEach(async ({ page }) => {
+  await page.route("https://analytics.cofoundry.jacobdanderson.net/**", route => route.fulfill({
+    contentType: "application/javascript",
+    body: "",
+  }))
+})
+
 test("homepage exposes the service and access paths", async ({ page }) => {
   await page.goto("/")
 

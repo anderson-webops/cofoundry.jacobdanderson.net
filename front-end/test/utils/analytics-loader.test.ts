@@ -6,20 +6,21 @@ const websiteId = "82564e10-5962-49df-8332-50e0c04c7485"
 
 describe("analytics loader", () => {
   it("inserts the approved tracker as a dynamic script only once", () => {
-    const head = document.createDocumentFragment()
-    const isolatedDocument = {
-      get scripts() {
-        return head.querySelectorAll("script")
-      },
-      createElement: document.createElement.bind(document),
-      head,
-    } as unknown as Document
+    const isolatedDocument = document.implementation.createHTMLDocument()
+    const head = isolatedDocument.head
+    head.remove()
+    Object.defineProperty(isolatedDocument, "head", { value: head })
+    Object.defineProperty(isolatedDocument, "scripts", {
+      get: () => head.getElementsByTagName("script"),
+    })
+    expect(head.isConnected).toBe(false)
     ensureAnalyticsScript(isolatedDocument, source, websiteId)
     ensureAnalyticsScript(isolatedDocument, source, websiteId)
 
     const scripts = head.querySelectorAll(`script[src="${source}"]`)
     expect(scripts).toHaveLength(1)
-    expect((scripts[0] as HTMLScriptElement).dataset.websiteId).toBe(websiteId)
-    expect((scripts[0] as HTMLScriptElement).defer).toBe(true)
+    const script = head.querySelector<HTMLScriptElement>(`script[src="${source}"]`)
+    expect(script?.dataset.websiteId).toBe(websiteId)
+    expect(script?.defer).toBe(true)
   })
 })

@@ -471,21 +471,8 @@ async function seedSupabase() {
     },
   })
 
-  if (process.env.SEED_SUPABASE_AUTH === "true") {
-    if (!isLocalDevelopmentEnvironment(process.env))
-      throw new Error("Demo Supabase Auth seeding is restricted to local development.")
-
-    for (const account of demoAuthAccounts) {
-      const result = await supabase.auth.admin.createUser({
-        email: account.email,
-        password: account.password,
-        email_confirm: true,
-      })
-
-      if (result.error && !result.error.message.toLowerCase().includes("already"))
-        throw result.error
-    }
-  }
+  if (process.env.SEED_SUPABASE_AUTH === "true")
+    await seedLocalAuthAccounts(supabase)
 
   for (const table of mapTables()) {
     if (!table.rows.length)
@@ -499,6 +486,22 @@ async function seedSupabase() {
       throw error
 
     console.log(`Seeded ${table.rows.length} row(s) into ${table.name}`)
+  }
+}
+
+async function seedLocalAuthAccounts(supabase: ReturnType<typeof createClient>) {
+  if (!isLocalDevelopmentEnvironment(process.env))
+    throw new Error("Demo Supabase Auth seeding is restricted to local development.")
+
+  for (const account of demoAuthAccounts) {
+    const result = await supabase.auth.admin.createUser({
+      email: account.email,
+      password: account.password,
+      email_confirm: true,
+    })
+
+    if (result.error && !result.error.message.toLowerCase().includes("already"))
+      throw result.error
   }
 }
 

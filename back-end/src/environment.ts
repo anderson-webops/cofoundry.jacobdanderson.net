@@ -245,32 +245,19 @@ export function readBackendDeploymentMetadata(env: EnvironmentSource) {
   })
 }
 
-export function collectEnvironmentValidationErrors(env: EnvironmentSource) {
-  const errors: string[] = []
-  const publicEnvironment = readPublicEnvironment(env)
-  const secretEnvironment = readSecretEnvironment(env)
+function validatePublicOriginSyntax(env: EnvironmentSource, errors: string[]) {
   const configuredAppUrl = readValue(env, "NUXT_PUBLIC_APP_URL")
-  const configuredBackendMode = readValue(env, "NUXT_PUBLIC_BACKEND_MODE")
-  const configuredBillingMode = readValue(env, "NUXT_PUBLIC_BILLING_MODE")
-  const production = readValue(env, "NODE_ENV") === "production"
-  const allowLocalProductionUrl = readValue(env, "COFOUNDRY_ALLOW_LOCAL_PUBLIC_APP_URL") === "true"
-  const requiresSignedSessions = !isLocalDevelopmentEnvironment(env)
-  const trustProxyHeaders = readValue(env, "COFOUNDRY_TRUST_PROXY_HEADERS")
-  const trustedProxyIps = readValue(env, "COFOUNDRY_TRUSTED_PROXY_IPS")
-  const expectsMultiInstance = readValue(env, "COFOUNDRY_EXPECT_MULTI_INSTANCE")
-  const appInstanceCount = readValue(env, "COFOUNDRY_APP_INSTANCE_COUNT")
-  const parsedAppInstanceCount = Number.parseInt(appInstanceCount, 10)
-  const realtimeFanoutUrl = readValue(env, "COFOUNDRY_REALTIME_FANOUT_URL")
-  const realtimeFanoutToken = readValue(env, "COFOUNDRY_REALTIME_FANOUT_TOKEN")
-  const investmentProgramApproved = readValue(env, "COFOUNDRY_INVESTMENT_PROGRAM_APPROVED")
-  const fileScannerCommand = readValue(env, "COFOUNDRY_FILE_SCANNER_COMMAND")
-  const backendHost = readValue(env, "BACKEND_HOST") || "127.0.0.1"
-  const configuredSupportEmail = readValue(env, "NUXT_PUBLIC_SUPPORT_EMAIL")
 
   if (configuredAppUrl && !isAbsoluteUrl(configuredAppUrl))
     errors.push("NUXT_PUBLIC_APP_URL must be an absolute URL when it is set.")
   else if (configuredAppUrl && !isOriginUrl(configuredAppUrl))
     errors.push("NUXT_PUBLIC_APP_URL must be an origin without credentials, a path, query parameters, or a fragment.")
+}
+
+function validateProductionOrigin(env: EnvironmentSource, errors: string[]) {
+  const configuredAppUrl = readValue(env, "NUXT_PUBLIC_APP_URL")
+  const production = readValue(env, "NODE_ENV") === "production"
+  const allowLocalProductionUrl = readValue(env, "COFOUNDRY_ALLOW_LOCAL_PUBLIC_APP_URL") === "true"
 
   if (production && !configuredAppUrl)
     errors.push("NUXT_PUBLIC_APP_URL is required in production.")
@@ -280,6 +267,13 @@ export function collectEnvironmentValidationErrors(env: EnvironmentSource) {
 
   if (production && configuredAppUrl && !isHttpsUrl(configuredAppUrl) && !allowLocalProductionUrl)
     errors.push("NUXT_PUBLIC_APP_URL must use HTTPS in production.")
+}
+
+function validatePublicFeatures(env: EnvironmentSource, errors: string[]) {
+  const publicEnvironment = readPublicEnvironment(env)
+  const investmentProgramApproved = readValue(env, "COFOUNDRY_INVESTMENT_PROGRAM_APPROVED")
+  const fileScannerCommand = readValue(env, "COFOUNDRY_FILE_SCANNER_COMMAND")
+  const configuredSupportEmail = readValue(env, "NUXT_PUBLIC_SUPPORT_EMAIL")
 
   if (configuredSupportEmail && !isValidSupportEmail(configuredSupportEmail))
     errors.push("NUXT_PUBLIC_SUPPORT_EMAIL must be a valid single email address.")
@@ -298,6 +292,11 @@ export function collectEnvironmentValidationErrors(env: EnvironmentSource) {
     if (!fileScannerCommand)
       errors.push("COFOUNDRY_FILE_SCANNER_COMMAND is required before the investment module is enabled outside local development.")
   }
+}
+
+function validateProxyTrust(env: EnvironmentSource, errors: string[]) {
+  const trustProxyHeaders = readValue(env, "COFOUNDRY_TRUST_PROXY_HEADERS")
+  const trustedProxyIps = readValue(env, "COFOUNDRY_TRUSTED_PROXY_IPS")
 
   if (trustProxyHeaders && !["false", "true"].includes(trustProxyHeaders))
     errors.push("COFOUNDRY_TRUST_PROXY_HEADERS must be true or false when it is set.")
@@ -306,6 +305,15 @@ export function collectEnvironmentValidationErrors(env: EnvironmentSource) {
     errors.push("COFOUNDRY_TRUSTED_PROXY_IPS is required when COFOUNDRY_TRUST_PROXY_HEADERS=true.")
   else if (trustProxyHeaders === "true" && !isExactTrustedProxyList(trustedProxyIps))
     errors.push("COFOUNDRY_TRUSTED_PROXY_IPS must contain only exact proxy host addresses (/32 or /128), not broad or malformed ranges.")
+}
+
+function validateProcessTopology(env: EnvironmentSource, errors: string[]) {
+  const production = readValue(env, "NODE_ENV") === "production"
+  const requiresSignedSessions = !isLocalDevelopmentEnvironment(env)
+  const expectsMultiInstance = readValue(env, "COFOUNDRY_EXPECT_MULTI_INSTANCE")
+  const appInstanceCount = readValue(env, "COFOUNDRY_APP_INSTANCE_COUNT")
+  const parsedAppInstanceCount = Number.parseInt(appInstanceCount, 10)
+  const realtimeFanoutUrl = readValue(env, "COFOUNDRY_REALTIME_FANOUT_URL")
 
   if (expectsMultiInstance && !["false", "true"].includes(expectsMultiInstance))
     errors.push("COFOUNDRY_EXPECT_MULTI_INSTANCE must be true or false when it is set.")
@@ -318,6 +326,13 @@ export function collectEnvironmentValidationErrors(env: EnvironmentSource) {
 
   if (production && realtimeFanoutUrl)
     errors.push("COFOUNDRY_REALTIME_FANOUT_URL must be unset in production until shared rate limiting is implemented.")
+}
+
+function validateRealtimeFanout(env: EnvironmentSource, errors: string[]) {
+  const publicEnvironment = readPublicEnvironment(env)
+  const secretEnvironment = readSecretEnvironment(env)
+  const realtimeFanoutUrl = readValue(env, "COFOUNDRY_REALTIME_FANOUT_URL")
+  const realtimeFanoutToken = readValue(env, "COFOUNDRY_REALTIME_FANOUT_TOKEN")
 
   if (realtimeFanoutUrl) {
     const fanoutUrl = parseAbsoluteHttpUrl(realtimeFanoutUrl)
@@ -338,6 +353,14 @@ export function collectEnvironmentValidationErrors(env: EnvironmentSource) {
       errors.push("A distinct COFOUNDRY_REALTIME_FANOUT_TOKEN is required for cross-origin realtime fanout.")
     }
   }
+}
+
+function validateBackendModes(env: EnvironmentSource, errors: string[]) {
+  const secretEnvironment = readSecretEnvironment(env)
+  const configuredBackendMode = readValue(env, "NUXT_PUBLIC_BACKEND_MODE")
+  const configuredBillingMode = readValue(env, "NUXT_PUBLIC_BILLING_MODE")
+  const realtimeFanoutToken = readValue(env, "COFOUNDRY_REALTIME_FANOUT_TOKEN")
+  const backendHost = readValue(env, "BACKEND_HOST") || "127.0.0.1"
 
   if (realtimeFanoutToken && realtimeFanoutToken.length < 32)
     errors.push("COFOUNDRY_REALTIME_FANOUT_TOKEN must be at least 32 characters when it is configured.")
@@ -350,67 +373,85 @@ export function collectEnvironmentValidationErrors(env: EnvironmentSource) {
 
   if (configuredBillingMode && !billingModes.includes(configuredBillingMode as BillingMode))
     errors.push(`NUXT_PUBLIC_BILLING_MODE must be one of: ${billingModes.join(", ")}.`)
+}
 
-  if (publicEnvironment.backendMode === "supabase") {
-    if (!publicEnvironment.supabaseUrl)
-      errors.push("NUXT_PUBLIC_SUPABASE_URL is required when NUXT_PUBLIC_BACKEND_MODE=\"supabase\".")
-    else if (!isAbsoluteUrl(publicEnvironment.supabaseUrl))
-      errors.push("NUXT_PUBLIC_SUPABASE_URL must be an absolute HTTP(S) URL.")
-    else if (!isOriginUrl(publicEnvironment.supabaseUrl))
-      errors.push("NUXT_PUBLIC_SUPABASE_URL must be an origin without credentials, a path, query parameters, or a fragment.")
-    else if (!isHttpsUrl(publicEnvironment.supabaseUrl) && !isLocalAppUrl(publicEnvironment.supabaseUrl))
-      errors.push("NUXT_PUBLIC_SUPABASE_URL must use HTTPS outside local development.")
+function validateSupabaseCredentials(env: EnvironmentSource, errors: string[]) {
+  const publicEnvironment = readPublicEnvironment(env)
+  const secretEnvironment = readSecretEnvironment(env)
 
-    if (!publicEnvironment.supabaseAnonKey)
-      errors.push("NUXT_PUBLIC_SUPABASE_ANON_KEY is required when NUXT_PUBLIC_BACKEND_MODE=\"supabase\".")
+  if (publicEnvironment.backendMode !== "supabase")
+    return
 
-    if (!secretEnvironment.supabaseServiceRoleKey)
-      errors.push("SUPABASE_SERVICE_ROLE_KEY is required when NUXT_PUBLIC_BACKEND_MODE=\"supabase\".")
+  if (!publicEnvironment.supabaseUrl)
+    errors.push("NUXT_PUBLIC_SUPABASE_URL is required when NUXT_PUBLIC_BACKEND_MODE=\"supabase\".")
+  else if (!isAbsoluteUrl(publicEnvironment.supabaseUrl))
+    errors.push("NUXT_PUBLIC_SUPABASE_URL must be an absolute HTTP(S) URL.")
+  else if (!isOriginUrl(publicEnvironment.supabaseUrl))
+    errors.push("NUXT_PUBLIC_SUPABASE_URL must be an origin without credentials, a path, query parameters, or a fragment.")
+  else if (!isHttpsUrl(publicEnvironment.supabaseUrl) && !isLocalAppUrl(publicEnvironment.supabaseUrl))
+    errors.push("NUXT_PUBLIC_SUPABASE_URL must use HTTPS outside local development.")
 
-    if (
-      publicEnvironment.supabaseAnonKey
-      && secretEnvironment.supabaseServiceRoleKey
-      && publicEnvironment.supabaseAnonKey === secretEnvironment.supabaseServiceRoleKey
-    ) {
-      errors.push("NUXT_PUBLIC_SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY must be different credentials.")
-    }
+  if (!publicEnvironment.supabaseAnonKey)
+    errors.push("NUXT_PUBLIC_SUPABASE_ANON_KEY is required when NUXT_PUBLIC_BACKEND_MODE=\"supabase\".")
+
+  if (!secretEnvironment.supabaseServiceRoleKey)
+    errors.push("SUPABASE_SERVICE_ROLE_KEY is required when NUXT_PUBLIC_BACKEND_MODE=\"supabase\".")
+
+  if (
+    publicEnvironment.supabaseAnonKey
+    && secretEnvironment.supabaseServiceRoleKey
+    && publicEnvironment.supabaseAnonKey === secretEnvironment.supabaseServiceRoleKey
+  ) {
+    errors.push("NUXT_PUBLIC_SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY must be different credentials.")
+  }
+}
+
+function validateStripeCredentials(env: EnvironmentSource, errors: string[]) {
+  const publicEnvironment = readPublicEnvironment(env)
+  const secretEnvironment = readSecretEnvironment(env)
+
+  if (publicEnvironment.billingMode !== "stripe")
+    return
+
+  if (publicEnvironment.backendMode !== "supabase")
+    errors.push("NUXT_PUBLIC_BILLING_MODE=\"stripe\" requires NUXT_PUBLIC_BACKEND_MODE=\"supabase\" for durable subscription reconciliation.")
+
+  if (!publicEnvironment.stripePublishableKey)
+    errors.push("NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is required when NUXT_PUBLIC_BILLING_MODE=\"stripe\".")
+
+  if (!publicEnvironment.stripePriceProMonthly)
+    errors.push("NUXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY is required when NUXT_PUBLIC_BILLING_MODE=\"stripe\".")
+
+  if (!publicEnvironment.stripePriceTeamMonthly)
+    errors.push("NUXT_PUBLIC_STRIPE_PRICE_TEAM_MONTHLY is required when NUXT_PUBLIC_BILLING_MODE=\"stripe\".")
+
+  if (!secretEnvironment.stripeSecretKey)
+    errors.push("STRIPE_SECRET_KEY is required when NUXT_PUBLIC_BILLING_MODE=\"stripe\".")
+
+  if (!secretEnvironment.stripeWebhookSecret)
+    errors.push("STRIPE_WEBHOOK_SECRET is required when NUXT_PUBLIC_BILLING_MODE=\"stripe\".")
+
+  if (
+    publicEnvironment.stripePriceProMonthly
+    && publicEnvironment.stripePriceTeamMonthly
+    && publicEnvironment.stripePriceProMonthly === publicEnvironment.stripePriceTeamMonthly
+  ) {
+    errors.push("The Stripe Pro and Team price IDs must be different.")
   }
 
-  if (publicEnvironment.billingMode === "stripe") {
-    if (publicEnvironment.backendMode !== "supabase")
-      errors.push("NUXT_PUBLIC_BILLING_MODE=\"stripe\" requires NUXT_PUBLIC_BACKEND_MODE=\"supabase\" for durable subscription reconciliation.")
+  const stripeCredentials = [
+    publicEnvironment.stripePublishableKey,
+    secretEnvironment.stripeSecretKey,
+    secretEnvironment.stripeWebhookSecret,
+  ].filter(Boolean)
+  if (new Set(stripeCredentials).size !== stripeCredentials.length)
+    errors.push("Stripe publishable, secret, and webhook credentials must be different.")
+}
 
-    if (!publicEnvironment.stripePublishableKey)
-      errors.push("NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is required when NUXT_PUBLIC_BILLING_MODE=\"stripe\".")
-
-    if (!publicEnvironment.stripePriceProMonthly)
-      errors.push("NUXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY is required when NUXT_PUBLIC_BILLING_MODE=\"stripe\".")
-
-    if (!publicEnvironment.stripePriceTeamMonthly)
-      errors.push("NUXT_PUBLIC_STRIPE_PRICE_TEAM_MONTHLY is required when NUXT_PUBLIC_BILLING_MODE=\"stripe\".")
-
-    if (!secretEnvironment.stripeSecretKey)
-      errors.push("STRIPE_SECRET_KEY is required when NUXT_PUBLIC_BILLING_MODE=\"stripe\".")
-
-    if (!secretEnvironment.stripeWebhookSecret)
-      errors.push("STRIPE_WEBHOOK_SECRET is required when NUXT_PUBLIC_BILLING_MODE=\"stripe\".")
-
-    if (
-      publicEnvironment.stripePriceProMonthly
-      && publicEnvironment.stripePriceTeamMonthly
-      && publicEnvironment.stripePriceProMonthly === publicEnvironment.stripePriceTeamMonthly
-    ) {
-      errors.push("The Stripe Pro and Team price IDs must be different.")
-    }
-
-    const stripeCredentials = [
-      publicEnvironment.stripePublishableKey,
-      secretEnvironment.stripeSecretKey,
-      secretEnvironment.stripeWebhookSecret,
-    ].filter(Boolean)
-    if (new Set(stripeCredentials).size !== stripeCredentials.length)
-      errors.push("Stripe publishable, secret, and webhook credentials must be different.")
-  }
+function validateSessionCredentials(env: EnvironmentSource, errors: string[]) {
+  const secretEnvironment = readSecretEnvironment(env)
+  const requiresSignedSessions = !isLocalDevelopmentEnvironment(env)
+  const realtimeFanoutToken = readValue(env, "COFOUNDRY_REALTIME_FANOUT_TOKEN")
 
   if (requiresSignedSessions && !secretEnvironment.sessionSigningSecret)
     errors.push("SESSION_SIGNING_SECRET is required whenever account sessions are enabled in a non-local environment.")
@@ -436,7 +477,20 @@ export function collectEnvironmentValidationErrors(env: EnvironmentSource) {
   ) {
     errors.push("COFOUNDRY_REALTIME_FANOUT_TOKEN must be different from operations and session secrets.")
   }
+}
 
+export function collectEnvironmentValidationErrors(env: EnvironmentSource) {
+  const errors: string[] = []
+  validatePublicOriginSyntax(env, errors)
+  validateProductionOrigin(env, errors)
+  validatePublicFeatures(env, errors)
+  validateProxyTrust(env, errors)
+  validateProcessTopology(env, errors)
+  validateRealtimeFanout(env, errors)
+  validateBackendModes(env, errors)
+  validateSupabaseCredentials(env, errors)
+  validateStripeCredentials(env, errors)
+  validateSessionCredentials(env, errors)
   return errors
 }
 

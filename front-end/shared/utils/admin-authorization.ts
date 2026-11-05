@@ -44,18 +44,8 @@ export function evaluateAdminSecurityMutation(
     user.role === "admin" && !user.suspendedAt && user.verifiedEmail,
   ).length
 
-  if (mutation.kind === "change_role") {
-    if (mutation.role === target.role)
-      return deny("Choose a different role before recording a role change.", 409)
-    if (target.suspendedAt && ["admin", "investor_admin"].includes(mutation.role))
-      return deny("Reinstate the account before granting a privileged role.", 409)
-    if (!target.verifiedEmail && ["admin", "investor_admin"].includes(mutation.role))
-      return deny("Verify the account email before granting a privileged role.", 409)
-    if (target.role === "admin" && mutation.role !== "admin" && !target.suspendedAt && target.verifiedEmail && activeFullAdminCount <= 1)
-      return deny("The last active full admin cannot be demoted.", 409)
-
-    return { allowed: true, statusCode: 200, statusMessage: "Role change allowed." }
-  }
+  if (mutation.kind === "change_role")
+    return evaluateAdminRoleChange(target, mutation.role, activeFullAdminCount)
 
   if (mutation.kind === "verify_email") {
     if (target.verifiedEmail)
@@ -64,7 +54,24 @@ export function evaluateAdminSecurityMutation(
     return { allowed: true, statusCode: 200, statusMessage: "Email verification allowed." }
   }
 
-  if (mutation.action === "suspend") {
+  return evaluateAdminStatusChange(target, mutation.action, activeFullAdminCount)
+}
+
+function evaluateAdminRoleChange(target: AdminSecurityUser, role: AppRole, activeFullAdminCount: number): AdminSecurityDecision {
+  if (role === target.role)
+    return deny("Choose a different role before recording a role change.", 409)
+  if (target.suspendedAt && ["admin", "investor_admin"].includes(role))
+    return deny("Reinstate the account before granting a privileged role.", 409)
+  if (!target.verifiedEmail && ["admin", "investor_admin"].includes(role))
+    return deny("Verify the account email before granting a privileged role.", 409)
+  if (target.role === "admin" && role !== "admin" && !target.suspendedAt && target.verifiedEmail && activeFullAdminCount <= 1)
+    return deny("The last active full admin cannot be demoted.", 409)
+
+  return { allowed: true, statusCode: 200, statusMessage: "Role change allowed." }
+}
+
+function evaluateAdminStatusChange(target: AdminSecurityUser, action: "reinstate" | "suspend", activeFullAdminCount: number): AdminSecurityDecision {
+  if (action === "suspend") {
     if (target.suspendedAt)
       return deny("This account is already suspended.", 409)
     if (target.role === "admin" && target.verifiedEmail && activeFullAdminCount <= 1)

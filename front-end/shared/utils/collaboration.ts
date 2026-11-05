@@ -446,10 +446,9 @@ export function sendMessageTransition(
 export function markConversationReadTransition(seed: WorkspaceSeed, conversationId: string, userId: string) {
   const nextSeed = cloneValue(seed)
   const conversation = nextSeed.conversations.find(item => item.id === conversationId)
-  if (!conversation || !isConversationParticipant(conversation, userId))
-    return nextSeed
+  if (conversation && isConversationParticipant(conversation, userId))
+    conversation.unreadCountByUser[userId] = 0
 
-  conversation.unreadCountByUser[userId] = 0
   return nextSeed
 }
 

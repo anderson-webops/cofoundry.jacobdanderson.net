@@ -2,12 +2,12 @@
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "incremental": true,
+    "rootDir": "./src",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "types": ["node"],
-    "rootDir": "./src",
-    "sourceMap": true,
     "outDir": "./dist",
+    "sourceMap": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true
   },

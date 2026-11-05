@@ -47,8 +47,7 @@ body,
 body {
   background:
     radial-gradient(circle at top left, var(--bg-glow-primary), transparent 32%),
-    radial-gradient(circle at bottom right, var(--bg-glow-secondary), transparent 28%),
-    var(--bg);
+    radial-gradient(circle at bottom right, var(--bg-glow-secondary), transparent 28%), var(--bg);
   color: var(--text);
   font-family: "DM Sans", sans-serif;
   line-height: 1.5;
@@ -202,7 +201,9 @@ select {
   gap: 1rem;
   padding-block: 1rem;
   border-bottom: 1px solid var(--line);
-  transition: color 150ms ease, border-color 150ms ease;
+  transition:
+    color 150ms ease,
+    border-color 150ms ease;
 }
 
 .plain-link-item:hover {
@@ -265,7 +266,9 @@ select {
   margin-inline: -0.75rem;
   padding: 0.5rem 0.75rem;
   border-radius: 0.75rem;
-  transition: color 150ms ease, background-color 150ms ease;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease;
 }
 
 .legal-toc-link:hover {
@@ -328,7 +331,10 @@ select {
   background: var(--panel-strong);
   color: var(--text);
   padding: 0.85rem 1rem;
-  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    background-color 150ms ease;
 }
 
 .field-control:hover {
@@ -351,7 +357,10 @@ select {
   border: 1px solid var(--line);
   background: var(--panel-strong);
   font-size: 0.88rem;
-  transition: transform 150ms ease, border-color 150ms ease, background-color 150ms ease;
+  transition:
+    transform 150ms ease,
+    border-color 150ms ease,
+    background-color 150ms ease;
 }
 
 .pill:hover {
@@ -369,7 +378,9 @@ select {
   min-height: 2.75rem;
   padding-block: 0.5rem;
   border-radius: 0.75rem;
-  transition: color 150ms ease, background-color 150ms ease;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease;
 }
 
 .disclosure-summary:hover {
@@ -384,7 +395,9 @@ select {
   padding-inline: 0.75rem;
   border-radius: 0.75rem;
   color: var(--accent);
-  transition: color 150ms ease, background-color 150ms ease;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease;
 }
 
 .public-action-link:hover {
@@ -401,7 +414,8 @@ select {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
   background-size: 28px 28px;
   mask-image: radial-gradient(circle at center, black 35%, transparent 85%);
   opacity: 0.35;

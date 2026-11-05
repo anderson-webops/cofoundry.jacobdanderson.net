@@ -1,5 +1,5 @@
 import type { H3Event } from "h3"
-import type { AdminActionTargetType, AdminActionType, AdminEscalationQueue, SessionUser } from "~/shared/types/domain"
+import type { AdminActionType, SessionUser } from "~/shared/types/domain"
 import { defaultAdminEscalationQueueForTarget } from "~/shared/utils/admin"
 import { getUserById } from "~/shared/utils/workspace"
 import { listAccessRequests } from "../../../utils/access-requests"
@@ -26,10 +26,6 @@ function sessionIdentity(session: SessionUser) {
     role: session.role,
     subscriptionPlan: session.subscriptionPlan,
   }
-}
-
-function defaultEscalationQueue(targetType: AdminActionTargetType): AdminEscalationQueue {
-  return defaultAdminEscalationQueueForTarget(targetType)
 }
 
 async function assertAssignableAdmin(event: H3Event, session: SessionUser, userId: string) {
@@ -126,7 +122,7 @@ export default defineEventHandler(async (event) => {
   const metadata = payload.action === "assign"
     ? { assignedAdminUserId: await assertAssignableAdmin(event, session, payload.assignedAdminUserId || session.id) }
     : payload.action === "escalate"
-      ? { escalationQueue: payload.escalationQueue || defaultEscalationQueue(payload.targetType) }
+      ? { escalationQueue: payload.escalationQueue || defaultAdminEscalationQueueForTarget(payload.targetType) }
       : {}
   const action = {
     id: crypto.randomUUID(),

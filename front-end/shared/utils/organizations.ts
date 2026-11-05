@@ -277,6 +277,476 @@ export function projectOrganizationWorkspaceForSession(
   return document
 }
 
+interface OrganizationMutationContext {
+  document: OrganizationWorkspaceDocument
+  session: SessionUser
+  options: TransitionOptions
+  membership: OrganizationMembership
+}
+
+function applyOrganizationUpdateOrganization(context: OrganizationMutationContext, mutation: Extract<OrganizationMutation, { action: "update_organization" }>) {
+  const { membership, document, session, options } = context
+  requireRole(membership, operatorRoles, "Only an owner or operator can update organization details.")
+  document.organization.name = mutation.name
+  document.organization.description = mutation.description
+  document.organization.website = mutation.website
+  audit(document, session.id, "organization.updated", "organization", document.organization.id, `${session.name} updated organization details.`, options)
+}
+
+function applyOrganizationUpdateSettings(context: OrganizationMutationContext, mutation: Extract<OrganizationMutation, { action: "update_settings" }>) {
+  const { membership, document, session, options } = context
+  requireRole(membership, new Set(["owner"]), "Only the organization owner can change seat and retention controls.")
+  if (mutation.seatLimit < document.memberships.length)
+    fail("The seat limit cannot be lower than the current active member count.", 409)
+  document.organization.allowOperatorInvites = mutation.allowOperatorInvites
+  document.organization.dataRetentionDays = mutation.dataRetentionDays
+  document.organization.seatLimit = mutation.seatLimit
+  audit(document, session.id, "organization.settings_updated", "organization", document.organization.id, `${session.name} updated seat and retention controls.`, options)
+}
+
+function applyOrganizationArchiveOrganization(context: OrganizationMutationContext) {
+  const { membership, document, session, options } = context
+  requireRole(membership, new Set(["owner"]), "Only the organization owner can archive this workspace.")
+  document.organization.status = "archived"
+  audit(document, session.id, "organization.archived", "organization", document.organization.id, `${session.name} archived the organization workspace.`, options)
+}
+
+function applyOrganizationInviteMember(context: OrganizationMutationContext, mutation: Extract<OrganizationMutation, { action: "invite_member" }>) {
+  const { membership, document, options, session } = context
+  const canInvite = membership.role === "owner" || (membership.role === "operator" && document.organization.allowOperatorInvites)
+  if (!canInvite)
+    fail("Only an owner or authorized operator can invite members.", 403)
+  const email = normalizeEmail(mutation.email)
+  const pendingInvitations = document.invitations.filter(invitation => invitation.status === "pending" && new Date(invitation.expiresAt).getTime() > new Date(options.now).getTime())
+  if (document.memberships.length + pendingInvitations.length >= document.organization.seatLimit)
+    fail("This invitation would exceed the organization seat limit.", 409)
+  if (document.memberships.some(item => normalizeEmail(item.email) === email))
+    fail("That email already belongs to an active organization member.", 409)
+  if (pendingInvitations.some(item => normalizeEmail(item.email) === email))
+    fail("A pending invitation already exists for that email.", 409)
+  const invitationId = options.createId("organization_invitation")
+  document.invitations.unshift({
+    createdAt: options.now,
+    displayName: mutation.displayName,
+    email,
+    expiresAt: new Date(new Date(options.now).getTime() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+    id: invitationId,
+    invitedByUserId: session.id,
+    organizationId: document.organization.id,
+    respondedAt: null,
+    role: mutation.role,
+    status: "pending",
+    title: mutation.title,
+    updatedAt: options.now,
+  })
+  audit(document, session.id, "invitation.created", "organization_invitation", invitationId, `${session.name} invited ${email} as ${mutation.role}.`, options)
+}
+
+function applyOrganizationRevokeInvitation(context: OrganizationMutationContext, mutation: Extract<OrganizationMutation, { action: "revoke_invitation" }>) {
+  const { membership, document, options, session } = context
+  requireRole(membership, operatorRoles, "Only an owner or operator can revoke invitations.")
+  const invitation = document.invitations.find(item => item.id === mutation.invitationId)
+  if (!invitation || invitation.status !== "pending")
+    fail("This invitation is no longer pending.", 409)
+  invitation.status = "revoked"
+  invitation.respondedAt = options.now
+  invitation.updatedAt = options.now
+  audit(document, session.id, "invitation.revoked", "organization_invitation", invitation.id, `${session.name} revoked the invitation for ${invitation.email}.`, options)
+}
+
+function applyOrganizationUpdateMember(context: OrganizationMutationContext, mutation: Extract<OrganizationMutation, { action: "update_member" }>) {
+  const { membership, document, options, session } = context
+  requireRole(membership, new Set(["owner"]), "Only the organization owner can change member roles.")
+  const target = document.memberships.find(item => item.id === mutation.membershipId)
+  if (!target)
+    fail("Organization member not found.", 404)
+  if (target.role === "owner")
+    fail("Transfer ownership before changing the owner's role.", 409)
+  target.role = mutation.role
+  target.title = mutation.title
+  target.updatedAt = options.now
+  audit(document, session.id, "membership.updated", "organization_membership", target.id, `${session.name} changed ${target.displayName}'s organization role.`, options)
+}
+
+function applyOrganizationRemoveMember(context: OrganizationMutationContext, mutation: Extract<OrganizationMutation, { action: "remove_member" }>) {
+  const { membership, document, options, session } = context
+  requireRole(membership, new Set(["owner"]), "Only the organization owner can remove members.")
+  const target = document.memberships.find(item => item.id === mutation.membershipId)
+  if (!target)
+    fail("Organization member not found.", 404)
+  if (target.role === "owner")
+    fail("Transfer ownership before removing the owner.", 409)
+  document.memberships = document.memberships.filter(item => item.id !== target.id)
+  document.tasks = document.tasks.map(task => task.assigneeUserId === target.userId
+    ? { ...task, assigneeUserId: null, updatedAt: options.now }
+    : task)
+  document.projects = document.projects.map(project => project.ownerUserId === target.userId
+    ? { ...project, ownerUserId: null, updatedAt: options.now }
+    : project)
+  document.ventures = document.ventures.map(venture => venture.leadUserId === target.userId
+    ? { ...venture, leadUserId: null, updatedAt: options.now }
+    : venture)
+  audit(document, session.id, "membership.removed", "organization_membership", target.id, `${session.name} removed ${target.displayName} from the organization.`, options)
+}
+
+function applyOrganizationTransferOwnership(context: OrganizationMutationContext, mutation: Extract<OrganizationMutation, { action: "transfer_ownership" }>) {
+  const { membership, document, session, options } = context
+  requireRole(membership, new Set(["owner"]), "Only the current owner can transfer ownership.")
+  const target = document.memberships.find(item => item.id === mutation.membershipId)
+  if (!target || target.userId === session.id)
+    fail("Choose another active member to become the owner.")
+  const currentOwner = document.memberships.find(item => item.userId === document.organization.ownerUserId)
+  if (!currentOwner)
+    fail("The current owner membership is unavailable.", 409)
+  currentOwner.role = "operator"
+  currentOwner.updatedAt = options.now
+  target.role = "owner"
+  target.updatedAt = options.now
+  document.organization.ownerUserId = target.userId
+  if (document.organization.billingOwnerUserId === session.id)
+    document.organization.billingOwnerUserId = target.userId
+  audit(document, session.id, "ownership.transferred", "organization_membership", target.id, `${session.name} transferred ownership to ${target.displayName}.`, options)
+}
+
+function applyOrganizationCreateVenture(context: OrganizationMutationContext, mutation: Extract<OrganizationMutation, { action: "create_venture" }>) {
+  const { membership, document, options, session } = context
+  requireRole(membership, operatorRoles, "Only an owner or operator can add portfolio ventures.")
+  assertMemberReference(document, mutation.leadUserId, "Venture lead")
+  const ventureId = options.createId("organization_venture")
+  document.ventures.unshift({
+    createdAt: options.now,
+    id: ventureId,
+    leadUserId: mutation.leadUserId,
+    name: mutation.name,
+    opportunityId: mutation.opportunityId,
+    organizationId: document.organization.id,
+    stage: mutation.stage,
+    status: "incubating",
+    summary: mutation.summary,
+    updatedAt: options.now,
+  })
+  audit(document, session.id, "venture.created", "organization_venture", ventureId, `${session.name} added ${mutation.name} to the portfolio.`, options)
+}
+
+function applyOrganizationUpdateVenture(context: OrganizationMutationContext, mutation: Extract<OrganizationMutation, { action: "update_venture" }>) {
+  const { membership, document, options, session } = context
+  requireRole(membership, operatorRoles, "Only an owner or operator can update portfolio ventures.")
+  assertMemberReference(document, mutation.leadUserId, "Venture lead")
+  const venture = document.ventures.find(item => item.id === mutation.ventureId)
+  if (!venture)
+    fail("Portfolio venture not found.", 404)
+  venture.leadUserId = mutation.leadUserId
+  venture.stage = mutation.stage
+  venture.status = mutation.status
+  venture.summary = mutation.summary
+  venture.updatedAt = options.now
+  audit(document, session.id, "venture.updated", "organization_venture", venture.id, `${session.name} updated ${venture.name}.`, options)
+}
+
+function applyOrganizationCreateProject(context: OrganizationMutationContext, mutation: Extract<OrganizationMutation, { action: "create_project" }>) {
+  const { membership, document, options, session } = context
+  requireRole(membership, workingRoles, "Your organization role cannot create projects.")
+  assertMemberReference(document, mutation.ownerUserId, "Project owner")
+  if (mutation.ventureId && !document.ventures.some(venture => venture.id === mutation.ventureId))
+    fail("The selected portfolio venture is unavailable.", 404)
+  const projectId = options.createId("organization_project")
+  document.projects.unshift({
+    createdAt: options.now,
+    description: mutation.description,
+    dueAt: mutation.dueAt,
+    id: projectId,
+    organizationId: document.organization.id,
+    ownerUserId: mutation.ownerUserId,
+    status: "planned",
+    title: mutation.title,
+    updatedAt: options.now,
+    ventureId: mutation.ventureId,
+  })
+  audit(document, session.id, "project.created", "organization_project", projectId, `${session.name} created project ${mutation.title}.`, options)
+}
+
+function applyOrganizationUpdateProject(context: OrganizationMutationContext, mutation: Extract<OrganizationMutation, { action: "update_project" }>) {
+  const { membership, document, options, session } = context
+  requireRole(membership, workingRoles, "Your organization role cannot update projects.")
+  assertMemberReference(document, mutation.ownerUserId, "Project owner")
+  const project = document.projects.find(item => item.id === mutation.projectId)
+  if (!project)
+    fail("Project not found.", 404)
+  project.description = mutation.description
+  project.dueAt = mutation.dueAt
+  project.ownerUserId = mutation.ownerUserId
+  project.status = mutation.status
+  project.title = mutation.title
+  project.updatedAt = options.now
+  audit(document, session.id, "project.updated", "organization_project", project.id, `${session.name} updated project ${project.title}.`, options)
+}
+
+function applyOrganizationCreateTask(context: OrganizationMutationContext, mutation: Extract<OrganizationMutation, { action: "create_task" }>) {
+  const { membership, document, options, session } = context
+  requireRole(membership, workingRoles, "Your organization role cannot create tasks.")
+  assertMemberReference(document, mutation.assigneeUserId, "Task assignee")
+  if (!document.projects.some(project => project.id === mutation.projectId))
+    fail("The selected project is unavailable.", 404)
+  const taskId = options.createId("organization_task")
+  document.tasks.unshift({
+    assigneeUserId: mutation.assigneeUserId,
+    createdAt: options.now,
+    createdByUserId: session.id,
+    dueAt: mutation.dueAt,
+    id: taskId,
+    organizationId: document.organization.id,
+    projectId: mutation.projectId,
+    status: "todo",
+    title: mutation.title,
+    updatedAt: options.now,
+  })
+  audit(document, session.id, "task.created", "organization_task", taskId, `${session.name} created task ${mutation.title}.`, options)
+}
+
+function applyOrganizationUpdateTask(context: OrganizationMutationContext, mutation: Extract<OrganizationMutation, { action: "update_task" }>) {
+  const { membership, document, session, options } = context
+  requireRole(membership, workingRoles, "Your organization role cannot update tasks.")
+  assertMemberReference(document, mutation.assigneeUserId, "Task assignee")
+  const task = document.tasks.find(item => item.id === mutation.taskId)
+  if (!task)
+    fail("Task not found.", 404)
+  const ownsTask = task.assigneeUserId === session.id || task.createdByUserId === session.id
+  if (!ownsTask && !operatorRoles.has(membership.role))
+    fail("Only the task assignee, creator, owner, or operator can update this task.", 403)
+  task.assigneeUserId = mutation.assigneeUserId
+  task.dueAt = mutation.dueAt
+  task.status = mutation.status
+  task.title = mutation.title
+  task.updatedAt = options.now
+  audit(document, session.id, "task.updated", "organization_task", task.id, `${session.name} updated task ${task.title}.`, options)
+}
+
+function applyOrganizationCreateDecision(context: OrganizationMutationContext, mutation: Extract<OrganizationMutation, { action: "create_decision" }>) {
+  const { membership, document, options, session } = context
+  requireRole(membership, reviewingRoles, "Your organization role cannot create governance decisions.")
+  assertMemberReference(document, mutation.ownerUserId, "Decision owner")
+  const decisionId = options.createId("organization_decision")
+  document.decisions.unshift({
+    approvedByUserId: null,
+    context: mutation.context,
+    createdAt: options.now,
+    decidedAt: null,
+    decision: mutation.decision,
+    id: decisionId,
+    organizationId: document.organization.id,
+    ownerUserId: mutation.ownerUserId,
+    projectId: mutation.projectId,
+    status: "proposed",
+    title: mutation.title,
+    updatedAt: options.now,
+    ventureId: mutation.ventureId,
+  })
+  audit(document, session.id, "decision.created", "organization_decision", decisionId, `${session.name} proposed decision ${mutation.title}.`, options)
+}
+
+function applyOrganizationResolveDecision(context: OrganizationMutationContext, mutation: Extract<OrganizationMutation, { action: "resolve_decision" }>) {
+  const { membership, document, session, options } = context
+  requireRole(membership, reviewingRoles, "Your organization role cannot resolve governance decisions.")
+  const decision = document.decisions.find(item => item.id === mutation.decisionId)
+  if (!decision)
+    fail("Governance decision not found.", 404)
+  decision.decision = mutation.decision
+  decision.status = mutation.status
+  decision.approvedByUserId = session.id
+  decision.decidedAt = options.now
+  decision.updatedAt = options.now
+  audit(document, session.id, `decision.${mutation.status}`, "organization_decision", decision.id, `${session.name} marked ${decision.title} ${mutation.status}.`, options)
+}
+
+function applyOrganizationCreatePolicy(context: OrganizationMutationContext, mutation: Extract<OrganizationMutation, { action: "create_policy" }>) {
+  const { membership, options, session, document } = context
+  requireRole(membership, policyRoles, "Only owners, operators, or counsel can create agreement policies.")
+  const policyId = options.createId("organization_policy")
+  const policy: OrganizationAgreementPolicy = {
+    allowOutsideCounsel: mutation.allowOutsideCounsel,
+    approvalRoles: validateApprovalRoles(mutation.approvalRoles),
+    createdAt: options.now,
+    createdByUserId: session.id,
+    description: mutation.description,
+    id: policyId,
+    isDefault: mutation.isDefault,
+    name: mutation.name,
+    organizationId: document.organization.id,
+    requiredClauses: Array.from(new Set(mutation.requiredClauses)),
+    requiresInternalApproval: mutation.requiresInternalApproval,
+    requiresLegalReview: mutation.requiresLegalReview,
+    separationOfDuties: mutation.separationOfDuties,
+    updatedAt: options.now,
+  }
+  document.agreementPolicies.unshift(policy)
+  if (policy.isDefault)
+    updateDefaultPolicy(document, policy.id, options.now)
+  audit(document, session.id, "policy.created", "organization_policy", policy.id, `${session.name} created agreement policy ${policy.name}.`, options)
+}
+
+function applyOrganizationUpdatePolicy(context: OrganizationMutationContext, mutation: Extract<OrganizationMutation, { action: "update_policy" }>) {
+  const { membership, document, options, session } = context
+  requireRole(membership, policyRoles, "Only owners, operators, or counsel can update agreement policies.")
+  const policy = requirePolicy(document, mutation.policyId)
+  policy.allowOutsideCounsel = mutation.allowOutsideCounsel
+  policy.approvalRoles = validateApprovalRoles(mutation.approvalRoles)
+  policy.description = mutation.description
+  policy.isDefault = mutation.isDefault
+  policy.name = mutation.name
+  policy.requiredClauses = Array.from(new Set(mutation.requiredClauses))
+  policy.requiresInternalApproval = mutation.requiresInternalApproval
+  policy.requiresLegalReview = mutation.requiresLegalReview
+  policy.separationOfDuties = mutation.separationOfDuties
+  policy.updatedAt = options.now
+  if (policy.isDefault)
+    updateDefaultPolicy(document, policy.id, options.now)
+  audit(document, session.id, "policy.updated", "organization_policy", policy.id, `${session.name} updated agreement policy ${policy.name}.`, options)
+}
+
+function applyOrganizationRequestApproval(context: OrganizationMutationContext, mutation: Extract<OrganizationMutation, { action: "request_approval" }>) {
+  const { document, session, options } = context
+  requireMembership(document, session.id)
+  if (mutation.policyId)
+    requirePolicy(document, mutation.policyId)
+  const contractLink = mutation.targetType === "contract"
+    ? document.resourceLinks.find(link => link.resourceType === "contract" && link.resourceId === mutation.targetId)
+    : null
+  const linkedPolicy = contractLink
+    ? linkedAgreementPolicy(document, contractLink.policyId)
+    : null
+  if (contractLink && !linkedPolicy)
+    fail("The linked agreement policy is unavailable.", 409)
+  if (linkedPolicy && mutation.policyId !== linkedPolicy.id)
+    fail("Contract approval must use the linked agreement policy.", 409)
+  const duplicate = document.approvalRequests.some(approval =>
+    approval.targetType === mutation.targetType
+    && approval.targetId === mutation.targetId
+    && approval.targetVersionId === mutation.targetVersionId
+    && (!linkedPolicy || approval.policyId === linkedPolicy.id)
+    && approval.status === "pending",
+  )
+  if (duplicate)
+    fail("A pending approval already exists for this exact item and version.", 409)
+  const approvalId = options.createId("organization_approval")
+  document.approvalRequests.unshift({
+    createdAt: options.now,
+    decidedAt: null,
+    decidedByUserId: null,
+    decisionNote: null,
+    id: approvalId,
+    organizationId: document.organization.id,
+    policyId: mutation.policyId,
+    requestedByUserId: session.id,
+    status: "pending",
+    summary: mutation.summary,
+    targetId: mutation.targetId,
+    targetType: mutation.targetType,
+    targetVersionId: mutation.targetVersionId,
+    title: mutation.title,
+    updatedAt: options.now,
+  })
+  audit(document, session.id, "approval.requested", "organization_approval", approvalId, `${session.name} requested approval for ${mutation.title}.`, options)
+}
+
+function applyOrganizationResolveApproval(context: OrganizationMutationContext, mutation: Extract<OrganizationMutation, { action: "resolve_approval" }>) {
+  const { document, membership, session, options } = context
+  const approval = document.approvalRequests.find(item => item.id === mutation.approvalId)
+  if (!approval || approval.status !== "pending")
+    fail("This approval request is no longer pending.", 409)
+  const policy = approvalPolicy(document, approval)
+  const approvalRoles = new Set<OrganizationMemberRole>(policy?.approvalRoles || [
+    "owner",
+    "operator",
+    "reviewer",
+    "counsel"
+  ])
+  requireRole(membership, approvalRoles, "Your organization role cannot resolve this approval request.")
+  if (policy?.separationOfDuties && approval.requestedByUserId === session.id)
+    fail("This policy requires a different organization member to resolve the approval.", 409)
+  approval.status = mutation.status
+  approval.decisionNote = mutation.decisionNote
+  approval.decidedByUserId = session.id
+  approval.decidedAt = options.now
+  approval.updatedAt = options.now
+  audit(document, session.id, `approval.${mutation.status}`, "organization_approval", approval.id, `${session.name} marked ${approval.title} ${mutation.status}.`, options)
+}
+
+function applyOrganizationCancelApproval(context: OrganizationMutationContext, mutation: Extract<OrganizationMutation, { action: "cancel_approval" }>) {
+  const { document, session, membership, options } = context
+  const approval = document.approvalRequests.find(item => item.id === mutation.approvalId)
+  if (!approval || approval.status !== "pending")
+    fail("This approval request is no longer pending.", 409)
+  if (approval.requestedByUserId !== session.id && !operatorRoles.has(membership.role))
+    fail("Only the requester, owner, or operator can cancel this approval.", 403)
+  approval.status = "canceled"
+  approval.decidedByUserId = session.id
+  approval.decidedAt = options.now
+  approval.updatedAt = options.now
+  audit(document, session.id, "approval.canceled", "organization_approval", approval.id, `${session.name} canceled ${approval.title}.`, options)
+}
+
+function applyOrganizationShareSearch(context: OrganizationMutationContext, mutation: Extract<OrganizationMutation, { action: "share_search" }>) {
+  const { membership, options, document, session } = context
+  requireRole(membership, workingRoles, "Your organization role cannot share searches.")
+  const sharedSearchId = options.createId("organization_search")
+  document.sharedSearches.unshift({
+    createdAt: options.now,
+    filters: cloneValue(mutation.filters),
+    id: sharedSearchId,
+    label: mutation.label,
+    organizationId: document.organization.id,
+    scope: mutation.scope,
+    sharedByUserId: session.id,
+    sourceSavedSearchId: mutation.sourceSavedSearchId,
+    updatedAt: options.now,
+  })
+  audit(document, session.id, "search.shared", "organization_search", sharedSearchId, `${session.name} shared search ${mutation.label}.`, options)
+}
+
+function applyOrganizationRemoveSharedSearch(context: OrganizationMutationContext, mutation: Extract<OrganizationMutation, { action: "remove_shared_search" }>) {
+  const { document, session, membership, options } = context
+  const sharedSearch = document.sharedSearches.find(item => item.id === mutation.sharedSearchId)
+  if (!sharedSearch)
+    fail("Shared search not found.", 404)
+  if (sharedSearch.sharedByUserId !== session.id && !operatorRoles.has(membership.role))
+    fail("Only the search owner, organization owner, or operator can remove it.", 403)
+  document.sharedSearches = document.sharedSearches.filter(item => item.id !== sharedSearch.id)
+  audit(document, session.id, "search.removed", "organization_search", sharedSearch.id, `${session.name} removed shared search ${sharedSearch.label}.`, options)
+}
+
+function applyOrganizationLinkResource(context: OrganizationMutationContext, mutation: Extract<OrganizationMutation, { action: "link_resource" }>) {
+  const { membership, document, options, session } = context
+  requireRole(membership, operatorRoles, "Only an owner or operator can link organization resources.")
+  if (mutation.policyId)
+    requirePolicy(document, mutation.policyId)
+  const existing = document.resourceLinks.find(link => link.resourceType === mutation.resourceType && link.resourceId === mutation.resourceId)
+  if (existing)
+    fail("That resource is already linked to this organization.", 409)
+  const resourceLinkId = options.createId("organization_resource")
+  document.resourceLinks.unshift({
+    createdAt: options.now,
+    id: resourceLinkId,
+    label: mutation.label,
+    linkedByUserId: session.id,
+    organizationId: document.organization.id,
+    policyId: mutation.policyId,
+    resourceId: mutation.resourceId,
+    resourceType: mutation.resourceType,
+    updatedAt: options.now,
+  })
+  audit(document, session.id, "resource.linked", "organization_resource", resourceLinkId, `${session.name} linked ${mutation.label}.`, options)
+}
+
+function applyOrganizationUnlinkResource(context: OrganizationMutationContext, mutation: Extract<OrganizationMutation, { action: "unlink_resource" }>) {
+  const { membership, document, session, options } = context
+  requireRole(membership, operatorRoles, "Only an owner or operator can unlink organization resources.")
+  const resource = document.resourceLinks.find(item => item.id === mutation.resourceLinkId)
+  if (!resource)
+    fail("Linked resource not found.", 404)
+  document.resourceLinks = document.resourceLinks.filter(item => item.id !== resource.id)
+  audit(document, session.id, "resource.unlinked", "organization_resource", resource.id, `${session.name} unlinked ${resource.label}.`, options)
+}
+
 export function applyOrganizationMutation(
   source: OrganizationWorkspaceDocument,
   session: SessionUser,
@@ -325,445 +795,113 @@ export function applyOrganizationMutation(
   if (mutation.action !== "archive_organization")
     requireActiveOrganization(document)
 
+  const context = {
+    document,
+    session,
+    options,
+    membership
+  }
   switch (mutation.action) {
-    case "update_organization": {
-      requireRole(membership, operatorRoles, "Only an owner or operator can update organization details.")
-      document.organization.name = mutation.name
-      document.organization.description = mutation.description
-      document.organization.website = mutation.website
-      audit(document, session.id, "organization.updated", "organization", document.organization.id, `${session.name} updated organization details.`, options)
+    case "update_organization":
+      applyOrganizationUpdateOrganization(context, mutation)
       break
-    }
-    case "update_settings": {
-      requireRole(membership, new Set(["owner"]), "Only the organization owner can change seat and retention controls.")
-      if (mutation.seatLimit < document.memberships.length)
-        fail("The seat limit cannot be lower than the current active member count.", 409)
-      document.organization.allowOperatorInvites = mutation.allowOperatorInvites
-      document.organization.dataRetentionDays = mutation.dataRetentionDays
-      document.organization.seatLimit = mutation.seatLimit
-      audit(document, session.id, "organization.settings_updated", "organization", document.organization.id, `${session.name} updated seat and retention controls.`, options)
+
+    case "update_settings":
+      applyOrganizationUpdateSettings(context, mutation)
       break
-    }
-    case "archive_organization": {
-      requireRole(membership, new Set(["owner"]), "Only the organization owner can archive this workspace.")
-      document.organization.status = "archived"
-      audit(document, session.id, "organization.archived", "organization", document.organization.id, `${session.name} archived the organization workspace.`, options)
+
+    case "archive_organization":
+      applyOrganizationArchiveOrganization(context)
       break
-    }
-    case "invite_member": {
-      const canInvite = membership.role === "owner" || (membership.role === "operator" && document.organization.allowOperatorInvites)
-      if (!canInvite)
-        fail("Only an owner or authorized operator can invite members.", 403)
-      const email = normalizeEmail(mutation.email)
-      const pendingInvitations = document.invitations.filter(invitation => invitation.status === "pending" && new Date(invitation.expiresAt).getTime() > new Date(options.now).getTime())
-      if (document.memberships.length + pendingInvitations.length >= document.organization.seatLimit)
-        fail("This invitation would exceed the organization seat limit.", 409)
-      if (document.memberships.some(item => normalizeEmail(item.email) === email))
-        fail("That email already belongs to an active organization member.", 409)
-      if (pendingInvitations.some(item => normalizeEmail(item.email) === email))
-        fail("A pending invitation already exists for that email.", 409)
-      const invitationId = options.createId("organization_invitation")
-      document.invitations.unshift({
-        createdAt: options.now,
-        displayName: mutation.displayName,
-        email,
-        expiresAt: new Date(new Date(options.now).getTime() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-        id: invitationId,
-        invitedByUserId: session.id,
-        organizationId: document.organization.id,
-        respondedAt: null,
-        role: mutation.role,
-        status: "pending",
-        title: mutation.title,
-        updatedAt: options.now,
-      })
-      audit(document, session.id, "invitation.created", "organization_invitation", invitationId, `${session.name} invited ${email} as ${mutation.role}.`, options)
+
+    case "invite_member":
+      applyOrganizationInviteMember(context, mutation)
       break
-    }
-    case "revoke_invitation": {
-      requireRole(membership, operatorRoles, "Only an owner or operator can revoke invitations.")
-      const invitation = document.invitations.find(item => item.id === mutation.invitationId)
-      if (!invitation || invitation.status !== "pending")
-        fail("This invitation is no longer pending.", 409)
-      invitation.status = "revoked"
-      invitation.respondedAt = options.now
-      invitation.updatedAt = options.now
-      audit(document, session.id, "invitation.revoked", "organization_invitation", invitation.id, `${session.name} revoked the invitation for ${invitation.email}.`, options)
+
+    case "revoke_invitation":
+      applyOrganizationRevokeInvitation(context, mutation)
       break
-    }
-    case "update_member": {
-      requireRole(membership, new Set(["owner"]), "Only the organization owner can change member roles.")
-      const target = document.memberships.find(item => item.id === mutation.membershipId)
-      if (!target)
-        fail("Organization member not found.", 404)
-      if (target.role === "owner")
-        fail("Transfer ownership before changing the owner's role.", 409)
-      target.role = mutation.role
-      target.title = mutation.title
-      target.updatedAt = options.now
-      audit(document, session.id, "membership.updated", "organization_membership", target.id, `${session.name} changed ${target.displayName}'s organization role.`, options)
+
+    case "update_member":
+      applyOrganizationUpdateMember(context, mutation)
       break
-    }
-    case "remove_member": {
-      requireRole(membership, new Set(["owner"]), "Only the organization owner can remove members.")
-      const target = document.memberships.find(item => item.id === mutation.membershipId)
-      if (!target)
-        fail("Organization member not found.", 404)
-      if (target.role === "owner")
-        fail("Transfer ownership before removing the owner.", 409)
-      document.memberships = document.memberships.filter(item => item.id !== target.id)
-      document.tasks = document.tasks.map(task => task.assigneeUserId === target.userId
-        ? { ...task, assigneeUserId: null, updatedAt: options.now }
-        : task)
-      document.projects = document.projects.map(project => project.ownerUserId === target.userId
-        ? { ...project, ownerUserId: null, updatedAt: options.now }
-        : project)
-      document.ventures = document.ventures.map(venture => venture.leadUserId === target.userId
-        ? { ...venture, leadUserId: null, updatedAt: options.now }
-        : venture)
-      audit(document, session.id, "membership.removed", "organization_membership", target.id, `${session.name} removed ${target.displayName} from the organization.`, options)
+
+    case "remove_member":
+      applyOrganizationRemoveMember(context, mutation)
       break
-    }
-    case "transfer_ownership": {
-      requireRole(membership, new Set(["owner"]), "Only the current owner can transfer ownership.")
-      const target = document.memberships.find(item => item.id === mutation.membershipId)
-      if (!target || target.userId === session.id)
-        fail("Choose another active member to become the owner.")
-      const currentOwner = document.memberships.find(item => item.userId === document.organization.ownerUserId)
-      if (!currentOwner)
-        fail("The current owner membership is unavailable.", 409)
-      currentOwner.role = "operator"
-      currentOwner.updatedAt = options.now
-      target.role = "owner"
-      target.updatedAt = options.now
-      document.organization.ownerUserId = target.userId
-      if (document.organization.billingOwnerUserId === session.id)
-        document.organization.billingOwnerUserId = target.userId
-      audit(document, session.id, "ownership.transferred", "organization_membership", target.id, `${session.name} transferred ownership to ${target.displayName}.`, options)
+
+    case "transfer_ownership":
+      applyOrganizationTransferOwnership(context, mutation)
       break
-    }
-    case "create_venture": {
-      requireRole(membership, operatorRoles, "Only an owner or operator can add portfolio ventures.")
-      assertMemberReference(document, mutation.leadUserId, "Venture lead")
-      const ventureId = options.createId("organization_venture")
-      document.ventures.unshift({
-        createdAt: options.now,
-        id: ventureId,
-        leadUserId: mutation.leadUserId,
-        name: mutation.name,
-        opportunityId: mutation.opportunityId,
-        organizationId: document.organization.id,
-        stage: mutation.stage,
-        status: "incubating",
-        summary: mutation.summary,
-        updatedAt: options.now,
-      })
-      audit(document, session.id, "venture.created", "organization_venture", ventureId, `${session.name} added ${mutation.name} to the portfolio.`, options)
+
+    case "create_venture":
+      applyOrganizationCreateVenture(context, mutation)
       break
-    }
-    case "update_venture": {
-      requireRole(membership, operatorRoles, "Only an owner or operator can update portfolio ventures.")
-      assertMemberReference(document, mutation.leadUserId, "Venture lead")
-      const venture = document.ventures.find(item => item.id === mutation.ventureId)
-      if (!venture)
-        fail("Portfolio venture not found.", 404)
-      venture.leadUserId = mutation.leadUserId
-      venture.stage = mutation.stage
-      venture.status = mutation.status
-      venture.summary = mutation.summary
-      venture.updatedAt = options.now
-      audit(document, session.id, "venture.updated", "organization_venture", venture.id, `${session.name} updated ${venture.name}.`, options)
+
+    case "update_venture":
+      applyOrganizationUpdateVenture(context, mutation)
       break
-    }
-    case "create_project": {
-      requireRole(membership, workingRoles, "Your organization role cannot create projects.")
-      assertMemberReference(document, mutation.ownerUserId, "Project owner")
-      if (mutation.ventureId && !document.ventures.some(venture => venture.id === mutation.ventureId))
-        fail("The selected portfolio venture is unavailable.", 404)
-      const projectId = options.createId("organization_project")
-      document.projects.unshift({
-        createdAt: options.now,
-        description: mutation.description,
-        dueAt: mutation.dueAt,
-        id: projectId,
-        organizationId: document.organization.id,
-        ownerUserId: mutation.ownerUserId,
-        status: "planned",
-        title: mutation.title,
-        updatedAt: options.now,
-        ventureId: mutation.ventureId,
-      })
-      audit(document, session.id, "project.created", "organization_project", projectId, `${session.name} created project ${mutation.title}.`, options)
+
+    case "create_project":
+      applyOrganizationCreateProject(context, mutation)
       break
-    }
-    case "update_project": {
-      requireRole(membership, workingRoles, "Your organization role cannot update projects.")
-      assertMemberReference(document, mutation.ownerUserId, "Project owner")
-      const project = document.projects.find(item => item.id === mutation.projectId)
-      if (!project)
-        fail("Project not found.", 404)
-      project.description = mutation.description
-      project.dueAt = mutation.dueAt
-      project.ownerUserId = mutation.ownerUserId
-      project.status = mutation.status
-      project.title = mutation.title
-      project.updatedAt = options.now
-      audit(document, session.id, "project.updated", "organization_project", project.id, `${session.name} updated project ${project.title}.`, options)
+
+    case "update_project":
+      applyOrganizationUpdateProject(context, mutation)
       break
-    }
-    case "create_task": {
-      requireRole(membership, workingRoles, "Your organization role cannot create tasks.")
-      assertMemberReference(document, mutation.assigneeUserId, "Task assignee")
-      if (!document.projects.some(project => project.id === mutation.projectId))
-        fail("The selected project is unavailable.", 404)
-      const taskId = options.createId("organization_task")
-      document.tasks.unshift({
-        assigneeUserId: mutation.assigneeUserId,
-        createdAt: options.now,
-        createdByUserId: session.id,
-        dueAt: mutation.dueAt,
-        id: taskId,
-        organizationId: document.organization.id,
-        projectId: mutation.projectId,
-        status: "todo",
-        title: mutation.title,
-        updatedAt: options.now,
-      })
-      audit(document, session.id, "task.created", "organization_task", taskId, `${session.name} created task ${mutation.title}.`, options)
+
+    case "create_task":
+      applyOrganizationCreateTask(context, mutation)
       break
-    }
-    case "update_task": {
-      requireRole(membership, workingRoles, "Your organization role cannot update tasks.")
-      assertMemberReference(document, mutation.assigneeUserId, "Task assignee")
-      const task = document.tasks.find(item => item.id === mutation.taskId)
-      if (!task)
-        fail("Task not found.", 404)
-      const ownsTask = task.assigneeUserId === session.id || task.createdByUserId === session.id
-      if (!ownsTask && !operatorRoles.has(membership.role))
-        fail("Only the task assignee, creator, owner, or operator can update this task.", 403)
-      task.assigneeUserId = mutation.assigneeUserId
-      task.dueAt = mutation.dueAt
-      task.status = mutation.status
-      task.title = mutation.title
-      task.updatedAt = options.now
-      audit(document, session.id, "task.updated", "organization_task", task.id, `${session.name} updated task ${task.title}.`, options)
+
+    case "update_task":
+      applyOrganizationUpdateTask(context, mutation)
       break
-    }
-    case "create_decision": {
-      requireRole(membership, reviewingRoles, "Your organization role cannot create governance decisions.")
-      assertMemberReference(document, mutation.ownerUserId, "Decision owner")
-      const decisionId = options.createId("organization_decision")
-      document.decisions.unshift({
-        approvedByUserId: null,
-        context: mutation.context,
-        createdAt: options.now,
-        decidedAt: null,
-        decision: mutation.decision,
-        id: decisionId,
-        organizationId: document.organization.id,
-        ownerUserId: mutation.ownerUserId,
-        projectId: mutation.projectId,
-        status: "proposed",
-        title: mutation.title,
-        updatedAt: options.now,
-        ventureId: mutation.ventureId,
-      })
-      audit(document, session.id, "decision.created", "organization_decision", decisionId, `${session.name} proposed decision ${mutation.title}.`, options)
+
+    case "create_decision":
+      applyOrganizationCreateDecision(context, mutation)
       break
-    }
-    case "resolve_decision": {
-      requireRole(membership, reviewingRoles, "Your organization role cannot resolve governance decisions.")
-      const decision = document.decisions.find(item => item.id === mutation.decisionId)
-      if (!decision)
-        fail("Governance decision not found.", 404)
-      decision.decision = mutation.decision
-      decision.status = mutation.status
-      decision.approvedByUserId = session.id
-      decision.decidedAt = options.now
-      decision.updatedAt = options.now
-      audit(document, session.id, `decision.${mutation.status}`, "organization_decision", decision.id, `${session.name} marked ${decision.title} ${mutation.status}.`, options)
+
+    case "resolve_decision":
+      applyOrganizationResolveDecision(context, mutation)
       break
-    }
-    case "create_policy": {
-      requireRole(membership, policyRoles, "Only owners, operators, or counsel can create agreement policies.")
-      const policyId = options.createId("organization_policy")
-      const policy: OrganizationAgreementPolicy = {
-        allowOutsideCounsel: mutation.allowOutsideCounsel,
-        approvalRoles: validateApprovalRoles(mutation.approvalRoles),
-        createdAt: options.now,
-        createdByUserId: session.id,
-        description: mutation.description,
-        id: policyId,
-        isDefault: mutation.isDefault,
-        name: mutation.name,
-        organizationId: document.organization.id,
-        requiredClauses: Array.from(new Set(mutation.requiredClauses)),
-        requiresInternalApproval: mutation.requiresInternalApproval,
-        requiresLegalReview: mutation.requiresLegalReview,
-        separationOfDuties: mutation.separationOfDuties,
-        updatedAt: options.now,
-      }
-      document.agreementPolicies.unshift(policy)
-      if (policy.isDefault)
-        updateDefaultPolicy(document, policy.id, options.now)
-      audit(document, session.id, "policy.created", "organization_policy", policy.id, `${session.name} created agreement policy ${policy.name}.`, options)
+
+    case "create_policy":
+      applyOrganizationCreatePolicy(context, mutation)
       break
-    }
-    case "update_policy": {
-      requireRole(membership, policyRoles, "Only owners, operators, or counsel can update agreement policies.")
-      const policy = requirePolicy(document, mutation.policyId)
-      policy.allowOutsideCounsel = mutation.allowOutsideCounsel
-      policy.approvalRoles = validateApprovalRoles(mutation.approvalRoles)
-      policy.description = mutation.description
-      policy.isDefault = mutation.isDefault
-      policy.name = mutation.name
-      policy.requiredClauses = Array.from(new Set(mutation.requiredClauses))
-      policy.requiresInternalApproval = mutation.requiresInternalApproval
-      policy.requiresLegalReview = mutation.requiresLegalReview
-      policy.separationOfDuties = mutation.separationOfDuties
-      policy.updatedAt = options.now
-      if (policy.isDefault)
-        updateDefaultPolicy(document, policy.id, options.now)
-      audit(document, session.id, "policy.updated", "organization_policy", policy.id, `${session.name} updated agreement policy ${policy.name}.`, options)
+
+    case "update_policy":
+      applyOrganizationUpdatePolicy(context, mutation)
       break
-    }
-    case "request_approval": {
-      requireMembership(document, session.id)
-      if (mutation.policyId)
-        requirePolicy(document, mutation.policyId)
-      const contractLink = mutation.targetType === "contract"
-        ? document.resourceLinks.find(link => link.resourceType === "contract" && link.resourceId === mutation.targetId)
-        : null
-      const linkedPolicy = contractLink
-        ? linkedAgreementPolicy(document, contractLink.policyId)
-        : null
-      if (contractLink && !linkedPolicy)
-        fail("The linked agreement policy is unavailable.", 409)
-      if (linkedPolicy && mutation.policyId !== linkedPolicy.id)
-        fail("Contract approval must use the linked agreement policy.", 409)
-      const duplicate = document.approvalRequests.some(approval =>
-        approval.targetType === mutation.targetType
-        && approval.targetId === mutation.targetId
-        && approval.targetVersionId === mutation.targetVersionId
-        && (!linkedPolicy || approval.policyId === linkedPolicy.id)
-        && approval.status === "pending",
-      )
-      if (duplicate)
-        fail("A pending approval already exists for this exact item and version.", 409)
-      const approvalId = options.createId("organization_approval")
-      document.approvalRequests.unshift({
-        createdAt: options.now,
-        decidedAt: null,
-        decidedByUserId: null,
-        decisionNote: null,
-        id: approvalId,
-        organizationId: document.organization.id,
-        policyId: mutation.policyId,
-        requestedByUserId: session.id,
-        status: "pending",
-        summary: mutation.summary,
-        targetId: mutation.targetId,
-        targetType: mutation.targetType,
-        targetVersionId: mutation.targetVersionId,
-        title: mutation.title,
-        updatedAt: options.now,
-      })
-      audit(document, session.id, "approval.requested", "organization_approval", approvalId, `${session.name} requested approval for ${mutation.title}.`, options)
+
+    case "request_approval":
+      applyOrganizationRequestApproval(context, mutation)
       break
-    }
-    case "resolve_approval": {
-      const approval = document.approvalRequests.find(item => item.id === mutation.approvalId)
-      if (!approval || approval.status !== "pending")
-        fail("This approval request is no longer pending.", 409)
-      const policy = approvalPolicy(document, approval)
-      const approvalRoles = new Set<OrganizationMemberRole>(policy?.approvalRoles || [
-        "owner",
-        "operator",
-        "reviewer",
-        "counsel"
-      ])
-      requireRole(membership, approvalRoles, "Your organization role cannot resolve this approval request.")
-      if (policy?.separationOfDuties && approval.requestedByUserId === session.id)
-        fail("This policy requires a different organization member to resolve the approval.", 409)
-      approval.status = mutation.status
-      approval.decisionNote = mutation.decisionNote
-      approval.decidedByUserId = session.id
-      approval.decidedAt = options.now
-      approval.updatedAt = options.now
-      audit(document, session.id, `approval.${mutation.status}`, "organization_approval", approval.id, `${session.name} marked ${approval.title} ${mutation.status}.`, options)
+
+    case "resolve_approval":
+      applyOrganizationResolveApproval(context, mutation)
       break
-    }
-    case "cancel_approval": {
-      const approval = document.approvalRequests.find(item => item.id === mutation.approvalId)
-      if (!approval || approval.status !== "pending")
-        fail("This approval request is no longer pending.", 409)
-      if (approval.requestedByUserId !== session.id && !operatorRoles.has(membership.role))
-        fail("Only the requester, owner, or operator can cancel this approval.", 403)
-      approval.status = "canceled"
-      approval.decidedByUserId = session.id
-      approval.decidedAt = options.now
-      approval.updatedAt = options.now
-      audit(document, session.id, "approval.canceled", "organization_approval", approval.id, `${session.name} canceled ${approval.title}.`, options)
+
+    case "cancel_approval":
+      applyOrganizationCancelApproval(context, mutation)
       break
-    }
-    case "share_search": {
-      requireRole(membership, workingRoles, "Your organization role cannot share searches.")
-      const sharedSearchId = options.createId("organization_search")
-      document.sharedSearches.unshift({
-        createdAt: options.now,
-        filters: cloneValue(mutation.filters),
-        id: sharedSearchId,
-        label: mutation.label,
-        organizationId: document.organization.id,
-        scope: mutation.scope,
-        sharedByUserId: session.id,
-        sourceSavedSearchId: mutation.sourceSavedSearchId,
-        updatedAt: options.now,
-      })
-      audit(document, session.id, "search.shared", "organization_search", sharedSearchId, `${session.name} shared search ${mutation.label}.`, options)
+
+    case "share_search":
+      applyOrganizationShareSearch(context, mutation)
       break
-    }
-    case "remove_shared_search": {
-      const sharedSearch = document.sharedSearches.find(item => item.id === mutation.sharedSearchId)
-      if (!sharedSearch)
-        fail("Shared search not found.", 404)
-      if (sharedSearch.sharedByUserId !== session.id && !operatorRoles.has(membership.role))
-        fail("Only the search owner, organization owner, or operator can remove it.", 403)
-      document.sharedSearches = document.sharedSearches.filter(item => item.id !== sharedSearch.id)
-      audit(document, session.id, "search.removed", "organization_search", sharedSearch.id, `${session.name} removed shared search ${sharedSearch.label}.`, options)
+
+    case "remove_shared_search":
+      applyOrganizationRemoveSharedSearch(context, mutation)
       break
-    }
-    case "link_resource": {
-      requireRole(membership, operatorRoles, "Only an owner or operator can link organization resources.")
-      if (mutation.policyId)
-        requirePolicy(document, mutation.policyId)
-      const existing = document.resourceLinks.find(link => link.resourceType === mutation.resourceType && link.resourceId === mutation.resourceId)
-      if (existing)
-        fail("That resource is already linked to this organization.", 409)
-      const resourceLinkId = options.createId("organization_resource")
-      document.resourceLinks.unshift({
-        createdAt: options.now,
-        id: resourceLinkId,
-        label: mutation.label,
-        linkedByUserId: session.id,
-        organizationId: document.organization.id,
-        policyId: mutation.policyId,
-        resourceId: mutation.resourceId,
-        resourceType: mutation.resourceType,
-        updatedAt: options.now,
-      })
-      audit(document, session.id, "resource.linked", "organization_resource", resourceLinkId, `${session.name} linked ${mutation.label}.`, options)
+
+    case "link_resource":
+      applyOrganizationLinkResource(context, mutation)
       break
-    }
-    case "unlink_resource": {
-      requireRole(membership, operatorRoles, "Only an owner or operator can unlink organization resources.")
-      const resource = document.resourceLinks.find(item => item.id === mutation.resourceLinkId)
-      if (!resource)
-        fail("Linked resource not found.", 404)
-      document.resourceLinks = document.resourceLinks.filter(item => item.id !== resource.id)
-      audit(document, session.id, "resource.unlinked", "organization_resource", resource.id, `${session.name} unlinked ${resource.label}.`, options)
+
+    case "unlink_resource":
+      applyOrganizationUnlinkResource(context, mutation)
       break
-    }
+
     default: {
       const exhaustive: never = mutation
       return exhaustive

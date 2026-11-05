@@ -127,6 +127,50 @@ function buildIdentity(session: SessionUser) {
   }
 }
 
+function canAttachToWorkspaceRecord(
+  seed: Awaited<ReturnType<typeof loadMemberWorkspaceState>>["seed"],
+  session: SessionUser,
+  relatedType: FileUploadRelatedType,
+  relatedId: string,
+) {
+  const fullAdmin = session.role === "admin"
+  if (relatedType === "message") {
+    const message = seed.messages.find(item => item.id === relatedId)
+    const conversation = message
+      ? seed.conversations.find(item => item.id === message.conversationId)
+      : null
+    return Boolean(message && conversation?.participantIds.includes(session.id))
+  }
+  if (relatedType === "proposal") {
+    const proposal = seed.proposals.find(item => item.id === relatedId)
+    return Boolean(proposal && (
+      proposal.createdByUserId === session.id
+      || proposal.recipientUserId === session.id
+      || fullAdmin
+    ))
+  }
+  else if (relatedType === "contract") {
+    const contract = seed.contracts.find(item => item.id === relatedId)
+    const proposal = contract
+      ? seed.proposals.find(item => item.id === contract.proposalId)
+      : null
+    return Boolean(contract && proposal && (
+      proposal.createdByUserId === session.id
+      || proposal.recipientUserId === session.id
+      || fullAdmin
+    ))
+  }
+  else if (relatedType === "profile") {
+    const profile = seed.profiles.find(item => item.id === relatedId)
+    return Boolean(profile && (profile.userId === session.id || fullAdmin))
+  }
+  else if (relatedType === "opportunity") {
+    const opportunity = seed.opportunities.find(item => item.id === relatedId)
+    return Boolean(opportunity && (opportunity.ownerUserId === session.id || fullAdmin))
+  }
+  return false
+}
+
 export function assertFileUploadAuthorization(seed: Awaited<ReturnType<typeof loadMemberWorkspaceState>>["seed"], session: SessionUser, payload: FileUploadPolicyPayload) {
   const relatedId = payload.relatedId
   const relatedType = payload.relatedType
@@ -139,48 +183,29 @@ export function assertFileUploadAuthorization(seed: Awaited<ReturnType<typeof lo
     })
   }
 
-  const fullAdmin = session.role === "admin"
-  let authorized = false
-
-  if (relatedType === "message") {
-    const message = seed.messages.find(item => item.id === relatedId)
-    const conversation = message
-      ? seed.conversations.find(item => item.id === message.conversationId)
-      : null
-    authorized = Boolean(message && conversation?.participantIds.includes(session.id))
-  }
-  else if (relatedType === "proposal") {
-    const proposal = seed.proposals.find(item => item.id === relatedId)
-    authorized = Boolean(proposal && (
-      proposal.createdByUserId === session.id
-      || proposal.recipientUserId === session.id
-      || fullAdmin
-    ))
-  }
-  else if (relatedType === "contract") {
-    const contract = seed.contracts.find(item => item.id === relatedId)
-    const proposal = contract
-      ? seed.proposals.find(item => item.id === contract.proposalId)
-      : null
-    authorized = Boolean(contract && proposal && (
-      proposal.createdByUserId === session.id
-      || proposal.recipientUserId === session.id
-      || fullAdmin
-    ))
-  }
-  else if (relatedType === "profile") {
-    const profile = seed.profiles.find(item => item.id === relatedId)
-    authorized = Boolean(profile && (profile.userId === session.id || fullAdmin))
-  }
-  else if (relatedType === "opportunity") {
-    const opportunity = seed.opportunities.find(item => item.id === relatedId)
-    authorized = Boolean(opportunity && (opportunity.ownerUserId === session.id || fullAdmin))
-  }
+  const authorized = canAttachToWorkspaceRecord(seed, session, relatedType, relatedId)
 
   if (!authorized) {
     throw createError({
       statusCode: 403,
       statusMessage: "You cannot attach files to that workspace record.",
+    })
+  }
+}
+
+async function assertInvestmentFileUploadAuthorization(event: H3Event, session: SessionUser, payload: FileUploadPolicyPayload) {
+  if (useRuntimeConfig(event).public.featureInvestmentModule !== true)
+    throw createError({ statusCode: 404, statusMessage: "The investment workspace is not enabled." })
+  if (["admin", "investor_admin"].includes(session.role))
+    throw createError({ statusCode: 403, statusMessage: "Staff review accounts cannot upload applicant data-room records." })
+
+  const investmentWorkspace = payload.relatedId
+    ? await findRawInvestmentWorkspaceDocumentByResourceId(event, payload.relatedId)
+    : null
+  if (!investmentWorkspace || investmentWorkspace.applicantUserId !== session.id) {
+    throw createError({
+      statusCode: 403,
+      statusMessage: "You cannot attach files to that investment workspace.",
     })
   }
 }
@@ -195,20 +220,7 @@ export async function createFileUploadPolicy(event: H3Event, session: SessionUse
 
   const workspace = await loadMemberWorkspaceState(event, buildIdentity(session))
   if (payload.relatedType === "investment_workspace") {
-    if (useRuntimeConfig(event).public.featureInvestmentModule !== true)
-      throw createError({ statusCode: 404, statusMessage: "The investment workspace is not enabled." })
-    if (["admin", "investor_admin"].includes(session.role))
-      throw createError({ statusCode: 403, statusMessage: "Staff review accounts cannot upload applicant data-room records." })
-
-    const investmentWorkspace = payload.relatedId
-      ? await findRawInvestmentWorkspaceDocumentByResourceId(event, payload.relatedId)
-      : null
-    if (!investmentWorkspace || investmentWorkspace.applicantUserId !== session.id) {
-      throw createError({
-        statusCode: 403,
-        statusMessage: "You cannot attach files to that investment workspace.",
-      })
-    }
+    await assertInvestmentFileUploadAuthorization(event, session, payload)
   }
   else {
     assertFileUploadAuthorization(workspace.seed, workspace.session, payload)
