@@ -87,18 +87,17 @@ function summarizeSecretPresence(isPresent: boolean, label: string) {
     : `${label} is missing.`
 }
 
-export function buildHostEnvironmentReport(
-  env: EnvironmentSource,
-  options: HostEnvironmentOptions = {},
-): HostEnvironmentReport {
-  const publicEnvironment = readPublicEnvironment(env)
-  const secretEnvironment = readSecretEnvironment(env)
-  const deployment = readDeploymentMetadata(env)
-  const validationErrors = collectEnvironmentValidationErrors(env)
-  const localDevelopment = isLocalDevelopmentEnvironment(env)
-  const productionExpected = options.production || readValue(env, "NODE_ENV") === "production" || !localDevelopment
-  const checks: HostEnvironmentCheck[] = []
+interface HostEnvironmentContext {
+  env: EnvironmentSource
+  publicEnvironment: ReturnType<typeof readPublicEnvironment>
+  secretEnvironment: ReturnType<typeof readSecretEnvironment>
+  deployment: ReturnType<typeof readDeploymentMetadata>
+  validationErrors: string[]
+  localDevelopment: boolean
+  productionExpected: boolean
+}
 
+function addEnvironmentContractCheck({ validationErrors }: HostEnvironmentContext, checks: HostEnvironmentCheck[]) {
   if (validationErrors.length > 0) {
     addCheck(
       checks,
@@ -118,7 +117,9 @@ export function buildHostEnvironmentReport(
       "Public and server-only environment values satisfy the active backend and billing modes.",
     )
   }
+}
 
+function addNodeEnvironmentCheck({ env, productionExpected }: HostEnvironmentContext, checks: HostEnvironmentCheck[]) {
   if (productionExpected) {
     if (readValue(env, "NODE_ENV") === "production") {
       addCheck(checks, "pass", "node-env", "Production Node environment", "NODE_ENV is production.")
@@ -137,7 +138,9 @@ export function buildHostEnvironmentReport(
   else {
     addCheck(checks, "pass", "node-env", "Local Node environment", "This environment is being treated as local development.")
   }
+}
 
+function addPublicOriginCheck({ env, publicEnvironment, productionExpected }: HostEnvironmentContext, checks: HostEnvironmentCheck[]) {
   if (productionExpected) {
     if (!publicEnvironment.appUrl) {
       addCheck(
@@ -176,7 +179,9 @@ export function buildHostEnvironmentReport(
   else {
     addCheck(checks, "pass", "app-url", "Local app URL", `Using ${publicEnvironment.appUrl || "local default"}.`)
   }
+}
 
+function addDemoAccessCheck({ publicEnvironment, productionExpected }: HostEnvironmentContext, checks: HostEnvironmentCheck[]) {
   if (productionExpected && publicEnvironment.enableDemoAccess) {
     addCheck(
       checks,
@@ -196,7 +201,9 @@ export function buildHostEnvironmentReport(
       publicEnvironment.enableDemoAccess ? "Demo access is enabled for local/staging use." : "Demo access is disabled.",
     )
   }
+}
 
+function addBackendBindCheck({ env }: HostEnvironmentContext, checks: HostEnvironmentCheck[]) {
   const backendHost = readValue(env, "BACKEND_HOST") || "127.0.0.1"
   const publicBackendBind = !localHostnames.has(backendHost.toLowerCase())
   if (publicBackendBind && readValue(env, "COFOUNDRY_ALLOW_PUBLIC_BACKEND_BIND") !== "true") {
@@ -220,7 +227,9 @@ export function buildHostEnvironmentReport(
         : `Backend binds to ${backendHost}.`,
     )
   }
+}
 
+function addProxyTrustCheck({ env }: HostEnvironmentContext, checks: HostEnvironmentCheck[]) {
   const trustsProxyHeaders = readValue(env, "COFOUNDRY_TRUST_PROXY_HEADERS") === "true"
   const trustedProxyIps = readValue(env, "COFOUNDRY_TRUSTED_PROXY_IPS")
   if (trustsProxyHeaders && !trustedProxyIps) {
@@ -244,7 +253,9 @@ export function buildHostEnvironmentReport(
         : "Forwarded headers are not trusted.",
     )
   }
+}
 
+function addSessionSecretCheck({ secretEnvironment, productionExpected }: HostEnvironmentContext, checks: HostEnvironmentCheck[]) {
   if (productionExpected && !secretEnvironment.sessionSigningSecret) {
     addCheck(
       checks,
@@ -274,7 +285,9 @@ export function buildHostEnvironmentReport(
       summarizeSecretPresence(Boolean(secretEnvironment.sessionSigningSecret), "SESSION_SIGNING_SECRET"),
     )
   }
+}
 
+function addDeploymentIdentityCheck({ deployment, productionExpected }: HostEnvironmentContext, checks: HostEnvironmentCheck[]) {
   if (productionExpected && !deployment.release && !deployment.commitSha) {
     addCheck(
       checks,
@@ -308,7 +321,9 @@ export function buildHostEnvironmentReport(
       identity || "No release or commit identity is set. This is acceptable only for local development.",
     )
   }
+}
 
+function addLocalDataCheck({ env, publicEnvironment, productionExpected }: HostEnvironmentContext, checks: HostEnvironmentCheck[]) {
   if (productionExpected && publicEnvironment.backendMode === "mock" && !hasValue(env, "COFOUNDRY_LOCAL_DATA_DIR")) {
     addCheck(
       checks,
@@ -330,7 +345,9 @@ export function buildHostEnvironmentReport(
         : "No durable local data directory is required for this mode.",
     )
   }
+}
 
+function addOperationsTokenCheck({ secretEnvironment, productionExpected }: HostEnvironmentContext, checks: HostEnvironmentCheck[]) {
   const operationsTokenLength = secretEnvironment.operationsWorkerToken.length
   addCheck(
     checks,
@@ -350,7 +367,9 @@ export function buildHostEnvironmentReport(
       ? undefined
       : "Set COFOUNDRY_OPERATIONS_TOKEN to a distinct random value of at least 32 characters before starting a hosted app or operations timers.",
   )
+}
 
+function addOAuthProviderCheck({ env, publicEnvironment, productionExpected }: HostEnvironmentContext, checks: HostEnvironmentCheck[]) {
   const oauthMarkers = [
     "COFOUNDRY_OAUTH_PROVIDER",
     "COFOUNDRY_GOOGLE_OAUTH_PROVIDER",
@@ -378,6 +397,40 @@ export function buildHostEnvironmentReport(
         : "No OAuth provider markers are set.",
     )
   }
+}
+
+export function buildHostEnvironmentReport(
+  env: EnvironmentSource,
+  options: HostEnvironmentOptions = {},
+): HostEnvironmentReport {
+  const publicEnvironment = readPublicEnvironment(env)
+  const secretEnvironment = readSecretEnvironment(env)
+  const deployment = readDeploymentMetadata(env)
+  const validationErrors = collectEnvironmentValidationErrors(env)
+  const localDevelopment = isLocalDevelopmentEnvironment(env)
+  const productionExpected = options.production || readValue(env, "NODE_ENV") === "production" || !localDevelopment
+  const checks: HostEnvironmentCheck[] = []
+  const context = {
+    env,
+    publicEnvironment,
+    secretEnvironment,
+    deployment,
+    validationErrors,
+    localDevelopment,
+    productionExpected
+  }
+
+  addEnvironmentContractCheck(context, checks)
+  addNodeEnvironmentCheck(context, checks)
+  addPublicOriginCheck(context, checks)
+  addDemoAccessCheck(context, checks)
+  addBackendBindCheck(context, checks)
+  addProxyTrustCheck(context, checks)
+  addSessionSecretCheck(context, checks)
+  addDeploymentIdentityCheck(context, checks)
+  addLocalDataCheck(context, checks)
+  addOperationsTokenCheck(context, checks)
+  addOAuthProviderCheck(context, checks)
 
   const failCount = checks.filter(check => check.status === "fail").length
   const warningCount = checks.filter(check => check.status === "warn").length

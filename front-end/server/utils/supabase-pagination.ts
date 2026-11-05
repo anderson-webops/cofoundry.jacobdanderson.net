@@ -6,6 +6,15 @@ interface Page<Row> {
 
 const pageSize = 250
 
+function appendVersionPage<Row extends { id: string }>(rows: Row[], currentRows: Row[], seenIds: Set<string>) {
+  for (const row of currentRows) {
+    if (seenIds.has(row.id))
+      throw new Error("Version history changed during loading. Refresh and try again.")
+    seenIds.add(row.id)
+  }
+  rows.push(...currentRows)
+}
+
 export async function collectStablePages<Row extends { id: string }>(readPage: (start: number, end: number) => Promise<Page<Row>>) {
   const rows: Row[] = []
   const seenIds = new Set<string>()
@@ -24,12 +33,7 @@ export async function collectStablePages<Row extends { id: string }>(readPage: (
     const currentRows = page.data || []
     if (currentRows.length > pageSize || (!currentRows.length && rows.length < expectedCount))
       throw new Error("Version history page is incomplete.")
-    for (const row of currentRows) {
-      if (seenIds.has(row.id))
-        throw new Error("Version history changed during loading. Refresh and try again.")
-      seenIds.add(row.id)
-    }
-    rows.push(...currentRows)
+    appendVersionPage(rows, currentRows, seenIds)
     if (rows.length > expectedCount)
       throw new Error("Version history page exceeds the expected count.")
     if (rows.length === expectedCount)

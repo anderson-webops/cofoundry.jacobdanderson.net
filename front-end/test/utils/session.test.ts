@@ -1,4 +1,5 @@
 import type { SessionUser } from "../../shared/types/domain"
+import { Buffer } from "node:buffer"
 import { describe, expect, it } from "vitest"
 import { workspaceSeed } from "../../shared/data/seed"
 import { cloneValue } from "../../shared/utils/clone"
@@ -25,14 +26,15 @@ describe("session utilities", () => {
   it("returns null for invalid payloads", () => {
     expect(decodeSessionUser("not-a-real-session")).toBeNull()
     expect(decodeSessionUser("")).toBeNull()
-    expect(decodeSessionUser(encodeSessionUser({
+    const invalidRolePayload = Buffer.from(JSON.stringify({
       id: "user_test",
       email: "tester@cofoundry.dev",
       name: "Test Founder",
       role: "owner",
       onboardingCompleted: true,
       subscriptionPlan: "pro",
-    } as unknown as SessionUser))).toBeNull()
+    }), "utf8").toString("base64url")
+    expect(decodeSessionUser(invalidRolePayload)).toBeNull()
     expect(sessionCookieName).toBe("cofoundry_session")
     expect(sessionSignatureCookieName).toBe("cofoundry_session_sig")
   })

@@ -31,15 +31,7 @@ async function reloadProjectedWorkspace(event: H3Event, session: SessionUser) {
   }
 }
 
-export async function createMemberReport(event: H3Event, session: SessionUser, payload: {
-  details: string
-  reason: Report["reason"]
-  targetId: string
-  targetType: Report["targetType"]
-}) {
-  const workspace = await loadMemberWorkspaceState(event, buildIdentity(session))
-  const visible = projectWorkspaceForSession(workspace.seed, workspace.session)
-
+function assertReportTarget(visible: ReturnType<typeof projectWorkspaceForSession>, session: SessionUser, payload: Pick<Report, "targetType" | "targetId">) {
   if (payload.targetType === "profile") {
     const profile = visible.profiles.find(item => item.id === payload.targetId)
     if (!profile)
@@ -61,6 +53,18 @@ export async function createMemberReport(event: H3Event, session: SessionUser, p
     if (opportunity.ownerUserId === session.id)
       throw createError({ statusCode: 400, statusMessage: "You cannot report your own opportunity." })
   }
+}
+
+export async function createMemberReport(event: H3Event, session: SessionUser, payload: {
+  details: string
+  reason: Report["reason"]
+  targetId: string
+  targetType: Report["targetType"]
+}) {
+  const workspace = await loadMemberWorkspaceState(event, buildIdentity(session))
+  const visible = projectWorkspaceForSession(workspace.seed, workspace.session)
+
+  assertReportTarget(visible, session, payload)
 
   const createdAt = new Date().toISOString()
   const report: Report = {

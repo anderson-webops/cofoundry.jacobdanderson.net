@@ -25,7 +25,15 @@ function normalizeStatus(value: unknown): ContractEnvelopeStatus {
     : "created"
 }
 
-function toCertificateEvidence(row: Record<string, unknown>): ContractProviderEvidence {
+function toCertificateEvidence(row: {
+  completed_pdf_file_upload_id?: unknown
+  completed_pdf_sha256?: unknown
+  occurred_at?: unknown
+  provider?: unknown
+  provider_envelope_id?: unknown
+  signed_by_user_ids?: unknown
+  status?: unknown
+}): ContractProviderEvidence {
   return {
     completedPdfFileUploadId: typeof row.completed_pdf_file_upload_id === "string"
       ? row.completed_pdf_file_upload_id
@@ -105,7 +113,7 @@ export async function recordContractEnvelopeEvent(event: H3Event, payload: Opera
 export async function listContractProviderEvidence(event: H3Event, contractId: string, contractVersionId: string) {
   if (!isSupabaseEnabled(event)) {
     const rows = await listLocalContractEnvelopeEvents(contractId, contractVersionId)
-    return rows.map(row => toCertificateEvidence(row as unknown as Record<string, unknown>))
+    return rows.map(row => toCertificateEvidence(row))
   }
 
   const adminClient = createSupabaseAdminClient(event)

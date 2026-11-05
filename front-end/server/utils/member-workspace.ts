@@ -126,10 +126,6 @@ export interface AdminOpportunityWorkspaceSlice {
   users: User[]
 }
 
-function createBaseSeed() {
-  return createInitialWorkspaceDocument()
-}
-
 function safeBootstrapRole(role: User["role"]): "collaborator" | "founder" {
   return role === "collaborator"
     ? "collaborator"
@@ -164,7 +160,7 @@ export function buildBootstrapState(
 }
 
 function buildMergedSeed(state: MemberWorkspaceState) {
-  return mergeMemberWorkspaceState(createBaseSeed(), syncWorkspaceVerificationState(state))
+  return mergeMemberWorkspaceState(createInitialWorkspaceDocument(), syncWorkspaceVerificationState(state))
 }
 
 function contractParticipantUserIds(seed: WorkspaceSeed) {
@@ -808,7 +804,7 @@ function sanitizeSavedSearchWrites(current: MemberWorkspaceState, incoming: Save
 }
 
 export async function listAdminOpportunityWorkspaceSlice(event: H3Event): Promise<AdminOpportunityWorkspaceSlice> {
-  const baseSeed = createBaseSeed()
+  const baseSeed = createInitialWorkspaceDocument()
 
   if (!isSupabaseEnabled(event)) {
     const localStates = (await readLocalMemberWorkspaceStates()).map(syncWorkspaceVerificationState)
@@ -905,6 +901,36 @@ export async function persistWholeMemberWorkspaceState(
     throw error
 }
 
+async function loadLocalMemberWorkspace(
+  event: H3Event,
+  identity: PersistedIdentityInput,
+  fallbackSession: SessionUser,
+  seededState: ReturnType<typeof buildMemberWorkspaceState>,
+  allowUserBootstrap: boolean,
+) {
+  const persistedState = await readLocalMemberWorkspaceState(fallbackSession.id)
+  if (!persistedState && !seededState && !allowUserBootstrap) {
+    throw createError({
+      statusCode: 403,
+      statusMessage: "This account has not been provisioned for CoFoundry.",
+    })
+  }
+
+  const baseState = persistedState
+    || seededState
+    || buildBootstrapState(identity)
+  const state = persistedState
+    ? await loadAuthoritativeTrustState(event, baseState)
+    : baseState
+  const seed = await buildLocalRuntimeSeed(state)
+
+  return {
+    seed,
+    session: resolveSessionUserFromWorkspace(seed, fallbackSession),
+    state,
+  }
+}
+
 export async function loadMemberWorkspaceState(
   event: H3Event,
   identity: PersistedIdentityInput,
@@ -917,36 +943,15 @@ export async function loadMemberWorkspaceState(
     })
   }
 
-  const baseSeed = createBaseSeed()
+  const baseSeed = createInitialWorkspaceDocument()
   const seededState = buildMemberWorkspaceState(baseSeed, identity.id)
   const fallbackSession = seededState
     ? resolveSessionUserFromWorkspace(baseSeed, identity)
     : buildBootstrapSession(identity)
   const allowUserBootstrap = options.allowUserBootstrap !== false
 
-  if (!isSupabaseEnabled(event)) {
-    const persistedState = await readLocalMemberWorkspaceState(fallbackSession.id)
-    if (!persistedState && !seededState && !allowUserBootstrap) {
-      throw createError({
-        statusCode: 403,
-        statusMessage: "This account has not been provisioned for CoFoundry.",
-      })
-    }
-
-    const baseState = persistedState
-      || seededState
-      || buildBootstrapState(identity)
-    const state = persistedState
-      ? await loadAuthoritativeTrustState(event, baseState)
-      : baseState
-    const seed = await buildLocalRuntimeSeed(state)
-
-    return {
-      seed,
-      session: resolveSessionUserFromWorkspace(seed, fallbackSession),
-      state,
-    }
-  }
+  if (!isSupabaseEnabled(event))
+    return loadLocalMemberWorkspace(event, identity, fallbackSession, seededState, allowUserBootstrap)
 
   const adminClient = createSupabaseAdminClient(event)
   if (!adminClient)

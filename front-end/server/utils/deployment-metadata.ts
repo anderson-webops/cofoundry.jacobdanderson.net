@@ -3,12 +3,6 @@ import type { DeploymentMetadata } from "../../shared/utils/environment"
 import process from "node:process"
 import { readDeploymentMetadata } from "../../shared/utils/environment"
 
-interface RuntimeDeploymentConfig {
-  deploymentCommitSha?: unknown
-  deploymentDeployedAt?: unknown
-  deploymentRelease?: unknown
-}
-
 function readRuntimeString(value: unknown) {
   return typeof value === "string"
     ? value
@@ -16,7 +10,7 @@ function readRuntimeString(value: unknown) {
 }
 
 export function readServerDeploymentMetadata(event: H3Event): DeploymentMetadata {
-  const runtimeConfig = useRuntimeConfig(event) as unknown as RuntimeDeploymentConfig
+  const runtimeConfig = useRuntimeConfig(event)
 
   return readDeploymentMetadata(process.env, {
     commitSha: readRuntimeString(runtimeConfig.deploymentCommitSha),

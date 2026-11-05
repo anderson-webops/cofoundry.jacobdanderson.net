@@ -222,7 +222,7 @@ function buildTrustReadinessChecklist(profile: Profile): ProfileReadinessItem[] 
   ]
 }
 
-function buildProfileReadinessChecklist(profile: Profile): ProfileReadinessItem[] {
+function buildProfileReadinessFlags(profile: Profile) {
   const identityComplete = Boolean(profile.displayName.trim() && profile.location.trim() && profile.privacy.profileVisibility)
   const roleSignalComplete = profile.roles.length > 0 && profile.headline.trim().length >= 10 && profile.bio.trim().length >= 40
   const companyFitComplete = profile.industries.length > 0 && profile.intent.companyPreferences.length > 0
@@ -255,6 +255,23 @@ function buildProfileReadinessChecklist(profile: Profile): ProfileReadinessItem[
     && profile.ipReadiness.priorObligations
     && profile.ipReadiness.readyToAssignIp,
   )
+  return {
+    identityComplete,
+    roleSignalComplete,
+    companyFitComplete,
+    commitmentComplete,
+    proofComplete,
+    outreachGuardrailsComplete,
+    collaborationStyleComplete,
+    compensationStageComplete,
+    governanceComplete,
+    scopeComplete,
+    ipReadinessComplete
+  }
+}
+
+function buildProfileReadinessChecklist(profile: Profile): ProfileReadinessItem[] {
+  const { identityComplete, roleSignalComplete, companyFitComplete, commitmentComplete, proofComplete, outreachGuardrailsComplete, collaborationStyleComplete, compensationStageComplete, governanceComplete, scopeComplete, ipReadinessComplete } = buildProfileReadinessFlags(profile)
 
   return [
     {
@@ -416,6 +433,26 @@ export function buildProfileTrustTier(profile: Profile): TrustTier {
   return "level_a"
 }
 
+function profileVerificationScore(profile: Profile) {
+  const weightedSignals: [boolean, number][] = [
+    [
+      hasRecognizableProfile(profile),
+      2
+    ],
+    [profile.verificationBadges.profileComplete, 2],
+    [profile.verificationBadges.emailVerified, 1],
+    [profile.verificationBadges.linkedAccounts, 1],
+    [profile.trustSignals.phoneVerified, 1],
+    [profile.trustSignals.linkedInVerified, 1],
+    [profile.trustSignals.githubVerified, 1],
+    [profile.trustSignals.workDomainVerified, 1],
+    [profile.trustSignals.websiteVerified, 1],
+    [profile.trustSignals.identityVerified, 2],
+    [profile.trustSignals.workHistoryVerified, 1],
+  ]
+  return weightedSignals.reduce((score, [enabled, weight]) => score + (enabled ? weight : 0), 0)
+}
+
 export function buildProfileTrustScore(profile: Profile) {
   const readiness = buildProfileReadiness(profile)
   let score = 0
@@ -427,28 +464,7 @@ export function buildProfileTrustScore(profile: Profile) {
 
   score += Math.round(readiness.trustPercent / 20)
 
-  if (hasRecognizableProfile(profile))
-    score += 2
-  if (profile.verificationBadges.profileComplete)
-    score += 2
-  if (profile.verificationBadges.emailVerified)
-    score += 1
-  if (profile.verificationBadges.linkedAccounts)
-    score += 1
-  if (profile.trustSignals.phoneVerified)
-    score += 1
-  if (profile.trustSignals.linkedInVerified)
-    score += 1
-  if (profile.trustSignals.githubVerified)
-    score += 1
-  if (profile.trustSignals.workDomainVerified)
-    score += 1
-  if (profile.trustSignals.websiteVerified)
-    score += 1
-  if (profile.trustSignals.identityVerified)
-    score += 2
-  if (profile.trustSignals.workHistoryVerified)
-    score += 1
+  score += profileVerificationScore(profile)
 
   score += Math.min(profile.trustSignals.builderProofs.length, 3) * 2
 
@@ -536,6 +552,12 @@ function hasSharedWorkStyle(left: Profile, right: Profile) {
   return left.workStylePreferences.some(item => right.workStylePreferences.includes(item))
 }
 
+function alignmentStatus(leftValue: unknown, rightValue: unknown, aligned: boolean): AlignmentCheckItem["status"] {
+  if (!leftValue || !rightValue)
+    return "missing"
+  return aligned ? "aligned" : "review"
+}
+
 export function buildAlignmentCheck(left: Profile, right: Profile): AlignmentCheckItem[] {
   const roleOverlap = left.roles.some(role => right.roles.includes(role))
   const bothWantLead = left.governancePreferences.leadershipPreference === "wants_ceo_role"
@@ -546,49 +568,31 @@ export function buildAlignmentCheck(left: Profile, right: Profile): AlignmentChe
     {
       id: "commitment",
       title: "Commitment",
-      status: left.commitmentProfile.weeklyAvailabilityHours && right.commitmentProfile.weeklyAvailabilityHours
-        ? left.timeCommitment === right.timeCommitment
-          ? "aligned"
-          : "review"
-        : "missing",
+      status: alignmentStatus(left.commitmentProfile.weeklyAvailabilityHours, right.commitmentProfile.weeklyAvailabilityHours, left.timeCommitment === right.timeCommitment),
       summary: `${left.commitmentProfile.weeklyAvailabilityHours}h/week vs ${right.commitmentProfile.weeklyAvailabilityHours}h/week · ${formatRunwayBucket(left.commitmentProfile.runwayBucket)} vs ${formatRunwayBucket(right.commitmentProfile.runwayBucket)}`,
     },
     {
       id: "equity",
       title: "Equity philosophy",
-      status: left.governancePreferences.equityPhilosophy && right.governancePreferences.equityPhilosophy
-        ? left.governancePreferences.equityPhilosophy === right.governancePreferences.equityPhilosophy
-          ? "aligned"
-          : "review"
-        : "missing",
+      status: alignmentStatus(left.governancePreferences.equityPhilosophy, right.governancePreferences.equityPhilosophy, left.governancePreferences.equityPhilosophy === right.governancePreferences.equityPhilosophy),
       summary: `${formatEquityPhilosophy(left.governancePreferences.equityPhilosophy)} vs ${formatEquityPhilosophy(right.governancePreferences.equityPhilosophy)}`,
     },
     {
       id: "roles",
       title: "Role and scope",
-      status: left.roleScope.primaryRole && right.roleScope.primaryRole
-        ? roleOverlap ? "review" : "aligned"
-        : "missing",
+      status: alignmentStatus(left.roleScope.primaryRole, right.roleScope.primaryRole, !roleOverlap),
       summary: `${left.roleScope.primaryRole} vs ${right.roleScope.primaryRole}`,
     },
     {
       id: "governance",
       title: "Decision rights",
-      status: left.governancePreferences.decisionModelPreference && right.governancePreferences.decisionModelPreference
-        ? bothWantLead
-          ? "review"
-          : left.governancePreferences.decisionModelPreference === right.governancePreferences.decisionModelPreference
-            ? "aligned"
-            : "review"
-        : "missing",
+      status: alignmentStatus(left.governancePreferences.decisionModelPreference, right.governancePreferences.decisionModelPreference, !bothWantLead && left.governancePreferences.decisionModelPreference === right.governancePreferences.decisionModelPreference),
       summary: `${formatDecisionModelPreference(left.governancePreferences.decisionModelPreference)} · ${formatLeadershipPreference(left.governancePreferences.leadershipPreference)} / ${formatLeadershipPreference(right.governancePreferences.leadershipPreference)}`,
     },
     {
       id: "ip",
       title: "IP readiness",
-      status: left.ipReadiness.readyToAssignIp && right.ipReadiness.readyToAssignIp
-        ? ipBlocked ? "review" : "aligned"
-        : "missing",
+      status: alignmentStatus(left.ipReadiness.readyToAssignIp, right.ipReadiness.readyToAssignIp, !ipBlocked),
       summary: ipBlocked
         ? "One side has confirmed prior obligations that need counsel review."
         : `${left.ipReadiness.existingAssets.length + right.ipReadiness.existingAssets.length} pre-existing asset disclosures logged`,
@@ -596,11 +600,7 @@ export function buildAlignmentCheck(left: Profile, right: Profile): AlignmentChe
     {
       id: "communication",
       title: "Communication style",
-      status: left.workStylePreferences.length && right.workStylePreferences.length
-        ? hasSharedWorkStyle(left, right)
-          ? "aligned"
-          : "review"
-        : "missing",
+      status: alignmentStatus(left.workStylePreferences.length, right.workStylePreferences.length, hasSharedWorkStyle(left, right)),
       summary: hasSharedWorkStyle(left, right)
         ? "There is at least one shared operating preference."
         : "No shared work-style preference is obvious yet.",

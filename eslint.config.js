@@ -9,13 +9,14 @@ export default antfu(
       es2021: true,
     },
     unocss: true,
+    antislop: true,
     stylistic: {
       linebreak: "unix",
       quotes: "double",
       semi: false,
     },
     formatters: {
-      css: false,
+      css: true,
       html: false,
       markdown: false,
     },

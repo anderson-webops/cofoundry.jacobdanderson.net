@@ -58,10 +58,6 @@ function subscriptionCapabilities(plan: SubscriptionPlan) {
   }
 }
 
-function getFirstSubscriptionItem(subscription: Stripe.Subscription) {
-  return subscription.items.data[0]
-}
-
 function getPeriodEnd(item: Stripe.SubscriptionItem | undefined) {
   const periodEnd = item?.current_period_end
   return typeof periodEnd === "number"
@@ -360,7 +356,7 @@ export async function syncStripeSubscription(
   if (!userId)
     return null
 
-  const item = getFirstSubscriptionItem(subscription)
+  const item = subscription.items.data[0]
   const priceId = item?.price.id || null
   const plan = resolveStripePlanFromPriceId(event, priceId)
   if (!plan) {

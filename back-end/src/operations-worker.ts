@@ -420,65 +420,77 @@ export async function runCommand(executable: string, args: string[] = [], option
   })
 }
 
-export function parseExecutableCommand(command: string) {
-  const tokens: string[] = []
-  let current = ""
-  let quote: "'" | "\"" | null = null
-  let escaping = false
-  let tokenStarted = false
+interface ExecutableCommandState {
+  current: string
+  escaping: boolean
+  quote: "'" | "\"" | null
+  tokenStarted: boolean
+  tokens: string[]
+}
 
-  for (const character of command.trim()) {
-    if (character === "\0" || character === "\n" || character === "\r")
-      throw new Error("Executable commands must be a single line without null bytes.")
+function consumeExecutableCharacter(state: ExecutableCommandState, character: string) {
+  if (character === "\0" || character === "\n" || character === "\r")
+    throw new Error("Executable commands must be a single line without null bytes.")
 
-    if (escaping) {
-      current += character
-      tokenStarted = true
-      escaping = false
-      continue
-    }
-
-    if (character === "\\" && quote !== "'") {
-      escaping = true
-      tokenStarted = true
-      continue
-    }
-
-    if (quote) {
-      if (character === quote)
-        quote = null
-      else
-        current += character
-      tokenStarted = true
-      continue
-    }
-
-    if (character === "'" || character === "\"") {
-      quote = character
-      tokenStarted = true
-      continue
-    }
-
-    if (/\s/.test(character)) {
-      if (tokenStarted) {
-        tokens.push(current)
-        current = ""
-        tokenStarted = false
-      }
-      continue
-    }
-
-    current += character
-    tokenStarted = true
+  if (state.escaping) {
+    state.current += character
+    state.tokenStarted = true
+    state.escaping = false
+    return
   }
 
-  if (quote || escaping)
+  if (character === "\\" && state.quote !== "'") {
+    state.escaping = true
+    state.tokenStarted = true
+    return
+  }
+
+  if (state.quote) {
+    if (character === state.quote)
+      state.quote = null
+    else
+      state.current += character
+    state.tokenStarted = true
+    return
+  }
+
+  if (character === "'" || character === "\"") {
+    state.quote = character
+    state.tokenStarted = true
+    return
+  }
+
+  if (/\s/.test(character)) {
+    if (state.tokenStarted) {
+      state.tokens.push(state.current)
+      state.current = ""
+      state.tokenStarted = false
+    }
+    return
+  }
+
+  state.current += character
+  state.tokenStarted = true
+}
+
+export function parseExecutableCommand(command: string) {
+  const state: ExecutableCommandState = {
+    current: "",
+    escaping: false,
+    quote: null,
+    tokenStarted: false,
+    tokens: []
+  }
+  for (const character of command.trim())
+    consumeExecutableCharacter(state, character)
+
+  if (state.quote || state.escaping)
     throw new Error("Executable command has an unterminated quote or escape.")
 
-  if (tokenStarted)
-    tokens.push(current)
+  if (state.tokenStarted)
+    state.tokens.push(state.current)
 
-  const [executable, ...args] = tokens
+  const [executable, ...args] = state.tokens
   if (!executable)
     throw new Error("Executable command is empty.")
 
@@ -897,6 +909,80 @@ async function reportScanResult(
   })
 }
 
+interface FileScanCounts {
+  clean: number
+  failed: number
+  flagged: number
+  skipped: number
+}
+
+async function scanPendingFile(
+  environment: OperationsWorkerEnvironment,
+  item: PendingFileScan,
+  scannerCommand: string,
+  options: Required<WorkerCommandOptions>,
+  counts: FileScanCounts,
+) {
+  let tempDirectory = ""
+
+  try {
+    if (!scannerCommand) {
+      counts.skipped += 1
+      await reportScanResult(environment, item, {
+        notes: "No scanner command configured; explicit skip requested by operations worker.",
+        scanStatus: "skipped",
+      }, options.fetch)
+      return
+    }
+
+    const downloaded = await downloadPendingFile(environment, options.env, item, options.fetch)
+    tempDirectory = downloaded.directory
+    const command = scannerCommandForFile(scannerCommand, downloaded.filePath, item.id)
+    const exitCode = await options.runCommand(command.executable, command.args, {
+      env: {
+        ...process.env,
+        COFOUNDRY_SCAN_FILE: downloaded.filePath,
+        COFOUNDRY_UPLOAD_ID: item.id,
+      },
+    })
+
+    if (exitCode === 0) {
+      counts.clean += 1
+      await reportScanResult(environment, item, {
+        notes: "Scanner command exited cleanly.",
+        scanStatus: "clean",
+      }, options.fetch)
+    }
+    else if (exitCode === 1) {
+      counts.flagged += 1
+      await reportScanResult(environment, item, {
+        notes: "Scanner command flagged this upload.",
+        scanStatus: "flagged",
+      }, options.fetch)
+    }
+    else {
+      counts.failed += 1
+      await reportScanResult(environment, item, {
+        notes: `Scanner command failed with exit code ${exitCode}.`,
+        scanStatus: "failed",
+      }, options.fetch)
+    }
+  }
+  catch (error) {
+    counts.failed += 1
+    await reportScanResult(environment, item, {
+      notes: error instanceof Error
+        ? error.message
+        : "Scanner worker failed.",
+      scanStatus: "failed",
+    }, options.fetch)
+  }
+  finally {
+    if (tempDirectory)
+      await rm(tempDirectory, { force: true, recursive: true })
+  }
+}
+
 async function runScan(parsed: ParsedArgs, options: Required<WorkerCommandOptions>) {
   const environment = resolveOperationsWorkerEnvironment(options.env)
   const limit = parsePositiveInteger(
@@ -909,10 +995,12 @@ async function runScan(parsed: ParsedArgs, options: Required<WorkerCommandOption
     fetchImpl: options.fetch,
   })
   const pendingScans = pendingResponse.pendingScans || []
-  let clean = 0
-  let failed = 0
-  let flagged = 0
-  let skipped = 0
+  const counts: FileScanCounts = {
+    clean: 0,
+    failed: 0,
+    flagged: 0,
+    skipped: 0
+  }
 
   if (!scannerCommand && !allowSkip && pendingScans.length) {
     await reportOperationalEvent(environment, {
@@ -924,66 +1012,10 @@ async function runScan(parsed: ParsedArgs, options: Required<WorkerCommandOption
     throw new Error("Set COFOUNDRY_FILE_SCANNER_COMMAND or pass --scanner-command before running the scanner worker.")
   }
 
-  for (const item of pendingScans) {
-    let tempDirectory = ""
+  for (const item of pendingScans)
+    await scanPendingFile(environment, item, scannerCommand, options, counts)
 
-    try {
-      if (!scannerCommand) {
-        skipped += 1
-        await reportScanResult(environment, item, {
-          notes: "No scanner command configured; explicit skip requested by operations worker.",
-          scanStatus: "skipped",
-        }, options.fetch)
-        continue
-      }
-
-      const downloaded = await downloadPendingFile(environment, options.env, item, options.fetch)
-      tempDirectory = downloaded.directory
-      const command = scannerCommandForFile(scannerCommand, downloaded.filePath, item.id)
-      const exitCode = await options.runCommand(command.executable, command.args, {
-        env: {
-          ...process.env,
-          COFOUNDRY_SCAN_FILE: downloaded.filePath,
-          COFOUNDRY_UPLOAD_ID: item.id,
-        },
-      })
-
-      if (exitCode === 0) {
-        clean += 1
-        await reportScanResult(environment, item, {
-          notes: "Scanner command exited cleanly.",
-          scanStatus: "clean",
-        }, options.fetch)
-      }
-      else if (exitCode === 1) {
-        flagged += 1
-        await reportScanResult(environment, item, {
-          notes: "Scanner command flagged this upload.",
-          scanStatus: "flagged",
-        }, options.fetch)
-      }
-      else {
-        failed += 1
-        await reportScanResult(environment, item, {
-          notes: `Scanner command failed with exit code ${exitCode}.`,
-          scanStatus: "failed",
-        }, options.fetch)
-      }
-    }
-    catch (error) {
-      failed += 1
-      await reportScanResult(environment, item, {
-        notes: error instanceof Error
-          ? error.message
-          : "Scanner worker failed.",
-        scanStatus: "failed",
-      }, options.fetch)
-    }
-    finally {
-      if (tempDirectory)
-        await rm(tempDirectory, { force: true, recursive: true })
-    }
-  }
+  const { clean, failed, flagged, skipped } = counts
 
   await reportOperationalEvent(environment, {
     eventType: "file_scan_worker_completed",

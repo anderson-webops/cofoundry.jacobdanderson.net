@@ -90,17 +90,37 @@ function isMetadataAuthorized(request: IncomingMessage) {
   return configuredToken.length >= 32 && tokensMatch(readMetadataToken(request), configuredToken)
 }
 
-export function handleRequest(request: IncomingMessage, response: ServerResponse, ready = true) {
-  const headers = {
-    "cache-control": "no-store",
-    "content-security-policy": "default-src 'none'; frame-ancestors 'none'",
-    "content-type": "application/json; charset=utf-8",
-    "cross-origin-resource-policy": "same-origin",
-    "permissions-policy": "camera=(), geolocation=(), microphone=()",
-    "referrer-policy": "no-referrer",
-    "x-content-type-options": "nosniff",
-    "x-frame-options": "DENY",
+const responseHeaders = {
+  "cache-control": "no-store",
+  "content-security-policy": "default-src 'none'; frame-ancestors 'none'",
+  "content-type": "application/json; charset=utf-8",
+  "cross-origin-resource-policy": "same-origin",
+  "permissions-policy": "camera=(), geolocation=(), microphone=()",
+  "referrer-policy": "no-referrer",
+  "x-content-type-options": "nosniff",
+  "x-frame-options": "DENY",
+}
+
+function handleMetadataRequest(request: IncomingMessage, response: ServerResponse, method: string) {
+  if (!isMetadataAuthorized(request)) {
+    response.writeHead(401, {
+      ...responseHeaders,
+      "www-authenticate": "Bearer",
+    })
+    response.end(method === "HEAD"
+      ? undefined
+      : JSON.stringify({ error: "Unauthorized" }))
+    return
   }
+
+  response.writeHead(200, responseHeaders)
+  response.end(method === "HEAD"
+    ? undefined
+    : JSON.stringify(buildMetadataPayload()))
+}
+
+export function handleRequest(request: IncomingMessage, response: ServerResponse, ready = true) {
+  const headers = responseHeaders
   const method = request.method || "GET"
   const pathname = new URL(request.url || "/", "http://127.0.0.1").pathname
   const knownPath = [
@@ -150,21 +170,7 @@ export function handleRequest(request: IncomingMessage, response: ServerResponse
   }
 
   if (pathname === "/metadata") {
-    if (!isMetadataAuthorized(request)) {
-      response.writeHead(401, {
-        ...headers,
-        "www-authenticate": "Bearer",
-      })
-      response.end(method === "HEAD"
-        ? undefined
-        : JSON.stringify({ error: "Unauthorized" }))
-      return
-    }
-
-    response.writeHead(200, headers)
-    response.end(method === "HEAD"
-      ? undefined
-      : JSON.stringify(buildMetadataPayload()))
+    handleMetadataRequest(request, response, method)
     return
   }
 

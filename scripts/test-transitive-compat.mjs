@@ -12,14 +12,17 @@ const lintConfig = createRequire(require.resolve("@antfu/eslint-config"))
 const pluginEntry = lintConfig.resolve("eslint-plugin-n")
 const nodePlugin = createRequire(pluginEntry)
 
-test("Nuxt DevTools 4 keeps its 0.8 APIs separate from existing 0.7 consumers", () => {
+test("Nuxt DevTools 4 uses the current 0.8 host without rebinding legacy Vue plugin peers", () => {
   const frontend = createRequire(new URL("../front-end/package.json", import.meta.url))
   const devtools = createRequire(frontend.resolve("@nuxt/devtools"))
+  const legacy = createRequire(devtools.resolve("vite-plugin-vue-devtools"))
   assert.match(frontend("@nuxt/devtools/package.json").version, /^4\./u)
+  assert.equal(legacy("vite-plugin-vue-devtools/package.json").version, "9.0.0-rc.2")
   for (const name of ["@vitejs/devtools", "@vitejs/devtools-kit"]) {
-    assert.match(frontend(`${name}/package.json`).version, /^0\.7\./u)
-    assert.match(devtools(`${name}/package.json`).version, /^0\.8\./u)
-    assert.notEqual(frontend.resolve(name), devtools.resolve(name))
+    assert.equal(frontend(`${name}/package.json`).version, "0.8.2")
+    assert.equal(devtools(`${name}/package.json`).version, "0.8.2")
+    assert.match(legacy(`${name}/package.json`).version, /^0\.7\./u)
+    assert.notEqual(legacy.resolve(name), devtools.resolve(name))
   }
 })
 
@@ -39,7 +42,9 @@ test("the backend runs TypeScript 7 while Vue retains its required compiler API"
 test("the Node lint plugin reads its supported JS-YAML 5 workspace format", async (context) => {
   const yaml = nodePlugin("js-yaml")
   assert.match(nodePlugin("js-yaml/package.json").version, /^5\./u)
-  assert.deepEqual(yaml.load("packages:\n  - front-end\n  - back-end\n"), { packages: ["front-end", "back-end"] })
+  assert.deepEqual(yaml.load("packages:\n  - front-end\n  - back-end\n"), {
+    packages: ["front-end", "back-end"]
+  })
   assert.throws(() => yaml.load("value: 1\nvalue: 2\n"))
   assert.throws(() => yaml.load("value: !!js/function 'function () {}'"))
   const base = fileURLToPath(new URL("../.ai-work/runs/transitive-compatibility/", import.meta.url))
@@ -60,7 +65,11 @@ test("the beautifier CLI uses the installed glob API", async (context) => {
   await writeFile(filename, "const answer=42;")
   const metadata = require("js-beautify/package.json")
   const binary = join(dirname(require.resolve("js-beautify/package.json")), metadata.bin["js-beautify"])
-  execFileSync(process.execPath, [binary, "--replace", join(directory, "*.js")], { timeout: 30_000, maxBuffer: 1024 * 1024 })
+  execFileSync(process.execPath, [
+    binary,
+    "--replace",
+    join(directory, "*.js")
+  ], { timeout: 30_000, maxBuffer: 1024 * 1024 })
   assert.match(await readFile(filename, "utf8"), /const answer = 42;/u)
 })
 
@@ -72,5 +81,12 @@ test("the Markdown math consumer preserves rendering and untrusted-link rejectio
   assert.doesNotMatch(katex.renderToString("\\href{javascript:alert(1)}{text}", { trust: false, throwOnError: false }), /href="javascript:|<script/iu)
   const { micromark } = await import(pathToFileURL(lintConfig.resolve("micromark")))
   const { math: mathSyntax, mathHtml } = await import(pathToFileURL(lintConfig.resolve("micromark-extension-math")))
-  assert.match(micromark("$a+b$", { extensions: [mathSyntax()], htmlExtensions: [mathHtml()] }), /class="katex/u)
+  assert.match(micromark("$a+b$", {
+    extensions: [
+      mathSyntax()
+    ],
+    htmlExtensions: [
+      mathHtml()
+    ]
+  }), /class="katex/u)
 })
