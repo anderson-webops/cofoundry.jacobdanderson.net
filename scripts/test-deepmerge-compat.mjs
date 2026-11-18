@@ -3,6 +3,7 @@ import { readFileSync, realpathSync } from "node:fs"
 import { createRequire } from "node:module"
 import test from "node:test"
 import { fileURLToPath } from "node:url"
+import { runInNewContext } from "node:vm"
 
 const require = createRequire(import.meta.url)
 const merge = require("deepmerge")
@@ -11,16 +12,20 @@ test("all locked deepmerge consumers use the guarded package", () => {
   const lock = JSON.parse(readFileSync(new URL("../package-lock.json", import.meta.url), "utf8"))
   const entries = Object.entries(lock.packages).filter(([name]) => name.endsWith("node_modules/deepmerge"))
   assert.ok(entries.length > 0)
-  for (const [, entry] of entries)
-    assert.equal(entry.resolved, "vendor/deepmerge")
+  for (const [, entry] of entries) {
+    assert.equal(entry.resolved, "file:vendor/deepmerge-4.3.2-cofoundry.1.tgz")
+    assert.equal(entry.version, "4.3.2-cofoundry.1")
+    assert.equal(entry.link, undefined)
+  }
+  assert.equal(lock.packages["vendor/deepmerge"], undefined)
   assert.equal(
     realpathSync(require.resolve("deepmerge")),
-    fileURLToPath(new URL("../vendor/deepmerge/dist/cjs.js", import.meta.url)),
+    fileURLToPath(new URL("../node_modules/deepmerge/dist/cjs.js", import.meta.url)),
   )
 })
 
 test("prototype keys cannot poison source, target, nested or array results", () => {
-  const payload = JSON.parse('{"__proto__":{"admin":true}}')
+  const payload = JSON.parse("{\"__proto__\":{\"admin\":true}}")
   const results = [
     merge(Object.create(null), payload),
     merge(payload, {}),
@@ -29,7 +34,10 @@ test("prototype keys cannot poison source, target, nested or array results", () 
     merge({ session: undefined }, { session: payload }).session,
     merge({ session: payload }, {}).session,
     merge([], [payload])[0],
-    merge.all([Object.create(null), payload]),
+    merge.all([
+      Object.create(null),
+      payload
+    ]),
   ]
   for (const result of results) {
     assert.equal(Object.getPrototypeOf(result), Object.prototype)
@@ -49,18 +57,39 @@ test("forbidden keys are omitted before invoking getters or custom hooks", () =>
   }
   assert.deepEqual(merge(payload, {}, { customMerge }), {})
   assert.deepEqual(merge(Object.create(null), payload, { customMerge }), {})
+  const browser = {}
+  runInNewContext(readFileSync(new URL("../node_modules/deepmerge/dist/umd.js", import.meta.url), "utf8"), browser)
+  assert.deepEqual(Object.keys(browser.deepmerge(payload, {}, { customMerge })), [])
+  assert.deepEqual(Object.keys(browser.deepmerge(Object.create(null), payload, { customMerge })), [])
 })
 
 test("ordinary merges preserve arrays, symbols, options and input values", () => {
   const identity = Symbol("identity")
-  const target = { extensions: [".mjs"], nested: { first: 1 }, [identity]: "original" }
-  const source = { extensions: [".js"], nested: { second: 2 }, [identity]: "updated" }
+  const target = {
+    extensions: [".mjs"],
+    nested: { first: 1 },
+    [identity]: "original"
+  }
+  const source = {
+    extensions: [".js"],
+    nested: { second: 2 },
+    [identity]: "updated"
+  }
   const result = merge(target, source)
-  assert.deepEqual(result, { extensions: [".mjs", ".js"], nested: { first: 1, second: 2 }, [identity]: "updated" })
+  assert.deepEqual(result, {
+    extensions: [".mjs", ".js"],
+    nested: { first: 1, second: 2 },
+    [identity]: "updated"
+  })
   assert.deepEqual(target.extensions, [".mjs"])
   assert.notEqual(result.nested, target.nested)
   assert.equal(merge({}, source, { clone: false }).nested, source.nested)
-  assert.deepEqual(merge(target, source, { arrayMerge: (_target, value) => value }).extensions, [".js"])
-  assert.deepEqual(merge.all([{ first: 1 }, { second: 2 }]), { first: 1, second: 2 })
+  assert.deepEqual(merge(target, source, {
+    arrayMerge: (_target, value) => value
+  }).extensions, [".js"])
+  assert.deepEqual(merge.all([
+    { first: 1 },
+    { second: 2 }
+  ]), { first: 1, second: 2 })
   assert.throws(() => merge.all({}), /first argument should be an array/)
 })

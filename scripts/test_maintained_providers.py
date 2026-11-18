@@ -14,6 +14,9 @@ SOURCE = Path(__file__).resolve().parent.parent
 SPEC = importlib.util.spec_from_file_location("maintained_providers", SOURCE / "scripts/verify-maintained-providers.py")
 PROVIDERS = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(PROVIDERS)
+SITE_SPEC = importlib.util.spec_from_file_location("site_deepmerge", SOURCE / "scripts/package-site-deepmerge.py")
+SITE_DEEPMERGE = importlib.util.module_from_spec(SITE_SPEC)
+SITE_SPEC.loader.exec_module(SITE_DEEPMERGE)
 
 
 class MaintainedProviderTests(unittest.TestCase):
@@ -83,6 +86,17 @@ class MaintainedProviderTests(unittest.TestCase):
             archive.write(b"changed")
         with self.assertRaisesRegex(ValueError, "archive requires producer review"):
             PROVIDERS.main()
+
+    def test_site_policy_archive_reproduces_its_reviewed_base(self):
+        actual = SITE_DEEPMERGE.build_archive(SOURCE)
+        self.assertEqual(actual, (SOURCE / SITE_DEEPMERGE.OUTPUT).read_bytes())
+
+    def test_site_policy_rejects_a_changed_base_archive(self):
+        target = self.root / SITE_DEEPMERGE.BASE_ARCHIVE
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes((SOURCE / SITE_DEEPMERGE.BASE_ARCHIVE).read_bytes() + b"changed")
+        with self.assertRaisesRegex(ValueError, "exact reviewed base archive"):
+            SITE_DEEPMERGE.build_archive(self.root)
 
 
 if __name__ == "__main__":

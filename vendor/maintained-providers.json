@@ -2,8 +2,23 @@
   "schemaVersion": 1,
   "producer": "anderson-webops/vitesse-nuxt-template",
   "producerTag": "v2.1.41",
-  "producerCommit": "7eddf8325fd75e1e98e2c5a2669f91c3431e7cff",
+  "producerCommit": "0630d098d373924c65bb7f25bdf19e9d5430b955",
   "providers": {
+    "braces": {
+      "archive": "vendor/braces-3.0.4-webops.3.tgz",
+      "sha256": "b6cbeb27c4606e56e096aa7766f42cfaeca72bf0f4518d8f705d87f84e8295dd"
+    },
+    "deepmerge": {
+      "archive": "vendor/deepmerge-4.3.2-cofoundry.1.tgz",
+      "sha256": "10dc85265a49a52f37aef040c69810d4a7a52b5d49034100bd499e27fcb83b6f",
+      "producer": "anderson-webops/cofoundry.jacobdanderson.net",
+      "baseArchive": "vendor/deepmerge-4.3.2-webops.2.tgz",
+      "baseSha256": "d2f30826ebcc45fb843120296e12b6465d3afe4b50e457f4e053403ec534adb4"
+    },
+    "listhen": {
+      "archive": "vendor/listhen-1.10.1-webops.3.tgz",
+      "sha256": "83af36f0429604a75ba14146c425d537ac01c27f08cac03c35dce64f865440fd"
+    },
     "picomatch": {
       "archive": "vendor/picomatch-4.0.7-webops.1.tgz",
       "sha256": "0d6aa02f2f0ed591a8ee6f6bfd7a34bc755d5a368c13026e802472cddaaefa3f"
