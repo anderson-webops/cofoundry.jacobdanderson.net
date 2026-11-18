@@ -24,6 +24,22 @@ Provider checks compare every installed consumer against its accepted archive.
 The parser retains bounded hostile-input regressions and ordinary matching.
 The strict import check covers client imports, components and server helpers.
 
+Braces and Listhen use the same reviewed standalone archives as the template.
+Deepmerge 4.3.2 adds CoFoundry's existing stricter policy: omit own `__proto__`
+keys before accessing values or invoking hooks. Its CJS and browser packages
+reproduce the reviewed shared archive plus that exact key filter. Original
+source, licenses and both provenance records remain preserved. Every dependency
+stays inside the locked application graph; linked local library projects can
+otherwise retain unpatched nested providers. All six maintained providers
+require exact archive and installed-consumer verification.
+
+Nuxt's selected Vite DevTools host and kit use the same reviewed 0.8.3 release.
+The Vue plugin retains its independently supported 0.7 peer graph. The existing
+real-host fixture exercises initialization, injected modules and exact dock UI
+bytes; mismatched pairs and unreviewed versions remain rejected. Glob 14.0.6
+and Minimatch 11.0.9 advance the existing supported override line. The unused
+Tab override is removed because the current dependency graph has no consumer.
+
 Required qualification includes clean locked installation, full and production
 audits, registry signatures, lint, types, source/browser/accessibility checks,
 and native runtime, missing-module, promotion and retained-recovery acceptance.
