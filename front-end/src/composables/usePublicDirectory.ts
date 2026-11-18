@@ -1,4 +1,6 @@
 import type { PublicDirectorySnapshot } from "~/shared/utils/directory"
+import { createError, useAsyncData } from "#app"
+import { $fetch } from "#build/fetch"
 
 export async function usePublicDirectory() {
   const { data, error } = await useAsyncData(

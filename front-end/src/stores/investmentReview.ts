@@ -4,6 +4,10 @@ import type {
   InvestmentWorkspaceDocument,
 } from "~/shared/types/investment-workspaces"
 import { acceptHMRUpdate, defineStore } from "pinia"
+import { ref, watch } from "vue"
+import { useRequestHeaders } from "#app"
+import { $fetch } from "#build/fetch"
+import { useSessionState } from "~/composables/useSessionState"
 
 export const useInvestmentReviewStore = defineStore("investment-review", () => {
   const { session } = useSessionState()

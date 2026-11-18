@@ -6,7 +6,7 @@ production acceptance.
 
 ## Runtime
 
-The reviewed build and service toolchain is Node 26.13.0 with npm 12.2.1.
+The reviewed build and service toolchain is Node 26.13.1 with npm 12.2.2.
 `deploy/runtime-artifact.json`, `deploy/host-contract.json` and
 `deploy/mac-artifact-profile.json` define the artifact and adapter requirements.
 Existing Node 24 artifacts retain their original contract and independent

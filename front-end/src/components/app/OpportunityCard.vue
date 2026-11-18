@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { StartupOpportunity } from "~/shared/types/domain"
 import { computed } from "vue"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
 import { formatCommitment, formatCompensation, formatOpportunityVerificationStatus, formatRemotePreference, formatStage } from "~/shared/utils/format"
 import { getOpportunityVerificationTone } from "~/shared/utils/formation"
 

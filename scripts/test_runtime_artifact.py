@@ -93,8 +93,8 @@ class RuntimeArtifactTests(unittest.TestCase):
         original = json.loads(artifact.CONTRACT_PATH.read_text())
         for runtime in (
             {"os": "linux", "arch": "arm64", "node": "24.18.1", "npmBuildOnly": "12.0.2"},
-            {"os": "linux", "arch": "arm64", "node": "26.13.0", "npmBuildOnly": "12.0.2"},
-            {"os": "linux", "arch": "x64", "node": "26.13.0", "npmBuildOnly": "12.2.1"},
+            {"os": "linux", "arch": "arm64", "node": "26.13.1", "npmBuildOnly": "12.0.2"},
+            {"os": "linux", "arch": "x64", "node": "26.13.1", "npmBuildOnly": "12.2.2"},
         ):
             with self.subTest(runtime=runtime):
                 candidate = {**original, "runtime": runtime}

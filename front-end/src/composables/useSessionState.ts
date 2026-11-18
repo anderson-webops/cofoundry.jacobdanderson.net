@@ -1,4 +1,5 @@
 import type { SessionUser } from "~/shared/types/domain"
+import { useCookie, useState } from "#app"
 import { decodeSessionUser, sessionCookieName } from "~/shared/utils/session"
 
 export function useSessionState() {

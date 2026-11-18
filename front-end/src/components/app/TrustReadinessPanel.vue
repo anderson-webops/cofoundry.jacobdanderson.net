@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { Profile } from "~/shared/types/domain"
+import { computed } from "vue"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
 import { buildProfileReadiness } from "~/shared/utils/formation"
 
 const props = withDefaults(defineProps<{

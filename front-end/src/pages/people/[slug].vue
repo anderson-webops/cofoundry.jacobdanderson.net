@@ -1,4 +1,15 @@
 <script setup lang="ts">
+import { computed } from "vue"
+import { createError, useRoute } from "#app"
+import { NuxtLink } from "#components"
+import ProfileAvatar from "~/components/app/ProfileAvatar.vue"
+import TrustSignalStrip from "~/components/app/TrustSignalStrip.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { useCanonicalAppUrl } from "~/composables/useCanonicalAppUrl"
+import { usePageSeo } from "~/composables/usePageSeo"
+import { useProductAccess } from "~/composables/useProductAccess"
+import { usePublicDirectory } from "~/composables/usePublicDirectory"
 import { buildPublicProfileSlug, slugifySegment } from "~/shared/utils/directory"
 import { formatContactRevealStage, formatDate, formatRemotePreference, formatStage, formatStartTimeline } from "~/shared/utils/format"
 

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "producer": "anderson-webops/vitesse-nuxt-template",
+  "producerTag": "v2.1.41",
+  "producerCommit": "7eddf8325fd75e1e98e2c5a2669f91c3431e7cff",
+  "providers": {
+    "picomatch": {
+      "archive": "vendor/picomatch-4.0.7-webops.1.tgz",
+      "sha256": "0d6aa02f2f0ed591a8ee6f6bfd7a34bc755d5a368c13026e802472cddaaefa3f"
+    },
+    "unimport": {
+      "archive": "vendor/unimport-7.0.3-webops.2.tgz",
+      "sha256": "4802e76c6c87d990cb804750c6181c018ad61275236b81565b831184980c627a"
+    },
+    "nuxt-explicit-imports": {
+      "archive": "vendor/nuxt-explicit-imports-0.1.0-webops.2.tgz",
+      "sha256": "afb571422f14ec9459ab3cb25b4435ecbc6a1df993d40f84c9bc3915fe8d6bb9"
+    }
+  }
+}

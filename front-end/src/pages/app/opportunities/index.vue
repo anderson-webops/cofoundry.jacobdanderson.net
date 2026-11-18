@@ -1,6 +1,19 @@
 <script setup lang="ts">
+import { reactive, ref } from "vue"
+import { definePageMeta } from "#app/composables/pages"
+import OpportunityCard from "~/components/app/OpportunityCard.vue"
+import PillPicker from "~/components/forms/PillPicker.vue"
+import SelectInput from "~/components/forms/SelectInput.vue"
+import TextareaInput from "~/components/forms/TextareaInput.vue"
+import TextInput from "~/components/forms/TextInput.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import BaseDialog from "~/components/ui/BaseDialog.vue"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { useCurrentMember } from "~/composables/useCurrentMember"
+import { usePageSeo } from "~/composables/usePageSeo"
 import { commitmentOptions, industryOptions, opportunityVerificationOptions, remoteOptions, roleOptions, stageOptions } from "~/shared/constants/options"
 import { opportunitySchema } from "~/shared/utils/validation"
+import { useToastStore } from "~/stores/toast"
 
 definePageMeta({
   layout: "app",

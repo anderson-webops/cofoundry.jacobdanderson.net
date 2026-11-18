@@ -1,9 +1,17 @@
 <script setup lang="ts">
 import type { SubscriptionPlan } from "~/shared/types/domain"
+import { computed } from "vue"
+import { definePageMeta } from "#app/composables/pages"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
+import EmptyState from "~/components/ui/EmptyState.vue"
+import MetricTile from "~/components/ui/MetricTile.vue"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { usePageSeo } from "~/composables/usePageSeo"
 import { buildAdminQueueSummary, buildAdminUserRows } from "~/shared/utils/admin"
 import { formatPlanName } from "~/shared/utils/format"
 import { buildRelationshipAnalytics } from "~/shared/utils/relationship-analytics"
 import { buildAdminMetrics } from "~/shared/utils/workspace"
+import { useWorkspaceStore } from "~/stores/workspace"
 
 definePageMeta({
   layout: "admin",

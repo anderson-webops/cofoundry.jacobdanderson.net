@@ -1,5 +1,18 @@
 <script setup lang="ts">
+import { computed, onMounted, reactive, ref } from "vue"
+import { navigateTo, useRoute } from "#app"
+import { definePageMeta } from "#app/composables/pages"
+import { $fetch } from "#build/fetch"
+import { NuxtLink } from "#components"
+import SelectInput from "~/components/forms/SelectInput.vue"
+import TextareaInput from "~/components/forms/TextareaInput.vue"
+import TextInput from "~/components/forms/TextInput.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import { usePageSeo } from "~/composables/usePageSeo"
+import { useProductAccess } from "~/composables/useProductAccess"
 import { accessRequestSchema, signUpSchema } from "~/shared/utils/validation"
+import { useAuthStore } from "~/stores/auth"
+import { useToastStore } from "~/stores/toast"
 
 definePageMeta({
   layout: "auth",

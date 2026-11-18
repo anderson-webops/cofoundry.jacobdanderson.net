@@ -1,4 +1,12 @@
 <script setup lang="ts">
+import { computed } from "vue"
+import { useRuntimeConfig } from "#app"
+import { NuxtLink } from "#components"
+import ThemeSchemePicker from "~/components/app/ThemeSchemePicker.vue"
+import AppLogo from "~/components/marketing/AppLogo.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import { useProductAccess } from "~/composables/useProductAccess"
+
 const runtimeConfig = useRuntimeConfig()
 const { getPrimaryAccessCta } = useProductAccess()
 const primaryAccessCta = computed(() => getPrimaryAccessCta("site-footer"))

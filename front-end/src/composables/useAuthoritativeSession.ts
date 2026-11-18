@@ -1,4 +1,8 @@
 import type { SessionUser } from "~/shared/types/domain"
+import { useRequestHeaders } from "#app"
+import { $fetch } from "#build/fetch"
+import { useSessionState } from "~/composables/useSessionState"
+import { useWorkspaceStore } from "~/stores/workspace"
 
 export async function useAuthoritativeSession() {
   const { setSession } = useSessionState()

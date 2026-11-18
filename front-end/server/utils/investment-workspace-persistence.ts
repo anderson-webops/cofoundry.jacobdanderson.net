@@ -1,5 +1,6 @@
 import type { H3Event } from "h3"
 import type { InvestmentWorkspaceDocument } from "../../shared/types/investment-workspaces"
+import { createError } from "h3"
 import {
   createLocalInvestmentWorkspaceDocument,
   getLocalInvestmentWorkspaceDocument,

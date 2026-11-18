@@ -1,4 +1,5 @@
 import type { CollaborationMutationPayload } from "../../utils/collaboration-workflow"
+import { defineEventHandler, readBody } from "h3"
 import { collaborationMutationSchema } from "~/shared/utils/validation"
 import { requireAuthenticatedSession } from "../../utils/auth"
 import { applyCollaborationMutation } from "../../utils/collaboration-workflow"

@@ -1,4 +1,4 @@
-import { getRouterParam, send, setHeader } from "h3"
+import { createError, defineEventHandler, getRouterParam, send, setHeader } from "h3"
 import { readLocalFileUploadContent } from "../../../../utils/local-operations-store"
 import { requireOperationsWorker } from "../../../../utils/operations-auth"
 import { assertRateLimit, buildRateLimitKey } from "../../../../utils/rate-limit"

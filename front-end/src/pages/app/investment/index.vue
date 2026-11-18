@@ -1,4 +1,21 @@
 <script setup lang="ts">
+import { computed, reactive, ref } from "vue"
+import { navigateTo } from "#app"
+import { definePageMeta } from "#app/composables/pages"
+import { NuxtLink } from "#components"
+import SelectInput from "~/components/forms/SelectInput.vue"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import BaseDialog from "~/components/ui/BaseDialog.vue"
+import EmptyState from "~/components/ui/EmptyState.vue"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { useCurrentMember } from "~/composables/useCurrentMember"
+import { useFeatureFlag } from "~/composables/useFeatureFlag"
+import { usePageSeo } from "~/composables/usePageSeo"
+import { useInvestmentWorkspaceStore } from "~/stores/investmentWorkspaces"
+import { useOrganizationStore } from "~/stores/organizations"
+import { useToastStore } from "~/stores/toast"
+
 definePageMeta({
   layout: "app",
   middleware: ["auth", "onboarding"],

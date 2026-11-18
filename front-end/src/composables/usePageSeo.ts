@@ -1,3 +1,5 @@
+import { useHead, useRoute, useSeoMeta } from "#app"
+import { useCanonicalAppUrl } from "~/composables/useCanonicalAppUrl"
 import { appDescription, appName } from "~/shared/constants/app"
 import { serializeJsonForHtml } from "~/shared/utils/html"
 import { buildSiteUrl } from "~/shared/utils/seo"

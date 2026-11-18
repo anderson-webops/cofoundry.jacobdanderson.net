@@ -1,5 +1,14 @@
 <script setup lang="ts">
 import type { ProductionReadinessPayload, ProductionReadinessStatus } from "../../../server/utils/production-readiness"
+import { computed } from "vue"
+import { useAsyncData, useRequestFetch } from "#app"
+import { definePageMeta } from "#app/composables/pages"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import EmptyState from "~/components/ui/EmptyState.vue"
+import MetricTile from "~/components/ui/MetricTile.vue"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { usePageSeo } from "~/composables/usePageSeo"
 import { formatDate } from "~/shared/utils/format"
 
 definePageMeta({

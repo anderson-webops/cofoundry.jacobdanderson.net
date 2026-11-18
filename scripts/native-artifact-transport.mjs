@@ -423,7 +423,7 @@ function assertProfile(profile) {
 		|| profile.runtime.os !== "linux" || profile.runtime.architecture !== "arm64"
 		|| profile.runtime.libc !== "glibc"
 		|| (profile.site === "cofoundry.jacobdanderson.net"
-			? profile.runtime.node !== "26.13.0" || profile.runtime.npm !== "12.2.1" || profile.runtime.package_manager !== "npm@12.2.1"
+			? profile.runtime.node !== "26.13.1" || profile.runtime.npm !== "12.2.2" || profile.runtime.package_manager !== "npm@12.2.2"
 			: !["24.18.1", "24.22.1"].includes(profile.runtime.node) || profile.runtime.npm !== "12.0.2" || profile.runtime.package_manager !== "npm@12.0.2")
 		|| !exactKeys(profile.environment, [])) {
 		throw new Error("Unsupported native application transport profile.");

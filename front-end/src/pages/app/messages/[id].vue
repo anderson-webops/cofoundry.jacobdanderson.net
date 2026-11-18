@@ -1,9 +1,28 @@
 <script setup lang="ts">
+import { computed, ref, watch, watchEffect } from "vue"
+import { navigateTo, useRoute } from "#app"
+import { definePageMeta } from "#app/composables/pages"
+import AlignmentCheckPanel from "~/components/app/AlignmentCheckPanel.vue"
+import FirstCallAgenda from "~/components/app/FirstCallAgenda.vue"
+import ReportIssueDialog from "~/components/app/ReportIssueDialog.vue"
+import SafetyFlagsPanel from "~/components/app/SafetyFlagsPanel.vue"
+import TrialCollaborationCard from "~/components/app/TrialCollaborationCard.vue"
+import TrustSignalStrip from "~/components/app/TrustSignalStrip.vue"
+import TextareaInput from "~/components/forms/TextareaInput.vue"
+import ProposalEditorForm from "~/components/proposals/ProposalEditorForm.vue"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import BaseDialog from "~/components/ui/BaseDialog.vue"
+import EmptyState from "~/components/ui/EmptyState.vue"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { useCurrentMember } from "~/composables/useCurrentMember"
+import { usePageSeo } from "~/composables/usePageSeo"
 import { buildSubscriptionUsage, getSubscriptionEntitlements } from "~/shared/utils/billing"
 import { formatContactRevealStage, formatDate, formatProposalRelationshipType, formatProposalStatus } from "~/shared/utils/format"
 import { buildConversationRiskFlags, buildMessageRiskFlags, canOpenProposalWorkflow } from "~/shared/utils/formation"
 import { getRelationshipHrefForConversation } from "~/shared/utils/relationships"
 import { buildParticipantProfiles, getCurrentProposalVersion, getMatchByConversation, getMessagesForConversation, getProfileByUserId, getProposalByConversation, getTrialForMatch } from "~/shared/utils/workspace"
+import { useToastStore } from "~/stores/toast"
 
 definePageMeta({
   layout: "app",

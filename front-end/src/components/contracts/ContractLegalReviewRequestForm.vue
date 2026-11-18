@@ -1,5 +1,10 @@
 <script setup lang="ts">
 import type { ContractLegalReviewerType, ContractLegalReviewScope } from "~/shared/types/domain"
+import { reactive, ref } from "vue"
+import SelectInput from "~/components/forms/SelectInput.vue"
+import TextareaInput from "~/components/forms/TextareaInput.vue"
+import TextInput from "~/components/forms/TextInput.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
 import { contractLegalReviewerTypeOptions, contractLegalReviewScopeOptions } from "~/shared/utils/legal-reviews"
 import { contractLegalReviewRequestSchema } from "~/shared/utils/validation"
 

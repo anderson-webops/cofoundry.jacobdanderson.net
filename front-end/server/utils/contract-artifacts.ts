@@ -1,6 +1,7 @@
 import type { H3Event } from "h3"
 import type { Contract, ContractVersion, Signature, WorkspaceSeed } from "../../shared/types/domain"
 import type { ContractProviderEvidence } from "../../shared/utils/contract-documents"
+import { createError } from "h3"
 import { hasPaidContractWorkflowSponsor } from "../../shared/utils/billing"
 import { isContractParticipant } from "../../shared/utils/collaboration"
 import { renderContractTextDocument } from "../../shared/utils/contract-documents"

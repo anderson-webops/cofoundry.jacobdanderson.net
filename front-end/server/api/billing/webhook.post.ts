@@ -1,6 +1,6 @@
 import type { H3Event } from "h3"
 import type Stripe from "stripe"
-import { getHeader, readRawBody } from "h3"
+import { createError, defineEventHandler, getHeader, readRawBody } from "h3"
 import { recordStripeCheckoutSession, resolveStripeCheckoutUser, syncStripeSubscription } from "../../utils/billing-persistence"
 import { recordOperationalEvent } from "../../utils/operations-persistence"
 import { assertRateLimit } from "../../utils/rate-limit"

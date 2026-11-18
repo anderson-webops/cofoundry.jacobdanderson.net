@@ -1,6 +1,7 @@
 import type { H3Event } from "h3"
 import type { DeploymentMetadata, PublicEnvironment } from "../../shared/utils/environment"
 import { setHeader } from "h3"
+import { useRuntimeConfig } from "nitropack/runtime"
 import { createSupabaseAdminClient } from "./supabase"
 
 const readinessCacheMs = 1000

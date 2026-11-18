@@ -1,8 +1,21 @@
 <script setup lang="ts">
 import type { ContactRevealStage, PrivacyRequestType } from "~/shared/types/domain"
+import { computed, ref, watch } from "vue"
+import { definePageMeta } from "#app/composables/pages"
+import { $fetch } from "#build/fetch"
+import { NuxtLink } from "#components"
+import TrustSignalStrip from "~/components/app/TrustSignalStrip.vue"
+import SelectInput from "~/components/forms/SelectInput.vue"
+import TextareaInput from "~/components/forms/TextareaInput.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { useCurrentMember } from "~/composables/useCurrentMember"
+import { usePageSeo } from "~/composables/usePageSeo"
+import { useProductAccess } from "~/composables/useProductAccess"
 import { contactRevealStageOptions } from "~/shared/constants/options"
 import { formatContactRevealStage, formatTrustTier } from "~/shared/utils/format"
 import { buildProfileTrustTier } from "~/shared/utils/formation"
+import { useToastStore } from "~/stores/toast"
 
 type TrustVerificationType = "email" | "phone" | "linkedin" | "github" | "website" | "work_domain" | "government_id"
 

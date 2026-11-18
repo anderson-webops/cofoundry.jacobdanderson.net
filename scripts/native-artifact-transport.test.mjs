@@ -26,9 +26,9 @@ async function fixture(context, site = sites[2]) {
 		builder_id: "jacob-m3",
 		runtime: {
 			os: "linux", architecture: "arm64", libc: "glibc",
-			node: site === sites[0] ? "26.13.0" : site === sites[2] ? "24.22.1" : "24.18.1",
-			npm: site === sites[0] ? "12.2.1" : "12.0.2",
-			package_manager: site === sites[0] ? "npm@12.2.1" : "npm@12.0.2"
+			node: site === sites[0] ? "26.13.1" : site === sites[2] ? "24.22.1" : "24.18.1",
+			npm: site === sites[0] ? "12.2.2" : "12.0.2",
+			package_manager: site === sites[0] ? "npm@12.2.2" : "npm@12.0.2"
 		},
 		environment: {}
 	};
@@ -75,8 +75,8 @@ for (const site of sites) {
 test("CoFoundry rejects legacy and mixed toolchains without changing peer profiles", async (context) => {
 	for (const runtime of [
 		{ node: "24.18.1", npm: "12.0.2", package_manager: "npm@12.0.2" },
-		{ node: "26.13.0", npm: "12.0.2", package_manager: "npm@12.0.2" },
-		{ node: "26.13.0", npm: "12.2.1", package_manager: "npm@12.0.2" }
+		{ node: "26.13.1", npm: "12.0.2", package_manager: "npm@12.0.2" },
+		{ node: "26.13.1", npm: "12.2.2", package_manager: "npm@12.0.2" }
 	]) {
 		const input = await fixture(context, sites[0]);
 		Object.assign(input.profile.runtime, runtime);
@@ -84,7 +84,7 @@ test("CoFoundry rejects legacy and mixed toolchains without changing peer profil
 	}
 	for (const site of sites.slice(1)) {
 		const input = await fixture(context, site);
-		Object.assign(input.profile.runtime, { node: "26.13.0", npm: "12.2.1", package_manager: "npm@12.2.1" });
+		Object.assign(input.profile.runtime, { node: "26.13.1", npm: "12.2.2", package_manager: "npm@12.2.2" });
 		await assert.rejects(prepareNativeTransport(input), /profile/);
 	}
 });

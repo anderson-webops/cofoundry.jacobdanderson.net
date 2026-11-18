@@ -1,6 +1,7 @@
 import type { H3Event } from "h3"
 import type { ProductionReadinessAdminPosture } from "./production-readiness"
 import type { AdminAction } from "~/shared/types/domain"
+import { createError } from "h3"
 import { listPersistedAdminActions } from "./admin-persistence"
 import { mergeLocalAdminAuditState } from "./local-admin-audit"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"

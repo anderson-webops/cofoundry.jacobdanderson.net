@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { ActivationPlan } from "~/shared/utils/activation"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
 
 defineProps<{
   compact?: boolean

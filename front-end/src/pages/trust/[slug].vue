@@ -1,4 +1,10 @@
 <script setup lang="ts">
+import { computed } from "vue"
+import { createError, useRoute } from "#app"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { usePageSeo } from "~/composables/usePageSeo"
+import { useProductAccess } from "~/composables/useProductAccess"
 import { trustCenterPages } from "~/shared/data/public-content"
 
 const route = useRoute()

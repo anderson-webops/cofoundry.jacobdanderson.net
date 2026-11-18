@@ -1,3 +1,4 @@
+import { defineEventHandler } from "h3"
 import { requireAdminSession } from "../../utils/admin"
 import { listPrivacyRequests } from "../../utils/privacy-requests"
 import { assertRateLimit, buildRateLimitKey } from "../../utils/rate-limit"

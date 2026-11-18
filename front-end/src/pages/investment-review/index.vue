@@ -1,4 +1,16 @@
 <script setup lang="ts">
+import { computed, ref } from "vue"
+import { definePageMeta } from "#app/composables/pages"
+import { NuxtLink } from "#components"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import EmptyState from "~/components/ui/EmptyState.vue"
+import MetricTile from "~/components/ui/MetricTile.vue"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { usePageSeo } from "~/composables/usePageSeo"
+import { useAuthStore } from "~/stores/auth"
+import { useInvestmentReviewStore } from "~/stores/investmentReview"
+
 definePageMeta({
   layout: "investment-review",
   middleware: ["investment-review"],

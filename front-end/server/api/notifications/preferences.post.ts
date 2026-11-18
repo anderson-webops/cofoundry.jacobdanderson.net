@@ -1,3 +1,4 @@
+import { defineEventHandler, readBody } from "h3"
 import { emailPreferenceApplySchema } from "~/shared/utils/validation"
 import { applyEmailPreferenceToken } from "../../utils/email-preferences"
 import { assertRateLimit, buildRateLimitKey } from "../../utils/rate-limit"

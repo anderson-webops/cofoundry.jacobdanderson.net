@@ -1,11 +1,25 @@
 <script setup lang="ts">
 import type { ProposalSectionKey, ProposalSectionState } from "~/shared/types/domain"
+import { computed, ref } from "vue"
+import { navigateTo, useRoute } from "#app"
+import { definePageMeta } from "#app/composables/pages"
+import SelectInput from "~/components/forms/SelectInput.vue"
+import TextareaInput from "~/components/forms/TextareaInput.vue"
+import ProposalEditorForm from "~/components/proposals/ProposalEditorForm.vue"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import BaseDialog from "~/components/ui/BaseDialog.vue"
+import EmptyState from "~/components/ui/EmptyState.vue"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { useCurrentMember } from "~/composables/useCurrentMember"
+import { usePageSeo } from "~/composables/usePageSeo"
 import { buildSubscriptionUsage, formatUsageQuota, getSubscriptionEntitlements } from "~/shared/utils/billing"
 import { canUserCounterProposal, canUserUpdateProposalStatus } from "~/shared/utils/collaboration"
 import { formatDate, formatProposalRelationshipType, formatProposalSectionKey, formatProposalSectionState, formatProposalStatus } from "~/shared/utils/format"
 import { buildProposalSectionSummaries, buildProposalTermsSummary, buildProposalTimeline, buildProposalUnresolvedItems, getProposalStatusTone } from "~/shared/utils/proposals"
 import { getRelationshipHrefForProposal } from "~/shared/utils/relationships"
 import { getCurrentProposalVersion, getProfileByUserId, getProposalById, getProposalComments, getProposalVersions } from "~/shared/utils/workspace"
+import { useToastStore } from "~/stores/toast"
 
 definePageMeta({
   layout: "app",

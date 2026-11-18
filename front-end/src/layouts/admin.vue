@@ -1,4 +1,11 @@
 <script setup lang="ts">
+import { ref } from "vue"
+import { useHead } from "#app"
+import { NuxtLink } from "#components"
+import AppTopbar from "~/components/app/AppTopbar.vue"
+import ThemeSchemePicker from "~/components/app/ThemeSchemePicker.vue"
+import ThemeToggle from "~/components/app/ThemeToggle.vue"
+import AppLogo from "~/components/marketing/AppLogo.vue"
 import { adminNavigation } from "~/shared/constants/app"
 
 const mobileNavOpen = ref(false)

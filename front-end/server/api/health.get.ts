@@ -1,5 +1,5 @@
 import process from "node:process"
-import { send } from "h3"
+import { defineEventHandler, send } from "h3"
 import { readPublicEnvironment } from "../../shared/utils/environment"
 import { readServerDeploymentMetadata } from "../utils/deployment-metadata"
 import { buildHealthPayload, setHealthResponseHeaders } from "../utils/health"

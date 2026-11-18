@@ -1,6 +1,7 @@
 import type { H3Event } from "h3"
 import type { AdminAction, AppRole, Notification, OpportunityVerificationStatus, PrivacyRequestStatus, ReportStatus } from "~/shared/types/domain"
 import type { AdminSecurityMutation, AdminSecurityUser } from "~/shared/utils/admin-authorization"
+import { createError } from "h3"
 import { workspaceSeed } from "../../shared/data/seed"
 import { listLocalAccessAdminActions } from "./local-access-requests"
 import { mergeLocalAdminAuditState, persistLocalAdminUserSecurityAction, persistLocalOpportunityVerificationAction, persistLocalReportStatusAction, readLocalAdminAuditStore, recordLocalAdminQueueAction, recordLocalUserNotification } from "./local-admin-audit"

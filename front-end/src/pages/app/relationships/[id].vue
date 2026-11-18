@@ -1,8 +1,25 @@
 <script setup lang="ts">
 import type { FileUploadPurpose, FileUploadRelatedType } from "~/shared/types/domain"
 import type { RelationshipDecisionStatus, RelationshipSnapshot, RelationshipTimelineKind } from "~/shared/utils/relationships"
+import { computed, onBeforeUnmount, onMounted, ref } from "vue"
+import { useAsyncData, useRequestHeaders, useRoute } from "#app"
+import { definePageMeta } from "#app/composables/pages"
+import { $fetch } from "#build/fetch"
+import { NuxtLink } from "#components"
+import AlignmentCheckPanel from "~/components/app/AlignmentCheckPanel.vue"
+import TrialCollaborationCard from "~/components/app/TrialCollaborationCard.vue"
+import TrustSignalStrip from "~/components/app/TrustSignalStrip.vue"
+import TextareaInput from "~/components/forms/TextareaInput.vue"
+import TextInput from "~/components/forms/TextInput.vue"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import EmptyState from "~/components/ui/EmptyState.vue"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { useCurrentMember } from "~/composables/useCurrentMember"
+import { usePageSeo } from "~/composables/usePageSeo"
 import { formatDate, formatRelativeDate } from "~/shared/utils/format"
 import { getProfileByUserId } from "~/shared/utils/workspace"
+import { useToastStore } from "~/stores/toast"
 
 definePageMeta({
   layout: "app",

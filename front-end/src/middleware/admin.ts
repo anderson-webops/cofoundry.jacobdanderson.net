@@ -1,3 +1,6 @@
+import { defineNuxtRouteMiddleware, navigateTo } from "#app"
+import { useAuthoritativeSession } from "~/composables/useAuthoritativeSession"
+
 export default defineNuxtRouteMiddleware(async () => {
   const response = await useAuthoritativeSession()
 

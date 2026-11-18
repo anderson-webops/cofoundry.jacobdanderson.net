@@ -1,3 +1,4 @@
+import { defineEventHandler, readBody } from "h3"
 import { operationsEmailSuppressionSchema } from "~/shared/utils/validation"
 import { recordEmailSuppression } from "../../utils/email-suppression"
 import { requireOperationsWorker } from "../../utils/operations-auth"

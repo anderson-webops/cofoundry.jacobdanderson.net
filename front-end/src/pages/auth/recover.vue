@@ -1,5 +1,14 @@
 <script setup lang="ts">
+import { reactive, ref } from "vue"
+import { useRoute } from "#app"
+import { definePageMeta } from "#app/composables/pages"
+import { $fetch } from "#build/fetch"
+import TextareaInput from "~/components/forms/TextareaInput.vue"
+import TextInput from "~/components/forms/TextInput.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import { usePageSeo } from "~/composables/usePageSeo"
 import { accessRequestSchema } from "~/shared/utils/validation"
+import { useToastStore } from "~/stores/toast"
 
 definePageMeta({
   layout: "auth",

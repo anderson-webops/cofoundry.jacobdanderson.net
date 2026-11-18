@@ -1,3 +1,4 @@
+import { defineEventHandler } from "h3"
 import { requireAuthenticatedSession } from "~/server/utils/auth"
 import { loadInboxReadModel } from "../utils/inbox-read-model"
 import { assertRateLimit, buildRateLimitKey } from "../utils/rate-limit"
