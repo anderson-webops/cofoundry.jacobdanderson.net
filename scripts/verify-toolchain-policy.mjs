@@ -46,8 +46,8 @@ const packageJson = JSON.parse(readRepoFile("package.json"))
 const npmVersion = extractNpmVersion(packageJson)
 const expectedNpmSpecifier = `npm@${npmVersion}`
 
-assert(packageJson.engines?.node === ">=26.13.0 <27", "engines.node must enforce the Node 26.13.0 LTS line.")
-assert(packageJson.engines?.npm === ">=12.2.1 <13", "engines.npm must enforce the npm 12.2.1 line.")
+assert(packageJson.engines?.node === ">=26.13.1 <27", "engines.node must enforce the Node 26.13.1 LTS line.")
+assert(packageJson.engines?.npm === ">=12.2.2 <13", "engines.npm must enforce the npm 12.2.2 line.")
 assert(!Object.hasOwn(packageJson, "devEngines"), "devEngines must remain absent so bundled npm can bootstrap the pinned npm version.")
 
 const npmConfig = readRepoFile(".npmrc")
@@ -93,17 +93,17 @@ for (const workflowFile of workflowFiles) {
   assertNpmPinsMatch(workflowFile, contents, expectedNpmSpecifier)
 
   if (contents.includes("npm ci"))
-    assert(contents.includes("node-version: 26.13.0"), `${workflowFile} should run npm ci on Node 26.13.0`)
+    assert(contents.includes("node-version: 26.13.1"), `${workflowFile} should run npm ci on Node 26.13.1`)
 }
 
 const ciWorkflow = readRepoFile(".github/workflows/ci.yml")
 const runtimeContract = JSON.parse(readRepoFile("deploy/runtime-artifact.json"))
 const nativeProfile = JSON.parse(readRepoFile("deploy/mac-artifact-profile.json"))
 const hostContract = JSON.parse(readRepoFile("deploy/host-contract.json"))
-assert(runtimeContract.runtime.node === "26.13.0" && runtimeContract.runtime.npmBuildOnly === npmVersion, "Runtime artifact contract must match the Node/npm build tuple.")
-assert(nativeProfile.site === "cofoundry.jacobdanderson.net" && nativeProfile.runtime.node === "26.13.0" && nativeProfile.runtime.npm === npmVersion && nativeProfile.runtime.package_manager === expectedNpmSpecifier, "Native transport profile must require the reviewed CoFoundry toolchain.")
-assert(hostContract.runtime.node === "26.13.0" && hostContract.runtime.npm === npmVersion && hostContract.adapter.minimum_version >= 2, "Node 26 requires the reviewed host adapter transition.")
-assert(hostContract.requires.includes("runtime:node-26.13.0") && hostContract.requires.includes("rollback:retained-node24-artifact"), "The host transition must preserve independent retained Node 24 artifact acceptance.")
+assert(runtimeContract.runtime.node === "26.13.1" && runtimeContract.runtime.npmBuildOnly === npmVersion, "Runtime artifact contract must match the Node/npm build tuple.")
+assert(nativeProfile.site === "cofoundry.jacobdanderson.net" && nativeProfile.runtime.node === "26.13.1" && nativeProfile.runtime.npm === npmVersion && nativeProfile.runtime.package_manager === expectedNpmSpecifier, "Native transport profile must require the reviewed CoFoundry toolchain.")
+assert(hostContract.runtime.node === "26.13.1" && hostContract.runtime.npm === npmVersion && hostContract.adapter.minimum_version >= 2, "Node 26 requires the reviewed host adapter transition.")
+assert(hostContract.requires.includes("runtime:node-26.13.1") && hostContract.requires.includes("rollback:retained-node24-artifact"), "The host transition must preserve independent retained Node 24 artifact acceptance.")
 assert(packageJson.scripts.audit.includes("--include-workspace-root") && packageJson.scripts["audit:production"].includes("--include-workspace-root"), "Both audit graphs must include root tools.")
 assert(ciWorkflow.includes("npm run verify:install-scripts"), "CI should verify dependency install-script policy after installing dependencies.")
 assert(ciWorkflow.includes("npm run audit:production"), "CI must check the production dependency graph independently.")
@@ -113,11 +113,11 @@ const publicVerificationWorkflow = readRepoFile(".github/workflows/public-site-v
 assert(publicVerificationWorkflow.includes("npm run verify:install-scripts"), "Public verification workflow should verify dependency install-script policy.")
 
 const netlifyConfig = readRepoFile("netlify.toml")
-assert(netlifyConfig.includes('NODE_VERSION = "26.13.0"'), "Netlify should build on Node 26.13.0.")
-assert(netlifyConfig.includes('NPM_VERSION = "12.2.1"'), "Netlify should select npm 12.2.1 before building.")
+assert(netlifyConfig.includes('NODE_VERSION = "26.13.1"'), "Netlify should build on Node 26.13.1.")
+assert(netlifyConfig.includes('NPM_VERSION = "12.2.2"'), "Netlify should select npm 12.2.2 before building.")
 
 const appService = readRepoFile("deploy/systemd/cofoundry-app.service")
-assert(appService.includes("ExecStart=/opt/node-26.13.0/bin/node front-end/.output/server/index.mjs"), "The direct production service should start the built Nuxt output with the pinned Node runtime.")
+assert(appService.includes("ExecStart=/opt/node-26.13.1/bin/node front-end/.output/server/index.mjs"), "The direct production service should start the built Nuxt output with the pinned Node runtime.")
 assert(appService.includes("Environment=NITRO_HOST=127.0.0.1"), "The direct production service must bind to loopback.")
 assert(appService.includes("Environment=NODE_OPTIONS=--max-old-space-size=192"), "The direct production service must keep its measured V8 heap cap.")
 assert(appService.includes("MemoryHigh=320M"), "The direct production service must declare its soft memory limit.")
@@ -136,7 +136,7 @@ const operationsUnits = [
 for (const operation of operationsUnits) {
   const unitPath = `deploy/systemd/cofoundry-operations-${operation}.service`
   const unit = readRepoFile(unitPath)
-  assert(unit.includes("ExecStart=/opt/node-26.13.0/bin/node back-end/dist/operations-worker.js"), `${unitPath} must invoke the compiled worker with the pinned Node runtime.`)
+  assert(unit.includes("ExecStart=/opt/node-26.13.1/bin/node back-end/dist/operations-worker.js"), `${unitPath} must invoke the compiled worker with the pinned Node runtime.`)
   assert(!/\b(?:npm|npx|tsx)\b/u.test(unit), `${unitPath} must not load a package manager or TypeScript runtime in production.`)
 }
 
@@ -157,4 +157,4 @@ for (const requiredArtifactFile of [
 for (const retiredContainerPath of ["Dockerfile", ".dockerignore", "compose.yml", "compose.yaml", "docker-compose.yml", "docker-compose.yaml"])
   assert(!existsSync(new URL(retiredContainerPath, `${repoRoot}/`)), `${retiredContainerPath} should remain retired from the production deployment path.`)
 
-console.log(`Toolchain policy verified for ${basename(process.cwd())}: bootstrap-safe ${expectedNpmSpecifier}, Node 26.13.0 CI/Netlify/direct-host builds, reviewed install scripts, and no container deployment path.`)
+console.log(`Toolchain policy verified for ${basename(process.cwd())}: bootstrap-safe ${expectedNpmSpecifier}, Node 26.13.1 CI/Netlify/direct-host builds, reviewed install scripts, and no container deployment path.`)

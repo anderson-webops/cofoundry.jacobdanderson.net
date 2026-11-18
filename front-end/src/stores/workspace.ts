@@ -19,6 +19,10 @@ import type {
 } from "~/shared/types/domain"
 import { watchDebounced } from "@vueuse/core"
 import { acceptHMRUpdate, defineStore } from "pinia"
+import { computed, ref } from "vue"
+import { useRequestHeaders } from "#app"
+import { $fetch } from "#build/fetch"
+import { useSessionState } from "~/composables/useSessionState"
 import { buildSubscriptionUsage } from "~/shared/utils/billing"
 import { cloneValue } from "~/shared/utils/clone"
 import {

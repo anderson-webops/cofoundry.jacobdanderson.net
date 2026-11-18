@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { computed } from "vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import { usePageSeo } from "~/composables/usePageSeo"
+import { useProductAccess } from "~/composables/useProductAccess"
 import { appDescription, appTagline } from "~/shared/constants/app"
 
 const { getPrimaryAccessCta } = useProductAccess()

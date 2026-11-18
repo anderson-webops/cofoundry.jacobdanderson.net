@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { Profile } from "~/shared/types/domain"
 import type { PublicTrustSummary } from "~/shared/utils/directory"
+import { computed } from "vue"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
 import { formatRelativeDate, formatTrustTier } from "~/shared/utils/format"
 import { buildProfileReadiness, buildProfileTrustTier, buildVerifiedLinkCount, isRecentlyActive } from "~/shared/utils/formation"
 

@@ -1,4 +1,4 @@
-import { getRouterParam, setHeader } from "h3"
+import { createError, defineEventHandler, getRouterParam, setHeader } from "h3"
 import { renderContractCertificateText } from "~/shared/utils/contract-documents"
 import { requireAuthenticatedSession } from "../../../utils/auth"
 import { loadContractArtifactContext } from "../../../utils/contract-artifacts"

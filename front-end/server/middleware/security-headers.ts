@@ -1,5 +1,6 @@
 import process from "node:process"
-import { getRequestURL, setResponseHeader } from "h3"
+import { defineEventHandler, getRequestURL, setResponseHeader } from "h3"
+import { useRuntimeConfig } from "nitropack/runtime"
 import { isLocalDevelopmentEnvironment } from "../../shared/utils/environment"
 import { resolveServerAppUrl } from "../utils/app-url"
 import { buildSecurityHeaders, shouldDefaultApiResponseToNoStore } from "../utils/security-headers"

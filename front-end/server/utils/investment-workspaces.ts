@@ -8,6 +8,8 @@ import type {
   InvestmentWorkspaceDocument,
 } from "../../shared/types/investment-workspaces"
 import { randomUUID } from "node:crypto"
+import { createError } from "h3"
+import { useRuntimeConfig } from "nitropack/runtime"
 import { workspaceSeed } from "../../shared/data/seed"
 import {
   applyInvestmentApplicantMutation,

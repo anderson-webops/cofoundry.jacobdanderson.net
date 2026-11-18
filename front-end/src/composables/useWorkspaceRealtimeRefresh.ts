@@ -1,5 +1,8 @@
 import type { WorkspaceRefreshReason } from "~/shared/utils/workspace-refresh"
+import { onBeforeUnmount, onMounted, ref, watch } from "vue"
+import { useSessionState } from "~/composables/useSessionState"
 import { shouldRunWorkspaceRefresh, shouldUseWorkspaceRealtime } from "~/shared/utils/workspace-refresh"
+import { useWorkspaceStore } from "~/stores/workspace"
 
 interface WorkspaceRealtimeRefreshOptions {
   enableRealtime?: boolean

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { Proposal, ProposalVersion } from "~/shared/types/domain"
+import { NuxtLink } from "#components"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
 import { formatProposalRelationshipType, formatProposalStatus } from "~/shared/utils/format"
 
 defineProps<{

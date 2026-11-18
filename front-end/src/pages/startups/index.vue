@@ -1,4 +1,10 @@
 <script setup lang="ts">
+import OpportunityCard from "~/components/app/OpportunityCard.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { usePageSeo } from "~/composables/usePageSeo"
+import { usePublicDirectory } from "~/composables/usePublicDirectory"
+
 const opportunities = (await usePublicDirectory()).opportunities
 
 usePageSeo("Public startup searches", "Browse public startup opportunity pages on CoFoundry.", {

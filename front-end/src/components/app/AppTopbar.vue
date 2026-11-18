@@ -1,7 +1,14 @@
 <script setup lang="ts">
+import { computed } from "vue"
+import { navigateTo, useRoute } from "#app"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
 import { buildInboxSnapshot } from "~/shared/utils/inbox"
 import { getUnreadMessages } from "~/shared/utils/workspace"
 import { resolveWorkspaceRouteContext } from "~/shared/utils/workspace-navigation"
+import { useAuthStore } from "~/stores/auth"
+import { useToastStore } from "~/stores/toast"
+import { useWorkspaceStore } from "~/stores/workspace"
 
 const authStore = useAuthStore()
 const toastStore = useToastStore()

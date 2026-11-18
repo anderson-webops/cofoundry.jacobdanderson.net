@@ -1,9 +1,23 @@
 <script setup lang="ts">
 import type { StructuredIntro } from "~/shared/types/domain"
+import { computed, ref } from "vue"
+import { useRoute } from "#app"
+import { definePageMeta } from "#app/composables/pages"
+import ReportIssueDialog from "~/components/app/ReportIssueDialog.vue"
+import SafetyFlagsPanel from "~/components/app/SafetyFlagsPanel.vue"
+import StructuredIntroDialog from "~/components/app/StructuredIntroDialog.vue"
+import TrustSignalStrip from "~/components/app/TrustSignalStrip.vue"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import EmptyState from "~/components/ui/EmptyState.vue"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { useCurrentMember } from "~/composables/useCurrentMember"
+import { usePageSeo } from "~/composables/usePageSeo"
 import { buildSubscriptionUsage, formatUsageQuota } from "~/shared/utils/billing"
 import { formatCommitment, formatCompensation, formatContactRevealStage, formatOpportunityVerificationStatus, formatRemotePreference, formatStage } from "~/shared/utils/format"
 import { getOpportunityVerificationTone, getOutreachUnlockMessage } from "~/shared/utils/formation"
 import { getProfileByUserId } from "~/shared/utils/workspace"
+import { useToastStore } from "~/stores/toast"
 
 definePageMeta({
   layout: "app",

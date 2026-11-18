@@ -1,7 +1,16 @@
 <script setup lang="ts">
+import { computed } from "vue"
+import { definePageMeta } from "#app/composables/pages"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import EmptyState from "~/components/ui/EmptyState.vue"
+import MetricTile from "~/components/ui/MetricTile.vue"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { usePageSeo } from "~/composables/usePageSeo"
 import { buildAdminAuditEntries, buildAdminQueueSummary, buildAdminReportRows } from "~/shared/utils/admin"
 import { formatAdminActionType, formatDate, formatRelativeDate, formatReportReason, formatReportStatus } from "~/shared/utils/format"
 import { buildAdminMetrics } from "~/shared/utils/workspace"
+import { useWorkspaceStore } from "~/stores/workspace"
 
 definePageMeta({
   layout: "admin",

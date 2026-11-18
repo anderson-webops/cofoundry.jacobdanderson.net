@@ -1,5 +1,17 @@
 <script setup lang="ts">
 import type { ContractLegalReview, ContractVersion } from "~/shared/types/domain"
+import { computed, onMounted, ref } from "vue"
+import { useHead, useRoute } from "#app"
+import { definePageMeta } from "#app/composables/pages"
+import { $fetch } from "#build/fetch"
+import ThemeToggle from "~/components/app/ThemeToggle.vue"
+import SelectInput from "~/components/forms/SelectInput.vue"
+import TextareaInput from "~/components/forms/TextareaInput.vue"
+import TextInput from "~/components/forms/TextInput.vue"
+import AppLogo from "~/components/marketing/AppLogo.vue"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import PageIntro from "~/components/ui/PageIntro.vue"
 import { formatDate } from "~/shared/utils/format"
 import { formatContractLegalReviewerType, formatContractLegalReviewScope, formatContractLegalReviewStatus } from "~/shared/utils/legal-reviews"
 

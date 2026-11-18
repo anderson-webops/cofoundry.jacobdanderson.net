@@ -1,4 +1,10 @@
 <script setup lang="ts">
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue"
+import { NuxtLink } from "#components"
+import ThemeToggle from "~/components/app/ThemeToggle.vue"
+import AppLogo from "~/components/marketing/AppLogo.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import { useProductAccess } from "~/composables/useProductAccess"
 import { marketingNavigation } from "~/shared/constants/app"
 
 const menuOpen = ref(false)

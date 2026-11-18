@@ -14,7 +14,7 @@ Environment=NODE_OPTIONS=--max-old-space-size=192
 Environment=BACKEND_HOST=127.0.0.1
 Environment=BACKEND_PORT=3015
 ExecStartPre=/usr/bin/test -f /srv/cofoundry/current/back-end/dist/server.js
-ExecStart=/opt/node-26.13.0/bin/node back-end/dist/server.js
+ExecStart=/opt/node-26.13.1/bin/node back-end/dist/server.js
 Restart=on-failure
 RestartSec=5s
 SyslogIdentifier=cofoundry-backend

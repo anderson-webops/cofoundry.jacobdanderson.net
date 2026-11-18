@@ -1,4 +1,4 @@
-import { getCookie, getHeader, getMethod, getRequestURL } from "h3"
+import { createError, defineEventHandler, getCookie, getHeader, getMethod, getRequestURL } from "h3"
 import { sessionCookieName } from "../../shared/utils/session"
 import { resolveServerAppUrl } from "../utils/app-url"
 import { getRequestIntegrityFailure } from "../utils/request-integrity"

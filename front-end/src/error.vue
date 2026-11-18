@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import type { NuxtError } from "#app"
+import { computed } from "vue"
+import { useSeoMeta } from "#app"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import { useProductAccess } from "~/composables/useProductAccess"
 
 const props = defineProps<{
   error: NuxtError

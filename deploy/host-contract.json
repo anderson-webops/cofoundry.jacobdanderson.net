@@ -6,8 +6,8 @@
     "minimum_version": 2
   },
   "runtime": {
-    "node": "26.13.0",
-    "npm": "12.2.1",
+    "node": "26.13.1",
+    "npm": "12.2.2",
     "architecture": "arm64"
   },
   "artifact_format": "signed-native-tar-v1",
@@ -15,7 +15,7 @@
     "artifact:mac-signed",
     "rollback:retained-artifact",
     "acceptance:origin-dual-stack",
-    "runtime:node-26.13.0",
+    "runtime:node-26.13.1",
     "rollback:retained-node24-artifact"
   ],
   "database": {

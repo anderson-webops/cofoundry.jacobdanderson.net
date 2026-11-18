@@ -1,4 +1,11 @@
 <script setup lang="ts">
+import { computed, onMounted, ref } from "vue"
+import { useHead, useRoute, useRuntimeConfig } from "#app"
+import { $fetch } from "#build/fetch"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { usePageSeo } from "~/composables/usePageSeo"
+
 type PreferenceCategory = "digest" | "workflow"
 
 const route = useRoute()

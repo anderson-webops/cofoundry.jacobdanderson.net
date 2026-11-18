@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { usePageSeo } from "~/composables/usePageSeo"
 import { trustPillars } from "~/shared/data/marketing"
 
 usePageSeo("Trust & Safety", "Designed to reduce spam, ambiguity, and bad-faith founder behavior.", {

@@ -1,3 +1,4 @@
+import { defineEventHandler, readBody } from "h3"
 import { privacyRequestSchema } from "~/shared/utils/validation"
 import { requireAuthenticatedSession } from "../../utils/auth"
 import { persistPrivacyRequest } from "../../utils/privacy-requests"

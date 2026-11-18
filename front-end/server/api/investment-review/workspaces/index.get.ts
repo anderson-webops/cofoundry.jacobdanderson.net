@@ -1,4 +1,4 @@
-import { setHeader } from "h3"
+import { defineEventHandler, setHeader } from "h3"
 import { requireInvestmentReviewerSession } from "../../../utils/admin"
 import { loadInvestmentReviewerSnapshot } from "../../../utils/investment-workspaces"
 import { assertRateLimit, buildRateLimitKey } from "../../../utils/rate-limit"

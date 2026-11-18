@@ -2,6 +2,7 @@ import type { H3Event } from "h3"
 import type { z } from "zod"
 import type { operationsBackupRunSchema, operationsEventSchema } from "~/shared/utils/validation"
 import { randomUUID } from "node:crypto"
+import { createError } from "h3"
 import { recordLocalBackupRun, recordLocalOperationalEvent } from "./local-operations-store"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
 

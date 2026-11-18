@@ -1,6 +1,6 @@
 import type { H3Event } from "h3"
 import { Buffer } from "node:buffer"
-import { getHeader, getRouterParam, readRawBody } from "h3"
+import { createError, defineEventHandler, getHeader, getRouterParam, readRawBody } from "h3"
 import { assertLocalFileUploadToken, writeLocalFileUploadContent } from "../../../utils/local-operations-store"
 import { assertRateLimit, buildRateLimitKey } from "../../../utils/rate-limit"
 import { isSupabaseEnabled } from "../../../utils/supabase"

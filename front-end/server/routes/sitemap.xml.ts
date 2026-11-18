@@ -1,3 +1,4 @@
+import { defineEventHandler, setHeader } from "h3"
 import { workspaceSeed } from "../../shared/data/seed"
 import { getPublicRoutePaths } from "../../shared/utils/directory"
 import { resolveServerAppUrl } from "../utils/app-url"

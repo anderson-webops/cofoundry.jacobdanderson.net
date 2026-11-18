@@ -1,4 +1,4 @@
-FROM cofoundry-artifact-builder:node26.13.0 AS toolchain
+FROM cofoundry-artifact-builder:node26.13.1 AS toolchain
 FROM scratch
 COPY --from=toolchain /usr/local/bin/node /runtime/node
 COPY --from=toolchain /lib/ld-linux-aarch64.so.1 /lib/ld-linux-aarch64.so.1

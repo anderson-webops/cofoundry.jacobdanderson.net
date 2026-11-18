@@ -18,6 +18,7 @@ import type {
   WorkspaceSeed,
 } from "../../shared/types/domain"
 import type { PersistedCollaborationState } from "./local-collaboration-store"
+import { createError } from "h3"
 import { cloneValue } from "../../shared/utils/clone"
 import { deriveCollaborationTrustMetrics } from "../../shared/utils/collaboration"
 import { loadLocalCollaborationState, persistLocalCollaborationStateForUsers } from "./local-collaboration-store"

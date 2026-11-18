@@ -1,4 +1,10 @@
 <script setup lang="ts">
+import { NuxtLink } from "#components"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { usePageSeo } from "~/composables/usePageSeo"
+import { usePublicDirectory } from "~/composables/usePublicDirectory"
+
 const industryHubs = (await usePublicDirectory()).industryHubs
 
 usePageSeo("Industry hubs", "Browse public founder and startup searches organized by industry.", {

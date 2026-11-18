@@ -4,6 +4,7 @@ import type { AccessRequest, AdminAction } from "~/shared/types/domain"
 import type { accessRequestSchema } from "~/shared/utils/validation"
 import { createHash, randomBytes, randomUUID } from "node:crypto"
 import process from "node:process"
+import { createError } from "h3"
 import {
   applyLocalAdminAccessRequestStatus,
   createLocalAccessRequestResult,

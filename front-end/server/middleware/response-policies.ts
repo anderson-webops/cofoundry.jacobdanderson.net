@@ -1,4 +1,4 @@
-import { getRequestURL, setResponseHeader } from "h3"
+import { defineEventHandler, getRequestURL, setResponseHeader } from "h3"
 import { buildResponsePolicyHeaders } from "../utils/response-policies"
 
 export default defineEventHandler((event) => {

@@ -1,8 +1,26 @@
 <script setup lang="ts">
 import type { OrganizationApprovalRequest, OrganizationMemberRole, OrganizationMutation } from "~/shared/types/organizations"
+import { computed, onMounted, reactive, ref, watch } from "vue"
+import { useRoute, useRouter } from "#app"
+import { definePageMeta } from "#app/composables/pages"
+import SelectInput from "~/components/forms/SelectInput.vue"
+import TextareaInput from "~/components/forms/TextareaInput.vue"
+import TextInput from "~/components/forms/TextInput.vue"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import BaseDialog from "~/components/ui/BaseDialog.vue"
+import EmptyState from "~/components/ui/EmptyState.vue"
+import MetricTile from "~/components/ui/MetricTile.vue"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { useCurrentMember } from "~/composables/useCurrentMember"
+import { useFeatureFlag } from "~/composables/useFeatureFlag"
+import { usePageSeo } from "~/composables/usePageSeo"
 import { formatDate } from "~/shared/utils/format"
 import { canManageOrganization, canResolveOrganizationApprovals, formatOrganizationKind, formatOrganizationMemberRole, organizationMembershipFor } from "~/shared/utils/organizations"
 import { getCurrentContractVersion, getCurrentProposalVersion } from "~/shared/utils/workspace"
+import { useInvestmentWorkspaceStore } from "~/stores/investmentWorkspaces"
+import { useOrganizationStore } from "~/stores/organizations"
+import { useToastStore } from "~/stores/toast"
 
 definePageMeta({
   layout: "app",

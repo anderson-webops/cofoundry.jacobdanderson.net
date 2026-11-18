@@ -1,3 +1,4 @@
+import { useRequestURL, useRuntimeConfig } from "#app"
 import { appProductionUrl } from "~/shared/constants/app"
 import { isLocalSiteUrl, normalizeSiteUrl } from "~/shared/utils/seo"
 

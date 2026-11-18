@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import { NuxtLink } from "#components"
+import ThemeSchemePicker from "~/components/app/ThemeSchemePicker.vue"
+import ThemeToggle from "~/components/app/ThemeToggle.vue"
+import AppLogo from "~/components/marketing/AppLogo.vue"
+import { useFeatureFlag } from "~/composables/useFeatureFlag"
 import { appNavigation } from "~/shared/constants/app"
 
 const investmentEnabled = useFeatureFlag("featureInvestmentModule")

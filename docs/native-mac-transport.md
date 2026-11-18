@@ -8,7 +8,7 @@ independent of these native profiles. Retained Node 24 artifacts keep their exac
 original verifier/profile and require separate recovery acceptance.
 
 `deploy/mac-artifact-profile.json` declares application `cofoundry.jacobdanderson.net`, builder
-`jacob-m3`, Linux ARM64/glibc, Node 26.13.0 and build-only npm 12.2.1.
+`jacob-m3`, Linux ARM64/glibc, Node 26.13.1 and build-only npm 12.2.2.
 No external public build-environment overrides are declared. The clean source
 recipe fixes the public origin to `https://cofoundry.jacobdanderson.net`, backend
 and billing modes to `mock`, and demo/investment features to `false`. These

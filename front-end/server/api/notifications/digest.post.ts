@@ -1,3 +1,4 @@
+import { defineEventHandler } from "h3"
 import { requireAuthenticatedSession } from "../../utils/auth"
 import { loadMemberWorkspaceState } from "../../utils/member-workspace"
 import { sendUnreadNotificationDigest } from "../../utils/notification-delivery"

@@ -1,6 +1,7 @@
 import type { H3Event } from "h3"
 import type { DeploymentMetadata } from "../../shared/utils/environment"
 import process from "node:process"
+import { useRuntimeConfig } from "nitropack/runtime"
 import { readDeploymentMetadata } from "../../shared/utils/environment"
 
 function readRuntimeString(value: unknown) {

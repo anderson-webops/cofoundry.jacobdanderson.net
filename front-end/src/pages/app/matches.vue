@@ -1,6 +1,19 @@
 <script setup lang="ts">
+import { computed, ref, watchEffect } from "vue"
+import { definePageMeta } from "#app/composables/pages"
+import AlignmentCheckPanel from "~/components/app/AlignmentCheckPanel.vue"
+import FirstCallAgenda from "~/components/app/FirstCallAgenda.vue"
+import TrialCollaborationCard from "~/components/app/TrialCollaborationCard.vue"
+import TrustSignalStrip from "~/components/app/TrustSignalStrip.vue"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import EmptyState from "~/components/ui/EmptyState.vue"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { useCurrentMember } from "~/composables/useCurrentMember"
+import { usePageSeo } from "~/composables/usePageSeo"
 import { formatDate } from "~/shared/utils/format"
 import { buildParticipantProfiles, getConversationByMatch, getMatchesForUser, getProfileByUserId, getTrialForMatch } from "~/shared/utils/workspace"
+import { useToastStore } from "~/stores/toast"
 
 definePageMeta({
   layout: "app",

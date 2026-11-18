@@ -1,10 +1,25 @@
 <script setup lang="ts">
+import { computed } from "vue"
+import { navigateTo } from "#app"
+import { definePageMeta } from "#app/composables/pages"
+import ActivationCockpit from "~/components/app/ActivationCockpit.vue"
+import ConnectRequestInbox from "~/components/app/ConnectRequestInbox.vue"
+import OpportunityCard from "~/components/app/OpportunityCard.vue"
+import ProfileCard from "~/components/app/ProfileCard.vue"
+import TrialCollaborationCard from "~/components/app/TrialCollaborationCard.vue"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import EmptyState from "~/components/ui/EmptyState.vue"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { useCurrentMember } from "~/composables/useCurrentMember"
+import { usePageSeo } from "~/composables/usePageSeo"
 import { buildActivationPlan } from "~/shared/utils/activation"
 import { recommendOpportunitiesForProfile, recommendProfilesForProfile } from "~/shared/utils/discovery"
 import { formatPlanName } from "~/shared/utils/format"
 import { buildProfileReadiness } from "~/shared/utils/formation"
 import { buildInboxSnapshot } from "~/shared/utils/inbox"
 import { getContractsForUser, getIncomingConnectRequestsForUser, getMatchesForUser, getOutgoingConnectRequestsForUser, getProfileByUserId, getProfileSkills, getProposalsForUser, getTrialsForUser } from "~/shared/utils/workspace"
+import { useToastStore } from "~/stores/toast"
 
 definePageMeta({
   layout: "app",

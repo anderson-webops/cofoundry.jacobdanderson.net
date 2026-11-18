@@ -1,8 +1,19 @@
 <script setup lang="ts">
 import type { SessionUser, Subscription, WorkspaceSeed } from "~/shared/types/domain"
+import { computed, ref } from "vue"
+import { navigateTo, useRoute, useRuntimeConfig } from "#app"
+import { definePageMeta } from "#app/composables/pages"
+import { $fetch } from "#build/fetch"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { useCurrentMember } from "~/composables/useCurrentMember"
+import { usePageSeo } from "~/composables/usePageSeo"
+import { useProductAccess } from "~/composables/useProductAccess"
 import { pricingTiers } from "~/shared/data/marketing"
 import { getPlanPriceLabel } from "~/shared/utils/billing"
 import { formatBillingCycle, formatDate, formatPlanName } from "~/shared/utils/format"
+import { useToastStore } from "~/stores/toast"
 
 definePageMeta({
   layout: "app",

@@ -4,6 +4,7 @@ import type { AdminAction, FileUpload, FileUploadRelatedType, SessionUser } from
 import type { adminFileScanResultSchema, fileScanResultSchema, fileUploadPolicySchema } from "~/shared/utils/validation"
 import { randomUUID } from "node:crypto"
 import { createError } from "h3"
+import { useRuntimeConfig } from "nitropack/runtime"
 import { resolveServerAppUrl } from "./app-url"
 import { findRawInvestmentWorkspaceDocumentByResourceId } from "./investment-workspace-persistence"
 import { getLocalFileUploadById, hashLocalUploadToken, listLocalFileUploadsByRelated, listLocalPendingFileScans, recordLocalAdminFileScanResult, recordLocalFileScanResult, recordLocalFileUploadPolicy } from "./local-operations-store"

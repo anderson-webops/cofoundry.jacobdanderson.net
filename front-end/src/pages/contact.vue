@@ -1,5 +1,14 @@
 <script setup lang="ts">
+import { reactive, ref } from "vue"
+import { useRoute, useRuntimeConfig } from "#app"
+import { $fetch } from "#build/fetch"
+import TextareaInput from "~/components/forms/TextareaInput.vue"
+import TextInput from "~/components/forms/TextInput.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { usePageSeo } from "~/composables/usePageSeo"
 import { contactSchema } from "~/shared/utils/validation"
+import { useToastStore } from "~/stores/toast"
 
 usePageSeo(
   "Contact the CoFoundry team",

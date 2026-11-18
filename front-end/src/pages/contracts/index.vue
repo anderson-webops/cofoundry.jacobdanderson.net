@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { NuxtLink } from "#components"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { usePageSeo } from "~/composables/usePageSeo"
 import { contractGuidePages } from "~/shared/data/public-content"
 
 usePageSeo("Founder agreement resources", "Learn how CoFoundry approaches proposals, founder agreements, vesting, and trial plans.", {

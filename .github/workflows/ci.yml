@@ -21,13 +21,17 @@ jobs:
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: 26.13.0
-          cache: npm
+          node-version: 26.13.1
+          package-manager-cache: false
 
-      - name: Pin npm version
+      - name: Prepare verified build-only toolchain
+        env:
+          NPM_CONFIG_CACHE: ${{ runner.temp }}/cofoundry-npm-cache
         run: |
-          npm i -g npm@12.2.1 --allow-scripts=npm
-          npm -v
+          printf 'NPM_CONFIG_CACHE=%s\n' "$NPM_CONFIG_CACHE" >> "$GITHUB_ENV"
+          bin="$(node scripts/build-toolchain.mjs --print-bin)"
+          printf '%s\n' "$bin" >> "$GITHUB_PATH"
+          "$bin/npm" run verify:build-toolchain
 
       - name: Install deps
         run: npm ci
@@ -44,19 +48,23 @@ jobs:
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: 26.13.0
-          cache: npm
+          node-version: 26.13.1
+          package-manager-cache: false
 
-      - name: Pin npm version
+      - name: Prepare verified build-only toolchain
+        env:
+          NPM_CONFIG_CACHE: ${{ runner.temp }}/cofoundry-npm-cache
         run: |
-          npm i -g npm@12.2.1 --allow-scripts=npm
-          npm -v
+          printf 'NPM_CONFIG_CACHE=%s\n' "$NPM_CONFIG_CACHE" >> "$GITHUB_ENV"
+          bin="$(node scripts/build-toolchain.mjs --print-bin)"
+          printf '%s\n' "$bin" >> "$GITHUB_PATH"
+          "$bin/npm" run verify:build-toolchain
 
       - name: Install deps
         run: npm ci
 
       - name: Typecheck
-        run: npm run typecheck
+        run: npm run verify:explicit-imports && npm run typecheck
 
   audit:
     runs-on: ubuntu-latest
@@ -67,13 +75,17 @@ jobs:
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: 26.13.0
-          cache: npm
+          node-version: 26.13.1
+          package-manager-cache: false
 
-      - name: Pin npm version
+      - name: Prepare verified build-only toolchain
+        env:
+          NPM_CONFIG_CACHE: ${{ runner.temp }}/cofoundry-npm-cache
         run: |
-          npm i -g npm@12.2.1 --allow-scripts=npm
-          npm -v
+          printf 'NPM_CONFIG_CACHE=%s\n' "$NPM_CONFIG_CACHE" >> "$GITHUB_ENV"
+          bin="$(node scripts/build-toolchain.mjs --print-bin)"
+          printf '%s\n' "$bin" >> "$GITHUB_PATH"
+          "$bin/npm" run verify:build-toolchain
 
       - name: Install deps
         run: npm ci
@@ -84,6 +96,12 @@ jobs:
       - name: Dependency audit
         run: npm run audit && npm run audit:production
 
+      - name: Maintained dependency provenance and toolchain
+        run: npm run verify:maintained-providers && npm run verify:toolchain
+
+      - name: Registry signatures and attestations
+        run: npm audit signatures
+
   test:
     runs-on: ubuntu-latest
     steps:
@@ -93,14 +111,18 @@ jobs:
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: 26.13.0
-          cache: npm
+          node-version: 26.13.1
+          package-manager-cache: false
           registry-url: https://registry.npmjs.org/
 
-      - name: Pin npm version
+      - name: Prepare verified build-only toolchain
+        env:
+          NPM_CONFIG_CACHE: ${{ runner.temp }}/cofoundry-npm-cache
         run: |
-          npm i -g npm@12.2.1 --allow-scripts=npm
-          npm -v
+          printf 'NPM_CONFIG_CACHE=%s\n' "$NPM_CONFIG_CACHE" >> "$GITHUB_ENV"
+          bin="$(node scripts/build-toolchain.mjs --print-bin)"
+          printf '%s\n' "$bin" >> "$GITHUB_PATH"
+          "$bin/npm" run verify:build-toolchain
 
       - name: Install deps
         run: npm ci
@@ -110,6 +132,16 @@ jobs:
 
       - name: Runtime artifact security tests
         run: npm run test:runtime-artifact
+
+      - name: Maintained parser security and compatibility
+        run: node --test scripts/test-picomatch-compat.mjs
+
+      - name: Independent build-tool compatibility graph
+        run: |
+          npm ci --prefix build-toolchain/compat --workspaces=false --include=optional --strict-allow-scripts
+          npm audit --prefix build-toolchain/compat --workspaces=false --audit-level=low
+          npm audit --prefix build-toolchain/compat --workspaces=false --omit=dev --audit-level=low
+          npm audit signatures --prefix build-toolchain/compat
 
       - name: Install promotion isolation dependency
         run: sudo apt-get update && sudo apt-get install --yes bubblewrap
@@ -126,14 +158,18 @@ jobs:
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: 26.13.0
-          cache: npm
+          node-version: 26.13.1
+          package-manager-cache: false
           registry-url: https://registry.npmjs.org/
 
-      - name: Pin npm version
+      - name: Prepare verified build-only toolchain
+        env:
+          NPM_CONFIG_CACHE: ${{ runner.temp }}/cofoundry-npm-cache
         run: |
-          npm i -g npm@12.2.1 --allow-scripts=npm
-          npm -v
+          printf 'NPM_CONFIG_CACHE=%s\n' "$NPM_CONFIG_CACHE" >> "$GITHUB_ENV"
+          bin="$(node scripts/build-toolchain.mjs --print-bin)"
+          printf '%s\n' "$bin" >> "$GITHUB_PATH"
+          "$bin/npm" run verify:build-toolchain
 
       - name: Install deps
         run: npm ci
@@ -153,13 +189,17 @@ jobs:
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: 26.13.0
-          cache: npm
+          node-version: 26.13.1
+          package-manager-cache: false
 
-      - name: Pin npm version
+      - name: Prepare verified build-only toolchain
+        env:
+          NPM_CONFIG_CACHE: ${{ runner.temp }}/cofoundry-npm-cache
         run: |
-          npm i -g npm@12.2.1 --allow-scripts=npm
-          npm -v
+          printf 'NPM_CONFIG_CACHE=%s\n' "$NPM_CONFIG_CACHE" >> "$GITHUB_ENV"
+          bin="$(node scripts/build-toolchain.mjs --print-bin)"
+          printf '%s\n' "$bin" >> "$GITHUB_PATH"
+          "$bin/npm" run verify:build-toolchain
 
       - name: Install deps
         run: npm ci
@@ -176,13 +216,17 @@ jobs:
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: 26.13.0
-          cache: npm
+          node-version: 26.13.1
+          package-manager-cache: false
 
-      - name: Pin npm version
+      - name: Prepare verified build-only toolchain
+        env:
+          NPM_CONFIG_CACHE: ${{ runner.temp }}/cofoundry-npm-cache
         run: |
-          npm i -g npm@12.2.1 --allow-scripts=npm
-          npm -v
+          printf 'NPM_CONFIG_CACHE=%s\n' "$NPM_CONFIG_CACHE" >> "$GITHUB_ENV"
+          bin="$(node scripts/build-toolchain.mjs --print-bin)"
+          printf '%s\n' "$bin" >> "$GITHUB_PATH"
+          "$bin/npm" run verify:build-toolchain
 
       - name: Install deps
         run: npm ci
@@ -250,13 +294,17 @@ jobs:
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: 26.13.0
-          cache: npm
+          node-version: 26.13.1
+          package-manager-cache: false
 
-      - name: Pin npm version
+      - name: Prepare verified build-only toolchain
+        env:
+          NPM_CONFIG_CACHE: ${{ runner.temp }}/cofoundry-npm-cache
         run: |
-          npm i -g npm@12.2.1 --allow-scripts=npm
-          test "$(npm --version)" = 12.2.1
+          printf 'NPM_CONFIG_CACHE=%s\n' "$NPM_CONFIG_CACHE" >> "$GITHUB_ENV"
+          bin="$(node scripts/build-toolchain.mjs --print-bin)"
+          printf '%s\n' "$bin" >> "$GITHUB_PATH"
+          "$bin/npm" run verify:build-toolchain
 
       - name: Verify annotated source tag
         run: |
@@ -340,12 +388,13 @@ jobs:
       - name: Publish immutable release after asset comparison
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ATTESTATION_BUNDLE: ${{ steps.attest.outputs.bundle-path }}
         run: |
           if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo 'Release already exists; refusing to replace its assets.' >&2
             exit 1
           fi
-          cp "${{ steps.attest.outputs.bundle-path }}" release-assets/attestation-bundle.jsonl
+          cp "$ATTESTATION_BUNDLE" release-assets/attestation-bundle.jsonl
           test "$(find release-assets -maxdepth 1 -type f | wc -l)" -eq 6
           notes_file="$RUNNER_TEMP/cofoundry-release-notes.md"
           printf 'Verified Linux ARM64 runtime and host-control bundles for %s at %s.\n\nCI accepted the exact unpacked runtime, required paths, dependency closure, missing-module rejection, and promotion recovery. Production activation remains server-owned.\n' \

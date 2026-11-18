@@ -1,3 +1,4 @@
+import { defineEventHandler, readBody } from "h3"
 import { operationsTrustVerificationSchema } from "~/shared/utils/validation"
 import { requireOperationsWorker } from "../../utils/operations-auth"
 import { assertRateLimit, buildRateLimitKey } from "../../utils/rate-limit"

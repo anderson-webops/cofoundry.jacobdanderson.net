@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import BaseBadge from "~/components/ui/BaseBadge.vue"
+
 defineProps<{
   flags: string[]
   title?: string

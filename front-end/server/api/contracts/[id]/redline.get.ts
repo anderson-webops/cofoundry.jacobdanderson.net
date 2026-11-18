@@ -1,4 +1,4 @@
-import { getRouterParam } from "h3"
+import { createError, defineEventHandler, getRouterParam } from "h3"
 import { isContractParticipant } from "~/shared/utils/collaboration"
 import { buildContractRedline } from "~/shared/utils/contract-documents"
 import { getContractById, getCurrentContractVersion } from "~/shared/utils/workspace"

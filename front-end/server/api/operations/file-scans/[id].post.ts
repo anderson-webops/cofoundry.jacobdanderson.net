@@ -1,4 +1,4 @@
-import { getRouterParam } from "h3"
+import { createError, defineEventHandler, getRouterParam, readBody } from "h3"
 import { fileScanResultSchema } from "~/shared/utils/validation"
 import { recordFileScanResult } from "../../../utils/file-uploads"
 import { requireOperationsWorker } from "../../../utils/operations-auth"

@@ -1,3 +1,4 @@
+import { defineEventHandler } from "h3"
 import { clearSessionCookie, readAuthoritativeSession } from "~/server/utils/auth"
 import { assertRateLimit } from "../../utils/rate-limit"
 

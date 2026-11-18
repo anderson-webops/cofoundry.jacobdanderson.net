@@ -1,4 +1,12 @@
 <script setup lang="ts">
+import { ref } from "vue"
+import { useHead } from "#app"
+import AppSidebar from "~/components/app/AppSidebar.vue"
+import AppTopbar from "~/components/app/AppTopbar.vue"
+import ThemeToggle from "~/components/app/ThemeToggle.vue"
+import AppLogo from "~/components/marketing/AppLogo.vue"
+import { useWorkspaceRealtimeRefresh } from "~/composables/useWorkspaceRealtimeRefresh"
+
 const mobileNavOpen = ref(false)
 
 useWorkspaceRealtimeRefresh()

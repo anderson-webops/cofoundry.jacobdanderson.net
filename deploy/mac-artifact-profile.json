@@ -7,9 +7,9 @@
     "os": "linux",
     "architecture": "arm64",
     "libc": "glibc",
-    "node": "26.13.0",
-    "npm": "12.2.1",
-    "package_manager": "npm@12.2.1"
+    "node": "26.13.1",
+    "npm": "12.2.2",
+    "package_manager": "npm@12.2.2"
   },
   "environment": {}
 }

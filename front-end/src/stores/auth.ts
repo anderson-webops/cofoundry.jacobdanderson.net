@@ -1,6 +1,9 @@
 import type { SessionUser } from "~/shared/types/domain"
 import type { SupportedOAuthProvider } from "~/shared/utils/oauth-providers"
 import { acceptHMRUpdate, defineStore } from "pinia"
+import { computed, ref } from "vue"
+import { navigateTo } from "#app"
+import { $fetch } from "#build/fetch"
 import { useSessionState } from "~/composables/useSessionState"
 import { useWorkspaceStore } from "~/stores/workspace"
 

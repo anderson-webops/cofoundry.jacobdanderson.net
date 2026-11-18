@@ -1,6 +1,7 @@
 import type { H3Event } from "h3"
 import process from "node:process"
 import { getHeader, getRequestIP, getRequestURL } from "h3"
+import { useRuntimeConfig } from "nitropack/runtime"
 import { appProductionUrl } from "../../shared/constants/app"
 import { isTrustedProxyAddress } from "./trusted-proxy"
 

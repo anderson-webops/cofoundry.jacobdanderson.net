@@ -9,9 +9,9 @@ User=cofoundry
 Group=cofoundry
 WorkingDirectory=/srv/cofoundry/current
 EnvironmentFile=/etc/cofoundry/operations.env
-Environment=PATH=/opt/node-26.13.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+Environment=PATH=/opt/node-26.13.1/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
 Environment=NODE_OPTIONS=--max-old-space-size=192
-ExecStart=/opt/node-26.13.0/bin/node back-end/dist/operations-worker.js scan
+ExecStart=/opt/node-26.13.1/bin/node back-end/dist/operations-worker.js scan
 SyslogIdentifier=cofoundry-operations-scan
 AmbientCapabilities=
 CapabilityBoundingSet=

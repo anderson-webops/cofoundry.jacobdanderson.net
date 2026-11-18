@@ -1,4 +1,4 @@
-import { setHeader } from "h3"
+import { defineEventHandler, setHeader } from "h3"
 import { readServerDeploymentMetadata } from "../utils/deployment-metadata"
 
 export default defineEventHandler((event) => {

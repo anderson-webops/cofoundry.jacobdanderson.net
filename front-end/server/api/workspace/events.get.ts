@@ -1,4 +1,4 @@
-import { createEventStream } from "h3"
+import { createEventStream, defineEventHandler } from "h3"
 import { requireAuthenticatedSession } from "~/server/utils/auth"
 import { safePushWorkspaceRealtimeSink, subscribeWorkspaceRealtime } from "../../utils/workspace-realtime"
 

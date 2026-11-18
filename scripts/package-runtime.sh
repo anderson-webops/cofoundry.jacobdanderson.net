@@ -6,8 +6,9 @@ root=$(cd -- "$(dirname -- "$0")/.." && pwd -P)
 cd -- "$root"
 test "$(uname -s)" = Linux
 test "$(uname -m)" = aarch64
-test "$(node --version)" = v26.13.0
-test "$(npm --version)" = 12.2.1
+test "$(node --version)" = v26.13.1
+test "$(npm --version)" = 12.2.2
+npm run verify:build-toolchain
 test -z "$(git status --porcelain)"
 
 commit=$(git rev-parse HEAD)
@@ -33,9 +34,11 @@ npm audit signatures --include=dev
 npm audit signatures --omit=dev
 npm run verify:install-scripts
 npm run verify:toolchain
+npm run verify:maintained-providers
 npm run lint
 npm run typecheck
 NODE_ENV=test npm run test:unit
+node --test scripts/test-picomatch-compat.mjs
 npm run test:runtime-artifact
 export COFOUNDRY_COMMIT_SHA="$commit"
 export COFOUNDRY_DEPLOYED_AT="$deployed_at"

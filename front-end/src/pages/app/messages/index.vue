@@ -1,4 +1,12 @@
 <script setup lang="ts">
+import { computed } from "vue"
+import { definePageMeta } from "#app/composables/pages"
+import ConversationCard from "~/components/app/ConversationCard.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import EmptyState from "~/components/ui/EmptyState.vue"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { useCurrentMember } from "~/composables/useCurrentMember"
+import { usePageSeo } from "~/composables/usePageSeo"
 import { formatRelativeDate } from "~/shared/utils/format"
 import { buildParticipantProfiles } from "~/shared/utils/workspace"
 

@@ -2,6 +2,7 @@ import type { H3Event } from "h3"
 import type { z } from "zod"
 import type { operationsEmailSuppressionSchema } from "~/shared/utils/validation"
 import { randomUUID } from "node:crypto"
+import { createError } from "h3"
 import { findLocalEmailSuppression, recordLocalEmailSuppression } from "./local-operations-store"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
 

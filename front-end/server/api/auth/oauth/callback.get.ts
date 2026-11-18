@@ -1,4 +1,4 @@
-import { getQuery, sendRedirect } from "h3"
+import { defineEventHandler, getQuery, sendRedirect } from "h3"
 import { completeSupabaseOAuthCallback } from "~/server/utils/auth"
 import { normalizeOAuthProvider } from "~/shared/utils/oauth-providers"
 import { assertRateLimit } from "../../../utils/rate-limit"

@@ -1,5 +1,11 @@
 <script setup lang="ts">
 import type { ConnectRequestNextStep, StructuredIntro } from "~/shared/types/domain"
+import { computed, reactive, watch } from "vue"
+import SelectInput from "~/components/forms/SelectInput.vue"
+import TextareaInput from "~/components/forms/TextareaInput.vue"
+import TextInput from "~/components/forms/TextInput.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import BaseDialog from "~/components/ui/BaseDialog.vue"
 import { connectRequestNextStepOptions } from "~/shared/constants/options"
 import { buildStructuredIntroNote } from "~/shared/utils/formation"
 
