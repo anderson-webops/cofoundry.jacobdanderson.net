@@ -62,7 +62,9 @@ def build_archive(root):
     }
     files["package/COFOUNDRY-POLICY.json"] = (json.dumps(policy, indent=2) + "\n").encode()
     output = io.BytesIO()
-    with gzip.GzipFile(fileobj=output, mode="wb", mtime=0, filename="") as compressed:
+    with gzip.GzipFile(
+        fileobj=output, mode="wb", compresslevel=6, mtime=0, filename=""
+    ) as compressed:
         with tarfile.open(fileobj=compressed, mode="w|", format=tarfile.PAX_FORMAT) as archive:
             for filename, payload in sorted(files.items()):
                 path = PurePosixPath(filename)
