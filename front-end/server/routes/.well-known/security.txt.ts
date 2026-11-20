@@ -1,4 +1,5 @@
-import { setHeader } from "h3"
+import { defineEventHandler, setHeader } from "h3"
+import { useRuntimeConfig } from "nitropack/runtime"
 import { resolveServerAppUrl } from "../../utils/app-url"
 import { buildSecurityTxt } from "../../utils/security-txt"
 
