@@ -107,16 +107,16 @@ export default defineNuxtConfig({
     "nuxt-explicit-imports",
   ],
 
-  explicitImports: {
-    mode: "strict",
-  },
-
   components: [
     {
       path: "~/components",
       pathPrefix: false,
     },
   ],
+
+  explicitImports: {
+    mode: "strict",
+  },
 
   devtools: {
     enabled: !isProductionLike && process.env.NUXT_DEVTOOLS_ENABLED !== "false",
