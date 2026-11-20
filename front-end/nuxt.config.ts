@@ -114,10 +114,6 @@ export default defineNuxtConfig({
     },
   ],
 
-  explicitImports: {
-    mode: "strict",
-  },
-
   devtools: {
     enabled: !isProductionLike && process.env.NUXT_DEVTOOLS_ENABLED !== "false",
   },
@@ -229,6 +225,9 @@ export default defineNuxtConfig({
         sortConfigKeys: true,
       },
     },
+  },
+  explicitImports: {
+    mode: "strict",
   },
   security: {
     allowedMethodsRestricter: false,
