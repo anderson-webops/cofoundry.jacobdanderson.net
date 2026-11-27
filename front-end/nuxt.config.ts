@@ -186,6 +186,7 @@ export default defineNuxtConfig({
   },
 
   experimental: {
+    externalVue: false,
     payloadExtraction: false,
     renderJsonPayloads: true,
     typedPages: true,
