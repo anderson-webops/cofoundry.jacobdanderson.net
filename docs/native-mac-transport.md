@@ -17,6 +17,10 @@ Credentials, protected runtime
 configuration and mutable state remain external. A profile does not enroll a key,
 install an adapter, authorize activation or establish rollback acceptance.
 
+The tag workflow verifies and uploads the exact Linux ARM64 runtime and
+host-control builds as signing intake. Its GitHub attestation covers the
+intake; the public runtime release uses the Mac-signed transport.
+
 The common stable annotated release has exactly these six assets:
 
 - `cofoundry.jacobdanderson.net-<tag>-linux-arm64-runtime.tar.gz`
