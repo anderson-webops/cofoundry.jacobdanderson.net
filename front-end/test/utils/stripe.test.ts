@@ -31,6 +31,6 @@ describe("stripe client configuration", () => {
       public: { billingMode: "stripe" }
     }))
 
-    expect(createStripeClient()?.getApiField("version")).toBe("2026-10-28.endive")
+    expect(createStripeClient()?.getApiField("version")).toBe("2026-11-18.endive")
   })
 })
