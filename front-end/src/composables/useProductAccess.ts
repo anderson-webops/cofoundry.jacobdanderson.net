@@ -1,4 +1,6 @@
 import type { ProductAccessEnvironment, ProductAccessPolicy } from "~/shared/utils/product-access"
+import { computed } from "vue"
+import { useRuntimeConfig } from "#app"
 import { buildAccessRequestPath, getBackendModeLabel, getBillingModeLabel, getGuidePageCta, getIntroCta, getPricingTierCta, getPrimaryAccessCta, getSecondaryAccessCta, resolveProductAccessPolicy } from "~/shared/utils/product-access"
 
 export function useProductAccess() {

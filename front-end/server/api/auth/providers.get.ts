@@ -1,5 +1,5 @@
 import process from "node:process"
-import { setHeader } from "h3"
+import { defineEventHandler, setHeader } from "h3"
 import { readConfiguredOAuthProviders } from "~/shared/utils/oauth-providers"
 import { isSupabaseEnabled } from "../../utils/supabase"
 

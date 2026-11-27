@@ -1,11 +1,26 @@
 <script setup lang="ts">
 import type { StructuredIntro } from "~/shared/types/domain"
+import { computed, reactive, ref } from "vue"
+import { definePageMeta } from "#app/composables/pages"
+import OpportunityCard from "~/components/app/OpportunityCard.vue"
+import ProfileCard from "~/components/app/ProfileCard.vue"
+import StructuredIntroDialog from "~/components/app/StructuredIntroDialog.vue"
+import PillPicker from "~/components/forms/PillPicker.vue"
+import SelectInput from "~/components/forms/SelectInput.vue"
+import TextInput from "~/components/forms/TextInput.vue"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import EmptyState from "~/components/ui/EmptyState.vue"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { useCurrentMember } from "~/composables/useCurrentMember"
+import { usePageSeo } from "~/composables/usePageSeo"
 import { commitmentOptions, compensationOptions, equityPhilosophyOptions, industryOptions, remoteOptions, roleOptions, runwayBucketOptions, stageOptions } from "~/shared/constants/options"
 import { buildSubscriptionUsage, formatUsageQuota } from "~/shared/utils/billing"
 import { createEmptySearchFilters, filterOpportunities, filterProfiles } from "~/shared/utils/discovery"
 import { formatCommitment, formatCompensation, formatEquityPhilosophy, formatRemotePreference, formatRunwayBucket, formatStage } from "~/shared/utils/format"
 import { buildProfileReadiness, getOutreachUnlockMessage } from "~/shared/utils/formation"
 import { getProfileSkills } from "~/shared/utils/workspace"
+import { useToastStore } from "~/stores/toast"
 
 definePageMeta({
   layout: "app",

@@ -1,3 +1,4 @@
+import { defineEventHandler, readBody } from "h3"
 import { assertAccountAccessEnabled, createMockAccount, validateSignUpPayload } from "~/server/utils/auth"
 import { assertRateLimit, buildRateLimitKey } from "../../utils/rate-limit"
 

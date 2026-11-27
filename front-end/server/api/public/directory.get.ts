@@ -1,4 +1,4 @@
-import { setHeader } from "h3"
+import { defineEventHandler, setHeader } from "h3"
 import { workspaceSeed } from "../../../shared/data/seed"
 import { buildPublicDirectorySnapshot } from "../../../shared/utils/directory"
 

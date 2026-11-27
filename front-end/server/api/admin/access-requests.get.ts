@@ -1,4 +1,5 @@
 import type { AccessRequest } from "~/shared/types/domain"
+import { defineEventHandler } from "h3"
 import { listAccessRequests } from "../../utils/access-requests"
 import { requireAdminSession } from "../../utils/admin"
 import { assertRateLimit, buildRateLimitKey } from "../../utils/rate-limit"

@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { useCanonicalAppUrl } from "~/composables/useCanonicalAppUrl"
+import { usePageSeo } from "~/composables/usePageSeo"
 import { faqs } from "~/shared/data/marketing"
 import { buildFaqStructuredData } from "~/shared/utils/seo"
 

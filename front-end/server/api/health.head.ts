@@ -1,4 +1,4 @@
-import { sendNoContent } from "h3"
+import { defineEventHandler, sendNoContent } from "h3"
 import { setHealthResponseHeaders } from "../utils/health"
 
 export default defineEventHandler((event) => {

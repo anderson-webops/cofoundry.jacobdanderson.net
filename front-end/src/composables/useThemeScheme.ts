@@ -1,4 +1,6 @@
 import type { ThemeSchemeId } from "~/shared/utils/theme"
+import { computed } from "vue"
+import { useCookie } from "#app"
 import { getPreferenceCookieOptions } from "~/shared/utils/cookie-policy"
 import { defaultThemeScheme, normalizeThemeScheme, themeSchemeOptions } from "~/shared/utils/theme"
 

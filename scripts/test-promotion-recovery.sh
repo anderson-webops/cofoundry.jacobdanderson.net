@@ -6,7 +6,7 @@ node=$(realpath "$(command -v node)")
 python_prefix=$(python3 -c 'import sys; print(sys.base_prefix)')
 test "$(uname -s)" = Linux
 test "$(id -u)" -ne 0
-test "$("$node" --version)" = v26.13.0
+test "$("$node" --version)" = v26.13.1
 test -x "$python_prefix/bin/python3"
 command -v bwrap >/dev/null
 command -v timeout >/dev/null

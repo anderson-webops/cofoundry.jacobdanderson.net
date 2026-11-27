@@ -1,4 +1,10 @@
 <script setup lang="ts">
+import { computed } from "vue"
+import { useRuntimeConfig } from "#app"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { usePageSeo } from "~/composables/usePageSeo"
 import {
   privacyDataCategories,
   privacyKeyNotes,

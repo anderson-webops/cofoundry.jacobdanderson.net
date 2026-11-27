@@ -1,3 +1,4 @@
+import { defineEventHandler } from "h3"
 import { requireAdminSession } from "../../utils/admin"
 import { listPersistedAdminActions } from "../../utils/admin-persistence"
 import { assertRateLimit, buildRateLimitKey } from "../../utils/rate-limit"

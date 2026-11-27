@@ -1,3 +1,4 @@
+import { defineEventHandler, readBody } from "h3"
 import { reportSubmissionSchema } from "~/shared/utils/validation"
 import { requireAuthenticatedSession } from "../utils/auth"
 import { createMemberReport } from "../utils/member-submissions"

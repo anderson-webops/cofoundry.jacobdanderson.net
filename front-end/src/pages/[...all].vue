@@ -1,4 +1,10 @@
 <script setup lang="ts">
+import { computed } from "vue"
+import { setResponseStatus, useRouter } from "#app"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import { usePageSeo } from "~/composables/usePageSeo"
+import { useProductAccess } from "~/composables/useProductAccess"
+
 const router = useRouter()
 const { getPrimaryAccessCta } = useProductAccess()
 const primaryAccessCta = computed(() => getPrimaryAccessCta("not-found"))

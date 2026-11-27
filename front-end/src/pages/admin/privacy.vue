@@ -1,5 +1,15 @@
 <script setup lang="ts">
 import type { PrivacyRequest } from "~/shared/types/domain"
+import { computed, reactive, ref } from "vue"
+import { useFetch } from "#app"
+import { definePageMeta } from "#app/composables/pages"
+import { $fetch } from "#build/fetch"
+import TextareaInput from "~/components/forms/TextareaInput.vue"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import EmptyState from "~/components/ui/EmptyState.vue"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { usePageSeo } from "~/composables/usePageSeo"
 import { formatRelativeDate } from "~/shared/utils/format"
 
 definePageMeta({

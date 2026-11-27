@@ -1,5 +1,6 @@
 import type { H3Event } from "h3"
 import process from "node:process"
+import { useRuntimeConfig } from "nitropack/runtime"
 import { resolveProductAccessPolicy } from "~/shared/utils/product-access"
 import { isLocalDevelopmentEnvironment } from "../../shared/utils/environment"
 

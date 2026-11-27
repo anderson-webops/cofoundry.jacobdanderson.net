@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import type { ThemeSchemeId } from "~/shared/utils/theme"
 import { onClickOutside, useEventListener } from "@vueuse/core"
+import { computed, nextTick, onMounted, ref, shallowRef, watch } from "vue"
+import { useColorMode } from "#imports"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
+import { useThemeScheme } from "~/composables/useThemeScheme"
 import { isDarkThemeValue } from "~/shared/utils/theme"
 
 const props = withDefaults(defineProps<{

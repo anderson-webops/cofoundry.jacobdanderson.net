@@ -1,6 +1,7 @@
 import type { H3Event } from "h3"
 import type { Notification, Report, SessionUser } from "../../shared/types/domain"
 import { randomUUID } from "node:crypto"
+import { createError } from "h3"
 import { getReportPriority } from "../../shared/utils/formation"
 import { projectWorkspaceForSession } from "../../shared/utils/workspace-authorization"
 import { listAdminSecurityUsers } from "./admin-persistence"

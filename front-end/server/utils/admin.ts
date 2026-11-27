@@ -1,4 +1,6 @@
 import type { H3Event } from "h3"
+import { createError } from "h3"
+import { useRuntimeConfig } from "nitropack/runtime"
 import { adminCommandQueueActionSchema, adminOpportunityVerificationSchema, adminReportStatusSchema, adminUserEmailVerificationSchema, adminUserModerationSchema, adminUserRoleSchema } from "~/shared/utils/validation"
 import { requireAuthenticatedSession } from "./auth"
 

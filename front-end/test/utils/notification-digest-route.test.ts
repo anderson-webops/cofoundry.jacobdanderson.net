@@ -14,6 +14,11 @@ const fixtures = vi.hoisted(() => ({
   supabaseEnabled: vi.fn(),
 }))
 
+vi.mock("h3", async importOriginal => ({
+  ...await importOriginal<typeof import("h3")>(),
+  readBody: fixtures.readBody,
+}))
+
 vi.mock("../../shared/data/seed", () => ({
   workspaceSeed: { users: [] }
 }))

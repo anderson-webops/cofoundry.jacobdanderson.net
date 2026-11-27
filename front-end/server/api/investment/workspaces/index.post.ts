@@ -1,4 +1,4 @@
-import { setHeader } from "h3"
+import { defineEventHandler, readBody, setHeader } from "h3"
 import { investmentWorkspaceCreateSchema } from "~/shared/utils/investment-validation"
 import { requireAuthenticatedSession } from "../../../utils/auth"
 import { createInvestmentWorkspace } from "../../../utils/investment-workspaces"

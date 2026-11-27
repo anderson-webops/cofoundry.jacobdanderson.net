@@ -1,4 +1,10 @@
 <script setup lang="ts">
+import ProfileCard from "~/components/app/ProfileCard.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { usePageSeo } from "~/composables/usePageSeo"
+import { usePublicDirectory } from "~/composables/usePublicDirectory"
+
 const profiles = (await usePublicDirectory()).profiles
 
 usePageSeo("Public founder profiles", "Browse opt-in public founder and collaborator profiles on CoFoundry.", {

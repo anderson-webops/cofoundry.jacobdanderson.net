@@ -1,5 +1,10 @@
 <script setup lang="ts">
 import { reactive, ref } from "vue"
+import PillPicker from "~/components/forms/PillPicker.vue"
+import SelectInput from "~/components/forms/SelectInput.vue"
+import TextareaInput from "~/components/forms/TextareaInput.vue"
+import TextInput from "~/components/forms/TextInput.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
 import { commitmentOptions, companyPreferenceOptions, equityPhilosophyOptions, industryOptions, remoteOptions, roleOptions, runwayBucketOptions, startTimelineOptions } from "~/shared/constants/options"
 import { minimumOnboardingSchema } from "~/shared/utils/validation"
 

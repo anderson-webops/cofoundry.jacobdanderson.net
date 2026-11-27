@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { Contract, ContractVersion } from "~/shared/types/domain"
+import { NuxtLink } from "#components"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
 import { formatContractStatus } from "~/shared/utils/format"
 
 defineProps<{

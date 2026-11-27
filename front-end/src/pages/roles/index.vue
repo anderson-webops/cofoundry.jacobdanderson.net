@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import { NuxtLink } from "#components"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { usePageSeo } from "~/composables/usePageSeo"
+import { usePublicDirectory } from "~/composables/usePublicDirectory"
 import { formatPublicHubInventoryLabel } from "~/shared/utils/directory"
 
 const roleHubs = (await usePublicDirectory()).roleHubs

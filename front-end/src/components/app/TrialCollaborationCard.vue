@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { TrialCollaboration } from "~/shared/types/domain"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
 import { formatTrialStatus } from "~/shared/utils/format"
 import { buildTrialStatusCopy } from "~/shared/utils/formation"
 

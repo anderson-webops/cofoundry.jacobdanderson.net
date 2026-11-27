@@ -3,6 +3,7 @@ import { Buffer } from "node:buffer"
 import { timingSafeEqual } from "node:crypto"
 import process from "node:process"
 import { createError, getHeader } from "h3"
+import { useRuntimeConfig } from "nitropack/runtime"
 
 function readConfiguredToken(event: H3Event) {
   const runtimeConfig = useRuntimeConfig(event)

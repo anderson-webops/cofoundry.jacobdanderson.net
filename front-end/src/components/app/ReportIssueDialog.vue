@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import type { ReportReason } from "~/shared/types/domain"
+import { reactive, ref, watch } from "vue"
+import SelectInput from "~/components/forms/SelectInput.vue"
+import TextareaInput from "~/components/forms/TextareaInput.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import BaseDialog from "~/components/ui/BaseDialog.vue"
 import { reportReasonOptions } from "~/shared/constants/options"
 import { reportSchema } from "~/shared/utils/validation"
+import { useAuthStore } from "~/stores/auth"
+import { useWorkspaceStore } from "~/stores/workspace"
 
 const props = defineProps<{
   title: string

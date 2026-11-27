@@ -104,6 +104,7 @@ export default defineNuxtConfig({
     "@pinia/nuxt",
     "@nuxtjs/color-mode",
     "@nuxt/eslint",
+    "nuxt-explicit-imports",
   ],
 
   components: [
@@ -224,6 +225,9 @@ export default defineNuxtConfig({
         sortConfigKeys: true,
       },
     },
+  },
+  explicitImports: {
+    mode: "strict",
   },
   security: {
     allowedMethodsRestricter: false,

@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import type { ContractVersion, ContractVersionPayload } from "~/shared/types/domain"
+import { reactive, ref } from "vue"
+import TextareaInput from "~/components/forms/TextareaInput.vue"
+import TextInput from "~/components/forms/TextInput.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
 import { contractVersionSchema } from "~/shared/utils/validation"
 
 const props = defineProps<{

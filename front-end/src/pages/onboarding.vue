@@ -1,6 +1,17 @@
 <script setup lang="ts">
+import { computed, ref } from "vue"
+import { definePageMeta } from "#app/composables/pages"
+import MinimumOnboardingForm from "~/components/app/MinimumOnboardingForm.vue"
+import OpportunityCard from "~/components/app/OpportunityCard.vue"
+import ProfileCard from "~/components/app/ProfileCard.vue"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import EmptyState from "~/components/ui/EmptyState.vue"
+import { useCurrentMember } from "~/composables/useCurrentMember"
+import { usePageSeo } from "~/composables/usePageSeo"
 import { recommendOpportunitiesForProfile, recommendProfilesForProfile } from "~/shared/utils/discovery"
 import { buildProfileReadiness } from "~/shared/utils/formation"
+import { useToastStore } from "~/stores/toast"
 
 definePageMeta({
   layout: "auth",

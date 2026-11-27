@@ -1,5 +1,6 @@
 import type { H3Event } from "h3"
 import type { PrivacyRequest, SessionUser } from "~/shared/types/domain"
+import { createError } from "h3"
 import {
   createLocalPrivacyRequest,
   listLocalPrivacyRequests,

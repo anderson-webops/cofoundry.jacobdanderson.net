@@ -1,4 +1,13 @@
 <script setup lang="ts">
+import { ref } from "vue"
+import { navigateTo, useHead } from "#app"
+import { NuxtLink } from "#components"
+import ThemeSchemePicker from "~/components/app/ThemeSchemePicker.vue"
+import ThemeToggle from "~/components/app/ThemeToggle.vue"
+import AppLogo from "~/components/marketing/AppLogo.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import { useAuthStore } from "~/stores/auth"
+
 const mobileNavOpen = ref(false)
 const authStore = useAuthStore()
 

@@ -1,4 +1,14 @@
 <script setup lang="ts">
+import { computed } from "vue"
+import { createError, useRoute } from "#app"
+import { NuxtLink } from "#components"
+import OpportunityCard from "~/components/app/OpportunityCard.vue"
+import ProfileCard from "~/components/app/ProfileCard.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { usePageSeo } from "~/composables/usePageSeo"
+import { useProductAccess } from "~/composables/useProductAccess"
+import { usePublicDirectory } from "~/composables/usePublicDirectory"
 import { pickRelatedHubEntries } from "~/shared/utils/directory"
 
 const route = useRoute()

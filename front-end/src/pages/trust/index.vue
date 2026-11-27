@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { NuxtLink } from "#components"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { usePageSeo } from "~/composables/usePageSeo"
 import { trustCenterPages } from "~/shared/data/public-content"
 
 usePageSeo("Trust Center", "Learn how CoFoundry handles visibility, outreach limits, and misuse prevention.", {

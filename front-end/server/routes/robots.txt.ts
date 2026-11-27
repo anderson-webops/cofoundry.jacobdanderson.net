@@ -1,3 +1,4 @@
+import { defineEventHandler, setHeader } from "h3"
 import { buildRobotsTxt } from "../../shared/utils/robots"
 import { resolveServerAppUrl } from "../utils/app-url"
 

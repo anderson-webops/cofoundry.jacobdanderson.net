@@ -1,5 +1,10 @@
 <script setup lang="ts">
 import type { ConnectDeclineReason, ConnectRequest, Profile } from "~/shared/types/domain"
+import { reactive } from "vue"
+import TrustSignalStrip from "~/components/app/TrustSignalStrip.vue"
+import SelectInput from "~/components/forms/SelectInput.vue"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
 import { connectDeclineReasonOptions } from "~/shared/constants/options"
 import { formatConnectDeclineReason, formatConnectRequestNextStep, formatDate } from "~/shared/utils/format"
 import { buildConnectRequestDueCopy, buildResponsivenessLabel } from "~/shared/utils/formation"

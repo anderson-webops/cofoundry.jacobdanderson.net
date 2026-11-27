@@ -1,6 +1,16 @@
 <script setup lang="ts">
 import type { SupportedOAuthProvider } from "~/shared/utils/oauth-providers"
+import { computed, reactive, ref } from "vue"
+import { navigateTo, useFetch, useRoute, useRuntimeConfig } from "#app"
+import { definePageMeta } from "#app/composables/pages"
+import { NuxtLink } from "#components"
+import TextInput from "~/components/forms/TextInput.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import { usePageSeo } from "~/composables/usePageSeo"
+import { useProductAccess } from "~/composables/useProductAccess"
 import { signInSchema } from "~/shared/utils/validation"
+import { useAuthStore } from "~/stores/auth"
+import { useToastStore } from "~/stores/toast"
 
 interface OAuthProvidersResponse {
   providers: SupportedOAuthProvider[]

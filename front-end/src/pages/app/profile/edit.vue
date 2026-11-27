@@ -1,4 +1,13 @@
 <script setup lang="ts">
+import { computed } from "vue"
+import { navigateTo } from "#app"
+import { definePageMeta } from "#app/composables/pages"
+import ProfileEditorForm from "~/components/app/ProfileEditorForm.vue"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { useCurrentMember } from "~/composables/useCurrentMember"
+import { usePageSeo } from "~/composables/usePageSeo"
+import { useToastStore } from "~/stores/toast"
+
 definePageMeta({
   layout: "app",
   middleware: ["auth", "onboarding"],

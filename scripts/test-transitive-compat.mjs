@@ -12,18 +12,21 @@ const lintConfig = createRequire(require.resolve("@antfu/eslint-config"))
 const pluginEntry = lintConfig.resolve("eslint-plugin-n")
 const nodePlugin = createRequire(pluginEntry)
 
-test("Nuxt DevTools 4 uses the current 0.8 host without rebinding legacy Vue plugin peers", () => {
+test("Nuxt DevTools 4 and the Vue plugin retain their supported host and kit versions", () => {
   const frontend = createRequire(new URL("../front-end/package.json", import.meta.url))
   const devtools = createRequire(frontend.resolve("@nuxt/devtools"))
   const legacy = createRequire(devtools.resolve("vite-plugin-vue-devtools"))
   assert.match(frontend("@nuxt/devtools/package.json").version, /^4\./u)
-  assert.equal(legacy("vite-plugin-vue-devtools/package.json").version, "9.0.0-rc.2")
+  assert.equal(legacy("vite-plugin-vue-devtools/package.json").version, "9.0.0-rc.3")
   for (const name of ["@vitejs/devtools", "@vitejs/devtools-kit"]) {
-    assert.equal(frontend(`${name}/package.json`).version, "0.8.2")
-    assert.equal(devtools(`${name}/package.json`).version, "0.8.2")
-    assert.match(legacy(`${name}/package.json`).version, /^0\.7\./u)
-    assert.notEqual(legacy.resolve(name), devtools.resolve(name))
+    assert.equal(frontend(`${name}/package.json`).version, "0.8.3")
+    assert.equal(devtools(`${name}/package.json`).version, "0.8.3")
   }
+  assert.equal(legacy("@vitejs/devtools/package.json").version, "0.7.6")
+  assert.equal(legacy("@vitejs/devtools-kit/package.json").version, "0.8.3")
+  assert.notEqual(legacy.resolve("@vitejs/devtools"), devtools.resolve("@vitejs/devtools"))
+  const legacyHost = createRequire(legacy.resolve("@vitejs/devtools/package.json"))
+  assert.equal(legacyHost("@vitejs/devtools-kit/package.json").version, "0.7.6")
 })
 
 test("the backend runs TypeScript 7 while Vue retains its required compiler API", () => {

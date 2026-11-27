@@ -1,4 +1,13 @@
 <script setup lang="ts">
+import { computed, ref } from "vue"
+import { definePageMeta } from "#app/composables/pages"
+import ProfileAvatar from "~/components/app/ProfileAvatar.vue"
+import TrustSignalStrip from "~/components/app/TrustSignalStrip.vue"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
+import BaseButton from "~/components/ui/BaseButton.vue"
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { useCurrentMember } from "~/composables/useCurrentMember"
+import { usePageSeo } from "~/composables/usePageSeo"
 import { formatContactRevealStage, formatCurrentWorkStatus, formatDeadlockPreference, formatDecisionModelPreference, formatEquityPhilosophy, formatLeadershipPreference, formatRelativeDate, formatRunwayBucket, formatStartTimeline } from "~/shared/utils/format"
 import { getProfileSkills } from "~/shared/utils/workspace"
 

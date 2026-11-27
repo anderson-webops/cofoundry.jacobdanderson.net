@@ -1,4 +1,6 @@
 import process from "node:process"
+import { defineEventHandler } from "h3"
+import { useRuntimeConfig } from "nitropack/runtime"
 import { collectEnvironmentValidationErrors, isLocalDevelopmentEnvironment, readEnvironmentSnapshot } from "~/shared/utils/environment"
 import { listAccessRequests } from "../../utils/access-requests"
 import { requireAdminSession } from "../../utils/admin"

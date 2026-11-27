@@ -2,6 +2,8 @@ import type { H3Event } from "h3"
 import type { ContractLegalReview, SessionUser, WorkspaceSeed } from "../../shared/types/domain"
 import type { OrganizationMutation, OrganizationWorkspaceDocument, OrganizationWorkspaceSnapshot } from "../../shared/types/organizations"
 import { randomUUID } from "node:crypto"
+import { createError } from "h3"
+import { useRuntimeConfig } from "nitropack/runtime"
 import { workspaceSeed } from "../../shared/data/seed"
 import {
   applyOrganizationMutation,

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed, onMounted, ref } from "vue"
+import { useColorMode } from "#imports"
 import { getThemeTogglePreference, isDarkThemeValue } from "~/shared/utils/theme"
 
 const colorMode = useColorMode()

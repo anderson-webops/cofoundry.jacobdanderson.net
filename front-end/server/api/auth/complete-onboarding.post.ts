@@ -1,3 +1,4 @@
+import { defineEventHandler } from "h3"
 import { completeOnboarding, requireAuthenticatedSession } from "~/server/utils/auth"
 import { assertRateLimit, buildRateLimitKey } from "../../utils/rate-limit"
 

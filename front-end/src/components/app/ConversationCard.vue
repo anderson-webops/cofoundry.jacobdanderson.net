@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { NuxtLink } from "#components"
+import BaseBadge from "~/components/ui/BaseBadge.vue"
+
 defineProps<{
   title: string
   preview: string

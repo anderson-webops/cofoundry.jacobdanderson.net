@@ -1,4 +1,4 @@
-import { setHeader } from "h3"
+import { defineEventHandler, setHeader } from "h3"
 import { redactReportForReporter } from "~/shared/utils/workspace-authorization"
 import { requireAuthenticatedSession } from "../../utils/auth"
 import { listContractLegalReviewsForContracts } from "../../utils/contract-legal-reviews"

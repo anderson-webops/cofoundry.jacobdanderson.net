@@ -1,4 +1,7 @@
+import { computed } from "vue"
 import { getProfileByUserId, getSubscriptionByUserId } from "~/shared/utils/workspace"
+import { useAuthStore } from "~/stores/auth"
+import { useWorkspaceStore } from "~/stores/workspace"
 
 export function useCurrentMember() {
   const authStore = useAuthStore()

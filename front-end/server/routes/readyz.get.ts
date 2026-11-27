@@ -1,4 +1,4 @@
-import { setResponseStatus } from "h3"
+import { defineEventHandler, setResponseStatus } from "h3"
 import { buildProbePayload, resolveFrontendReadiness, setHealthResponseHeaders } from "../utils/health"
 
 export default defineEventHandler(async (event) => {

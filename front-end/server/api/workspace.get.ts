@@ -1,3 +1,4 @@
+import { defineEventHandler } from "h3"
 import { requireAuthenticatedSession } from "~/server/utils/auth"
 import { projectWorkspaceForSession } from "~/shared/utils/workspace-authorization"
 import { loadMemberWorkspaceState } from "../utils/member-workspace"

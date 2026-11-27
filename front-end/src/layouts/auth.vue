@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { useHead } from "#app"
+import ThemeToggle from "~/components/app/ThemeToggle.vue"
+import AppLogo from "~/components/marketing/AppLogo.vue"
+
 useHead({
   meta: [
     {

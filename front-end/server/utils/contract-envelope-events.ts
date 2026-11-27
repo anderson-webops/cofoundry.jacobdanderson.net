@@ -3,6 +3,7 @@ import type { z } from "zod"
 import type { ContractProviderEvidence } from "~/shared/utils/contract-documents"
 import type { operationsContractEnvelopeSchema } from "~/shared/utils/validation"
 import { randomUUID } from "node:crypto"
+import { createError } from "h3"
 import { listLocalContractEnvelopeEvents, recordLocalContractEnvelopeEvent } from "./local-operations-store"
 import { createSupabaseAdminClient, isSupabaseEnabled } from "./supabase"
 

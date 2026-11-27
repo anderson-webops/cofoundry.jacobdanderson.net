@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import PageIntro from "~/components/ui/PageIntro.vue"
+import { usePageSeo } from "~/composables/usePageSeo"
 import { howItWorksSteps } from "~/shared/data/marketing"
 
 usePageSeo(

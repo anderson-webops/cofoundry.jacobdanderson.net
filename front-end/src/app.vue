@@ -1,9 +1,16 @@
 <script setup lang="ts">
+import { computed, watch } from "vue"
+import { useHead, useRoute, useSeoMeta } from "#app"
+import { NuxtLayout, NuxtPage } from "#components"
+import ToastStack from "~/components/app/ToastStack.vue"
+import { useCanonicalAppUrl } from "~/composables/useCanonicalAppUrl"
+import { useThemeScheme } from "~/composables/useThemeScheme"
 import { appDescription, appName } from "~/shared/constants/app"
 import { isPrivateWorkspaceRoutePath } from "~/shared/constants/route-surfaces"
 import { serializeJsonForHtml } from "~/shared/utils/html"
 import { buildSiteStructuredData, buildSiteUrl } from "~/shared/utils/seo"
 import { themeSchemeStyleContent } from "~/shared/utils/theme"
+import { useWorkspaceStore } from "~/stores/workspace"
 import { ensureAnalyticsScript } from "~/utils/analytics-loader"
 
 const workspaceStore = useWorkspaceStore()

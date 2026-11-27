@@ -1,4 +1,4 @@
-import { getQuery } from "h3"
+import { defineEventHandler, getQuery } from "h3"
 import { listPendingFileScans } from "../../../utils/file-uploads"
 import { requireOperationsWorker } from "../../../utils/operations-auth"
 import { assertRateLimit, buildRateLimitKey } from "../../../utils/rate-limit"
