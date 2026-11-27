@@ -29,6 +29,8 @@ jobs:
           NPM_CONFIG_CACHE: ${{ runner.temp }}/cofoundry-npm-cache
         run: |
           printf 'NPM_CONFIG_CACHE=%s\n' "$NPM_CONFIG_CACHE" >> "$GITHUB_ENV"
+          verified_node=$(bash scripts/prepare-hosted-node.sh)
+          export PATH="$verified_node:$PATH"
           bin="$(node scripts/build-toolchain.mjs --print-bin)"
           printf '%s\n' "$bin" >> "$GITHUB_PATH"
           "$bin/npm" run verify:build-toolchain
@@ -56,6 +58,8 @@ jobs:
           NPM_CONFIG_CACHE: ${{ runner.temp }}/cofoundry-npm-cache
         run: |
           printf 'NPM_CONFIG_CACHE=%s\n' "$NPM_CONFIG_CACHE" >> "$GITHUB_ENV"
+          verified_node=$(bash scripts/prepare-hosted-node.sh)
+          export PATH="$verified_node:$PATH"
           bin="$(node scripts/build-toolchain.mjs --print-bin)"
           printf '%s\n' "$bin" >> "$GITHUB_PATH"
           "$bin/npm" run verify:build-toolchain
@@ -83,6 +87,8 @@ jobs:
           NPM_CONFIG_CACHE: ${{ runner.temp }}/cofoundry-npm-cache
         run: |
           printf 'NPM_CONFIG_CACHE=%s\n' "$NPM_CONFIG_CACHE" >> "$GITHUB_ENV"
+          verified_node=$(bash scripts/prepare-hosted-node.sh)
+          export PATH="$verified_node:$PATH"
           bin="$(node scripts/build-toolchain.mjs --print-bin)"
           printf '%s\n' "$bin" >> "$GITHUB_PATH"
           "$bin/npm" run verify:build-toolchain
@@ -120,6 +126,8 @@ jobs:
           NPM_CONFIG_CACHE: ${{ runner.temp }}/cofoundry-npm-cache
         run: |
           printf 'NPM_CONFIG_CACHE=%s\n' "$NPM_CONFIG_CACHE" >> "$GITHUB_ENV"
+          verified_node=$(bash scripts/prepare-hosted-node.sh)
+          export PATH="$verified_node:$PATH"
           bin="$(node scripts/build-toolchain.mjs --print-bin)"
           printf '%s\n' "$bin" >> "$GITHUB_PATH"
           "$bin/npm" run verify:build-toolchain
@@ -167,6 +175,8 @@ jobs:
           NPM_CONFIG_CACHE: ${{ runner.temp }}/cofoundry-npm-cache
         run: |
           printf 'NPM_CONFIG_CACHE=%s\n' "$NPM_CONFIG_CACHE" >> "$GITHUB_ENV"
+          verified_node=$(bash scripts/prepare-hosted-node.sh)
+          export PATH="$verified_node:$PATH"
           bin="$(node scripts/build-toolchain.mjs --print-bin)"
           printf '%s\n' "$bin" >> "$GITHUB_PATH"
           "$bin/npm" run verify:build-toolchain
@@ -197,6 +207,8 @@ jobs:
           NPM_CONFIG_CACHE: ${{ runner.temp }}/cofoundry-npm-cache
         run: |
           printf 'NPM_CONFIG_CACHE=%s\n' "$NPM_CONFIG_CACHE" >> "$GITHUB_ENV"
+          verified_node=$(bash scripts/prepare-hosted-node.sh)
+          export PATH="$verified_node:$PATH"
           bin="$(node scripts/build-toolchain.mjs --print-bin)"
           printf '%s\n' "$bin" >> "$GITHUB_PATH"
           "$bin/npm" run verify:build-toolchain
@@ -224,6 +236,8 @@ jobs:
           NPM_CONFIG_CACHE: ${{ runner.temp }}/cofoundry-npm-cache
         run: |
           printf 'NPM_CONFIG_CACHE=%s\n' "$NPM_CONFIG_CACHE" >> "$GITHUB_ENV"
+          verified_node=$(bash scripts/prepare-hosted-node.sh)
+          export PATH="$verified_node:$PATH"
           bin="$(node scripts/build-toolchain.mjs --print-bin)"
           printf '%s\n' "$bin" >> "$GITHUB_PATH"
           "$bin/npm" run verify:build-toolchain
@@ -284,8 +298,8 @@ jobs:
         run: npm run a11y:production
 
   native-arm64:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v1.') && github.repository == 'anderson-webops/cofoundry.jacobdanderson.net'
-    runs-on: ubuntu-24.04-arm
+    if: github.event_name == 'push' && github.repository == 'anderson-webops/cofoundry.jacobdanderson.net'
+    runs-on: ubuntu-26.04-arm
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -302,11 +316,14 @@ jobs:
           NPM_CONFIG_CACHE: ${{ runner.temp }}/cofoundry-npm-cache
         run: |
           printf 'NPM_CONFIG_CACHE=%s\n' "$NPM_CONFIG_CACHE" >> "$GITHUB_ENV"
+          verified_node=$(bash scripts/prepare-hosted-node.sh)
+          export PATH="$verified_node:$PATH"
           bin="$(node scripts/build-toolchain.mjs --print-bin)"
           printf '%s\n' "$bin" >> "$GITHUB_PATH"
           "$bin/npm" run verify:build-toolchain
 
       - name: Verify annotated source tag
+        if: startsWith(github.ref, 'refs/tags/')
         run: |
           test "$(git cat-file -t "$GITHUB_REF")" = tag
           test "$(git rev-parse "$GITHUB_REF^{commit}")" = "$GITHUB_SHA"
