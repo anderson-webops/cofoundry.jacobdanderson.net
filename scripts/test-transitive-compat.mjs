@@ -17,7 +17,8 @@ test("Nuxt DevTools 4 and the Vue plugin retain their supported host and kit ver
   const devtools = createRequire(frontend.resolve("@nuxt/devtools"))
   const legacy = createRequire(devtools.resolve("vite-plugin-vue-devtools"))
   assert.match(frontend("@nuxt/devtools/package.json").version, /^4\./u)
-  assert.equal(legacy("vite-plugin-vue-devtools/package.json").version, "9.0.0-rc.3")
+  assert.equal(legacy("vite-plugin-vue-devtools/package.json").version,
+    require("../package.json").devDependencies["vite-plugin-vue-devtools"])
   for (const name of ["@vitejs/devtools", "@vitejs/devtools-kit"]) {
     assert.equal(frontend(`${name}/package.json`).version, "0.8.3")
     assert.equal(devtools(`${name}/package.json`).version, "0.8.3")

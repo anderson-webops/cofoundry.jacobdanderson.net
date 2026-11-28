@@ -111,7 +111,7 @@
     "puppeteer": "25.19.0",
     "typescript": "^6.0.3",
     "unimport": "file:vendor/unimport-7.0.3-webops.2.tgz",
-    "vite-plugin-vue-devtools": "9.0.0-rc.3",
+    "vite-plugin-vue-devtools": "9.0.0-rc.4",
     "vue": "3.5.46"
   },
   "allowScripts": {
